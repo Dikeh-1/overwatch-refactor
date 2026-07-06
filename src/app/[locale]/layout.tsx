@@ -5,8 +5,8 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import ZohoChatbot from "@/components/layout/ZohoChatbot";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import Script from "next/script";
 import "../globals.css";
 
 const inter = Inter({
@@ -40,7 +40,11 @@ export default async function LocaleLayout({ children, params }: Props) {
   const messages = await getMessages();
 
   return (
-    <html lang={locale} className={`${inter.variable} ${geistMono.variable} h-full`} suppressHydrationWarning>
+    <html
+      lang={locale}
+      className={`${inter.variable} ${geistMono.variable} h-full`}
+      suppressHydrationWarning
+    >
       <body className="min-h-full flex flex-col bg-background text-foreground antialiased">
         <script
           dangerouslySetInnerHTML={{
@@ -63,9 +67,26 @@ export default async function LocaleLayout({ children, params }: Props) {
             <Navbar />
             <main className="flex-1">{children}</main>
             <Footer />
-            <ZohoChatbot />
           </NextIntlClientProvider>
         </ThemeProvider>
+
+        {/* Zoho SalesIQ Chat Widget */}
+        <Script id="zoho-init" strategy="beforeInteractive">
+          {`
+    window.$zoho = window.$zoho || {};
+    $zoho.salesiq = $zoho.salesiq || {
+      widgetcode: "siq80b8b734cb6cc4833",   // ← This was missing
+      values: {},
+      ready: function() {}
+    };
+  `}
+        </Script>
+
+        <Script
+          id="zsiqscript"
+          src="https://salesiq.zohopublic.com/widget?wc=siq80b8b734cb6cc4833"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );

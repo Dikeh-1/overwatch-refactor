@@ -173,3 +173,17 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(201, 162, 39, 0.5);
 }
+
+/* Ensure Zoho SalesIQ widget is visible */
+#zsiq-siq80b8b734cb6cc4833,
+#zsiq-float,
+#zsiq-float-full,
+[id*="zsiq"] {
+  z-index: 999999 !important;
+  position: fixed !important;
+}
+
+/* Ensure body doesn't hide the widget */
+body {
+  overflow-x: hidden;
+}

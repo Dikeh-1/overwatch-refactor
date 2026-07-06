@@ -5,33 +5,45 @@ import { useEffect } from "react";
 export default function ZohoChatbot() {
   useEffect(() => {
     // Zoho SalesIQ Chat Widget Integration
-    // Replace 'YOUR_WIDGET_ID' with your actual Zoho widget ID
     const loadZohoChat = () => {
       if (typeof window !== "undefined") {
-        (window as any).$zoho = (window as any).$zoho || {};
-        (window as any).$zoho.salesiq = (window as any).$zoho.salesiq || {
-          widgetcode: "YOUR_WIDGET_ID",
-          values: {},
-          ready: function () {},
-        };
+        console.log("Loading Zoho SalesIQ widget...");
+        
+        // First script: Initialize $zoho object
+        const inlineScript = document.createElement("script");
+        inlineScript.textContent = `
+          window.$zoho = window.$zoho || {};
+          $zoho.salesiq = $zoho.salesiq || { ready: function() {} };
+          console.log("Zoho $zoho object initialized");
+        `;
+        document.head.appendChild(inlineScript);
 
-        const script = document.createElement("script");
-        script.id = "zsiqscript";
-        script.src = "https://salesiq.zoho.com/widget";
-        script.async = true;
-        script.defer = true;
-        document.body.appendChild(script);
+        // Second script: Load the widget
+        const widgetScript = document.createElement("script");
+        widgetScript.id = "zsiqscript";
+        widgetScript.src = "https://salesiq.zohopublic.com/widget?wc=siq80b8b734cb6cc4833";
+        widgetScript.async = true;
+        widgetScript.defer = true;
+        
+        widgetScript.onload = () => {
+          console.log("Zoho SalesIQ widget script loaded successfully");
+          console.log("Widget code:", (window as any).$zoho?.salesiq?.widgetcode);
+        };
+        
+        widgetScript.onerror = (error) => {
+          console.error("Failed to load Zoho SalesIQ widget:", error);
+        };
+        
+        document.body.appendChild(widgetScript);
       }
     };
 
     loadZohoChat();
 
     return () => {
-      // Cleanup if needed
-      const script = document.getElementById("zsiqscript");
-      if (script) {
-        script.remove();
-      }
+      // Cleanup
+      const widgetScript = document.getElementById("zsiqscript");
+      if (widgetScript) widgetScript.remove();
     };
   }, []);
 
