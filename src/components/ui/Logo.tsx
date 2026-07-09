@@ -2,6 +2,7 @@ import Image from "next/image";
 
 type LogoProps = {
   className?: string;
+  preload?: boolean;
   size?: "sm" | "md" | "lg";
 };
 
@@ -11,7 +12,11 @@ const sizes = {
   lg: { width: 294, height: 44 },
 };
 
-export default function Logo({ className = "", size = "md" }: LogoProps) {
+export default function Logo({
+  className = "",
+  preload = false,
+  size = "md",
+}: LogoProps) {
   const { width, height } = sizes[size];
 
   return (
@@ -22,7 +27,7 @@ export default function Logo({ className = "", size = "md" }: LogoProps) {
         width={width}
         height={height}
         className="w-auto h-auto object-contain dark:filter dark:brightness-0 dark:invert transition-all duration-300"
-        priority
+        preload={preload}
       />
     </div>
   );

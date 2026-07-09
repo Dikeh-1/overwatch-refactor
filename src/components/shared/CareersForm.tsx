@@ -218,7 +218,7 @@ export default function CareersForm() {
       {status === "error" && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/8 border border-red-500/25 text-red-400">
           <AlertCircle size={18} className="shrink-0" />
-          <p className="text-sm">Something went wrong. Please try again or email us directly at ops@overwatchmoz.com</p>
+          <p className="text-sm">Something went wrong. Please try again or email us directly at comercial@overwatchmoz.com</p>
         </div>
       )}
 

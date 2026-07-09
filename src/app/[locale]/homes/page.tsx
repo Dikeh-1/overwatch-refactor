@@ -42,13 +42,13 @@ export default async function HomesPage({ params }: Props) {
       <section className="relative min-h-[65vh] md:min-h-[550px] flex items-center overflow-hidden dark">
         <ParallaxImage className="absolute inset-0" speed={0.2}>
           <Image
-            src="/homes-bg.jpg"
+            src="/homes-bg.webp"
             alt="Residential AI Surveillance"
             fill
             className="object-cover"
-            priority
+            preload
             sizes="100vw"
-            quality={90}
+            quality={80}
           />
         </ParallaxImage>
 

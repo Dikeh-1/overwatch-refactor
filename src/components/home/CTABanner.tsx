@@ -5,6 +5,7 @@ import Button from "@/components/ui/Button";
 import TechGrid from "@/components/ui/TechGrid";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 import { IMAGES } from "@/lib/constants";
+import LazyVideo from "@/components/ui/LazyVideo";
 
 export default function CTABanner() {
   const t = useTranslations("cta");
@@ -27,17 +28,12 @@ export default function CTABanner() {
           </ScrollReveal>
 
           <ScrollReveal direction="scale" delay={0.2} className="rounded-xl overflow-hidden border border-border shadow-2xl">
-            <video
+            <LazyVideo
               className="w-full h-auto block"
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="auto"
               poster={IMAGES.ctaVideoPoster}
-            >
-              <source src={IMAGES.ctaVideoSrc} type="video/mp4" />
-            </video>
+              rootMargin="700px"
+              src={IMAGES.ctaVideoSrc}
+            />
           </ScrollReveal>
         </div>
       </div>

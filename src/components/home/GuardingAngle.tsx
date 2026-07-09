@@ -5,6 +5,7 @@ import { ArrowRight, HelpCircle, ShieldCheck } from "lucide-react";
 import GlowCard from "@/components/ui/GlowCard";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 import { IMAGES } from "@/lib/constants";
+import LazyVideo from "@/components/ui/LazyVideo";
 
 export default function GuardingAngle() {
   const t = useTranslations("guardingAngle");
@@ -13,17 +14,12 @@ export default function GuardingAngle() {
     <section className="py-20 md:py-28 border-t border-border bg-primary-darker/40 relative overflow-hidden dark">
       {/* Background Video */}
       <div className="absolute inset-0 z-0 opacity-45 pointer-events-none">
-        <video
+        <LazyVideo
           className="w-full h-full object-cover"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
           poster={IMAGES.videoPoster}
-        >
-          <source src={IMAGES.videoSrc} type="video/mp4" />
-        </video>
+          rootMargin="700px"
+          src={IMAGES.videoSrc}
+        />
       </div>
       {/* Overlay to dim video using the main dark theme background color (#0f1117) */}
       <div className="absolute inset-0 bg-[#0f1117]/85 z-0 pointer-events-none" />

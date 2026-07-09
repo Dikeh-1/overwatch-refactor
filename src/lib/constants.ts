@@ -9,28 +9,28 @@ export const IMAGES = {
   heroMobile:
     "https://res.cloudinary.com/dxvvzuu3n/image/upload/f_auto,q_auto/v1778238103/vrag_ffsyrb.png",
   commandCenter:
-    "https://res.cloudinary.com/dxvvzuu3n/image/upload/v1778238099/Overwatch_-_Flyer_EN_nzvkov.png",
+    "https://res.cloudinary.com/dxvvzuu3n/image/upload/f_auto,q_auto,w_1200/v1778238099/Overwatch_-_Flyer_EN_nzvkov.png",
   aiTech:
-    "https://res.cloudinary.com/dxvvzuu3n/image/upload/v1778238119/ghtf_1_xqhdfx.png",
+    "https://res.cloudinary.com/dxvvzuu3n/image/upload/f_auto,q_auto,w_1200/v1778238119/ghtf_1_xqhdfx.png",
   deterrence:
-    "https://res.cloudinary.com/dxvvzuu3n/image/upload/v1778240007/6_af4eei.png",
+    "https://res.cloudinary.com/dxvvzuu3n/image/upload/f_auto,q_auto,w_1200/v1778240007/6_af4eei.png",
   process:
-    "https://res.cloudinary.com/dxvvzuu3n/image/upload/v1778238099/Overwatch_-_Flyer_EN_3_mviff3.png",
+    "https://res.cloudinary.com/dxvvzuu3n/image/upload/f_auto,q_auto,w_900/v1778238099/Overwatch_-_Flyer_EN_3_mviff3.png",
   logo: "/logo.png",
   videoPoster:
     "https://res.cloudinary.com/dxvvzuu3n/video/upload/f_auto,q_auto/v1778248523/ffffe_wgzedy.jpg",
   videoSrc:
     "https://res.cloudinary.com/dxvvzuu3n/video/upload/c_scale,w_1200/f_auto,q_auto/v1778248523/ffffe_wgzedy.mp4",
   ctaVideoPoster:
-    "https://res.cloudinary.com/dxvvzuu3n/video/upload/v1778238103/identity_recognition_HD_fqmra3.jpg",
+    "https://res.cloudinary.com/dxvvzuu3n/video/upload/c_scale,w_1200/f_auto,q_auto/v1778238103/identity_recognition_HD_fqmra3.jpg",
   ctaVideoSrc:
-    "https://res.cloudinary.com/dxvvzuu3n/video/upload/f_auto,q_auto/v1778238103/identity_recognition_HD_fqmra3.mp4",
+    "https://res.cloudinary.com/dxvvzuu3n/video/upload/c_scale,w_1200/f_auto,q_auto/v1778238103/identity_recognition_HD_fqmra3.mp4",
   cert1:
-    "https://res.cloudinary.com/dxvvzuu3n/image/upload/v1778239010/cert1_hrihms.png",
+    "https://res.cloudinary.com/dxvvzuu3n/image/upload/f_auto,q_auto,w_240/v1778239010/cert1_hrihms.png",
   cert2:
-    "https://res.cloudinary.com/dxvvzuu3n/image/upload/v1778239010/cert2_a7yjxb.png",
+    "https://res.cloudinary.com/dxvvzuu3n/image/upload/f_auto,q_auto,w_240/v1778239010/cert2_a7yjxb.png",
   cert3:
-    "https://res.cloudinary.com/dxvvzuu3n/image/upload/v1778241146/cert3_futlxh.png",
+    "https://res.cloudinary.com/dxvvzuu3n/image/upload/f_auto,q_auto,w_240/v1778241146/cert3_futlxh.png",
   cert4:
-    "https://res.cloudinary.com/dxvvzuu3n/image/upload/v1778239009/cert4_iqbmcq.png",
+    "https://res.cloudinary.com/dxvvzuu3n/image/upload/f_auto,q_auto,w_240/v1778239009/cert4_iqbmcq.png",
 };

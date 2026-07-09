@@ -183,7 +183,7 @@ export default function Navbar() {
       >
         <div className="flex h-16 md:h-20 items-center justify-between">
           <Link href="/" className="shrink-0" onClick={closeMobileMenu}>
-            <Logo size="sm" />
+            <Logo size="sm" preload />
           </Link>
 
           {/* Desktop Navigation */}

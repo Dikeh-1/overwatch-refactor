@@ -60,13 +60,13 @@ export default async function BusinessPage({ params }: Props) {
       <section className="relative min-h-[65vh] md:min-h-[550px] flex items-center overflow-hidden dark">
         <ParallaxImage className="absolute inset-0" speed={0.2}>
           <Image
-            src="/business-bg-minimal.png"
+            src="/business-bg-minimal.webp"
             alt="AI Surveillance Background"
             fill
             className="object-cover"
-            priority
+            preload
             sizes="100vw"
-            quality={90}
+            quality={80}
           />
         </ParallaxImage>
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/70 to-black/60 z-10" />

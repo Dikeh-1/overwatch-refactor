@@ -25,7 +25,6 @@ export default function CertificationBar() {
               width={120}
               height={48}
               className="h-10 w-auto opacity-40 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300"
-              unoptimized
             />
           ))}
         </div>

@@ -382,7 +382,10 @@ body {
 /* ── HERO SECTION BACKGROUNDS ─────────────────────────────────── */
 /* Default (light mode) */
 .hero-bg {
-  background-image: url('/hero_light.png');
+  background-image: image-set(
+    url('/hero_light.webp') type('image/webp'),
+    url('/hero_light.png') type('image/png')
+  );
   background-size: cover;
   background-position: right center;
   background-repeat: no-repeat;
@@ -396,7 +399,10 @@ body {
 
 /* Dark mode overrides */
 .dark .hero-bg {
-  background-image: url('/hero_dark.png');
+  background-image: image-set(
+    url('/hero_dark.webp') type('image/webp'),
+    url('/hero_dark.png') type('image/png')
+  );
   background-position: right center;
 }
 

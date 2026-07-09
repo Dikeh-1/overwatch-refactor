@@ -20,35 +20,35 @@ const storytellingItems = [
     title: "Reduce Dependence on Physical Guards",
     description:
       "Physical guards remain useful, but they cannot watch every camera, every second. Overwatch supports your team with active monitoring so important activity is detected.",
-    image: "/guard-sleeping.jpg",
+    image: "/guard-sleeping.webp",
   },
   {
     id: "detection",
     title: "Detect Incidents Earlier",
     description:
       "CCTV footage is often reviewed only after stock loss, intrusion, or damage has already happened. Overwatch helps detect suspicious activity earlier so action can be taken faster.",
-    image: "/weapon-detection.png",
+    image: "/weapon-detection.webp",
   },
   {
     id: "visibility",
     title: "Improve Management Visibility",
     description:
       "Owners, directors, and operations managers gain better visibility into what is happening across their sites, even when they are not physically present.",
-    image: "/surveillance-control-room.png",
+    image: "/surveillance-control-room.webp",
   },
   {
     id: "accountability",
     title: "Strengthen Accountability",
     description:
       "When a site is monitored actively, staff and guards know that critical areas are being watched and incidents are being recorded. This improves accountability and reduces reliance on manual reporting alone.",
-    image: "/monitoring.jpg",
+    image: "/monitoring.webp",
   },
   {
     id: "protection",
     title: "Protect Stock, Assets, and Operations",
     description:
       "For businesses with high-value inventory, vehicles, equipment, or cash flow, delayed detection can be expensive. Overwatch helps protect your operational continuity by reducing blind spots and improving incident escalation.",
-    image: "/business-bg.jpg",
+    image: "/business-bg.webp",
   },
 ];
 
@@ -125,7 +125,6 @@ export default function WhyChoose() {
                       className="object-cover"
                       sizes="(min-width: 1280px) 650px, 52vw"
                       quality={72}
-                      priority={activeIndex === 0}
                     />
                     <div className="absolute inset-0 bg-gradient-to-tr from-primary-darker/55 to-transparent" />
                   </div>
@@ -176,7 +175,7 @@ export default function WhyChoose() {
           <SectionIntro id="why-choose-mobile-title" />
 
           <div className="mt-12 grid gap-12">
-            {storytellingItems.map((item, index) => (
+            {storytellingItems.map((item) => (
               <motion.article
                 key={item.id}
                 initial={prefersReducedMotion ? false : { opacity: 0, y: 24 }}
@@ -195,7 +194,6 @@ export default function WhyChoose() {
                     className="object-cover"
                     sizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) min(42rem, calc(100vw - 3rem)), 650px"
                     quality={72}
-                    priority={index === 0}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-primary-darker/70 to-transparent" />
                 </div>

@@ -35,13 +35,16 @@ export default async function LocaleLayout({ children, params }: Props) {
       suppressHydrationWarning
     >
       <head>
+        <link rel="preload" href="/hero_dark.webp" as="image" type="image/webp" />
+        <link rel="preconnect" href="https://res.cloudinary.com" />
+        <link rel="dns-prefetch" href="https://res.cloudinary.com" />
         <link rel="preconnect" href="https://salesiq.zohopublic.com" />
         <link rel="dns-prefetch" href="https://salesiq.zohopublic.com" />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground antialiased">
         <Script
           id="zoho-init"
-          strategy="lazyOnload"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `window.$zoho=window.$zoho || {};$zoho.salesiq=$zoho.salesiq||{ready:function(){}}`
           }}
@@ -49,7 +52,7 @@ export default async function LocaleLayout({ children, params }: Props) {
         <Script
           id="zoho-script"
           src="https://salesiq.zohopublic.com/widget?wc=siq80b8b734cb6cc48334e01ab8c29da76f4ecfcbad2ed2ade5b18c142f9ec357da"
-          strategy="lazyOnload"
+          strategy="afterInteractive"
         />
         <Script
           id="theme-init"

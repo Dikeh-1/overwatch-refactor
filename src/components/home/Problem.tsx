@@ -81,7 +81,7 @@ export default function Problem() {
               speed={0.15}
             >
               <Image
-                src="/monitoring.jpg"
+                src="/monitoring.webp"
                 alt=""
                 fill
                 className="object-cover rounded-xl"
@@ -95,4 +95,4 @@ export default function Problem() {
   );
 }
 
-
+

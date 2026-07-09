@@ -93,7 +93,7 @@ export default async function PrivacyPage({ params }: Props) {
             <p>
               If you have any questions or concerns about this Privacy Policy or our data practices, please contact us at:
             </p>
-            <p className="mt-4 font-mono text-accent">ops@overwatchmoz.com</p>
+            <p className="mt-4 font-mono text-accent">comercial@overwatchmoz.com</p>
           </section>
         </div>
       </div>

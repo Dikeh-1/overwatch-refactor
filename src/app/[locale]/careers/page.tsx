@@ -109,7 +109,7 @@ export default async function CareersPage({ params }: Props) {
                   {t("openings.spontaneousDescription")}
                 </p>
                 <a
-                  href="mailto:ops@overwatchmoz.com?subject=Spontaneous Application"
+                  href="mailto:comercial@overwatchmoz.com?subject=Spontaneous Application"
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-accent text-primary-dark font-semibold hover:bg-accent/90 transition-all duration-300"
                 >
                   Send Your CV
