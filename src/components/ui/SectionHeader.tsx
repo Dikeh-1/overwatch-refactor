@@ -20,7 +20,7 @@ export default function SectionHeader({
   as: Component = "h2",
 }: SectionHeaderProps) {
   const textColor = variant === "white" ? "text-white" : "text-foreground";
-  const mutedTextColor = variant === "white" ? "text-white/80" : "text-muted";
+  const mutedTextColor = variant === "white" ? "text-white/88" : "text-muted";
   const accentTextColor = variant === "white" ? "text-accent" : "text-accent";
 
   return (

@@ -82,7 +82,7 @@ export default function Button({
   } = useMagnet();
 
   const classes = cn(
-    "inline-flex items-center justify-center rounded-lg transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-primary-dark disabled:opacity-50 disabled:cursor-not-allowed select-none text-center",
+    "inline-flex max-w-full items-center justify-center rounded-lg transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-primary-dark disabled:opacity-50 disabled:cursor-not-allowed select-none text-center",
     variants[variant],
     sizes[size],
     className
