@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function GlobalNotFound() {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
         <main className="not-found-page">
           <section className="not-found-shell">
