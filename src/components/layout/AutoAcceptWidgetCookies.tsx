@@ -77,28 +77,13 @@ export default function AutoAcceptWidgetCookies() {
 
     if (acceptVisibleCookiePrompt()) return;
 
-    const retryDelays = [250, 750, 1500, 3000, 6000];
+    const retryDelays = [1000, 3000, 7000];
     const retryTimers = retryDelays.map((delay) =>
       window.setTimeout(acceptVisibleCookiePrompt, delay),
     );
 
-    const observer = new MutationObserver(() => {
-      if (acceptVisibleCookiePrompt()) {
-        observer.disconnect();
-      }
-    });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-    });
-
-    const stopObserver = window.setTimeout(() => observer.disconnect(), 10000);
-
     return () => {
       retryTimers.forEach((timer) => window.clearTimeout(timer));
-      window.clearTimeout(stopObserver);
-      observer.disconnect();
     };
   }, []);
 

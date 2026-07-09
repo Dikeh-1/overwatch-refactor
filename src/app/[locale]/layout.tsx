@@ -5,6 +5,7 @@ import { routing } from "@/i18n/routing";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import AutoAcceptWidgetCookies from "@/components/layout/AutoAcceptWidgetCookies";
+import LaunchExperience from "@/components/layout/LaunchExperience";
 import ScrollToTop from "@/components/ui/ScrollToTop";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import Script from "next/script";
@@ -53,7 +54,7 @@ export default async function LocaleLayout({ children, params }: Props) {
         <Script
           id="zoho-script"
           src="https://salesiq.zohopublic.com/widget?wc=siq80b8b734cb6cc48334e01ab8c29da76f4ecfcbad2ed2ade5b18c142f9ec357da"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
         <Script
           id="theme-init"
@@ -67,6 +68,7 @@ export default async function LocaleLayout({ children, params }: Props) {
             <Navbar />
             <main className="flex-1">{children}</main>
             <Footer />
+            <LaunchExperience />
             <AutoAcceptWidgetCookies />
             <ScrollToTop />
           </NextIntlClientProvider>

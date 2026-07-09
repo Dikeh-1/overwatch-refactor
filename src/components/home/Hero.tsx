@@ -19,7 +19,7 @@ export default function Hero() {
   ];
 
   return (
-    <section className="hero-section relative min-h-[100svh] flex items-center overflow-hidden dark">
+    <section className="hero-section relative min-h-screen flex items-center overflow-hidden dark">
       {/* Theme-aware background via CSS (see globals.css) */}
       <div className="hero-bg absolute inset-0 z-0" />
 
@@ -31,7 +31,7 @@ export default function Hero() {
 
       {/* ── CONTENT with scroll-fade-out effect ──────────────────────────────────────── */}
       <ScrollFadeHero className="relative z-20 w-full">
-        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8 pt-24 pb-10 sm:pb-16 md:pt-28 md:pb-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-24 pb-16 md:pt-28 md:pb-20">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -49,7 +49,7 @@ export default function Hero() {
             </motion.span>
 
             {/* Headline */}
-            <h1 className="text-[clamp(2.4rem,10vw,3.5rem)] sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.1] mb-5 sm:mb-6 min-h-[7.25rem] sm:min-h-[150px]">
+            <h1 className="text-[clamp(2rem,8.5vw,3rem)] sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.1] mb-6 min-h-[6.75rem] sm:min-h-[150px]">
               <span className="text-foreground block">
                 <ScrambleText text={t("headline")} delay={0.2} />
               </span>
@@ -66,15 +66,14 @@ export default function Hero() {
             </p>
 
             {/* CTAs */}
-            <div className="flex w-full flex-col sm:flex-row items-stretch sm:items-start gap-4 mb-10 sm:mb-14">
-              <Button href="/contact" size="md" className="w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row items-start gap-4 mb-14">
+              <Button href="/contact" size="md">
                 {t("ctaPrimary")}
               </Button>
               <Button
                 href={WHATSAPP_URL}
                 variant="secondary"
                 size="md"
-                className="w-full sm:w-auto"
                 external
               >
                 {t("ctaSecondary")}
@@ -82,7 +81,7 @@ export default function Hero() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 sm:gap-6 pt-7 sm:pt-8 border-t border-white/10">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-8 border-t border-white/10">
               {stats.map((stat, i) => (
                 <motion.div
                   key={stat.label}
