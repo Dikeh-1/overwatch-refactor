@@ -47,7 +47,7 @@
 html {
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
   scroll-behavior: smooth;
 }
 
@@ -63,7 +63,7 @@ body {
   font-family: var(--font-inter);
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 main {
@@ -399,7 +399,7 @@ body #zsiq_maint {
 
 /* Ensure body doesn't hide the widget */
 body {
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 @media (max-width: 767px) {

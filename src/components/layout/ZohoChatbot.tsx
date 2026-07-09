@@ -5,58 +5,53 @@ import { useEffect } from "react";
 type ZohoWindow = Window & {
   $zoho?: {
     salesiq?: {
+      ready?: () => void;
       widgetcode?: string;
     };
   };
 };
 
+const ZOHO_WIDGET_SRC =
+  "https://salesiq.zohopublic.com/widget?wc=siq80b8b734cb6cc48334e01ab8c29da76f4ecfcbad2ed2ade5b18c142f9ec357da";
+
 export default function ZohoChatbot() {
   useEffect(() => {
-    // Zoho SalesIQ Chat Widget Integration
     const loadZohoChat = () => {
-      if (typeof window !== "undefined") {
-        console.log("Loading Zoho SalesIQ widget...");
-        
-        // First script: Initialize $zoho object
-        const inlineScript = document.createElement("script");
-        inlineScript.textContent = `
-          window.$zoho = window.$zoho || {};
-          $zoho.salesiq = $zoho.salesiq || { ready: function() {} };
-          console.log("Zoho $zoho object initialized");
-        `;
-        document.head.appendChild(inlineScript);
+      if (document.getElementById("zsiqscript")) return;
 
-        // Second script: Load the widget
-        const widgetScript = document.createElement("script");
-        widgetScript.id = "zsiqscript";
-        widgetScript.src = "https://salesiq.zohopublic.com/widget?wc=siq80b8b734cb6cc4833";
-        widgetScript.async = true;
-        widgetScript.defer = true;
-        
-        widgetScript.onload = () => {
-          console.log("Zoho SalesIQ widget script loaded successfully");
-          console.log(
-            "Widget code:",
-            (window as ZohoWindow).$zoho?.salesiq?.widgetcode,
-          );
-        };
-        
-        widgetScript.onerror = (error) => {
-          console.error("Failed to load Zoho SalesIQ widget:", error);
-        };
-        
-        document.body.appendChild(widgetScript);
-      }
+      const zohoWindow = window as ZohoWindow;
+      zohoWindow.$zoho = zohoWindow.$zoho || {};
+      zohoWindow.$zoho.salesiq = zohoWindow.$zoho.salesiq || {
+        ready: () => {},
+      };
+
+      const widgetScript = document.createElement("script");
+      widgetScript.id = "zsiqscript";
+      widgetScript.src = ZOHO_WIDGET_SRC;
+      widgetScript.async = true;
+      widgetScript.defer = true;
+      document.body.appendChild(widgetScript);
     };
 
-    loadZohoChat();
+    const scheduleLoad = () => {
+      const loadWhenIdle =
+        window.requestIdleCallback ||
+        ((callback: IdleRequestCallback) =>
+          window.setTimeout(() => callback({ didTimeout: false, timeRemaining: () => 0 }), 1));
+
+      loadWhenIdle(loadZohoChat, { timeout: 3000 });
+    };
+
+    if (document.readyState === "complete") {
+      scheduleLoad();
+    } else {
+      window.addEventListener("load", scheduleLoad, { once: true });
+    }
 
     return () => {
-      // Cleanup
-      const widgetScript = document.getElementById("zsiqscript");
-      if (widgetScript) widgetScript.remove();
+      window.removeEventListener("load", scheduleLoad);
     };
   }, []);
 
-  return null; // This component doesn't render anything visible
+  return null;
 }

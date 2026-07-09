@@ -56,25 +56,42 @@ const totalItems = storytellingItems.length;
 
 function SectionIntro({ id }: { id: string }) {
   return (
-    <div className="mx-auto max-w-3xl text-center">
+    <div className="mx-auto max-w-4xl text-center">
       <h2
         id={id}
-        className="text-[clamp(2rem,4vw,3.5rem)] font-bold leading-[1.08] text-foreground"
+        className="text-[clamp(1.75rem,3vw,2.9rem)] font-bold leading-[1.08] text-foreground"
       >
         {sectionTitle}
       </h2>
-      <p className="mx-auto mt-4 max-w-2xl text-[clamp(1rem,1.6vw,1.25rem)] leading-relaxed text-muted">
+      <p className="mx-auto mt-3 max-w-2xl text-[clamp(0.98rem,1.2vw,1.12rem)] leading-relaxed text-muted">
         {sectionDescription}
       </p>
     </div>
   );
 }
 
+function ProgressDots({ activeIndex }: { activeIndex: number }) {
+  return (
+    <div
+      className="flex items-center gap-2"
+      aria-label={`Why Businesses Choose Overwatch progress: ${activeIndex + 1} of ${totalItems}`}
+    >
+      {storytellingItems.map((item, index) => (
+        <span
+          key={item.id}
+          className={`h-2 rounded-full transition-all duration-300 ${
+            index === activeIndex ? "w-9 bg-accent" : "w-2 bg-slate-400/35"
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
+
 export default function WhyChoose() {
-  const desktopSectionRef = useRef<HTMLDivElement>(null);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const desktopSectionRef = useRef<HTMLElement>(null);
   const prefersReducedMotion = useReducedMotion();
-  const activeItem = storytellingItems[activeIndex];
+  const [activeIndex, setActiveIndex] = useState(0);
 
   const { scrollYProgress } = useScroll({
     target: desktopSectionRef,
@@ -82,127 +99,111 @@ export default function WhyChoose() {
   });
 
   useMotionValueEvent(scrollYProgress, "change", (latest) => {
-    const nextIndex = Math.min(totalItems - 1, Math.floor(latest * totalItems));
+    const nextIndex = Math.min(
+      totalItems - 1,
+      Math.max(0, Math.floor(latest * totalItems)),
+    );
+
     setActiveIndex((currentIndex) =>
       currentIndex === nextIndex ? currentIndex : nextIndex,
     );
   });
+
+  const activeItem = storytellingItems[activeIndex];
 
   return (
     <>
       <section
         ref={desktopSectionRef}
         aria-labelledby="why-choose-title"
-        className="relative hidden bg-primary-darker lg:block lg:min-h-[420svh]"
+        className="relative hidden bg-primary-darker lg:block lg:min-h-[500svh]"
       >
-        <div className="sticky top-0 flex min-h-[100svh] w-full items-center py-16 xl:py-20">
+        <div className="sticky top-0 flex min-h-[100svh] w-full items-center py-8 xl:py-10">
           <div className="absolute inset-0 bg-gradient-to-b from-primary-darker via-primary-dark/55 to-primary-darker" />
           <div className="absolute inset-0 bg-[radial-gradient(at_center_top,rgba(96,165,250,0.08)_0%,transparent_50%)]" />
 
-          <div className="relative z-10 mx-auto grid w-full max-w-7xl gap-8 px-6 lg:px-8">
+          <div className="relative z-10 mx-auto grid w-full max-w-7xl gap-5 px-6 lg:px-8 xl:gap-6">
             <SectionIntro id="why-choose-title" />
 
-            <div className="relative">
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.article
-                  key={activeItem.id}
-                  initial={
-                    prefersReducedMotion ? false : { opacity: 0, y: 18 }
-                  }
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -18 }}
-                  transition={{
-                    duration: prefersReducedMotion ? 0 : 0.35,
-                    ease: "easeOut",
-                  }}
-                  className="grid w-full items-center gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)] lg:gap-12 xl:gap-16"
-                >
-                  <div className="relative aspect-[16/10] min-h-64 w-full overflow-hidden rounded-lg shadow-2xl shadow-black/50 ring-1 ring-white/10 lg:h-[clamp(16rem,40svh,32rem)] lg:aspect-auto">
-                    <Image
-                      src={activeItem.image}
-                      alt={activeItem.title}
-                      fill
-                      className="object-cover"
-                      sizes="(min-width: 1280px) 650px, 52vw"
-                      quality={72}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-tr from-primary-darker/55 to-transparent" />
-                  </div>
+            <AnimatePresence initial={false} mode="wait">
+              <motion.article
+                key={activeItem.id}
+                initial={
+                  prefersReducedMotion ? false : { opacity: 0, y: 18 }
+                }
+                animate={{ opacity: 1, y: 0 }}
+                exit={prefersReducedMotion ? undefined : { opacity: 0, y: -18 }}
+                transition={{ duration: 0.32, ease: "easeOut" }}
+                className="grid w-full min-w-0 items-center gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)] lg:gap-8 xl:gap-12"
+              >
+                <div className="relative aspect-[16/10] w-full overflow-hidden rounded-lg shadow-2xl shadow-black/45 ring-1 ring-white/10 lg:aspect-auto lg:h-[clamp(13rem,34svh,26rem)]">
+                  <Image
+                    src={activeItem.image}
+                    alt={activeItem.title}
+                    fill
+                    priority={activeIndex === 0}
+                    quality={72}
+                    className="object-cover"
+                    sizes="(min-width: 1280px) 650px, 52vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-tr from-primary-darker/55 to-transparent" />
+                </div>
 
-                  <div className="max-w-2xl">
-                    <h3 className="text-[clamp(1.75rem,3vw,3.4rem)] font-bold leading-[1.1] text-foreground">
-                      {activeItem.title}
-                    </h3>
-                    <p className="mt-5 text-[clamp(1rem,1.45vw,1.25rem)] font-medium leading-[1.65] text-muted">
-                      {activeItem.description}
-                    </p>
-
-                    <div
-                      className="mt-8 flex items-center gap-3"
-                      aria-label="Why Businesses Choose Overwatch progress"
-                    >
-                      {storytellingItems.map((item, index) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => setActiveIndex(index)}
-                          aria-label={`Show ${item.title}`}
-                          aria-current={index === activeIndex ? "step" : undefined}
-                          className={`h-2.5 rounded-full transition-all duration-300 ${
-                            index === activeIndex
-                              ? "w-10 bg-accent"
-                              : "w-2.5 bg-slate-400/35 hover:bg-slate-300/70"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </motion.article>
-              </AnimatePresence>
-            </div>
+                <div className="min-w-0 max-w-2xl">
+                  <ProgressDots activeIndex={activeIndex} />
+                  <h3 className="mt-4 text-[clamp(1.45rem,2.4vw,2.75rem)] font-bold leading-[1.08] text-foreground">
+                    {activeItem.title}
+                  </h3>
+                  <p className="mt-4 text-[clamp(0.95rem,1.12vw,1.08rem)] font-medium leading-[1.58] text-muted">
+                    {activeItem.description}
+                  </p>
+                </div>
+              </motion.article>
+            </AnimatePresence>
           </div>
         </div>
       </section>
 
       <section
-        aria-labelledby="why-choose-mobile-title"
+        aria-labelledby="why-choose-title-mobile"
         className="relative bg-primary-darker px-4 py-16 pb-28 sm:px-6 lg:hidden"
       >
         <div className="absolute inset-0 bg-gradient-to-b from-primary-darker via-primary-dark/55 to-primary-darker" />
         <div className="absolute inset-0 bg-[radial-gradient(at_center_top,rgba(96,165,250,0.08)_0%,transparent_50%)]" />
 
         <div className="relative z-10 mx-auto w-full max-w-3xl">
-          <SectionIntro id="why-choose-mobile-title" />
+          <SectionIntro id="why-choose-title-mobile" />
 
-          <div className="mt-12 grid gap-12">
-            {storytellingItems.map((item) => (
+          <div className="mt-10 grid gap-12">
+            {storytellingItems.map((item, index) => (
               <motion.article
                 key={item.id}
-                initial={prefersReducedMotion ? false : { opacity: 0, y: 24 }}
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 22 }}
                 whileInView={
                   prefersReducedMotion ? undefined : { opacity: 1, y: 0 }
                 }
-                viewport={{ once: true, margin: "-80px" }}
-                transition={{ duration: 0.45, ease: "easeOut" }}
-                className="w-full"
+                viewport={{ once: true, amount: 0.35 }}
+                transition={{ duration: 0.38, ease: "easeOut" }}
+                className="grid min-w-0 gap-5"
               >
-                <div className="relative aspect-[16/10] w-full overflow-hidden rounded-lg shadow-xl shadow-black/40 ring-1 ring-white/10">
+                <div className="relative aspect-[16/10] w-full overflow-hidden rounded-lg shadow-2xl shadow-black/40 ring-1 ring-white/10">
                   <Image
                     src={item.image}
                     alt={item.title}
                     fill
-                    className="object-cover"
-                    sizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) min(42rem, calc(100vw - 3rem)), 650px"
+                    priority={index === 0}
                     quality={72}
+                    className="object-cover"
+                    sizes="(max-width: 639px) calc(100vw - 2rem), min(42rem, calc(100vw - 3rem))"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-primary-darker/70 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-tr from-primary-darker/55 to-transparent" />
                 </div>
 
-                <div className="mt-5">
-                  <h3 className="text-[clamp(1.5rem,7vw,2.25rem)] font-bold leading-[1.12] text-foreground">
+                <div className="min-w-0">
+                  <h3 className="text-[clamp(1.45rem,6vw,2.15rem)] font-bold leading-[1.12] text-foreground">
                     {item.title}
                   </h3>
-                  <p className="mt-4 text-[clamp(1rem,4.5vw,1.125rem)] font-medium leading-relaxed text-muted">
+                  <p className="mt-4 text-[clamp(1rem,4.4vw,1.1rem)] font-medium leading-relaxed text-muted">
                     {item.description}
                   </p>
                 </div>
