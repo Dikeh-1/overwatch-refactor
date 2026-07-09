@@ -48,20 +48,11 @@ export default async function LocaleLayout({ children, params }: Props) {
           src="https://salesiq.zohopublic.com/widget?wc=siq80b8b734cb6cc48334e01ab8c29da76f4ecfcbad2ed2ade5b18c142f9ec357da"
           strategy="afterInteractive"
         />
-        <script
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  var theme = localStorage.getItem('theme');
-                  if (!theme) {
-                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                  }
-                  document.documentElement.classList.remove('dark', 'light');
-                  document.documentElement.classList.add(theme);
-                } catch(e) {}
-              })();
-            `,
+            __html: `(function(){try{var savedTheme=localStorage.getItem('theme');var themeVersion=localStorage.getItem('theme_version');var prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;var theme=themeVersion==='2'&&savedTheme?savedTheme:(prefersDark?'dark':'light');document.documentElement.classList.remove('dark','light');if(theme==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();`,
           }}
         />
         <ThemeProvider>
