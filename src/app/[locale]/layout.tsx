@@ -34,11 +34,14 @@ export default async function LocaleLayout({ children, params }: Props) {
       className="h-full"
       suppressHydrationWarning
     >
-      <head />
+      <head>
+        <link rel="preconnect" href="https://salesiq.zohopublic.com" />
+        <link rel="dns-prefetch" href="https://salesiq.zohopublic.com" />
+      </head>
       <body className="min-h-full flex flex-col bg-background text-foreground antialiased">
         <Script
           id="zoho-init"
-          strategy="beforeInteractive"
+          strategy="lazyOnload"
           dangerouslySetInnerHTML={{
             __html: `window.$zoho=window.$zoho || {};$zoho.salesiq=$zoho.salesiq||{ready:function(){}}`
           }}
@@ -46,7 +49,7 @@ export default async function LocaleLayout({ children, params }: Props) {
         <Script
           id="zoho-script"
           src="https://salesiq.zohopublic.com/widget?wc=siq80b8b734cb6cc48334e01ab8c29da76f4ecfcbad2ed2ade5b18c142f9ec357da"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
         <Script
           id="theme-init"

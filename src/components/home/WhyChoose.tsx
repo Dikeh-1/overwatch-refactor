@@ -41,14 +41,14 @@ const storytellingItems = [
     title: "Strengthen Accountability",
     description:
       "When a site is monitored actively, staff and guards know that critical areas are being watched and incidents are being recorded. This improves accountability and reduces reliance on manual reporting alone.",
-    image: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&q=80",
+    image: "/monitoring.jpg",
   },
   {
     id: "protection",
     title: "Protect Stock, Assets, and Operations",
     description:
       "For businesses with high-value inventory, vehicles, equipment, or cash flow, delayed detection can be expensive. Overwatch helps protect your operational continuity by reducing blind spots and improving incident escalation.",
-    image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&q=80",
+    image: "/business-bg.jpg",
   },
 ];
 
@@ -124,8 +124,8 @@ export default function WhyChoose() {
                       fill
                       className="object-cover"
                       sizes="(min-width: 1280px) 650px, 52vw"
+                      quality={72}
                       priority={activeIndex === 0}
-                      unoptimized={activeItem.image.startsWith("http")}
                     />
                     <div className="absolute inset-0 bg-gradient-to-tr from-primary-darker/55 to-transparent" />
                   </div>
@@ -194,8 +194,8 @@ export default function WhyChoose() {
                     fill
                     className="object-cover"
                     sizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) min(42rem, calc(100vw - 3rem)), 650px"
+                    quality={72}
                     priority={index === 0}
-                    unoptimized={item.image.startsWith("http")}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-primary-darker/70 to-transparent" />
                 </div>

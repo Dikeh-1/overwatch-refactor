@@ -189,20 +189,20 @@ body {
 
 .particle-field {
   background-image:
-    radial-gradient(circle at 18% 24%, rgba(255, 255, 255, 0.42) 0 1px, transparent 2px),
-    radial-gradient(circle at 72% 18%, rgba(255, 255, 255, 0.32) 0 1px, transparent 2px),
-    radial-gradient(circle at 34% 68%, rgba(255, 255, 255, 0.28) 0 1px, transparent 2px),
-    radial-gradient(circle at 86% 74%, rgba(255, 255, 255, 0.34) 0 1px, transparent 2px);
-  background-size: 180px 180px, 220px 220px, 260px 260px, 200px 200px;
-  opacity: 0.45;
+    radial-gradient(circle at 18% 24%, rgba(255, 255, 255, 0.8) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 72% 18%, rgba(255, 255, 255, 0.6) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 34% 68%, rgba(255, 255, 255, 0.5) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 86% 74%, rgba(255, 255, 255, 0.65) 0 1.5px, transparent 2.5px);
+  background-size: 150px 150px, 190px 190px, 230px 230px, 170px 170px;
+  opacity: 0.8;
 }
 
 .particle-lines {
   background-image:
-    linear-gradient(115deg, transparent 0 46%, rgba(255, 255, 255, 0.06) 46% 47%, transparent 47% 100%),
-    linear-gradient(65deg, transparent 0 48%, rgba(255, 255, 255, 0.04) 48% 49%, transparent 49% 100%);
+    linear-gradient(115deg, transparent 0 46%, rgba(255, 255, 255, 0.1) 46% 47%, transparent 47% 100%),
+    linear-gradient(65deg, transparent 0 48%, rgba(255, 255, 255, 0.07) 48% 49%, transparent 49% 100%);
   background-size: 240px 180px, 260px 220px;
-  opacity: 0.35;
+  opacity: 0.55;
   mask-image: radial-gradient(ellipse at 45% 45%, black 0%, transparent 72%);
 }
 
@@ -365,21 +365,13 @@ body {
   background: rgba(255, 255, 255, 0.25);
 }
 
-/* Ensure Zoho SalesIQ widget is visible and properly positioned */
-#zsiq-siq80b8b734cb6cc4833,
-#zsiq-float,
-#zsiq-float-full,
-[id*="zsiq"] {
-  z-index: 999999 !important;
-  position: fixed !important;
-}
-
+/* Keep Zoho above the page without overriding its internal layout. */
 body .zsiq_floatmain,
 body .zsiq_float,
-body [id*="zsiq_float"],
+body #zsiq_float,
+body #zsiq_float-full,
 body #zsiq_maint {
-  bottom: 40px !important;
-  right: 20px !important;
+  z-index: 60 !important;
 }
 
 /* Ensure body doesn't hide the widget */
