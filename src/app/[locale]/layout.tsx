@@ -1,24 +1,13 @@
-import { Inter, Geist_Mono } from "next/font/google";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import ScrollToTop from "@/components/ui/ScrollToTop";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import Script from "next/script";
 import "../globals.css";
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 type Props = {
   children: React.ReactNode;
@@ -42,10 +31,23 @@ export default async function LocaleLayout({ children, params }: Props) {
   return (
     <html
       lang={locale}
-      className={`${inter.variable} ${geistMono.variable} h-full`}
+      className="h-full"
       suppressHydrationWarning
     >
+      <head />
       <body className="min-h-full flex flex-col bg-background text-foreground antialiased">
+        <Script
+          id="zoho-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `window.$zoho=window.$zoho || {};$zoho.salesiq=$zoho.salesiq||{ready:function(){}}`
+          }}
+        />
+        <Script
+          id="zoho-script"
+          src="https://salesiq.zohopublic.com/widget?wc=siq80b8b734cb6cc48334e01ab8c29da76f4ecfcbad2ed2ade5b18c142f9ec357da"
+          strategy="afterInteractive"
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -67,26 +69,9 @@ export default async function LocaleLayout({ children, params }: Props) {
             <Navbar />
             <main className="flex-1">{children}</main>
             <Footer />
+            <ScrollToTop />
           </NextIntlClientProvider>
         </ThemeProvider>
-
-        {/* Zoho SalesIQ Chat Widget */}
-        <Script id="zoho-init" strategy="beforeInteractive">
-          {`
-    window.$zoho = window.$zoho || {};
-    $zoho.salesiq = $zoho.salesiq || {
-      widgetcode: "siq80b8b734cb6cc4833",   // ← This was missing
-      values: {},
-      ready: function() {}
-    };
-  `}
-        </Script>
-
-        <Script
-          id="zsiqscript"
-          src="https://salesiq.zohopublic.com/widget?wc=siq80b8b734cb6cc4833"
-          strategy="afterInteractive"
-        />
       </body>
     </html>
   );

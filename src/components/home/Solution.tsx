@@ -25,16 +25,19 @@ export default function Solution() {
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
-            className="relative aspect-[4/5] rounded-xl overflow-hidden border border-border lg:sticky lg:top-28"
+            className="lg:sticky lg:top-28"
           >
-            <Image
-              src={IMAGES.process}
-              alt=""
-              fill
-              className="object-cover"
-              sizes="(max-width: 1024px) 100vw, 50vw"
-            />
-            <div className="absolute inset-0 bg-primary-dark/20" />
+            <div className="relative aspect-[4/5] rounded-xl overflow-hidden border border-border">
+              <Image
+                src={IMAGES.process}
+                alt=""
+                fill
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                unoptimized
+              />
+              <div className="absolute inset-0 bg-primary-dark/20" />
+            </div>
           </motion.div>
 
           <div className="space-y-4">

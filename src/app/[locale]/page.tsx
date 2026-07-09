@@ -43,7 +43,6 @@ export default async function HomePage({ params }: Props) {
   const Comparison = (await import("@/components/home/Comparison")).default;
   const GuardingAngle = (await import("@/components/home/GuardingAngle")).default;
   const Pricing = (await import("@/components/home/Pricing")).default;
-  const VideoShowcase = (await import("@/components/home/VideoShowcase")).default;
   const CTABanner = (await import("@/components/home/CTABanner")).default;
   const CertificationBar = (await import("@/components/home/CertificationBar")).default;
 
@@ -56,7 +55,6 @@ export default async function HomePage({ params }: Props) {
       <Comparison />
       <GuardingAngle />
       <Pricing />
-      <VideoShowcase />
       <CTABanner />
       <CertificationBar />
     </>

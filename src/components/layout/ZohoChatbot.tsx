@@ -2,6 +2,14 @@
 
 import { useEffect } from "react";
 
+type ZohoWindow = Window & {
+  $zoho?: {
+    salesiq?: {
+      widgetcode?: string;
+    };
+  };
+};
+
 export default function ZohoChatbot() {
   useEffect(() => {
     // Zoho SalesIQ Chat Widget Integration
@@ -27,7 +35,10 @@ export default function ZohoChatbot() {
         
         widgetScript.onload = () => {
           console.log("Zoho SalesIQ widget script loaded successfully");
-          console.log("Widget code:", (window as any).$zoho?.salesiq?.widgetcode);
+          console.log(
+            "Widget code:",
+            (window as ZohoWindow).$zoho?.salesiq?.widgetcode,
+          );
         };
         
         widgetScript.onerror = (error) => {

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
-import { Mail, Phone, MapPin } from "lucide-react";
 import ContactForm from "@/components/shared/ContactForm";
+import FadeIn from "@/components/animations/FadeIn";
+import ContactParticles from "@/components/animations/ContactParticles";
+import GlowCard from "@/components/ui/GlowCard";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -28,43 +29,56 @@ export default async function ContactPage({ params }: Props) {
 
   return (
     <>
-      {/* HERO SECTION */}
-      <section className="relative pt-24 md:pt-32 pb-16 md:pb-24 flex items-center overflow-hidden">
-        {/* Background Image */}
-        <div className="absolute inset-0">
-          <Image
-            src="/contact.jpg"
-            alt="Contact Background"
-            fill
-            className="object-cover"
-            priority
-            sizes="100vw"
-            quality={90}
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/70 to-black/60" />
-          <div className="absolute inset-0 bg-gradient-to-b from-primary-dark/50 via-transparent to-transparent" />
-          <div className="absolute inset-0 bg-[radial-gradient(at_center,#4f46e520_0%,transparent_50%)]" />
+      {/* HERO SECTION — permanently dark so transparent navbar remains visible */}
+      <section className="relative pt-24 md:pt-32 pb-20 bg-primary-dark overflow-hidden dark">
+        {/* Interactive Background */}
+        <div className="absolute inset-0 z-0 opacity-40">
+          <ContactParticles />
         </div>
 
-        {/* Content */}
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-10">
-          <div className="max-w-4xl">
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-white mb-4 drop-shadow-xl">
-              {t("title")}
-            </h1>
-            <p className="text-lg md:text-xl leading-relaxed text-white/90 whitespace-pre-line font-medium drop-shadow-md">
-              {t("description")}
-            </p>
-            {/* Contact info cards */}
+        <FadeIn direction="up" delay={0.1} className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+            {/* Left Column: Heading & Intro */}
+            <div className="text-left space-y-6">
+              <p className="text-accent text-sm font-semibold uppercase tracking-wider">
+                {t("label")}
+              </p>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight">
+                {t("title")}
+              </h1>
+              <p className="text-lg md:text-xl text-muted leading-relaxed max-w-lg">
+                {t("description").split('\n\n')[0]}
+              </p>
+            </div>
+
+            {/* Right Column: GlowCard List */}
+            <div className="text-left w-full max-w-xl mx-auto lg:mx-0">
+              <GlowCard techCorners={true} className="w-full p-8 md:p-10 group hover:-translate-y-2 transition-transform duration-500 bg-primary-darker/60 backdrop-blur-sm border-border/50">
+                {t("description").split('\n\n')[1].split('\n').map((line, j) => {
+                  const isBullet = line.trim().startsWith('•');
+                  const content = line.replace('•', '').trim();
+                  return (
+                    <div key={j} className={`mb-4 leading-relaxed ${isBullet ? 'flex items-start gap-4 group-hover:translate-x-1 transition-transform duration-300' : 'font-bold text-foreground mb-6 text-xl md:text-2xl'}`} style={{ transitionDelay: `${j * 50}ms` }}>
+                      {isBullet && <span className="text-accent shrink-0 mt-1.5">•</span>}
+                      <span className={isBullet ? "text-muted" : ""}>{content}</span>
+                    </div>
+                  );
+                })}
+              </GlowCard>
+            </div>
           </div>
-        </div>
+
+          <div className="mt-16 text-center text-lg md:text-xl text-foreground/90 font-medium">
+            <p>{t("description").split('\n\n')[2]}</p>
+          </div>
+        </FadeIn>
       </section>
 
-      {/* Contact Form Section */}
-      <section className="py-20 md:py-28 bg-primary-darker/50 border-t border-border">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      {/* Form Section — light background for clean legibility */}
+      <section className="py-20 bg-background overflow-hidden">
+        <FadeIn direction="up" delay={0.3} className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-10 w-full">
           <ContactForm />
-        </div>
+        </FadeIn>
       </section>
     </>
   );

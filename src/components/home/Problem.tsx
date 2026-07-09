@@ -1,10 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import SectionHeader from "@/components/ui/SectionHeader";
 import GlowCard from "@/components/ui/GlowCard";
+import ScrollReveal from "@/components/animations/ScrollReveal";
+import ParallaxImage from "@/components/animations/ParallaxImage";
 
 export default function Problem() {
   const t = useTranslations("problem");
@@ -14,15 +15,13 @@ export default function Problem() {
   return (
     <section id="about" className="py-20 md:py-28 bg-primary-darker/50">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <SectionHeader title={t("title")} />
+        <ScrollReveal direction="up">
+          <SectionHeader title={t("title")} />
+        </ScrollReveal>
 
         {/* Split Cards Grid */}
         <div className="grid md:grid-cols-2 gap-8 items-stretch mb-16">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
+          <ScrollReveal direction="left" delay={0.1}>
             <GlowCard techCorners={true} accentColor="gold" className="h-full flex flex-col justify-between">
               <div>
                 <h3 className="text-xl font-bold text-foreground mb-4 glow-text">
@@ -41,15 +40,10 @@ export default function Problem() {
                 </ul>
               </div>
             </GlowCard>
-          </motion.div>
+          </ScrollReveal>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
-          >
-            <GlowCard techCorners={true} accentColor="red" className="h-full flex flex-col justify-between">
+          <ScrollReveal direction="right" delay={0.2}>
+            <GlowCard techCorners={true} accentColor="slate" className="h-full flex flex-col justify-between">
               <div>
                 <h3 className="text-xl font-bold text-foreground mb-4 glow-text">
                   {t("passiveCost.title")}
@@ -58,9 +52,9 @@ export default function Problem() {
                   {t("passiveCost.description")}
                 </p>
                 <ul className="space-y-2 mb-6">
-                  {passiveCost.map((item) => (
-                    <li key={item} className="flex items-start gap-2 text-sm text-foreground/80">
-                      <span className="text-red-500/80 shrink-0 mt-1">•</span>
+                  {passiveCost.map((item, index) => (
+                    <li key={index} className="flex items-start gap-2 text-sm text-foreground/80">
+                      <span className="text-muted/80 shrink-0 mt-1">•</span>
                       <span>{item}</span>
                     </li>
                   ))}
@@ -70,38 +64,35 @@ export default function Problem() {
                 {t("passiveCost.outro")}
               </div>
             </GlowCard>
-          </motion.div>
+          </ScrollReveal>
         </div>
 
         {/* Quote & Image Row */}
         <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-          >
+          <ScrollReveal direction="left" delay={0.1}>
             <blockquote className="border-l-2 border-accent pl-5 text-foreground/90 font-medium text-lg leading-relaxed whitespace-pre-line">
               {t("quote")}
             </blockquote>
-          </motion.div>
+          </ScrollReveal>
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            className="relative aspect-[4/3] rounded-xl overflow-hidden border border-border"
-          >
-            <Image
-              src="/monitoring.jpg"
-              alt=""
-              fill
-              className="object-cover"
-              sizes="(max-width: 1024px) 100vw, 50vw"
-            />
-            
-          </motion.div>
+          <ScrollReveal direction="right" delay={0.2}>
+            <ParallaxImage
+              className="relative aspect-[4/3] rounded-xl border border-border"
+              speed={0.15}
+            >
+              <Image
+                src="/monitoring.jpg"
+                alt=""
+                fill
+                className="object-cover rounded-xl"
+                sizes="(max-width: 1024px) 100vw, 50vw"
+              />
+            </ParallaxImage>
+          </ScrollReveal>
         </div>
       </div>
     </section>
   );
 }
+
+

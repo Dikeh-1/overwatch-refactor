@@ -7,6 +7,9 @@ import SectionHeader from "@/components/ui/SectionHeader";
 import GlowCard from "@/components/ui/GlowCard";
 import Button from "@/components/ui/Button";
 import CTABanner from "@/components/home/CTABanner";
+import ScrollReveal from "@/components/animations/ScrollReveal";
+import ParallaxImage from "@/components/animations/ParallaxImage";
+import ScrollFadeHero from "@/components/animations/ScrollFadeHero";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -36,10 +39,8 @@ export default async function HomesPage({ params }: Props) {
 
   return (
     <>
-      {/* HERO SECTION */}
-      <section className="relative min-h-[65vh] md:min-h-[550px] flex items-center overflow-hidden">
-        {/* Background Image */}
-        <div className="absolute inset-0">
+      <section className="relative min-h-[65vh] md:min-h-[550px] flex items-center overflow-hidden dark">
+        <ParallaxImage className="absolute inset-0" speed={0.2}>
           <Image
             src="/homes-bg.jpg"
             alt="Residential AI Surveillance"
@@ -49,50 +50,52 @@ export default async function HomesPage({ params }: Props) {
             sizes="100vw"
             quality={90}
           />
+        </ParallaxImage>
 
-          {/* Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/70 to-black/60" />
-          <div className="absolute inset-0 bg-gradient-to-b from-primary-dark/80 via-transparent to-transparent" />
-          <div className="absolute inset-0 bg-[radial-gradient(at_center,#4f46e520_0%,transparent_70%)]" />
-        </div>
+        {/* Overlays */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/70 to-black/60 z-10" />
+        <div className="absolute inset-0 bg-gradient-to-b from-primary-dark/80 via-transparent to-transparent z-10" />
+        <div className="absolute inset-0 bg-[radial-gradient(at_center,#4f46e520_0%,transparent_70%)] z-10" />
 
-        {/* Content */}
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-10">
-          <div className="max-w-4xl">
-            <SectionHeader
-              title={t("title")}
-              description={t("description")}
-              align="left"
-              variant="white"
-            />
-            <Button href="/contact" size="lg" className="mt-6">
-              {t("cta")}
-            </Button>
+        {/* Content fades on scroll */}
+        <ScrollFadeHero className="relative z-20 w-full">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="max-w-4xl">
+              <SectionHeader
+                title={t("title")}
+                description={t("description")}
+                align="left"
+                variant="white"
+              />
+              <Button href="/contact" size="lg" className="mt-6">
+                {t("cta")}
+              </Button>
+            </div>
           </div>
-        </div>
+        </ScrollFadeHero>
       </section>
 
-      {/* Features Section */}
+      {/* Features Section — staggered scroll reveal */}
       <section className="py-12 md:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-2 gap-6">
             {featureKeys.map((key, i) => {
               const Icon = featureIcons[i];
               return (
-                <GlowCard key={key}>
-                  <Icon className="text-accent mb-3" size={36} />
-                  <h3 className="text-xl font-bold text-foreground mb-2">
-                    {t(`features.${key}.title`)}
-                  </h3>
-                  <p className="text-muted leading-relaxed">
-                    {t(`features.${key}.description`)}
-                  </p>
-                </GlowCard>
+                <ScrollReveal key={key} direction="up" delay={i * 0.12}>
+                  <GlowCard>
+                    <Icon className="text-accent mb-3" size={36} />
+                    <h3 className="text-xl font-bold text-foreground mb-2">
+                      {t(`features.${key}.title`)}
+                    </h3>
+                    <p className="text-muted leading-relaxed">
+                      {t(`features.${key}.description`)}
+                    </p>
+                  </GlowCard>
+                </ScrollReveal>
               );
             })}
           </div>
-
-          {/* Detection Demo Box */}
         </div>
       </section>
 

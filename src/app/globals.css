@@ -3,19 +3,6 @@
 @variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #0a1428;
-  --foreground: #f0f4f8;
-  --primary-dark: #0a1428;
-  --primary-darker: #060e1a;
-  --accent: #c9a227;
-  --accent-dim: #a68520;
-  --accent-glow: rgba(201, 162, 39, 0.3);
-  --muted: #8892a4;
-  --border: rgba(201, 162, 39, 0.2);
-  --card: rgba(10, 20, 40, 0.8);
-}
-
-.light {
   --background: #f8f9fa;
   --foreground: #1a1a2e;
   --primary-dark: #ffffff;
@@ -26,6 +13,21 @@
   --muted: #6c757d;
   --border: rgba(26, 26, 46, 0.15);
   --card: rgba(255, 255, 255, 0.9);
+  --font-inter: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-geist-mono: "Geist Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+.dark {
+  --background: #0f1117;
+  --foreground: #ffffff;
+  --primary-dark: #0f1117;
+  --primary-darker: #161b27;
+  --accent: #ffffff;
+  --accent-dim: #e2e8f0;
+  --accent-glow: rgba(255, 255, 255, 0.1);
+  --muted: #94a3b8;
+  --border: #2e3a4e;
+  --card: #1e2535;
 }
 
 @theme inline {
@@ -49,34 +51,50 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-inter), system-ui, sans-serif;
+  font-family: var(--font-inter);
 }
 
 ::selection {
-  background: rgba(201, 162, 39, 0.3);
+  background: rgba(255, 255, 255, 0.2);
   color: #fff;
 }
 
-/* Tech grid background */
+/* Tech grid background — light mode uses subtle dark lines */
 .tech-grid {
   background-image:
-    linear-gradient(rgba(201, 162, 39, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(201, 162, 39, 0.04) 1px, transparent 1px);
+    linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
   background-size: 60px 60px;
 }
 
-/* Hex pattern overlay */
+/* Dark mode: white lines */
+.dark .tech-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px);
+}
+
+/* Hex pattern overlay — light mode uses dark hexagons */
 .hex-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%23c9a227' fill-opacity='0.03'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.34L0 12.66v2.34zm0 18.5L12.98 41v8h-2v-6.34L0 35.34v-1.66zM15 0v7.5L27.99 15H28v-2.34h-.01L17 6.34V0h-2zm0 49v-8l12.99-7.5H28v2.34h-.01L17 42.66V49h-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.03'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.34L0 12.66v2.34zm0 18.5L12.98 41v8h-2v-6.34L0 35.34v-1.66zM15 0v7.5L27.99 15H28v-2.34h-.01L17 6.34V0h-2zm0 49v-8l12.99-7.5H28v2.34h-.01L17 42.66V49h-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Dark mode: white hexagons */
+.dark .hex-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.34L0 12.66v2.34zm0 18.5L12.98 41v8h-2v-6.34L0 35.34v-1.66zM15 0v7.5L27.99 15H28v-2.34h-.01L17 6.34V0h-2zm0 49v-8l12.99-7.5H28v2.34h-.01L17 42.66V49h-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
 
 /* Glow effects */
 .glow-accent {
-  box-shadow: 0 0 10px rgba(201, 162, 39, 0.15), 0 0 20px rgba(201, 162, 39, 0.05);
+  box-shadow: 0 0 10px var(--accent-glow), 0 0 20px var(--accent-glow);
 }
 
 .glow-text {
-  text-shadow: 0 0 10px rgba(201, 162, 39, 0.25);
+  text-shadow: 0 0 10px rgba(26, 26, 46, 0.2);
+}
+
+.dark .glow-text {
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
 }
 
 /* Scan line animation */
@@ -91,7 +109,7 @@ body {
   inset: 0;
   background: linear-gradient(
     transparent 0%,
-    rgba(201, 162, 39, 0.04) 50%,
+    rgba(255, 255, 255, 0.04) 50%,
     transparent 100%
   );
   height: 100px;
@@ -101,13 +119,16 @@ body {
 
 /* Pulse ring */
 @keyframes pulse-ring {
-  0% { transform: scale(0.95); opacity: 0.7; }
-  50% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(0.95); opacity: 0.7; }
+  0% { transform: scale(0.8); opacity: 0.5; }
+  100% { transform: scale(2.5); opacity: 0; }
 }
-
-.pulse-ring {
-  animation: pulse-ring 3s ease-in-out infinite;
+.pulse-ring::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
 }
 
 /* Float animations */
@@ -140,16 +161,26 @@ body {
 /* Detection box overlay */
 .detection-box {
   border: 2px solid var(--accent);
-  box-shadow: 0 0 10px var(--accent-glow), inset 0 0 10px rgba(201, 162, 39, 0.1);
+}
+
+.glow-card {
+  box-shadow: 0 0 10px var(--accent-glow), inset 0 0 10px rgba(255, 255, 255, 0.05);
+}
+
+.glow-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.08) 0%, transparent 60%);
 }
 
 /* Gradient backgrounds */
 .bg-gradient-radial {
-  background: radial-gradient(ellipse at 50% 0%, rgba(201, 162, 39, 0.08) 0%, transparent 60%);
+  background: radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.08) 0%, transparent 60%);
 }
 
 .bg-gradient-hero {
-  background: linear-gradient(180deg, #0a1428 0%, #060e1a 50%, #0a1428 100%);
+  background: linear-gradient(180deg, #0f1117 0%, #161b27 50%, #0f1117 100%);
 }
 
 .light .bg-gradient-hero {
@@ -166,15 +197,145 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(201, 162, 39, 0.3);
+  background: rgba(255, 255, 255, 0.15);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(201, 162, 39, 0.5);
+  background: rgba(255, 255, 255, 0.25);
 }
 
-/* Ensure Zoho SalesIQ widget is visible */
+
+::selection {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+
+
+/* Hex pattern overlay */
+.hex-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.34L0 12.66v2.34zm0 18.5L12.98 41v8h-2v-6.34L0 35.34v-1.66zM15 0v7.5L27.99 15H28v-2.34h-.01L17 6.34V0h-2zm0 49v-8l12.99-7.5H28v2.34h-.01L17 42.66V49h-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Glow effects */
+.glow-accent {
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.1), 0 0 20px rgba(255, 255, 255, 0.05);
+}
+
+.glow-text {
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+/* Scan line animation */
+@keyframes scan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+.scan-line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    transparent 0%,
+    rgba(255, 255, 255, 0.04) 50%,
+    transparent 100%
+  );
+  height: 100px;
+  animation: scan 8s linear infinite;
+  pointer-events: none;
+}
+
+/* Pulse ring */
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+.pulse-ring::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+/* Float animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(5deg);
+  }
+}
+
+@keyframes float-slow {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-15px) rotate(-3deg);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: float-slow 8s ease-in-out infinite;
+}
+
+/* Detection box overlay */
+.detection-box {
+  border: 2px solid var(--accent);
+}
+
+.glow-card {
+  box-shadow: 0 0 10px var(--accent-glow), inset 0 0 10px rgba(255, 255, 255, 0.05);
+}
+
+.glow-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.08) 0%, transparent 60%);
+}
+
+/* Gradient backgrounds */
+.bg-gradient-radial {
+  background: radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.08) 0%, transparent 60%);
+}
+
+.bg-gradient-hero {
+  background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 50%, #f8f9fa 100%);
+}
+
+.dark .bg-gradient-hero {
+  background: linear-gradient(180deg, #0f1117 0%, #161b27 50%, #0f1117 100%);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--primary-darker);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Ensure Zoho SalesIQ widget is visible and properly positioned */
 #zsiq-siq80b8b734cb6cc4833,
 #zsiq-float,
 #zsiq-float-full,
@@ -183,7 +344,70 @@ body {
   position: fixed !important;
 }
 
+body .zsiq_floatmain,
+body .zsiq_float,
+body [id*="zsiq_float"],
+body #zsiq_maint {
+  bottom: 40px !important;
+  right: 20px !important;
+}
+
 /* Ensure body doesn't hide the widget */
 body {
   overflow-x: hidden;
+}
+
+/* ── HERO SECTION BACKGROUNDS ─────────────────────────────────── */
+/* Default (light mode) */
+.hero-bg {
+  background-image: url('/hero_light.png');
+  background-size: cover;
+  background-position: right center;
+  background-repeat: no-repeat;
+}
+
+.hero-overlay {
+  background:
+    linear-gradient(to right, #f4f6f9 38%, rgba(244,246,249,0.82) 62%, rgba(244,246,249,0.05) 100%),
+    linear-gradient(to top,   rgba(244,246,249,0.65) 0%, transparent 55%, rgba(244,246,249,0.25) 100%);
+}
+
+/* Dark mode overrides */
+.dark .hero-bg {
+  background-image: url('/hero_dark.png');
+  background-position: right center;
+}
+
+.dark .hero-overlay {
+  background:
+    linear-gradient(to right, #0f1117 40%, rgba(15,17,23,0.72) 65%, rgba(15,17,23,0.1) 100%),
+    linear-gradient(to top,   rgba(15,17,23,0.85) 0%, transparent 50%, rgba(15,17,23,0.3) 100%);
+}
+
+/* ── AUTOFILL FIXES ────────────────────────────────────────────── */
+/* Default (light mode) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+textarea:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  -webkit-text-fill-color: #1a1a2e !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Dark mode overrides for autofill */
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus,
+.dark input:-webkit-autofill:active,
+.dark textarea:-webkit-autofill,
+.dark textarea:-webkit-autofill:hover,
+.dark textarea:-webkit-autofill:focus,
+.dark textarea:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #0b1120 inset !important;
+  -webkit-text-fill-color: #ffffff !important;
 }

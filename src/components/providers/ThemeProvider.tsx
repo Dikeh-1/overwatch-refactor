@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 type Theme = "dark" | "light";
 
@@ -11,21 +17,53 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+function subscribeToHydration() {
+  return () => {};
+}
+
+function getClientSnapshot() {
+  return true;
+}
+
+function getServerSnapshot() {
+  return false;
+}
+
+function isTheme(value: string | null): value is Theme {
+  return value === "dark" || value === "light";
+}
+
+function getInitialTheme(): Theme {
+  if (typeof window === "undefined") {
+    return "light";
+  }
+
+  const savedTheme = localStorage.getItem("theme");
+  const themeVersion = localStorage.getItem("theme_version");
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+  if (themeVersion === "2" && isTheme(savedTheme)) {
+    return savedTheme;
+  }
+
+  return prefersDark ? "dark" : "light";
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("dark");
-  const [mounted, setMounted] = useState(false);
+  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  const mounted = useSyncExternalStore(
+    subscribeToHydration,
+    getClientSnapshot,
+    getServerSnapshot,
+  );
 
   useEffect(() => {
-    setMounted(true);
-    const savedTheme = localStorage.getItem("theme") as Theme | null;
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    
-    if (savedTheme) {
-      setTheme(savedTheme);
-    } else if (prefersDark) {
-      setTheme("dark");
-    } else {
-      setTheme("light");
+    const themeVersion = localStorage.getItem("theme_version");
+
+    // v2: light mode is now the default. Clear old saved dark preference from v1.
+    if (themeVersion !== "2") {
+      localStorage.removeItem("theme");
+      localStorage.setItem("theme_version", "2");
     }
   }, []);
 
@@ -33,8 +71,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (!mounted) return;
     
     const root = document.documentElement;
-    root.classList.remove("dark", "light");
-    root.classList.add(theme);
+    // Only .dark class is needed; :root handles light mode by default
+    if (theme === "dark") {
+      root.classList.add("dark");
+      root.classList.remove("light");
+    } else {
+      root.classList.remove("dark");
+      root.classList.remove("light");
+    }
     localStorage.setItem("theme", theme);
   }, [theme, mounted]);
 

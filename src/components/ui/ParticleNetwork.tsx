@@ -1,0 +1,88 @@
+"use client";
+
+import Particles, { ParticlesProvider } from "@tsparticles/react";
+import { useTheme } from "@/components/providers/ThemeProvider";
+import { initParticles } from "@/lib/particles";
+
+export default function ParticleNetwork() {
+  const { theme } = useTheme();
+
+  const isDark = theme === 'dark';
+  // Use pure white for particles in dark mode, slate for light mode
+  const particleColor = isDark ? "#ffffff" : "#0f1117";
+  const linkColor = isDark ? "#ffffff" : "#0f1117";
+  
+  return (
+    <ParticlesProvider init={initParticles}>
+      <Particles
+        id="tsparticles"
+        // Needs pointer events to detect mouse for the grab effect, 
+        // but placed at z-0 so it doesn't block z-20 Hero content clicks
+        className="absolute inset-0 z-0"
+        options={{
+          fullScreen: { enable: false }, // Prevent it from covering the whole page, just the container
+          background: {
+            color: {
+              value: "transparent",
+            },
+          },
+          fpsLimit: 120,
+          interactivity: {
+            events: {
+              onHover: {
+                enable: true,
+                mode: "grab",
+              },
+            },
+            modes: {
+              grab: {
+                distance: 250,
+                links: {
+                  opacity: isDark ? 0.7 : 0.4,
+                },
+              },
+            },
+          },
+          particles: {
+            color: {
+              value: particleColor,
+            },
+            links: {
+              color: linkColor,
+              distance: 150,
+              enable: true,
+              opacity: isDark ? 0.2 : 0.1,
+              width: 1,
+            },
+            move: {
+              direction: "none",
+              enable: true,
+              outModes: {
+                default: "bounce",
+              },
+              random: true,
+              speed: 0.6,
+              straight: false,
+            },
+            number: {
+              density: {
+                enable: true,
+              },
+              value: 80,
+            },
+            opacity: {
+              value: isDark ? 0.5 : 0.3,
+            },
+            shape: {
+              type: "circle",
+            },
+            size: {
+              value: { min: 1, max: 3 },
+            },
+          },
+          detectRetina: true,
+        }}
+      />
+    </ParticlesProvider>
+  );
+}

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Menu, X, ChevronDown } from "lucide-react";
-import { Link } from "@/i18n/navigation";
+import { Link, usePathname } from "@/i18n/navigation";
 import Logo from "@/components/ui/Logo";
 import Button from "@/components/ui/Button";
 import ThemeDropdown from "./ThemeDropdown";
@@ -43,7 +43,61 @@ export default function Navbar() {
   const t = useTranslations("nav");
   const tNavSections = useTranslations("navSections");
   const tMobile = useTranslations("mobileMenu");
+  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
+  const [currentHash, setCurrentHash] = useState(
+    typeof window === "undefined" ? "" : window.location.hash,
+  );
+
+  useEffect(() => {
+    const handleHashChange = () => setCurrentHash(window.location.hash);
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
+
+  // Scroll effect & Section Spy
+  useEffect(() => {
+    const onScroll = () => {
+      setScrolled(window.scrollY > 20);
+      if (window.scrollY < 100) {
+        setCurrentHash("");
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    // Intersection Observer for Pricing section
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setCurrentHash("#pricing");
+          }
+        });
+      },
+      { threshold: 0.2 }
+    );
+
+    const timeoutId = setTimeout(() => {
+      const pricingSection = document.getElementById("pricing");
+      if (pricingSection) observer.observe(pricingSection);
+    }, 500);
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      clearTimeout(timeoutId);
+      observer.disconnect();
+    };
+  }, []);
+
+  const isActive = (href: string) => {
+    if (href.startsWith("/#")) {
+      const targetHash = href.substring(1);
+      return pathname === "/" && currentHash === `#${targetHash}`;
+    }
+    if (href === "/") return pathname === "/" && !currentHash;
+    return pathname.startsWith(href);
+  };
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openDesktopDropdown, setOpenDesktopDropdown] = useState<string | null>(
     null,
@@ -53,12 +107,20 @@ export default function Navbar() {
   );
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Scroll effect
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string, isMobile = false) => {
+    if (href.includes("#") && pathname === "/") {
+      e.preventDefault();
+      const targetId = href.substring(href.indexOf("#") + 1);
+      const element = document.getElementById(targetId);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+        setCurrentHash(`#${targetId}`);
+      }
+    }
+    if (isMobile) {
+      closeMobileMenu();
+    }
+  };
 
   // Prevent body scroll when mobile menu is open
   useEffect(() => {
@@ -106,16 +168,17 @@ export default function Navbar() {
   };
 
   return (
-    <header
-      className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
-        scrolled
-          ? "bg-primary-dark/95 backdrop-blur-md border-b border-border shadow-lg"
-          : "bg-transparent",
-      )}
-    >
-      <nav
-        className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"
+    <>
+      <header
+        className={cn(
+          "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+          scrolled
+            ? "bg-primary-dark/95 backdrop-blur-md border-b border-border shadow-lg"
+            : "bg-transparent dark",
+        )}
+      >
+        <nav
+          className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"
         aria-label={t("aria.mainNav")}
       >
         <div className="flex h-16 md:h-20 items-center justify-between">
@@ -130,7 +193,13 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="group relative px-4 py-2 text-sm font-medium text-foreground/80 hover:text-accent transition-colors"
+                className={cn(
+                  "group relative px-4 py-2 text-sm font-medium transition-colors",
+                  isActive(link.href)
+                    ? "text-accent"
+                    : "text-foreground/80 hover:text-accent"
+                )}
+                onClick={(e) => handleNavClick(e, link.href)}
               >
                 {t(link.key)}
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-accent transition-all group-hover:w-full" />
@@ -144,7 +213,12 @@ export default function Navbar() {
                   onClick={() => handleDesktopDropdownClick(menu.titleKey)}
                   onMouseEnter={() => setOpenDesktopDropdown(menu.titleKey)}
                   onMouseLeave={() => setOpenDesktopDropdown(null)}
-                  className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-foreground/80 hover:text-accent transition-colors"
+                  className={cn(
+                    "flex items-center gap-1 px-4 py-2 text-sm font-medium transition-colors",
+                    menu.links.some((l) => isActive(l.href))
+                      ? "text-accent"
+                      : "text-foreground/80 hover:text-accent"
+                  )}
                   aria-expanded={openDesktopDropdown === menu.titleKey}
                   aria-haspopup="true"
                 >
@@ -172,8 +246,16 @@ export default function Navbar() {
                     <Link
                       key={link.href}
                       href={link.href}
-                      className="block px-4 py-2 text-sm text-foreground hover:text-accent hover:bg-accent/5 transition-colors"
-                      onClick={() => setOpenDesktopDropdown(null)}
+                      className={cn(
+                        "block px-4 py-2 text-sm hover:bg-accent/5 transition-colors",
+                        isActive(link.href)
+                          ? "text-accent"
+                          : "text-foreground hover:text-accent"
+                      )}
+                      onClick={(e) => {
+                        setOpenDesktopDropdown(null);
+                        handleNavClick(e, link.href);
+                      }}
                     >
                       <div className="font-medium">{t(link.key)}</div>
                       <div className="text-xs text-foreground/50">
@@ -190,7 +272,13 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="group relative px-4 py-2 text-sm font-medium text-accent hover:text-accent/80 transition-colors"
+                className={cn(
+                  "group relative px-4 py-2 text-sm font-medium transition-colors",
+                  isActive(link.href)
+                    ? "text-accent"
+                    : "text-foreground/80 hover:text-accent"
+                )}
+                onClick={(e) => handleNavClick(e, link.href)}
               >
                 {t(link.key)}
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-accent transition-all group-hover:w-full" />
@@ -220,8 +308,9 @@ export default function Navbar() {
           </div>
         </div>
       </nav>
+    </header>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu - Moved outside header to prevent backdrop-filter from creating a containing block that collapses its fixed height */}
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 top-16 bg-primary-dark/98 backdrop-blur-lg z-40 overflow-auto">
           <div className="flex flex-col p-6 gap-2">
@@ -230,8 +319,13 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="py-3 px-4 text-lg font-medium text-foreground hover:text-accent hover:bg-accent/5 rounded-lg transition-colors"
-                onClick={closeMobileMenu}
+                className={cn(
+                  "py-3 px-4 text-lg font-medium hover:bg-accent/5 rounded-lg transition-colors",
+                  isActive(link.href)
+                    ? "text-accent"
+                    : "text-foreground hover:text-accent"
+                )}
+                onClick={(e) => handleNavClick(e, link.href, true)}
               >
                 <div className="flex items-center justify-between">
                   <span>{t(link.key)}</span>
@@ -247,7 +341,12 @@ export default function Navbar() {
               <div key={menu.titleKey}>
                 <button
                   onClick={() => toggleMobileDropdown(menu.titleKey)}
-                  className="w-full py-3 px-4 text-lg font-semibold text-accent hover:bg-accent/5 rounded-lg transition-colors flex items-center justify-between"
+                  className={cn(
+                    "w-full py-3 px-4 text-lg font-semibold hover:bg-accent/5 rounded-lg transition-colors flex items-center justify-between",
+                    menu.links.some((l) => isActive(l.href))
+                      ? "text-accent"
+                      : "text-foreground hover:text-accent"
+                  )}
                   aria-expanded={openMobileDropdowns.has(menu.titleKey)}
                   aria-haspopup="true"
                 >
@@ -268,8 +367,13 @@ export default function Navbar() {
                       <Link
                         key={link.href}
                         href={link.href}
-                        className="block py-2 px-4 text-base font-medium text-foreground hover:text-accent hover:bg-accent/5 rounded transition-colors"
-                        onClick={closeMobileMenu}
+                        className={cn(
+                          "block py-2 px-4 text-base font-medium hover:bg-accent/5 rounded transition-colors",
+                          isActive(link.href)
+                            ? "text-accent"
+                            : "text-foreground hover:text-accent"
+                        )}
+                        onClick={(e) => handleNavClick(e, link.href, true)}
                       >
                         <div className="flex items-center justify-between">
                           <span>{t(link.key)}</span>
@@ -289,8 +393,13 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="py-3 px-4 text-lg font-medium text-accent hover:text-accent/80 hover:bg-accent/5 rounded-lg transition-colors"
-                onClick={closeMobileMenu}
+                className={cn(
+                  "py-3 px-4 text-lg font-medium hover:bg-accent/5 rounded-lg transition-colors",
+                  isActive(link.href)
+                    ? "text-accent"
+                    : "text-foreground hover:text-accent"
+                )}
+                onClick={(e) => handleNavClick(e, link.href, true)}
               >
                 <div className="flex items-center justify-between">
                   <span>{t(link.key)}</span>
@@ -325,6 +434,6 @@ export default function Navbar() {
           </div>
         </div>
       )}
-    </header>
+    </>
   );
 }

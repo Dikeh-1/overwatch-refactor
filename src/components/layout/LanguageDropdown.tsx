@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Globe, ChevronDown } from "lucide-react";
 import LanguageSwitcher from "./LanguageSwitcher";
-import { cn } from "@/lib/utils";
 
 export default function LanguageDropdown() {
   const [isOpen, setIsOpen] = useState(false);

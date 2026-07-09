@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import SectionHeader from "@/components/ui/SectionHeader";
 import FAQAccordion from "@/components/shared/FAQAccordion";
 import CTABanner from "@/components/home/CTABanner";
+import ScrollReveal from "@/components/animations/ScrollReveal";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -31,43 +31,28 @@ export default async function FAQPage({ params }: Props) {
 
   return (
     <>
-      {/* HERO SECTION - Matching Business Page Style */}
-      <section className="relative min-h-[50vh] md:min-h-[400px] flex items-center overflow-hidden">
-        {/* Background Image */}
-        <div className="absolute inset-0">
-          <Image
-            src="/faq-bg.jpg"
-            alt="FAQ Background"
-            fill
-            className="object-cover"
-            priority
-            sizes="100vw"
-            quality={90}
-          />
-
-          {/* Matching Overlays from Business Page */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/60 to-black/70" />
-          <div className="absolute inset-0 bg-gradient-to-b from-primary-dark/75 via-transparent to-transparent" />
-          <div className="absolute inset-0 bg-[radial-gradient(at_center,#4f46e520_0%,transparent_50%)]" />
-        </div>
-
-        {/* Content */}
+      <section className="relative pt-24 md:pt-32 pb-20 bg-primary-dark overflow-hidden dark">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-dark via-primary-darker to-primary-dark opacity-90" />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-10">
-          <div className="max-w-4xl">
+          <div className="max-w-3xl">
             <SectionHeader
               title={t("title")}
               description={t("description")}
               align="left"
-              variant="white"
+              as="h1"
             />
           </div>
         </div>
       </section>
 
-      {/* FAQ Content Section */}
-      <section className="py-8 md:py-8 bg-primary-darker/30 border-t border-border">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <FAQAccordion />
+      {/* Accordion Section — light background for clean legibility */}
+      <section className="py-20 bg-background overflow-hidden">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <ScrollReveal direction="up" delay={0.1}>
+            <div className="rounded-2xl border border-border bg-card p-6 md:p-8">
+              <FAQAccordion />
+            </div>
+          </ScrollReveal>
         </div>
       </section>
 

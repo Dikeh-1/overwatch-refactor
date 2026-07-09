@@ -7,6 +7,7 @@ type SectionHeaderProps = {
   align?: "left" | "center";
   variant?: "default" | "white";
   className?: string;
+  as?: "h1" | "h2" | "h3";
 };
 
 export default function SectionHeader({
@@ -16,8 +17,9 @@ export default function SectionHeader({
   align = "center",
   variant = "default",
   className,
+  as: Component = "h2",
 }: SectionHeaderProps) {
-  const textColor = variant === "white" ? "text-white" : "";
+  const textColor = variant === "white" ? "text-white" : "text-foreground";
   const mutedTextColor = variant === "white" ? "text-white/80" : "text-muted";
   const accentTextColor = variant === "white" ? "text-accent" : "text-accent";
 
@@ -35,9 +37,9 @@ export default function SectionHeader({
           {label}
         </span>
       )}
-      <h2 className={cn("text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-4", textColor)}>
+      <Component className={cn("text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-4", textColor)}>
         {title}
-      </h2>
+      </Component>
       {description && (
         <p className={cn("text-lg md:text-xl leading-relaxed whitespace-pre-line", mutedTextColor)}>
           {description}
