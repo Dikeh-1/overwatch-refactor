@@ -1,5 +1,17 @@
-const CACHE_NAME = "overwatch-app-v1";
-const PRECACHE_URLS = ["/en", "/logo.png", "/hero_dark.webp", "/app-icon-192.png"];
+const CACHE_NAME = "overwatch-app-v2";
+const PRECACHE_URLS = [
+  "/en",
+  "/logo.png",
+  "/hero_dark.webp",
+  "/monitoring.webp",
+  "/guard-sleeping.webp",
+  "/weapon-detection.webp",
+  "/surveillance-control-room.webp",
+  "/business-bg.webp",
+  "/business-bg-minimal.webp",
+  "/homes-bg.webp",
+  "/app-icon-192.png",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

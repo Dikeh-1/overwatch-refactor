@@ -8,14 +8,18 @@ const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 const ACCEPT_LABELS = new Set([
   "accept",
   "accept all",
+  "accept all cookies",
   "accept cookies",
   "agree",
   "allow all",
+  "allow cookies",
   "got it",
   "i accept",
   "ok",
   "aceitar",
+  "aceitar todos",
   "aceitar tudo",
+  "aceitar todos os cookies",
   "aceitar cookies",
   "concordo",
 ]);
@@ -25,6 +29,7 @@ function markCookieNoticeHandled() {
   window.localStorage.setItem("cookieconsent_status", "allow");
   window.localStorage.setItem("cookies_accepted", "true");
   window.localStorage.setItem("zoho_cookie_notice", COOKIE_VALUE);
+  window.sessionStorage.setItem(COOKIE_NAME, COOKIE_VALUE);
   document.cookie = `${COOKIE_NAME}=${COOKIE_VALUE}; path=/; max-age=${ONE_YEAR_SECONDS}; SameSite=Lax`;
   document.cookie = `cookieconsent_status=allow; path=/; max-age=${ONE_YEAR_SECONDS}; SameSite=Lax`;
 }
@@ -112,7 +117,10 @@ export default function AutoAcceptWidgetCookies() {
 
     if (acceptVisibleCookiePrompt()) return;
 
-    const retryDelays = [50, 150, 300, 600, 1000, 1500, 2500, 4000, 6500, 9000];
+    const retryDelays = [
+      50, 150, 300, 600, 1000, 1500, 2500, 4000, 6500, 9000, 13000, 18000,
+      24000, 32000, 42000,
+    ];
     const retryTimers = retryDelays.map((delay) =>
       window.setTimeout(acceptVisibleCookiePrompt, delay),
     );
@@ -130,7 +138,7 @@ export default function AutoAcceptWidgetCookies() {
     const stopWatching = window.setTimeout(() => {
       window.clearInterval(retryInterval);
       observer.disconnect();
-    }, 15000);
+    }, 45000);
 
     return () => {
       retryTimers.forEach((timer) => window.clearTimeout(timer));

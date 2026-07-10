@@ -3,18 +3,13 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
-const MOBILE_QUERY = "(max-width: 767px)";
-
 const CHARS = "!<>-_\\\\/[]{}—=+*^?#________";
 
 export default function ScrambleText({ text, delay = 0 }: { text: string; delay?: number }) {
   const [displayText, setDisplayText] = useState("");
 
   useEffect(() => {
-    if (
-      window.matchMedia(MOBILE_QUERY).matches ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    ) {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       const timeout = window.setTimeout(() => setDisplayText(text), 0);
       return () => window.clearTimeout(timeout);
     }

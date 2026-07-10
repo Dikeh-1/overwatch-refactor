@@ -50,8 +50,8 @@ export default async function LocaleLayout({ children, params }: Props) {
             <main className="flex-1">{children}</main>
             <Footer />
             <LaunchExperience />
-            <ZohoChatbot />
             <AutoAcceptWidgetCookies />
+            <ZohoChatbot />
             <ScrollToTop />
           </NextIntlClientProvider>
         </ThemeProvider>
