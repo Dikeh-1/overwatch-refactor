@@ -40,7 +40,7 @@ export default async function AboutPage({ params }: Props) {
         {/* Parallax Background Image */}
         <ParallaxImage className="absolute inset-0" speed={0.15}>
           <Image
-            src="/surveillance-control-room.webp"
+            src="/about-hero.webp"
             alt="Overwatch Control Center"
             fill
             className="object-cover"

@@ -75,7 +75,7 @@ export default async function ContactPage({ params }: Props) {
       </section>
 
       {/* Form Section — light background for clean legibility */}
-      <section className="py-20 bg-background overflow-hidden">
+      <section id="assessment-form" className="scroll-mt-24 py-20 bg-background overflow-hidden">
         <FadeIn direction="up" delay={0.3} className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-10 w-full">
           <ContactForm />
         </FadeIn>

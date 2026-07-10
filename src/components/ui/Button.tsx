@@ -102,6 +102,7 @@ export default function Button({
           rel="noopener noreferrer"
           ref={magnetRef as React.RefObject<HTMLAnchorElement>}
           style={magnetStyle}
+          onClick={() => onClick?.()}
           onMouseMove={onMouseMove}
           onMouseLeave={onMouseLeave}
           {...motionProps}
@@ -117,6 +118,7 @@ export default function Button({
         className={classes}
         ref={magnetRef as React.RefObject<HTMLAnchorElement>}
         style={magnetStyle}
+        onClick={() => onClick?.()}
         onMouseMove={onMouseMove}
         onMouseLeave={onMouseLeave}
         {...motionProps}

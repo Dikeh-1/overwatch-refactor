@@ -289,7 +289,7 @@ export default function Navbar() {
           <div className="hidden lg:flex items-center gap-3">
             <ThemeDropdown />
             <LanguageDropdown />
-            <Button href="/contact" size="sm">
+            <Button href="/contact#assessment-form" size="sm">
               {t("cta")}
             </Button>
           </div>
@@ -424,7 +424,7 @@ export default function Navbar() {
 
             <div className="mt-4 pt-4 border-t border-border">
               <Button
-                href="/contact"
+                href="/contact#assessment-form"
                 className="w-full"
                 onClick={closeMobileMenu}
               >
