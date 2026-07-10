@@ -60,8 +60,8 @@ export default async function BusinessPage({ params }: Props) {
       <section className="relative min-h-[65vh] md:min-h-[550px] flex items-center overflow-hidden dark">
         <ParallaxImage className="absolute inset-0" speed={0.2}>
           <Image
-            src="/business-bg-minimal.webp"
-            alt="AI Surveillance Background"
+            src="/business-bg.webp"
+            alt="Warehouse AI surveillance background"
             fill
             className="object-cover"
             preload
@@ -73,7 +73,7 @@ export default async function BusinessPage({ params }: Props) {
         <div className="absolute inset-0 bg-gradient-to-b from-primary-dark/80 via-transparent to-transparent z-10" />
         <div className="absolute inset-0 bg-[radial-gradient(at_center,#4f46e520_0%,transparent_70%)] z-10" />
 
-        <ScrollFadeHero className="relative z-20 w-full">
+        <ScrollFadeHero className="relative z-20 w-full translate-y-8 sm:translate-y-10">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-white">
             <div className="max-w-4xl">
               <SectionHeader

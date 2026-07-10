@@ -81,7 +81,7 @@ export default function Problem() {
               speed={0.15}
             >
               <Image
-                src="/monitoring.webp"
+                src="/security-problems.webp"
                 alt=""
                 fill
                 unoptimized
