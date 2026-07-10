@@ -60,13 +60,15 @@ export default function GuardingAngle() {
           {/* To State */}
           <ScrollReveal direction="right" delay={0.2} className="flex-1">
             <GlowCard techCorners={true} accentColor="cyan" className="h-full border-accent/30 bg-primary-darker/20 text-center p-8 flex flex-col items-center justify-center">
-              <ShieldCheck className="text-accent mb-4 animate-pulse" size={40} />
-              <span className="text-xs text-accent uppercase tracking-widest font-semibold mb-2 block">
-                {t("toLabel")}
-              </span>
-              <p className="text-2xl font-bold text-foreground">
-                {t("toText")}
-              </p>
+              <div className="-translate-y-3 md:-translate-y-4 flex flex-col items-center">
+                <ShieldCheck className="text-accent mb-4 animate-pulse" size={40} />
+                <span className="text-xs text-accent uppercase tracking-widest font-semibold mb-2 block">
+                  {t("toLabel")}
+                </span>
+                <p className="text-2xl font-bold text-foreground">
+                  {t("toText")}
+                </p>
+              </div>
             </GlowCard>
           </ScrollReveal>
         </div>
