@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import SectionHeader from "@/components/ui/SectionHeader";
@@ -32,7 +33,16 @@ export default async function FAQPage({ params }: Props) {
   return (
     <>
       <section className="relative pt-24 md:pt-32 pb-20 bg-primary-dark overflow-hidden dark">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-dark via-primary-darker to-primary-dark opacity-90" />
+        <Image
+          src="/faq-hero.webp"
+          alt=""
+          fill
+          className="object-cover"
+          preload
+          sizes="100vw"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-primary-dark via-primary-dark/85 to-primary-dark/55" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-dark/80 via-primary-darker/70 to-primary-dark/40" />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-10">
           <div className="max-w-3xl">
             <SectionHeader
