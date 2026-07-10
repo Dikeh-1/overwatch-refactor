@@ -6,9 +6,15 @@ type Props = { params: Promise<{ locale: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
+  const isPortuguese = locale === "pt";
+
   return {
-    title: "Privacy Policy | Overwatch",
-    description: "Privacy Policy for Overwatch Security and Surveillance.",
+    title: isPortuguese
+      ? "Política de Privacidade | OverWatch Moçambique"
+      : "Privacy Policy | OverWatch Mozambique",
+    description: isPortuguese
+      ? "Saiba como a OverWatch Moçambique protege dados pessoais, imagens CCTV, metadados de IA e informações recolhidas durante serviços de segurança."
+      : "Learn how OverWatch Mozambique protects personal data, CCTV footage, AI metadata, and information collected during security monitoring services.",
     alternates: {
       canonical: `/${locale}/privacy`,
       languages: Object.fromEntries(routing.locales.map((loc) => [loc, `/${loc}/privacy`])),

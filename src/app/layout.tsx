@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.overwatchmoz.com"),
-  title: "Overwatch | AI CCTV Monitoring & Virtual Guarding",
+  title: "OverWatch Mozambique | AI CCTV Monitoring & Virtual Guard Service",
   description:
-    "Turn existing CCTV into 24/7 active security. Overwatch helps businesses detect intrusions, suspicious activity, and site risks in real time.",
+    "OverWatch Mozambique provides 24/7 AI-powered CCTV monitoring, human-verified alerts, deterrence support, and incident reporting for businesses in Mozambique.",
   applicationName: "Overwatch",
   openGraph: {
-    title: "Overwatch | AI CCTV Monitoring & Virtual Guarding",
+    title: "OverWatch Mozambique | AI CCTV Monitoring & Virtual Guard Service",
     description:
-      "Turn existing CCTV into 24/7 active security. Overwatch helps businesses detect intrusions, suspicious activity, and site risks in real time.",
+      "OverWatch Mozambique provides 24/7 AI-powered CCTV monitoring, human-verified alerts, deterrence support, and incident reporting for businesses in Mozambique.",
     url: "/",
     siteName: "Overwatch",
     type: "website",
@@ -24,9 +24,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Overwatch | AI CCTV Monitoring & Virtual Guarding",
+    title: "OverWatch Mozambique | AI CCTV Monitoring & Virtual Guard Service",
     description:
-      "Turn existing CCTV into 24/7 active security. Overwatch helps businesses detect intrusions, suspicious activity, and site risks in real time.",
+      "OverWatch Mozambique provides 24/7 AI-powered CCTV monitoring, human-verified alerts, deterrence support, and incident reporting for businesses in Mozambique.",
     images: ["/overwatch-social-preview.png"],
   },
   appleWebApp: {

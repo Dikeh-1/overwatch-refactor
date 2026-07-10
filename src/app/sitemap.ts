@@ -3,7 +3,17 @@ import { routing } from "@/i18n/routing";
 
 const baseUrl = "https://www.overwatchmoz.com";
 
-const pages = ["", "/business", "/homes", "/about", "/faq", "/contact"];
+const pages = [
+  "",
+  "/business",
+  "/homes",
+  "/about",
+  "/faq",
+  "/contact",
+  "/careers",
+  "/privacy",
+  "/terms",
+];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return routing.locales.flatMap((locale) =>

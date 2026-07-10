@@ -7,9 +7,15 @@ type Props = { params: Promise<{ locale: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
+  const isPortuguese = locale === "pt";
+
   return {
-    title: "Terms of Service | Overwatch",
-    description: "Terms of Service for Overwatch Security and Surveillance.",
+    title: isPortuguese
+      ? "Termos de Serviço | OverWatch Moçambique"
+      : "Terms of Service | OverWatch Mozambique",
+    description: isPortuguese
+      ? "Leia os termos dos serviços da OverWatch Moçambique para monitoramento CCTV, guarda virtual, detecção com IA e operações de segurança."
+      : "Read the terms for OverWatch Mozambique CCTV monitoring, virtual guard service, AI threat detection, and security operations.",
     alternates: {
       canonical: `/${locale}/terms`,
       languages: Object.fromEntries(routing.locales.map((loc) => [loc, `/${loc}/terms`])),
