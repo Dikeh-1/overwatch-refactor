@@ -29,8 +29,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: "website",
       siteName: "Overwatch",
       images: [
-        "https://res.cloudinary.com/dxvvzuu3n/image/upload/v1778238103/vrag_ffsyrb.png",
+        {
+          url: "/overwatch-social-preview.png",
+          width: 1200,
+          height: 630,
+          alt: "Overwatch AI CCTV monitoring and virtual guarding",
+        },
       ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: t("title"),
+      description: t("description"),
+      images: ["/overwatch-social-preview.png"],
     },
     alternates: {
       canonical: `/${locale}`,
