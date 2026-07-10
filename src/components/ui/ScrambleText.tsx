@@ -22,7 +22,7 @@ export default function ScrambleText({ text, delay = 0 }: { text: string; delay?
       const animate = () => {
         let result = "";
         for (let i = 0; i < length; i++) {
-          if (frame >= i * 3) {
+          if (frame >= i * 2) {
             result += text[i];
           } else {
             result += CHARS[Math.floor(Math.random() * CHARS.length)];
@@ -31,7 +31,7 @@ export default function ScrambleText({ text, delay = 0 }: { text: string; delay?
 
         setDisplayText(result);
 
-        if (frame < length * 3) {
+        if (frame < length * 2) {
           frame++;
           frameId = requestAnimationFrame(animate);
         }

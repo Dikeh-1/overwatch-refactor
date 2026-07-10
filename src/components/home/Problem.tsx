@@ -84,6 +84,7 @@ export default function Problem() {
                 src="/monitoring.webp"
                 alt=""
                 fill
+                unoptimized
                 className="object-cover rounded-xl"
                 sizes="(max-width: 1024px) 100vw, 50vw"
               />

@@ -1,4 +1,4 @@
-const CACHE_NAME = "overwatch-app-v2";
+const CACHE_NAME = "overwatch-app-v3";
 const PRECACHE_URLS = [
   "/en",
   "/logo.png",

@@ -142,6 +142,7 @@ export default function WhyChoose() {
                     alt={activeItem.title}
                     fill
                     priority={activeIndex === 0}
+                    unoptimized={activeItem.image === "/monitoring.webp"}
                     quality={72}
                     className="object-cover"
                     sizes="(min-width: 1280px) 650px, 52vw"
@@ -192,6 +193,7 @@ export default function WhyChoose() {
                     alt={item.title}
                     fill
                     priority={index === 0}
+                    unoptimized={item.image === "/monitoring.webp"}
                     quality={72}
                     className="object-cover"
                     sizes="(max-width: 639px) calc(100vw - 2rem), min(42rem, calc(100vw - 3rem))"
