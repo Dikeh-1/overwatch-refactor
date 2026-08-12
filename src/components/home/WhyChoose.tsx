@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import {
   AnimatePresence,
   motion,
@@ -10,73 +11,31 @@ import {
   useScroll,
 } from "framer-motion";
 
-const sectionTitle = "Why Businesses Choose Overwatch";
-const sectionDescription =
-  "We complement your physical security measures to provide active, intelligent site control.";
-
-const storytellingItems = [
-  {
-    id: "guards",
-    title: "Reduce Dependence on Physical Guards",
-    description:
-      "Physical guards remain useful, but they cannot watch every camera, every second. Overwatch supports your team with active monitoring so important activity is detected.",
-    image: "/guard-sleeping.webp",
-  },
-  {
-    id: "detection",
-    title: "Detect Incidents Earlier",
-    description:
-      "CCTV footage is often reviewed only after stock loss, intrusion, or damage has already happened. Overwatch helps detect suspicious activity earlier so action can be taken faster.",
-    image: "/weapon-detection.webp",
-  },
-  {
-    id: "visibility",
-    title: "Improve Management Visibility",
-    description:
-      "Owners, directors, and operations managers gain better visibility into what is happening across their sites, even when they are not physically present.",
-    image: "/surveillance-control-room.webp",
-  },
-  {
-    id: "accountability",
-    title: "Strengthen Accountability",
-    description:
-      "When a site is monitored actively, staff and guards know that critical areas are being watched and incidents are being recorded. This improves accountability and reduces reliance on manual reporting alone.",
-    image: "/monitoring.webp",
-  },
-  {
-    id: "protection",
-    title: "Protect Stock, Assets, and Operations",
-    description:
-      "For businesses with high-value inventory, vehicles, equipment, or cash flow, delayed detection can be expensive. Overwatch helps protect your operational continuity by reducing blind spots and improving incident escalation.",
-    image: "/business-bg.webp",
-  },
-];
-
-const totalItems = storytellingItems.length;
-
 function SectionIntro({ id }: { id: string }) {
+  const t = useTranslations("whyChoose");
   return (
     <div className="mx-auto max-w-4xl text-center">
       <h2
         id={id}
         className="text-[clamp(1.75rem,3vw,2.9rem)] font-bold leading-[1.08] text-foreground"
       >
-        {sectionTitle}
+        {t("title")}
       </h2>
       <p className="mx-auto mt-3 max-w-2xl text-[clamp(0.98rem,1.2vw,1.12rem)] leading-relaxed text-muted">
-        {sectionDescription}
+        {t("description")}
       </p>
     </div>
   );
 }
 
-function ProgressDots({ activeIndex }: { activeIndex: number }) {
+function ProgressDots({ activeIndex, items }: { activeIndex: number; items: { id: string }[] }) {
+  const t = useTranslations("whyChoose");
   return (
     <div
       className="flex items-center gap-2"
-      aria-label={`Why Businesses Choose Overwatch progress: ${activeIndex + 1} of ${totalItems}`}
+      aria-label={`${t("title")} progress: ${activeIndex + 1} of ${items.length}`}
     >
-      {storytellingItems.map((item, index) => (
+      {items.map((item, index) => (
         <span
           key={item.id}
           className={`h-2 rounded-full transition-all duration-300 ${
@@ -89,9 +48,45 @@ function ProgressDots({ activeIndex }: { activeIndex: number }) {
 }
 
 export default function WhyChoose() {
+  const t = useTranslations("whyChoose");
   const desktopSectionRef = useRef<HTMLElement>(null);
   const prefersReducedMotion = useReducedMotion();
   const [activeIndex, setActiveIndex] = useState(0);
+
+  const storytellingItems = [
+    {
+      id: "detection",
+      title: t("benefits.detection.title"),
+      description: t("benefits.detection.description"),
+      image: "/weapon-detection.webp",
+    },
+    {
+      id: "verification",
+      title: t("benefits.verification.title"),
+      description: t("benefits.verification.description"),
+      image: "/monitoring.webp",
+    },
+    {
+      id: "existingCCTV",
+      title: t("benefits.existingCCTV.title"),
+      description: t("benefits.existingCCTV.description"),
+      image: "/security-problems.webp",
+    },
+    {
+      id: "accountability",
+      title: t("benefits.accountability.title"),
+      description: t("benefits.accountability.description"),
+      image: "/business-bg.webp",
+    },
+    {
+      id: "integratedSecurity",
+      title: t("benefits.integratedSecurity.title"),
+      description: t("benefits.integratedSecurity.description"),
+      image: "/surveillance-control-room.webp",
+    },
+  ];
+
+  const totalItems = storytellingItems.length;
 
   const { scrollYProgress } = useScroll({
     target: desktopSectionRef,
@@ -103,10 +98,7 @@ export default function WhyChoose() {
       totalItems - 1,
       Math.max(0, Math.floor(latest * totalItems)),
     );
-
-    setActiveIndex((currentIndex) =>
-      currentIndex === nextIndex ? currentIndex : nextIndex,
-    );
+    setActiveIndex((current) => (current === nextIndex ? current : nextIndex));
   });
 
   const activeItem = storytellingItems[activeIndex];
@@ -128,9 +120,7 @@ export default function WhyChoose() {
             <AnimatePresence initial={false} mode="wait">
               <motion.article
                 key={activeItem.id}
-                initial={
-                  prefersReducedMotion ? false : { opacity: 0, y: 18 }
-                }
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={prefersReducedMotion ? undefined : { opacity: 0, y: -18 }}
                 transition={{ duration: 0.32, ease: "easeOut" }}
@@ -151,7 +141,7 @@ export default function WhyChoose() {
                 </div>
 
                 <div className="min-w-0 max-w-2xl">
-                  <ProgressDots activeIndex={activeIndex} />
+                  <ProgressDots activeIndex={activeIndex} items={storytellingItems} />
                   <h3 className="mt-4 text-[clamp(1.45rem,2.4vw,2.75rem)] font-bold leading-[1.08] text-foreground">
                     {activeItem.title}
                   </h3>
@@ -180,9 +170,7 @@ export default function WhyChoose() {
               <motion.article
                 key={item.id}
                 initial={prefersReducedMotion ? false : { opacity: 0, y: 22 }}
-                whileInView={
-                  prefersReducedMotion ? undefined : { opacity: 1, y: 0 }
-                }
+                whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.35 }}
                 transition={{ duration: 0.38, ease: "easeOut" }}
                 className="grid min-w-0 gap-5"

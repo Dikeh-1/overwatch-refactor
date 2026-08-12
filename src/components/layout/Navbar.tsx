@@ -16,6 +16,7 @@ const dropdownMenus = [
   {
     titleKey: "solutions" as const,
     links: [
+      { href: "/solutions", key: "allSolutions" as const },
       { href: "/business", key: "business" as const },
       { href: "/homes", key: "homes" as const },
     ],
@@ -33,10 +34,6 @@ const dropdownMenus = [
       { href: "/contact", key: "contact" as const },
     ],
   },
-];
-
-const standaloneLinks = [
-  { href: "/#pricing", key: "pricing" as const },
 ];
 
 export default function Navbar() {
@@ -266,24 +263,6 @@ export default function Navbar() {
                 </div>
               </div>
             ))}
-
-            {/* Pricing - Always Visible */}
-            {standaloneLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={cn(
-                  "group relative px-4 py-2 text-sm font-medium transition-colors",
-                  isActive(link.href)
-                    ? "text-accent"
-                    : "text-foreground/80 hover:text-accent"
-                )}
-                onClick={(e) => handleNavClick(e, link.href)}
-              >
-                {t(link.key)}
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-accent transition-all group-hover:w-full" />
-              </Link>
-            ))}
           </div>
 
           <div className="hidden lg:flex items-center gap-3">
@@ -386,28 +365,6 @@ export default function Navbar() {
                   </div>
                 )}
               </div>
-            ))}
-
-            {/* Pricing - Always Visible */}
-            {standaloneLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={cn(
-                  "py-3 px-4 text-lg font-medium hover:bg-accent/5 rounded-lg transition-colors",
-                  isActive(link.href)
-                    ? "text-accent"
-                    : "text-foreground hover:text-accent"
-                )}
-                onClick={(e) => handleNavClick(e, link.href, true)}
-              >
-                <div className="flex items-center justify-between">
-                  <span>{t(link.key)}</span>
-                  <span className="text-xs text-foreground/50">
-                    {t(`descriptions.${link.key}`)}
-                  </span>
-                </div>
-              </Link>
             ))}
 
             {/* Theme & Language Toggles */}

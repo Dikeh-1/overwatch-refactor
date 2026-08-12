@@ -30,6 +30,8 @@ export default async function AboutPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("howItWorks");
+  const tAbout = await getTranslations('about');
+  const aboutParagraphs = tAbout.raw('paragraphs') as string[];
   const flow = t.raw("flow") as { step: string; title: string; description: string }[];
   const capabilities = t.raw("capabilities.items") as string[];
 
@@ -67,6 +69,16 @@ export default async function AboutPage({ params }: Props) {
           </div>
         </FadeIn>
       </section>
+
+{/* About Overwatch Section */}
+<section className="py-12 bg-primary-darker/30">
+  <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
+    <h2 className="text-3xl font-bold text-foreground mb-6">{tAbout("title")}</h2>
+    {aboutParagraphs.map((p, i) => (
+      <p key={i} className="text-muted mb-4">{p}</p>
+    ))}
+  </div>
+</section>
 
       {/* Flow / Timeline Section */}
       <section className="py-8 md:py-8 overflow-hidden">

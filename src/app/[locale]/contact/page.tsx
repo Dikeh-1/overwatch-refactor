@@ -26,6 +26,9 @@ export default async function ContactPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("contact");
+  const descriptionParts = t("description").split("\n\n");
+  const intro = descriptionParts[0];
+  const ctaLine = descriptionParts[1] ?? "";
 
   return (
     <>
@@ -47,29 +50,36 @@ export default async function ContactPage({ params }: Props) {
                 {t("title")}
               </h1>
               <p className="text-lg md:text-xl text-muted leading-relaxed max-w-lg">
-                {t("description").split('\n\n')[0]}
+                {intro}
               </p>
             </div>
 
-            {/* Right Column: GlowCard List */}
+            {/* Right Column: CTA & Contact Info */}
             <div className="text-left w-full max-w-xl mx-auto lg:mx-0">
-              <GlowCard techCorners={true} className="w-full p-8 md:p-10 group hover:-translate-y-2 transition-transform duration-500 bg-primary-darker/60 backdrop-blur-sm border-border/50">
-                {t("description").split('\n\n')[1].split('\n').map((line, j) => {
-                  const isBullet = line.trim().startsWith('•');
-                  const content = line.replace('•', '').trim();
-                  return (
-                    <div key={j} className={`mb-4 leading-relaxed ${isBullet ? 'flex items-start gap-4 group-hover:translate-x-1 transition-transform duration-300' : 'font-bold text-foreground mb-6 text-xl md:text-2xl'}`} style={{ transitionDelay: `${j * 50}ms` }}>
-                      {isBullet && <span className="text-accent shrink-0 mt-1.5">•</span>}
-                      <span className={isBullet ? "text-muted" : ""}>{content}</span>
-                    </div>
-                  );
-                })}
+              <GlowCard techCorners={true} className="w-full p-8 md:p-10 bg-primary-darker/60 backdrop-blur-sm border-border/50">
+                {ctaLine && (
+                  <p className="font-bold text-foreground mb-6 text-xl md:text-2xl">{ctaLine}</p>
+                )}
+                <div className="space-y-4 text-sm">
+                  <p className="text-muted">
+                    <span className="text-foreground font-medium">Email: </span>
+                    {t("info.email")}
+                  </p>
+                  <p className="text-muted">
+                    <span className="text-foreground font-medium">Website: </span>
+                    {t("info.website")}
+                  </p>
+                  <p className="text-muted">
+                    <span className="text-foreground font-medium">WhatsApp: </span>
+                    {t("info.phone")}
+                  </p>
+                  <p className="text-muted">
+                    <span className="text-foreground font-medium">Location: </span>
+                    {t("info.location")}
+                  </p>
+                </div>
               </GlowCard>
             </div>
-          </div>
-
-          <div className="mt-16 text-center text-lg md:text-xl text-foreground/90 font-medium">
-            <p>{t("description").split('\n\n')[2]}</p>
           </div>
         </FadeIn>
       </section>

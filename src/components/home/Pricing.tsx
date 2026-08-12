@@ -55,7 +55,7 @@ export default function Pricing() {
     discount: number,
     annualSavings: number
   ) => {
-    const phone = "258853626792";
+    const phone = "258842870793";
     const planName = plan.badge ? `${plan.name} (${plan.badge})` : plan.name;
     const upfrontMonths = `${months} ${t("monthsLabel")}`;
     const formattedDiscount = discount > 0 ? `${discount}%` : "0%";
@@ -207,6 +207,73 @@ Thank you!`;
               </ScrollReveal>
             );
           })}
+        </div>
+
+        <div className="mt-16 space-y-8">
+          <ScrollReveal direction="up">
+            <GlowCard className="p-6 md:p-8">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+                <h3 className="text-xl font-semibold text-foreground">{t("customProposal.title")}</h3>
+                <span className="inline-block self-start rounded-full border border-accent/40 bg-accent/10 px-4 py-1 text-xs font-bold uppercase tracking-wider text-accent">
+                  {t("customProposal.badge")}
+                </span>
+              </div>
+              <p className="text-muted text-sm leading-relaxed">{t("customProposal.description")}</p>
+            </GlowCard>
+          </ScrollReveal>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <ScrollReveal direction="up" delay={0.05}>
+              <GlowCard className="p-6 h-full">
+                <h3 className="text-lg font-semibold text-foreground mb-2">{t("installation.title")}</h3>
+                <p className="text-2xl font-bold text-accent">{t("installation.price")}</p>
+              </GlowCard>
+            </ScrollReveal>
+            <ScrollReveal direction="up" delay={0.1}>
+              <GlowCard className="p-6 h-full">
+                <h3 className="text-lg font-semibold text-foreground mb-2">{t("cloudBridge.title")}</h3>
+                <p className="text-sm text-muted mb-1">{t("cloudBridge.depositLabel")}</p>
+                <p className="text-2xl font-bold text-accent mb-3">{t("cloudBridge.deposit")}</p>
+                <p className="text-sm text-muted leading-relaxed">{t("cloudBridge.description")}</p>
+              </GlowCard>
+            </ScrollReveal>
+          </div>
+
+          <ScrollReveal direction="up" delay={0.15}>
+            <GlowCard className="p-6 md:p-8">
+              <h3 className="text-xl font-semibold text-foreground mb-3">{t("freeAssessment.title")}</h3>
+              <p className="text-muted text-sm mb-4">{t("freeAssessment.description")}</p>
+              <ul className="space-y-2">
+                {(t.raw("freeAssessment.items") as string[]).map((item) => (
+                  <li key={item} className="flex gap-2 text-sm text-foreground">
+                    <Check size={16} className="text-accent shrink-0 mt-0.5" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </GlowCard>
+          </ScrollReveal>
+
+          <ScrollReveal direction="up" delay={0.2}>
+            <GlowCard className="p-6 md:p-8">
+              <h3 className="text-xl font-semibold text-foreground mb-3">{t("otherServices.title")}</h3>
+              <p className="text-muted text-sm mb-4">{t("otherServices.description")}</p>
+              <ul className="space-y-2">
+                {(t.raw("otherServices.items") as string[]).map((item) => (
+                  <li key={item} className="flex gap-2 text-sm text-foreground">
+                    <Check size={16} className="text-accent shrink-0 mt-0.5" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </GlowCard>
+          </ScrollReveal>
+
+          <div className="text-center">
+            <Button href="/contact" size="lg">
+              {t("proposalCta")}
+            </Button>
+          </div>
         </div>
       </div>
     </section>

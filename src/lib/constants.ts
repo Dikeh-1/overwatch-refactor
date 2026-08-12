@@ -1,8 +1,8 @@
 export const WHATSAPP_URL =
-  "https://api.whatsapp.com/send/?phone=258853626792";
+  "https://api.whatsapp.com/send/?phone=258842870793";
 
 export const WHATSAPP_QUOTE_URL =
-  "https://api.whatsapp.com/send/?phone=258853626792&text=Hello,%20I%20would%20like%20to%20request%20a%20site%20assessment%20with%20Overwatch.";
+  "https://api.whatsapp.com/send/?phone=258842870793&text=Hello,%20I%20would%20like%20to%20request%20a%20site%20assessment%20with%20Overwatch.";
 
 export const IMAGES = {
   hero: "https://res.cloudinary.com/dxvvzuu3n/image/upload/f_auto,q_auto/v1778240805/hero_desktop_vygzsi.png",

@@ -49,7 +49,7 @@ export default async function LocaleLayout({ children, params }: Props) {
             <Navbar />
             <main className="flex-1">{children}</main>
             <Footer />
-            <LaunchExperience />
+            {/* <LaunchExperience /> */}
             <AutoAcceptWidgetCookies />
             <ZohoChatbot />
             <ScrollToTop />

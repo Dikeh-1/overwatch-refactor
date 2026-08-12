@@ -3,16 +3,16 @@
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
-import { Scan, Eye, Siren, FileText } from "lucide-react";
+import { Scan, Eye, Siren, FileText, ShieldCheck } from "lucide-react";
 import SectionHeader from "@/components/ui/SectionHeader";
 import GlowCard from "@/components/ui/GlowCard";
 import { IMAGES } from "@/lib/constants";
 
-const stepIcons = [Scan, Eye, Siren, FileText];
-const stepKeys = ["monitor", "verify", "deter", "document"] as const;
+const stepIcons = [Scan, Eye, Siren, FileText, ShieldCheck];
 
 export default function Solution() {
   const t = useTranslations("solution");
+  const steps = t.raw("steps") as { title: string; description: string }[];
 
   return (
     <section id="how" className="py-20 md:py-28 relative">
@@ -41,11 +41,11 @@ export default function Solution() {
           </motion.div>
 
           <div className="space-y-4">
-            {stepKeys.map((key, i) => {
-              const Icon = stepIcons[i];
+            {steps.map((step, i) => {
+              const Icon = stepIcons[i] ?? ShieldCheck;
               return (
                 <motion.div
-                  key={key}
+                  key={step.title}
                   initial={{ opacity: 0, x: 20 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
@@ -59,11 +59,11 @@ export default function Solution() {
                       <div className="flex items-center gap-2 mb-2">
                         <Icon className="text-accent" size={18} />
                         <h3 className="text-lg font-semibold text-foreground">
-                          {t(`steps.${key}.title`)}
+                          {step.title}
                         </h3>
                       </div>
                       <p className="text-muted text-sm leading-relaxed">
-                        {t(`steps.${key}.description`)}
+                        {step.description}
                       </p>
                     </div>
                   </GlowCard>
