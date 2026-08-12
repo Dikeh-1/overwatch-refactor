@@ -5,7 +5,7 @@ import { routing } from "@/i18n/routing";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import AutoAcceptWidgetCookies from "@/components/layout/AutoAcceptWidgetCookies";
-import LaunchExperience from "@/components/layout/LaunchExperience";
+// import LaunchExperience from "@/components/layout/LaunchExperience";
 import ZohoChatbot from "@/components/layout/ZohoChatbot";
 import ScrollToTop from "@/components/ui/ScrollToTop";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
