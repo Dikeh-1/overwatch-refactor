@@ -406,62 +406,90 @@
     "compliance": { "value": "ISO-Certified", "label": "Compliance Standards" }
   },
   "pricing": {
-    "label": "Service Tiers",
-    "title": "Managed Monitoring Plans",
-    "description": "All tiers include AI-enhanced detection, operator verification, escalation workflows, and 3 months cloud storage. 12-month operational contract. Prices exclude VAT.",
+    "label": "Monitoring Plans",
+    "title": "Choose the coverage that fits",
+    "description": "Start with your camera count, then choose one payment period. Every plan gives you the same trusted Overwatch monitoring foundation.",
+    "highlights": [
+      "AI-assisted detection",
+      "Human operator verification",
+      "Escalation support included"
+    ],
     "setup": {
-      "label": "Once-off setup:",
-      "value": "2,500 MZN installation fee & 4,000 MZN hardware deposit."
+      "label": "One-time setup",
+      "value": "Two transparent costs, confirmed after your free assessment."
     },
-    "cta": "Initialize Onboarding",
-    "upfrontLabel": "Upfront Payment Period",
+    "cta": "Choose this plan",
+    "upfrontLabel": "Payment period",
     "perMonth": "/month",
     "monthsLabel": "mo",
+    "monthsWord": "months",
+    "monthsShort": "mo",
+    "monthlyEquivalent": "Monthly equivalent",
+    "discountApplied": "{percent}% discount applied",
+    "standardRate": "Standard rate: {price} {currency}",
+    "includedLabel": "What is included",
+    "planCta": "Choose {plan}",
+    "termsNote": "12-month service agreement. Prices exclude VAT.",
+    "selector": {
+      "title": "Choose one payment period",
+      "description": "This single choice updates every plan, making comparison easy.",
+      "save": "Save {percent}%",
+      "discountShort": "-{percent}%",
+      "recommended": "Popular",
+      "optionAria": "Pay {months} months upfront and save {percent}%"
+    },
+    "billingSummary": {
+      "label": "Billed upfront",
+      "description": "Covers {months} months at the selected monthly rate."
+    },
     "percentOff": "({percent}% off)",
     "saveLabel": "Save {savings} {currency}/year ({percent}% off)",
     "totalCommitment": "Total due: {total} {currency}",
     "whatsapp": {
       "perYear": "/year",
       "zeroSavings": "0 MZN/year",
-      "message": "Hello Overwatch Team,\n\nI would like to initialize onboarding for the following security monitoring plan:\n\n📋 Plan Details:\n• Plan: *{planName}*\n• Upfront Payment Period: *{upfrontMonths}*\n• Discount Applied: *{discount}*\n• Monthly Rate: *{monthlyRate}*\n• Upfront Commitment Total: *{totalDue}*\n• Annual Savings: *{annualSavings}*\n\n🔧 Standard Setup Fees:\n• 2,500 MZN installation fee\n• 4,000 MZN hardware deposit\n\nPlease let me know the next steps to schedule our site assessment and setup.\n\nThank you!"
+      "message": "Hello Overwatch team,\n\nI would like to discuss the *{planName}* monitoring plan.\n\n• Payment period: *{upfrontMonths}*\n• Discount: *{discount}*\n• Monthly equivalent: *{monthlyRate}*\n• Upfront plan payment: *{totalDue}*\n• Annual savings: *{annualSavings}*\n\nI understand the standard setup costs are a 2,500 MZN installation fee and a refundable 4,000 MZN hardware deposit.\n\nPlease help me schedule a free site assessment. Thank you!"
     },
     "plans": {
       "four": {
         "name": "4 Cameras",
+        "audience": "For homes, shops and smaller sites",
         "price": "13,500",
         "currency": "MZN ",
         "features": [
-          "AI Enhanced Detection",
-          "Elite Human Verification",
-          "WhatsApp / Phone Escalation",
-          "3 Months Cloud Storage",
-          "Standard Support SLA"
+          "AI-assisted detection",
+          "Human operator verification",
+          "WhatsApp and phone escalation",
+          "3 months cloud storage",
+          "Standard support"
         ]
       },
       "eight": {
         "name": "8 Cameras",
-        "badge": "Standard Enterprise",
+        "audience": "For growing businesses and active sites",
+        "badge": "Most Popular",
         "price": "22,500",
         "currency": "MZN",
         "featured": true,
         "features": [
-          "Everything in 4 Cameras",
-          "Active Deterrence Integration",
-          "Priority Response Handling",
-          "Dedicated Account Manager",
-          "Quarterly Security Assessment"
+          "Everything in the 4-camera plan",
+          "Active deterrence integration",
+          "Priority incident handling",
+          "Dedicated account manager",
+          "Quarterly security review"
         ]
       },
       "sixteen": {
         "name": "16 Cameras",
+        "audience": "For larger or multi-site operations",
         "price": "39,500",
         "currency": "MZN ",
         "features": [
-          "Everything in 8 Cameras",
-          "Custom SOP Integration",
-          "Multi-site Dashboard Access",
-          "API Access for Third-party Integration",
-          "Premium Support SLA"
+          "Everything in the 8-camera plan",
+          "Custom SOP integration",
+          "Multi-site dashboard access",
+          "Third-party system integrations",
+          "Premium support"
         ]
       }
     },
@@ -485,9 +513,14 @@
     },
     "cloudBridge": {
       "title": "CloudBridge",
-      "depositLabel": "Refundable deposit:",
+      "depositLabel": "Refundable deposit",
       "deposit": "MZN 4,000",
       "description": "The CloudBridge enables the connection of compatible CCTV infrastructure to the Overwatch monitoring platform."
+    },
+    "decisionHelp": {
+      "title": "Not sure which plan fits?",
+      "description": "Start with a free security assessment. We will review your cameras, coverage gaps and response needs, then recommend the right plan. Larger and multi-site projects receive a tailored proposal.",
+      "cta": "Book a Free Assessment"
     },
     "freeAssessment": {
       "title": "Free Security Assessment",

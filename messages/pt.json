@@ -406,62 +406,90 @@
     "compliance": { "value": "Certificado ISO", "label": "Padrões de Conformidade" }
   },
   "pricing": {
-    "label": "Planos de Serviço",
-    "title": "Planos de Monitorização Gerida",
-    "description": "Todos os planos incluem deteção melhorada por IA, verificação por operador, fluxos de escalada e 3 meses de armazenamento na nuvem. Contrato operacional de 12 meses. Preços excluem IVA.",
+    "label": "Planos de Monitorização",
+    "title": "Escolha a cobertura certa",
+    "description": "Comece pelo número de câmaras e escolha um único período de pagamento. Todos os planos incluem a base de monitorização de confiança da Overwatch.",
+    "highlights": [
+      "Detecção assistida por IA",
+      "Verificação por operador humano",
+      "Apoio de escalonamento incluído"
+    ],
     "setup": {
-      "label": "Configuração única:",
-      "value": "Taxa de instalação de 2.500 MZN e depósito de hardware de 4.000 MZN."
+      "label": "Configuração única",
+      "value": "Dois custos transparentes, confirmados após a avaliação gratuita."
     },
-    "cta": "Iniciar Integração",
-    "upfrontLabel": "Período de Pagamento Antecipado",
+    "cta": "Escolher este plano",
+    "upfrontLabel": "Período de pagamento",
     "perMonth": "/mês",
     "monthsLabel": "m",
+    "monthsWord": "meses",
+    "monthsShort": "meses",
+    "monthlyEquivalent": "Equivalente mensal",
+    "discountApplied": "Desconto de {percent}% aplicado",
+    "standardRate": "Preço normal: {price} {currency}",
+    "includedLabel": "O que está incluído",
+    "planCta": "Escolher {plan}",
+    "termsNote": "Contrato de serviço de 12 meses. Preços sem IVA.",
+    "selector": {
+      "title": "Escolha um período de pagamento",
+      "description": "Esta única escolha actualiza todos os planos e facilita a comparação.",
+      "save": "Poupe {percent}%",
+      "discountShort": "-{percent}%",
+      "recommended": "Popular",
+      "optionAria": "Pagar {months} meses antecipadamente e poupar {percent}%"
+    },
+    "billingSummary": {
+      "label": "Pagamento antecipado",
+      "description": "Cobre {months} meses ao valor mensal seleccionado."
+    },
     "percentOff": "({percent}% desconto)",
     "saveLabel": "Poupe {savings} {currency}/ano ({percent}% de desconto)",
     "totalCommitment": "Total a pagar: {total} {currency}",
     "whatsapp": {
       "perYear": "/ano",
       "zeroSavings": "0 MZN/ano",
-      "message": "Olá, equipa Overwatch,\n\nGostaria de iniciar a integração para o seguinte plano de monitorização de segurança:\n\n📋 Detalhes do Plano:\n• Plano: *{planName}*\n• Período de Pagamento Antecipado: *{upfrontMonths}*\n• Desconto Aplicado: *{discount}*\n• Mensalidade: *{monthlyRate}*\n• Total do Compromisso Antecipado: *{totalDue}*\n• Poupança Anual: *{annualSavings}*\n\n🔧 Custos Padrão de Configuração:\n• Taxa de instalação de 2.500 MZN\n• Depósito de hardware de 4.000 MZN\n\nPor favor, indiquem-me os próximos passos para agendar a avaliação do local e a configuração.\n\nObrigado!"
+      "message": "Olá, equipa Overwatch,\n\nGostaria de conversar sobre o plano de monitorização *{planName}*.\n\n• Período de pagamento: *{upfrontMonths}*\n• Desconto: *{discount}*\n• Equivalente mensal: *{monthlyRate}*\n• Pagamento antecipado do plano: *{totalDue}*\n• Poupança anual: *{annualSavings}*\n\nCompreendo que os custos padrão de configuração são uma taxa de instalação de 2.500 MZN e uma caução reembolsável de hardware de 4.000 MZN.\n\nPor favor, ajudem-me a marcar uma avaliação gratuita do local. Obrigado!"
     },
     "plans": {
       "four": {
         "name": "4 Câmaras",
+        "audience": "Para residências, lojas e locais pequenos",
         "price": "13.500",
         "currency": "MZN",
         "features": [
-          "Deteção Melhorada por IA",
-          "Verificação por Operador de Elite",
-          "Escalabilidade via WhatsApp / Telefone",
-          "3 Meses de Armazenamento Cloud",
-          "SLA de Suporte Padrão"
+          "Detecção assistida por IA",
+          "Verificação por operador humano",
+          "Escalonamento por WhatsApp e telefone",
+          "3 meses de armazenamento na nuvem",
+          "Suporte padrão"
         ]
       },
       "eight": {
         "name": "8 Câmaras",
-        "badge": "Empresa Padrão",
+        "audience": "Para empresas em crescimento e locais movimentados",
+        "badge": "Mais Popular",
         "price": "22.500",
         "currency": "MZN",
         "featured": true,
         "features": [
-          "Tudo no plano de 4 Câmaras",
-          "Integração de Dissuasão Ativa",
-          "Tratamento de Resposta Prioritária",
-          "Gestor de Conta Dedicado",
-          "Avaliação Trimestral de Segurança"
+          "Tudo no plano de 4 câmaras",
+          "Integração de dissuasão activa",
+          "Tratamento prioritário de incidentes",
+          "Gestor de conta dedicado",
+          "Avaliação trimestral de segurança"
         ]
       },
       "sixteen": {
         "name": "16 Câmaras",
+        "audience": "Para operações maiores ou com vários locais",
         "price": "39.500",
         "currency": "MZN",
         "features": [
-          "Tudo no plano de 8 Câmaras",
-          "Integração de SOP Personalizada",
-          "Acesso ao Painel Multi-site",
-          "Acesso API para Integração de Terceiros",
-          "SLA de Suporte Premium"
+          "Tudo no plano de 8 câmaras",
+          "Integração personalizada de SOPs",
+          "Acesso ao painel de vários locais",
+          "Integrações com sistemas de terceiros",
+          "Suporte premium"
         ]
       }
     },
@@ -485,9 +513,14 @@
     },
     "cloudBridge": {
       "title": "CloudBridge",
-      "depositLabel": "Caução reembolsável:",
+      "depositLabel": "Caução reembolsável",
       "deposit": "MZN 4.000",
       "description": "O CloudBridge permite a ligação de infraestrutura CCTV compatível à plataforma de monitorização da Overwatch."
+    },
+    "decisionHelp": {
+      "title": "Não sabe qual é o plano certo?",
+      "description": "Comece com uma avaliação de segurança gratuita. Analisamos as suas câmaras, falhas de cobertura e necessidades de resposta, e recomendamos o plano adequado. Projectos maiores e com vários locais recebem uma proposta personalizada.",
+      "cta": "Marcar Avaliação Gratuita"
     },
     "freeAssessment": {
       "title": "Avaliação de Segurança Gratuita",
