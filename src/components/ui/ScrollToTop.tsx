@@ -67,7 +67,7 @@ export default function ScrollToTop() {
           exit={{ opacity: 0, y: 10, scale: 0.9 }}
           transition={{ duration: 0.2 }}
           onClick={handleClick}
-          className="fixed bottom-6 left-6 z-[90] flex items-center justify-center w-10 h-10 rounded-md bg-primary-darker/60 backdrop-blur-md text-foreground/70 hover:text-foreground hover:bg-primary-dark/90 shadow-md transition-all duration-300 focus:outline-none group"
+          className="group fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-4 z-[90] flex h-11 w-11 touch-manipulation items-center justify-center rounded-xl bg-primary-darker/75 text-foreground/70 shadow-md backdrop-blur-md transition-all duration-300 hover:bg-primary-dark/90 hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:bottom-6 sm:left-6"
           aria-label={isScrollingDown ? "Scroll down" : "Scroll to top"}
         >
           {isScrollingDown ? (

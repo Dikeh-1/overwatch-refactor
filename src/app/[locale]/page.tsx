@@ -10,6 +10,7 @@ import GuardingAngle from "@/components/home/GuardingAngle";
 import Pricing from "@/components/home/Pricing";
 import CTABanner from "@/components/home/CTABanner";
 import CertificationBar from "@/components/home/CertificationBar";
+import PreloadHomeHero from "@/components/home/PreloadHomeHero";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -58,6 +59,7 @@ export default async function HomePage({ params }: Props) {
 
   return (
     <>
+      <PreloadHomeHero />
       <Hero />
       <Problem />
       <WhyChoose />

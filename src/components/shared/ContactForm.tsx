@@ -68,7 +68,7 @@ export default function ContactForm() {
                   <span className="text-[10px] font-semibold text-muted tracking-widest uppercase mb-0.5">Email</span>
                   <a
                     href={`mailto:${tInfo("email")}`}
-                    className="text-foreground text-sm font-semibold hover:text-accent transition-colors"
+                    className="inline-flex min-h-11 items-center text-sm font-semibold text-foreground transition-colors hover:text-accent"
                   >
                     {tInfo("email")}
                   </a>
@@ -83,7 +83,7 @@ export default function ContactForm() {
                   <span className="text-[10px] font-semibold text-muted tracking-widest uppercase mb-0.5">Phone</span>
                   <a
                     href={`tel:${tInfo("phone").replace(/\s/g, "")}`}
-                    className="text-foreground text-sm font-semibold hover:text-accent transition-colors"
+                    className="inline-flex min-h-11 items-center text-sm font-semibold text-foreground transition-colors hover:text-accent"
                   >
                     {tInfo("phone")}
                   </a>
@@ -122,7 +122,7 @@ export default function ContactForm() {
                   id="name"
                   name="name"
                   required
-                  className="peer w-full bg-transparent text-sm text-foreground placeholder-transparent focus:outline-none pt-4"
+                  className="peer min-h-11 w-full bg-transparent pt-4 text-sm text-foreground placeholder-transparent focus:outline-none"
                   placeholder=" "
                 />
                 <label
@@ -139,7 +139,7 @@ export default function ContactForm() {
                   id="email"
                   name="email"
                   required
-                  className="peer w-full bg-transparent text-sm text-foreground placeholder-transparent focus:outline-none pt-4"
+                  className="peer min-h-11 w-full bg-transparent pt-4 text-sm text-foreground placeholder-transparent focus:outline-none"
                   placeholder=" "
                 />
                 <label
@@ -150,7 +150,7 @@ export default function ContactForm() {
                 </label>
               </div>
 
-              <div className="group relative border-b border-border/50 focus-within:border-accent transition-colors pb-1 pt-4 [&_.react-tel-input_.form-control]:!bg-transparent [&_.react-tel-input_.form-control]:!border-none [&_.react-tel-input_.form-control]:!text-foreground [&_.react-tel-input_.form-control]:!w-full [&_.react-tel-input_.form-control]:!shadow-none [&_.react-tel-input_.form-control]:!pl-[46px] [&_.react-tel-input_.flag-dropdown]:!bg-transparent [&_.react-tel-input_.flag-dropdown]:!border-none [&_.react-tel-input_.selected-flag]:!bg-transparent [&_.react-tel-input_.selected-flag:hover]:!bg-transparent [&_.react-tel-input_.selected-flag:focus]:!bg-transparent [&_.react-tel-input_.selected-flag]:!outline-none [&_.react-tel-input_.selected-flag]:!shadow-none [&_.react-tel-input_.country-list]:!bg-card [&_.react-tel-input_.country-list]:!border-border/50 [&_.react-tel-input_.country-list]:!text-foreground [&_.react-tel-input_.country-list_.country:hover]:!bg-accent/20 [&_.react-tel-input_.country-list_.country.highlight]:!bg-accent/20 [&_.react-tel-input_.search]:!bg-card [&_.react-tel-input_.search-box]:!bg-primary-darker [&_.react-tel-input_.search-box]:!border-border/50 [&_.react-tel-input_.search-box]:!text-foreground">
+              <div className="group relative border-b border-border/50 pb-1 pt-4 transition-colors focus-within:border-accent [&_.react-tel-input_.form-control]:!h-11 [&_.react-tel-input_.form-control]:!w-full [&_.react-tel-input_.form-control]:!border-none [&_.react-tel-input_.form-control]:!bg-transparent [&_.react-tel-input_.form-control]:!pl-[46px] [&_.react-tel-input_.form-control]:!text-foreground [&_.react-tel-input_.form-control]:!shadow-none [&_.react-tel-input_.flag-dropdown]:!border-none [&_.react-tel-input_.flag-dropdown]:!bg-transparent [&_.react-tel-input_.selected-flag]:!bg-transparent [&_.react-tel-input_.selected-flag]:!outline-none [&_.react-tel-input_.selected-flag]:!shadow-none [&_.react-tel-input_.selected-flag:hover]:!bg-transparent [&_.react-tel-input_.selected-flag:focus]:!bg-transparent [&_.react-tel-input_.country-list]:!border-border/50 [&_.react-tel-input_.country-list]:!bg-card [&_.react-tel-input_.country-list]:!text-foreground [&_.react-tel-input_.country-list_.country.highlight]:!bg-accent/20 [&_.react-tel-input_.country-list_.country:hover]:!bg-accent/20 [&_.react-tel-input_.search]:!bg-card [&_.react-tel-input_.search-box]:!border-border/50 [&_.react-tel-input_.search-box]:!bg-primary-darker [&_.react-tel-input_.search-box]:!text-foreground">
                 <label
                   htmlFor="phone"
                   className="absolute left-0 top-0 text-xs font-medium text-accent pointer-events-none transition-all group-has-[:placeholder-shown]:text-sm group-has-[:placeholder-shown]:top-[22px] group-has-[:placeholder-shown]:left-[46px] group-has-[:placeholder-shown]:text-muted/60 group-focus-within:!top-0 group-focus-within:!text-xs group-focus-within:!left-0 group-focus-within:!text-accent z-10"
@@ -180,7 +180,7 @@ export default function ContactForm() {
                   name="message"
                   required
                   rows={2}
-                  className="peer w-full bg-transparent text-sm text-foreground placeholder-transparent focus:outline-none pt-4 resize-y"
+                  className="peer min-h-24 w-full resize-y bg-transparent pt-4 text-sm text-foreground placeholder-transparent focus:outline-none"
                   placeholder=" "
                 />
                 <label

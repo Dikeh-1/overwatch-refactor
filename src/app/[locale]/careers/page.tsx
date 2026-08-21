@@ -110,7 +110,7 @@ export default async function CareersPage({ params }: Props) {
                 </p>
                 <a
                   href="mailto:comercial@overwatchmoz.com?subject=Spontaneous Application"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-accent text-primary-dark font-semibold hover:bg-accent/90 transition-all duration-300"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-accent px-6 py-3 font-semibold text-primary-dark transition-all duration-300 hover:bg-accent/90"
                 >
                   Send Your CV
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

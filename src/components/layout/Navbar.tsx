@@ -119,11 +119,24 @@ export default function Navbar() {
     }
   };
 
-  // Prevent body scroll when mobile menu is open
+  // Keep focus on navigation and prevent the page behind it from moving.
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMobileOpen(false);
+        setOpenMobileDropdowns(new Set());
+      }
+    };
+
+    if (mobileOpen) {
+      window.addEventListener("keydown", handleEscape);
+    }
+
     return () => {
       document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleEscape);
     };
   }, [mobileOpen]);
 
@@ -179,7 +192,7 @@ export default function Navbar() {
         aria-label={t("aria.mainNav")}
       >
         <div className="flex h-16 md:h-20 items-center justify-between">
-          <Link href="/" className="shrink-0" onClick={closeMobileMenu}>
+          <Link href="/" className="flex min-h-11 min-w-0 shrink-0 items-center" onClick={closeMobileMenu}>
             <Logo size="sm" preload />
           </Link>
 
@@ -277,9 +290,10 @@ export default function Navbar() {
           <div className="flex lg:hidden items-center">
             <button
               type="button"
-              className="p-2 text-foreground hover:text-accent transition-colors"
+              className="flex h-11 w-11 touch-manipulation items-center justify-center rounded-xl text-foreground transition-colors hover:bg-white/8 hover:text-accent"
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-expanded={mobileOpen}
+              aria-controls="mobile-navigation"
               aria-label={mobileOpen ? t("aria.closeMenu") : t("aria.openMenu")}
             >
               {mobileOpen ? <X size={24} /> : <Menu size={24} />}
@@ -291,24 +305,27 @@ export default function Navbar() {
 
       {/* Mobile Menu - Moved outside header to prevent backdrop-filter from creating a containing block that collapses its fixed height */}
       {mobileOpen && (
-        <div className="lg:hidden fixed inset-0 top-16 bg-primary-dark/98 backdrop-blur-lg z-40 overflow-auto">
-          <div className="flex flex-col p-6 gap-2">
+        <div
+          id="mobile-navigation"
+          className="fixed inset-x-0 bottom-0 top-16 z-40 overflow-y-auto overscroll-contain bg-primary-dark/98 backdrop-blur-lg lg:hidden"
+        >
+          <div className="mx-auto flex min-h-full max-w-xl flex-col gap-1 px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4 sm:px-6">
             {/* Standalone Links */}
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "py-3 px-4 text-lg font-medium hover:bg-accent/5 rounded-lg transition-colors",
+                  "flex min-h-12 items-center rounded-xl px-4 py-3 text-lg font-medium transition-colors hover:bg-accent/5",
                   isActive(link.href)
                     ? "text-accent"
                     : "text-foreground hover:text-accent"
                 )}
                 onClick={(e) => handleNavClick(e, link.href, true)}
               >
-                <div className="flex items-center justify-between">
+                <div>
                   <span>{t(link.key)}</span>
-                  <span className="text-xs text-foreground/50">
+                  <span className="mt-0.5 block text-xs font-normal text-foreground/50">
                     {t(`descriptions.${link.key}`)}
                   </span>
                 </div>
@@ -321,7 +338,7 @@ export default function Navbar() {
                 <button
                   onClick={() => toggleMobileDropdown(menu.titleKey)}
                   className={cn(
-                    "w-full py-3 px-4 text-lg font-semibold hover:bg-accent/5 rounded-lg transition-colors flex items-center justify-between",
+                    "flex min-h-12 w-full touch-manipulation items-center justify-between rounded-xl px-4 py-3 text-lg font-semibold transition-colors hover:bg-accent/5",
                     menu.links.some((l) => isActive(l.href))
                       ? "text-accent"
                       : "text-foreground hover:text-accent"
@@ -341,22 +358,22 @@ export default function Navbar() {
 
                 {/* Collapsible Links */}
                 {openMobileDropdowns.has(menu.titleKey) && (
-                  <div className="pl-4 space-y-1 animate-in fade-in slide-in-from-top-2">
+                  <div className="ml-4 space-y-1 border-l border-border pl-3 animate-in fade-in slide-in-from-top-2">
                     {menu.links.map((link) => (
                       <Link
                         key={link.href}
                         href={link.href}
                         className={cn(
-                          "block py-2 px-4 text-base font-medium hover:bg-accent/5 rounded transition-colors",
+                          "flex min-h-12 items-center rounded-lg px-4 py-2.5 text-base font-medium transition-colors hover:bg-accent/5",
                           isActive(link.href)
                             ? "text-accent"
                             : "text-foreground hover:text-accent"
                         )}
                         onClick={(e) => handleNavClick(e, link.href, true)}
                       >
-                        <div className="flex items-center justify-between">
+                        <div>
                           <span>{t(link.key)}</span>
-                          <span className="text-xs text-foreground/50">
+                          <span className="mt-0.5 block text-xs font-normal text-foreground/50">
                             {t(`descriptions.${link.key}`)}
                           </span>
                         </div>
@@ -368,21 +385,21 @@ export default function Navbar() {
             ))}
 
             {/* Theme & Language Toggles */}
-            <div className="mt-6 flex flex-col gap-4 border-t border-border pt-6">
-              <div className="flex items-center justify-between px-4">
+            <div className="mt-5 flex flex-col gap-4 border-t border-border pt-5">
+              <div className="flex min-h-11 items-center justify-between px-4">
                 <span className="text-sm text-foreground/70">{tMobile("theme")}</span>
                 <ThemeDropdown />
               </div>
-              <div className="flex items-center justify-between px-4">
+              <div className="flex min-h-11 items-center justify-between px-4">
                 <span className="text-sm text-foreground/70">{tMobile("language")}</span>
                 <LanguageDropdown />
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-border">
+            <div className="mt-3 border-t border-border pt-4">
               <Button
                 href="/contact#assessment-form"
-                className="w-full"
+                className="w-full px-4 text-sm sm:px-6 sm:text-base"
                 onClick={closeMobileMenu}
               >
                 {t("cta")}

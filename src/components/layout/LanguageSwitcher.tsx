@@ -30,7 +30,7 @@ export default function LanguageSwitcher({ className }: { className?: string }) 
           href={pathname}
           locale={loc}
           className={cn(
-            "px-3 py-1.5 text-sm font-medium transition-colors",
+            "flex min-h-11 min-w-11 items-center justify-center px-3 py-2 text-sm font-medium transition-colors",
             locale === loc
               ? "bg-accent/20 text-accent"
               : "text-muted hover:text-foreground hover:bg-accent/10"

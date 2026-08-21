@@ -15,8 +15,8 @@
       "description": "Proteja residências com câmeras de segurança com monitoramento, vigilância remota 24 horas, alertas por WhatsApp e verificação de riscos."
     },
     "about": {
-      "title": "Como Funciona o Monitoramento CCTV com IA | OverWatch",
-      "description": "Saiba como a OverWatch liga-se às câmeras existentes, detecta ameaças, confirma alertas com operadores humanos e apoia a resposta a incidentes."
+      "title": "Sobre a OverWatch | Operações de Segurança Activa em Moçambique",
+      "description": "Conheça a OverWatch, uma empresa moçambicana que combina monitorização CCTV com IA, verificação humana, procedimentos claros e resposta responsável a incidentes."
     },
     "faq": {
       "title": "Perguntas Frequentes sobre Guarda Virtual | OverWatch",
@@ -595,8 +595,17 @@
     }
   },
   "cta": {
+    "eyebrow": "Um primeiro passo prático",
     "title": "Comece com uma Avaliação de Segurança Gratuita",
-    "description": "Cada local é diferente.\n\nAntes de recomendar uma solução, avaliamos a sua operação de segurança actual. Isto permite-nos identificar:\n• as principais vulnerabilidades;\n• que câmaras existentes podem ser utilizadas;\n• onde a cobertura CCTV precisa de ser melhorada;\n• onde a monitorização com IA pode acrescentar valor;\n• se os procedimentos precisam de ser criados ou melhorados;\n• se é necessário apoio de um Security Manager;\n• como os incidentes devem ser escalados e respondidos.",
+    "description": "Cada local é diferente. Antes de recomendar uma solução, avaliamos a sua operação de segurança actual e apresentamos um caminho prático a seguir.",
+    "items": [
+      "Vulnerabilidades de segurança prioritárias",
+      "Câmaras e sistemas existentes que podem ser mantidos",
+      "Falhas na cobertura CCTV",
+      "Onde a monitorização com IA acrescenta valor",
+      "Procedimentos que precisam de ser reforçados",
+      "Percursos claros de escalonamento e resposta"
+    ],
     "button": "Marque uma Avaliação de Segurança Gratuita"
   },
   "footer": {
@@ -680,14 +689,78 @@
     }
   },
   "about": {
-    "title": "Sobre a Overwatch",
-    "description": "A Overwatch é uma empresa de segurança baseada em Moçambique que fornece soluções integradas de segurança a empresas e organizações.",
-    "paragraphs": [
-      "Combinamos monitorização CCTV com IA, verificação humana, gestão de segurança, implementação tecnológica, procedimentos operacionais e resposta a incidentes.",
-      "A nossa abordagem começa por compreender como funciona actualmente a operação de segurança do cliente.",
-      "Quando os sistemas existentes são adequados, utilizamo-los. Quando existem falhas, identificamos e coordenamos as melhorias necessárias.",
-      "O nosso objectivo é simples: Ajudar as organizações a passar de uma segurança passiva para operações de segurança activas e responsáveis."
-    ]
+    "hero": {
+      "eyebrow": "Operações de segurança em Moçambique",
+      "title": "A segurança deve fazer mais do que registar o que aconteceu.",
+      "description": "A Overwatch ajuda empresas e organizações a transformar câmaras, pessoas e procedimentos numa única operação de segurança activa—preparada para ver mais cedo, verificar o que importa e responder com clareza.",
+      "primaryCta": "Marcar Avaliação Gratuita",
+      "secondaryCta": "Conheça a Nossa Abordagem",
+      "trust": [
+        "Desenhada para o seu local",
+        "Alertas verificados por pessoas",
+        "CCTV existente avaliado primeiro"
+      ],
+      "imageAlt": "Equipa de monitorização de segurança da Overwatch num centro de controlo",
+      "cardLabel": "A diferença Overwatch",
+      "cardText": "A IA detecta. As pessoas verificam. A equipa certa responde."
+    },
+    "story": {
+      "eyebrow": "Porque existimos",
+      "title": "Criada em torno de um problema que as empresas conhecem bem",
+      "paragraphs": [
+        "Muitos locais já têm câmaras, guardas e procedimentos—mas estes elementos funcionam frequentemente de forma separada. As câmaras gravam. Os guardas patrulham. Os incidentes são analisados depois do prejuízo.",
+        "A Overwatch reúne estes elementos numa operação coordenada. A monitorização inteligente destaca actividades relevantes, as pessoas verificam o que importa e procedimentos claros ajudam a iniciar mais cedo a resposta certa.",
+        "Começamos pelo que já existe. Quando as câmaras e os sistemas são adequados, integramo-los. Quando existem falhas, identificamo-las com clareza e recomendamos apenas as melhorias de que o local realmente precisa."
+      ],
+      "promise": "O nosso papel não é acrescentar mais ruído. É ajudar as equipas de segurança a ver mais cedo, decidir com confiança e responder com responsabilidade."
+    },
+    "operatingModel": {
+      "eyebrow": "Uma operação conectada",
+      "title": "Tecnologia, julgamento humano e resposta—a trabalhar em conjunto",
+      "description": "Um sistema de segurança conquista confiança quando cada camada tem um papel claro e cada evento verificado tem um próximo passo definido.",
+      "stages": [
+        {
+          "title": "Observar",
+          "description": "A monitorização CCTV com IA ajuda a destacar riscos configurados e actividades fora do normal em todo o local."
+        },
+        {
+          "title": "Verificar",
+          "description": "Operadores humanos analisam os alertas relevantes, acrescentam contexto e reduzem a incerteza das notificações automáticas."
+        },
+        {
+          "title": "Responder",
+          "description": "Os eventos verificados seguem procedimentos de escalonamento acordados para que a pessoa ou equipa certa possa agir com clareza."
+        }
+      ]
+    },
+    "pillars": {
+      "eyebrow": "Como conquistamos confiança",
+      "title": "Segurança prática, desenhada para a realidade",
+      "description": "Concentramo-nos no que torna uma operação de segurança fiável todos os dias—não apenas no que parece impressionante numa proposta.",
+      "items": [
+        {
+          "title": "Avaliação antes da recomendação",
+          "description": "Compreendemos o local, as rotinas, as vulnerabilidades e a operação actual antes de propormos uma solução."
+        },
+        {
+          "title": "Julgamento humano onde importa",
+          "description": "A tecnologia ajuda a detectar actividade relevante; pessoas formadas verificam o contexto antes do escalonamento."
+        },
+        {
+          "title": "Respeito pelo investimento existente",
+          "description": "As câmaras e os sistemas adequados são mantidos sempre que possível, com melhorias recomendadas apenas onde existem falhas."
+        },
+        {
+          "title": "Responsabilidade desde o desenho",
+          "description": "Procedimentos claros, registos de incidentes e responsabilidades definidas tornam a operação mais fácil de gerir e melhorar."
+        }
+      ]
+    },
+    "process": {
+      "eyebrow": "Da conversa à protecção",
+      "title": "Um caminho claro para a segurança activa",
+      "description": "Cada projecto segue uma sequência prática, para que compreenda o que muda, porque é importante e como a operação vai funcionar."
+    }
   },
   "solutions": {
     "items": [

@@ -14,7 +14,7 @@ export default function SettingsDropdown() {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 p-2 text-foreground/70 hover:text-accent transition-colors"
+        className="flex min-h-11 min-w-11 touch-manipulation items-center justify-center gap-2 rounded-lg text-foreground/70 transition-colors hover:bg-accent/5 hover:text-accent"
         aria-label="Settings"
       >
         <Globe size={16} />
@@ -40,7 +40,7 @@ export default function SettingsDropdown() {
                     if (theme !== "dark") toggleTheme();
                   }}
                   className={cn(
-                    "w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors",
+                    "flex min-h-11 w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors",
                     theme === "dark"
                       ? "bg-accent text-primary-dark font-medium"
                       : "text-foreground hover:bg-accent/10"
@@ -57,7 +57,7 @@ export default function SettingsDropdown() {
                     if (theme !== "light") toggleTheme();
                   }}
                   className={cn(
-                    "w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors",
+                    "flex min-h-11 w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors",
                     theme === "light"
                       ? "bg-accent text-primary-dark font-medium"
                       : "text-foreground hover:bg-accent/10"

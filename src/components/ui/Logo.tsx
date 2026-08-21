@@ -12,6 +12,12 @@ const sizes = {
   lg: { width: 294, height: 44 },
 };
 
+const sizeClasses = {
+  sm: "w-[187px]",
+  md: "w-[241px]",
+  lg: "w-[294px]",
+};
+
 export default function Logo({
   className = "",
   preload = false,
@@ -26,7 +32,7 @@ export default function Logo({
         alt="Overwatch Logo"
         width={width}
         height={height}
-        className="w-auto h-auto object-contain dark:filter dark:brightness-0 dark:invert transition-all duration-300"
+        className={`${sizeClasses[size]} h-auto max-w-full object-contain transition-all duration-300 dark:brightness-0 dark:invert`}
         preload={preload}
       />
     </div>

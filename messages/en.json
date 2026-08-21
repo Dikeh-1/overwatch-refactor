@@ -15,8 +15,8 @@
       "description": "Protect homes and private residences with AI-assisted CCTV monitoring for perimeter activity, pool safety, staff movement, and overnight security risks."
     },
     "about": {
-      "title": "How OverWatch AI CCTV Monitoring Works | Mozambique",
-      "description": "Learn how OverWatch connects to existing cameras, detects suspicious activity, verifies alerts with trained operators, and escalates incidents quickly."
+      "title": "About OverWatch | Active Security Operations in Mozambique",
+      "description": "Meet OverWatch, a Mozambique-based security company combining AI-assisted CCTV monitoring, human verification, clear procedures, and accountable incident response."
     },
     "faq": {
       "title": "AI CCTV Monitoring FAQ | OverWatch Mozambique",
@@ -595,8 +595,17 @@
     }
   },
   "cta": {
+    "eyebrow": "A practical first step",
     "title": "Start With a Free Security Assessment",
-    "description": "Every site is different.\n\nBefore recommending a solution, we assess your current security operation. This allows us to identify:\n• your main security vulnerabilities;\n• which existing cameras can be used;\n• where CCTV coverage needs improvement;\n• where AI-powered monitoring can add value;\n• whether procedures need to be created or improved;\n• whether Security Manager support is required;\n• how incidents should be escalated and responded to.",
+    "description": "Every site is different. Before recommending a solution, we assess your current security operation and show you a practical way forward.",
+    "items": [
+      "Priority security vulnerabilities",
+      "Existing cameras and systems that can remain",
+      "Gaps in CCTV coverage",
+      "Where AI-assisted monitoring adds value",
+      "Procedures that need strengthening",
+      "Clear escalation and response paths"
+    ],
     "button": "Book a Free Security Assessment"
   },
   "footer": {
@@ -680,14 +689,78 @@
     }
   },
   "about": {
-    "title": "About Overwatch",
-    "description": "Overwatch is a Mozambique-based security company providing integrated security solutions for businesses and organisations.",
-    "paragraphs": [
-      "We combine AI-powered CCTV monitoring, human verification, security management, technology implementation, operational procedures and incident response.",
-      "Our approach begins with understanding how the client's current security operation works.",
-      "Where existing systems are suitable, we use them. Where there are gaps, we identify and coordinate the required improvements.",
-      "Our objective is simple: To help organisations move from passive security to active, accountable security operations."
-    ]
+    "hero": {
+      "eyebrow": "Mozambique-based security operations",
+      "title": "Security should do more than record what happened.",
+      "description": "Overwatch helps businesses and organisations turn cameras, people, and procedures into one active security operation—built to see sooner, verify what matters, and respond with clarity.",
+      "primaryCta": "Book a Free Assessment",
+      "secondaryCta": "See Our Approach",
+      "trust": [
+        "Built around your site",
+        "Human-verified alerts",
+        "Existing CCTV considered first"
+      ],
+      "imageAlt": "Overwatch security monitoring team in a control centre",
+      "cardLabel": "The Overwatch difference",
+      "cardText": "AI detects. People verify. The right team responds."
+    },
+    "story": {
+      "eyebrow": "Why we exist",
+      "title": "Built around a problem businesses know too well",
+      "paragraphs": [
+        "Many sites already have cameras, guards, and procedures—but those parts often work separately. Cameras record. Guards patrol. Incidents are reviewed after the damage is done.",
+        "Overwatch brings those pieces into one coordinated operation. Intelligent monitoring surfaces relevant activity, people verify what matters, and clear escalation procedures help the right response begin sooner.",
+        "We start with what is already there. When existing cameras and systems are suitable, we integrate them. When there are gaps, we identify them clearly and recommend the improvements the site actually needs."
+      ],
+      "promise": "Our role is not to add more noise. It is to help security teams see sooner, decide with confidence, and respond with accountability."
+    },
+    "operatingModel": {
+      "eyebrow": "One connected operation",
+      "title": "Technology, human judgment, and response—working together",
+      "description": "A security system earns trust when every layer has a clear role and every verified event has a clear next step.",
+      "stages": [
+        {
+          "title": "Observe",
+          "description": "AI-assisted CCTV monitoring helps surface configured risks and unusual activity across the site."
+        },
+        {
+          "title": "Verify",
+          "description": "Human operators review relevant alerts, add context, and reduce the uncertainty that comes with raw notifications."
+        },
+        {
+          "title": "Respond",
+          "description": "Verified events follow agreed escalation procedures so the right person or team can act with clarity."
+        }
+      ]
+    },
+    "pillars": {
+      "eyebrow": "How we earn trust",
+      "title": "Practical security, designed around reality",
+      "description": "We focus on what makes a security operation dependable day after day—not simply what looks impressive in a proposal.",
+      "items": [
+        {
+          "title": "Assessment before recommendation",
+          "description": "We understand the site, its routines, vulnerabilities, and current security operation before proposing a solution."
+        },
+        {
+          "title": "Human judgment where it matters",
+          "description": "Technology helps detect relevant activity; trained people verify context before an incident is escalated."
+        },
+        {
+          "title": "Respect for existing investment",
+          "description": "Suitable cameras and systems are retained wherever possible, with upgrades recommended only where gaps exist."
+        },
+        {
+          "title": "Accountability by design",
+          "description": "Clear procedures, incident records, and defined responsibilities make the operation easier to manage and improve."
+        }
+      ]
+    },
+    "process": {
+      "eyebrow": "From conversation to protection",
+      "title": "A clear path to active security",
+      "description": "Every engagement follows a practical sequence, so you understand what is changing, why it matters, and how the operation will work."
+    }
   },
   "solutions": {
     "items": [

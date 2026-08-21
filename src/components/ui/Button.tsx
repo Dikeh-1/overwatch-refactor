@@ -26,9 +26,9 @@ const variants = {
 };
 
 const sizes = {
-  sm: "px-4 py-2 text-sm",
-  md: "px-6 py-3 text-base",
-  lg: "px-8 py-4 text-lg",
+  sm: "min-h-11 px-4 py-2 text-sm",
+  md: "min-h-12 px-6 py-3 text-base",
+  lg: "min-h-14 px-7 py-3.5 text-base sm:px-8 sm:text-lg",
 };
 
 function isExternalHref(href: string) {
@@ -82,7 +82,7 @@ export default function Button({
   } = useMagnet();
 
   const classes = cn(
-    "inline-flex max-w-full items-center justify-center rounded-lg transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-primary-dark disabled:opacity-50 disabled:cursor-not-allowed select-none text-center",
+    "inline-flex max-w-full touch-manipulation items-center justify-center rounded-lg text-center transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-primary-dark disabled:cursor-not-allowed disabled:opacity-50 select-none",
     variants[variant],
     sizes[size],
     className

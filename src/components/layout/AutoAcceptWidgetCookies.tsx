@@ -117,17 +117,19 @@ export default function AutoAcceptWidgetCookies() {
 
     if (acceptVisibleCookiePrompt()) return;
 
-    const retryDelays = [
-      50, 150, 300, 600, 1000, 1500, 2500, 4000, 6500, 9000, 13000, 18000,
-      24000, 32000, 42000,
-    ];
+    const retryDelays = [2000, 6000, 12000, 18000];
     const retryTimers = retryDelays.map((delay) =>
       window.setTimeout(acceptVisibleCookiePrompt, delay),
     );
-    const retryInterval = window.setInterval(acceptVisibleCookiePrompt, 1000);
+
+    let queuedScan: number | undefined;
 
     const observer = new MutationObserver(() => {
-      acceptVisibleCookiePrompt();
+      if (queuedScan) return;
+      queuedScan = window.setTimeout(() => {
+        queuedScan = undefined;
+        acceptVisibleCookiePrompt();
+      }, 300);
     });
 
     observer.observe(document.body, {
@@ -136,13 +138,12 @@ export default function AutoAcceptWidgetCookies() {
     });
 
     const stopWatching = window.setTimeout(() => {
-      window.clearInterval(retryInterval);
       observer.disconnect();
-    }, 45000);
+    }, 20000);
 
     return () => {
       retryTimers.forEach((timer) => window.clearTimeout(timer));
-      window.clearInterval(retryInterval);
+      if (queuedScan) window.clearTimeout(queuedScan);
       window.clearTimeout(stopWatching);
       observer.disconnect();
     };

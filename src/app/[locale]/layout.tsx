@@ -69,11 +69,6 @@ export default async function LocaleLayout({ children, params }: Props) {
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-        <link rel="preload" href="/hero_dark.webp" as="image" type="image/webp" />
-        <link rel="preconnect" href="https://res.cloudinary.com" />
-        <link rel="dns-prefetch" href="https://res.cloudinary.com" />
-        <link rel="preconnect" href="https://salesiq.zohopublic.com" />
-        <link rel="dns-prefetch" href="https://salesiq.zohopublic.com" />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground antialiased">
         <ThemeProvider>

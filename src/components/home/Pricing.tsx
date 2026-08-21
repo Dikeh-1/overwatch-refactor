@@ -174,7 +174,7 @@ Thank you!`;
                             key={months}
                             onClick={() => updatePlanOption(i, months)}
                             className={cn(
-                              "flex-1 py-2 px-2 rounded border text-xs font-semibold transition-all cursor-pointer",
+                              "min-h-11 flex-1 cursor-pointer rounded border px-1.5 py-2 text-xs font-semibold leading-tight transition-all sm:px-2",
                               planOptions[i] === months
                                 ? "bg-accent text-primary-dark border-accent"
                                 : "bg-primary-darker/50 text-foreground border-border hover:border-accent/50"

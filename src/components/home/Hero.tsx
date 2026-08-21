@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import ParticleNetwork from "@/components/ui/ParticleNetwork";
-import ScrambleText from "@/components/ui/ScrambleText";
 import ScrollFadeHero from "@/components/animations/ScrollFadeHero";
 import { WHATSAPP_URL } from "@/lib/constants";
 
@@ -49,13 +48,13 @@ export default function Hero() {
             </motion.span>
 
             {/* Headline */}
-            <h1 className="text-[clamp(2rem,8.5vw,3rem)] sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.1] mb-6 min-h-[6.75rem] sm:min-h-[150px]">
+            <h1 className="mb-6 text-balance text-[clamp(2rem,8.5vw,3rem)] font-bold leading-[1.1] tracking-tight sm:text-5xl md:text-6xl">
               <span className="text-white block">
-                <ScrambleText text={t("headline")} delay={0.2} />
+                {t("headline")}
               </span>
               {t("headlineAccent") && (
                 <span className="text-white glow-text block mt-2">
-                  <ScrambleText text={t("headlineAccent")} delay={0.8} />
+                  {t("headlineAccent")}
                 </span>
               )}
             </h1>

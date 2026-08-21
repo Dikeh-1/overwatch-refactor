@@ -11,7 +11,7 @@ export default function LanguageDropdown() {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1 p-2 text-foreground/70 hover:text-accent transition-colors"
+        className="flex min-h-11 min-w-11 touch-manipulation items-center justify-center gap-1 rounded-lg text-foreground/70 transition-colors hover:bg-accent/5 hover:text-accent"
         aria-label="Language"
       >
         <Globe size={18} />
