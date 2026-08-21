@@ -12,6 +12,7 @@ import { Link } from "@/i18n/navigation";
 import FAQAccordion from "@/components/shared/FAQAccordion";
 import CTABanner from "@/components/home/CTABanner";
 import TechGrid from "@/components/ui/TechGrid";
+import { darkEyebrowClassName } from "@/components/ui/eyebrow";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -55,8 +56,8 @@ export default async function FAQPage({ params }: Props) {
 
         <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-[0.92fr_1.08fr] lg:gap-16 lg:px-8">
           <div className="max-w-2xl">
-            <span className="inline-flex min-h-9 items-center gap-2 rounded-full border border-white/15 bg-white/[0.055] px-3.5 text-xs font-bold uppercase tracking-[0.18em] text-white/70">
-              <ShieldCheck size={15} aria-hidden="true" />
+            <span className={darkEyebrowClassName}>
+              <ShieldCheck size={15} className="shrink-0" aria-hidden="true" />
               {t("label")}
             </span>
             <h1 className="mt-6 text-balance text-4xl font-bold leading-[1.06] tracking-[-0.035em] text-white sm:text-5xl lg:text-6xl">

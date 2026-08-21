@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle2, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
+import { darkEyebrowClassName } from "@/components/ui/eyebrow";
 import ScrollFadeHero from "@/components/animations/ScrollFadeHero";
 import { WHATSAPP_URL } from "@/lib/constants";
 
@@ -37,7 +38,7 @@ export default function Hero() {
               initial={{ opacity: 0, x: -14 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.55, delay: 0.08 }}
-              className="inline-flex min-h-9 max-w-full items-center gap-2 rounded-full border border-white/18 bg-white/[0.065] px-3.5 py-2 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-white/78 sm:text-xs"
+              className={darkEyebrowClassName}
             >
               <ShieldCheck size={15} className="shrink-0" aria-hidden="true" />
               <span>{t("badge")}</span>
@@ -58,7 +59,7 @@ export default function Hero() {
               <Button
                 href="/contact#assessment-form"
                 size="lg"
-                className="w-full bg-white px-5 text-sm text-[#0d0f14] hover:bg-white/90 sm:w-auto sm:px-7 sm:text-base"
+                className="w-full whitespace-nowrap bg-white px-4 text-[clamp(0.68rem,3.5vw,0.875rem)] text-[#0d0f14] hover:bg-white/90 sm:w-auto sm:px-5 sm:text-sm"
               >
                 {t("ctaPrimary")}
                 <ArrowRight size={17} className="ml-2" aria-hidden="true" />
@@ -67,7 +68,7 @@ export default function Hero() {
                 href={WHATSAPP_URL}
                 variant="secondary"
                 size="lg"
-                className="w-full border-white/25 px-5 text-sm text-white hover:border-white/55 hover:bg-white/[0.07] sm:w-auto sm:px-7 sm:text-base"
+                className="w-full whitespace-nowrap border-white/25 px-4 text-[clamp(0.68rem,3.5vw,0.875rem)] text-white hover:border-white/55 hover:bg-white/[0.07] sm:w-auto sm:px-5 sm:text-sm"
                 external
               >
                 {t("ctaSecondary")}

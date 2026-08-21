@@ -14,6 +14,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import Button from "@/components/ui/Button";
 import CTABanner from "@/components/home/CTABanner";
+import { darkEyebrowClassName } from "@/components/ui/eyebrow";
 import { getGoogleMapsUrl } from "@/lib/site-config";
 
 type Props = { params: Promise<{ locale: string }> };
@@ -78,7 +79,7 @@ export default async function AboutPage({ params }: Props) {
               href={getGoogleMapsUrl(locale)}
               target="_blank"
               rel="noopener noreferrer"
-              className="mb-5 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3 py-2 text-xs font-bold uppercase tracking-[0.18em] text-white/75 transition-colors hover:border-white/30 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+              className={`${darkEyebrowClassName} mb-5 min-h-11 transition-colors hover:border-white/30 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60`}
             >
               <MapPin size={14} className="text-accent" aria-hidden="true" />
               {t("hero.eyebrow")}
@@ -95,7 +96,7 @@ export default async function AboutPage({ params }: Props) {
               <Button
                 href="/contact#assessment-form"
                 size="lg"
-                className="w-full bg-white text-[#0b0f18] hover:bg-white/90 sm:w-auto"
+                className="w-full whitespace-nowrap bg-white px-4 text-[clamp(0.68rem,3.5vw,0.875rem)] text-[#0b0f18] hover:bg-white/90 sm:w-auto sm:px-5 sm:text-sm"
               >
                 {t("hero.primaryCta")}
               </Button>
@@ -103,7 +104,7 @@ export default async function AboutPage({ params }: Props) {
                 href="#our-approach"
                 size="lg"
                 variant="secondary"
-                className="w-full border-white/35 text-white hover:border-white hover:bg-white/10 sm:w-auto"
+                className="w-full whitespace-nowrap border-white/35 px-4 text-[clamp(0.68rem,3.5vw,0.875rem)] text-white hover:border-white hover:bg-white/10 sm:w-auto sm:px-5 sm:text-sm"
               >
                 {t("hero.secondaryCta")}
               </Button>

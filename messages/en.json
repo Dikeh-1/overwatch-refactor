@@ -178,8 +178,24 @@
     "label": "Business Protection",
     "title": "Built for Logistics, Warehouses, and Retail Operations",
     "description": "Protect your assets, staff, and operations with intelligent virtual guarding tailored to commercial environments.",
+    "hero": {
+      "eyebrow": "Protection for active operations",
+      "secondaryCta": "Explore protected sectors",
+      "trust": [
+        "AI-assisted detection",
+        "Human verification",
+        "Clear escalation procedures"
+      ],
+      "cardLabel": "Operational visibility",
+      "cardTitle": "See what matters across a busy site",
+      "liveLabel": "Commercial monitoring active",
+      "stages": ["Detect", "Verify", "Escalate"],
+      "imageAlt": "A commercial operation monitored by Overwatch"
+    },
     "sectors": {
+      "eyebrow": "Built around real operations",
       "title": "Sectors We Protect",
+      "description": "Every site has different movement, access points, assets, and risks. We shape monitoring around how your operation actually works.",
       "items": [
         {
           "title": "Logistics Companies",
@@ -247,7 +263,9 @@
       ]
     },
     "implementation": {
+      "eyebrow": "A clear path to protection",
       "title": "Simple 4-Step Implementation",
+      "description": "We move from assessment to active monitoring through a practical process designed to limit disruption to your operation.",
       "steps": [
         {
           "title": "Site Assessment",
@@ -268,6 +286,7 @@
       ]
     },
     "whyNow": {
+      "eyebrow": "Act before the loss",
       "title": "Your Business Cannot Afford to Wait Until After the Incident",
       "description": "Security threats are not only external. Many losses happen because of poor visibility, weak procedures, delayed response, or lack of accountability.\n\nFor businesses handling stock, vehicles, equipment, deliveries, and cash, one serious incident can cost more than months of active monitoring.\n\nOverwatch gives your business a practical way to reduce that risk."
     },
@@ -277,6 +296,25 @@
     "label": "For Homes",
     "title": "Peace of Mind for Your Family",
     "description": "Protect what matters most with intelligent monitoring designed for private residences — whether you're home or away.",
+    "hero": {
+      "eyebrow": "Protection designed around home life",
+      "secondaryCta": "Explore home protection",
+      "trust": [
+        "Protection at home or away",
+        "Human-verified alerts",
+        "Agreed response steps"
+      ],
+      "cardLabel": "Home protection",
+      "cardTitle": "Awareness without constant worry",
+      "liveLabel": "Residential monitoring active",
+      "stages": ["Watch", "Verify", "Alert"],
+      "imageAlt": "A private residence protected by Overwatch monitoring"
+    },
+    "featuresSection": {
+      "eyebrow": "Thoughtful coverage",
+      "title": "Protection for the moments that matter",
+      "description": "From the gate to the garden, monitoring is configured around the spaces, routines, and people that are most important to your household."
+    },
     "features": {
       "family": {
         "title": "Family Safety",
@@ -294,6 +332,25 @@
         "title": "Overnight Monitoring",
         "description": "Sleep soundly knowing trained operators are watching your property through the night, ready to deter and escalate."
       }
+    },
+    "reassurance": {
+      "eyebrow": "Calm, coordinated response",
+      "title": "Security that supports your everyday life",
+      "description": "Overwatch combines technology and trained people so relevant activity can be understood and handled through a clear response plan.",
+      "items": [
+        {
+          "title": "Focused monitoring",
+          "description": "We configure priority areas and activity rules around your property and household routines."
+        },
+        {
+          "title": "Verified alerts",
+          "description": "Operators review relevant activity before escalation, helping you receive clearer information."
+        },
+        {
+          "title": "Practical escalation",
+          "description": "Your agreed contacts and response steps guide what happens when an incident needs attention."
+        }
+      ]
     },
     "cta": "Request Home Assessment"
   },
@@ -609,10 +666,42 @@
     "label": "Contact",
     "title": "Talk to Overwatch",
     "description": "Whether you already have CCTV and guards or are planning a new security solution, Overwatch can assess your operation and identify the most appropriate way forward.\n\nBook a Free Security Assessment",
+    "hero": {
+      "eyebrow": "Start a conversation",
+      "primaryCta": "Book a Free Assessment",
+      "secondaryCta": "Speak on WhatsApp",
+      "trust": [
+        "No-obligation assessment",
+        "Practical recommendations",
+        "Local Maputo team"
+      ],
+      "cardLabel": "Overwatch Mozambique",
+      "cardTitle": "Choose the easiest way to reach us"
+    },
+    "details": {
+      "email": "Email",
+      "phone": "Phone",
+      "whatsapp": "WhatsApp",
+      "location": "Location"
+    },
+    "formSection": {
+      "eyebrow": "Tell us what you need",
+      "title": "Start with a practical security assessment",
+      "description": "Share a few details about your site or home. Our team will use them to understand your priorities and recommend the right next step."
+    },
     "form": {
+      "detailsEyebrow": "Direct contact",
+      "detailsTitle": "Contact details",
+      "detailsDescription": "Prefer to speak directly? Reach our team by email or phone, or open our Maputo location in Google Maps.",
+      "messageEyebrow": "Assessment request",
+      "messageTitle": "Send us a message",
+      "messageDescription": "Give us enough context to prepare for the first conversation. We will follow up using the contact details you provide.",
       "name": "Full Name",
+      "namePlaceholder": "Your full name",
       "email": "Email Address",
+      "emailPlaceholder": "you@example.com",
       "phone": "Phone Number",
+      "phonePlaceholder": "84 287 0793",
       "company": "Company / Property Name",
       "type": "Property Type",
       "typeOptions": {
@@ -621,6 +710,7 @@
         "other": "Other"
       },
       "message": "Tell us about your security needs",
+      "messagePlaceholder": "Tell us about the property, current security setup, and your main concerns.",
       "submit": "Send Request",
       "submitting": "Sending...",
       "success": "Thank you! We'll be in touch within 24 hours.",

@@ -1,13 +1,24 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { FormEvent, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Mail, Phone, MapPin, Send, CheckCircle, AlertCircle, ExternalLink } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle,
+  ExternalLink,
+  Mail,
+  MapPin,
+  Phone,
+  Send,
+} from "lucide-react";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import { getGoogleMapsUrl, getSiteAddress, siteContact } from "@/lib/site-config";
 
 type FormStatus = "idle" | "submitting" | "success" | "error";
+
+const fieldClassName =
+  "min-h-12 w-full rounded-xl border border-border bg-background/70 px-4 text-sm text-foreground outline-none transition-[border-color,box-shadow,background-color] placeholder:text-muted/55 focus:border-foreground/35 focus:bg-background focus:ring-4 focus:ring-foreground/[0.055]";
 
 export default function ContactForm() {
   const t = useTranslations("contact");
@@ -15,11 +26,11 @@ export default function ContactForm() {
   const [status, setStatus] = useState<FormStatus>("idle");
   const [phoneValue, setPhoneValue] = useState("");
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     setStatus("submitting");
 
-    const form = e.currentTarget;
+    const form = event.currentTarget;
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
 
@@ -27,12 +38,12 @@ export default function ContactForm() {
       const response = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          name: data.name, 
-          email: data.email, 
-          phone: phoneValue, 
-          message: data.message 
-        })
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          phone: phoneValue,
+          message: data.message,
+        }),
       });
 
       if (response.ok) {
@@ -48,178 +59,185 @@ export default function ContactForm() {
     }
   }
 
+  const contactItems = [
+    {
+      label: t("details.email"),
+      value: siteContact.email,
+      href: `mailto:${siteContact.email}`,
+      icon: Mail,
+      external: false,
+    },
+    {
+      label: t("details.phone"),
+      value: siteContact.phone,
+      href: `tel:${siteContact.phoneHref}`,
+      icon: Phone,
+      external: false,
+    },
+    {
+      label: t("details.location"),
+      value: getSiteAddress(locale),
+      href: getGoogleMapsUrl(locale),
+      icon: MapPin,
+      external: true,
+    },
+  ];
+
   return (
-    <div className="flex justify-center w-full">
-      <div className="flex flex-col lg:flex-row w-full max-w-5xl bg-card rounded-xl overflow-hidden shadow-2xl border border-border/30">
-        
-        {/* Contact Info - Left Side */}
-        <div className="w-full lg:w-5/12 bg-primary-darker p-8 md:p-12 border-r border-border/20 flex flex-col justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-foreground mb-4">Contact Details</h2>
-            <p className="text-muted/80 text-sm leading-relaxed mb-10">
-              Ready to secure your business? Reach out to our team of experts. We are available for consultations, site assessments, and security operations.
-            </p>
+    <div className="mx-auto grid w-full max-w-6xl overflow-hidden rounded-[2rem] border border-border bg-card shadow-[0_28px_90px_rgba(2,6,23,0.12)] lg:grid-cols-[0.82fr_1.18fr]">
+      <aside className="dark relative overflow-hidden bg-[#111722] p-6 text-white sm:p-8 lg:p-10">
+        <div className="absolute inset-0 tech-grid opacity-25" />
+        <div className="absolute -bottom-28 -left-20 h-72 w-72 rounded-full bg-blue-400/10 blur-3xl" />
+        <div className="relative">
+          <p className="text-xs font-bold uppercase tracking-[0.17em] text-white/45">
+            {t("form.detailsEyebrow")}
+          </p>
+          <h3 className="mt-3 text-2xl font-bold tracking-tight text-white">
+            {t("form.detailsTitle")}
+          </h3>
+          <p className="mt-4 max-w-md text-sm leading-relaxed text-white/62 sm:text-base">
+            {t("form.detailsDescription")}
+          </p>
 
-            <div className="space-y-8">
-              <div className="flex items-center gap-5">
-                <div className="w-10 h-10 rounded-full border border-border/30 bg-primary-dark/50 flex items-center justify-center text-muted shrink-0">
-                  <Mail size={16} />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-semibold text-muted tracking-widest uppercase mb-0.5">Email</span>
-                  <a
-                    href={`mailto:${siteContact.email}`}
-                    className="inline-flex min-h-11 items-center text-sm font-semibold text-foreground transition-colors hover:text-accent"
-                  >
-                    {siteContact.email}
-                  </a>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-5">
-                <div className="w-10 h-10 rounded-full border border-border/30 bg-primary-dark/50 flex items-center justify-center text-muted shrink-0">
-                  <Phone size={16} />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-semibold text-muted tracking-widest uppercase mb-0.5">Phone</span>
-                  <a
-                    href={`tel:${siteContact.phoneHref}`}
-                    className="inline-flex min-h-11 items-center text-sm font-semibold text-foreground transition-colors hover:text-accent"
-                  >
-                    {siteContact.phone}
-                  </a>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-5">
-                <div className="w-10 h-10 rounded-full border border-border/30 bg-primary-dark/50 flex items-center justify-center text-muted shrink-0">
-                  <MapPin size={16} />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-semibold text-muted tracking-widest uppercase mb-0.5">Location</span>
-                  <a
-                    href={getGoogleMapsUrl(locale)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold leading-relaxed text-foreground underline decoration-foreground/20 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
-                  >
-                    {getSiteAddress(locale)}
-                    <ExternalLink size={13} className="shrink-0" aria-hidden="true" />
-                  </a>
-                </div>
-              </div>
-            </div>
+          <div className="mt-8 space-y-3">
+            {contactItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  target={item.external ? "_blank" : undefined}
+                  rel={item.external ? "noopener noreferrer" : undefined}
+                  className="group flex min-h-16 items-start gap-3 rounded-2xl border border-white/[0.085] bg-white/[0.04] p-3.5 transition-[border-color,background-color] hover:border-white/20 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/55"
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/12 bg-white/[0.06] text-white/75">
+                    <Icon size={18} aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0 pt-0.5">
+                    <span className="block text-[0.62rem] font-bold uppercase tracking-[0.15em] text-white/38">
+                      {item.label}
+                    </span>
+                    <span className="mt-1 flex items-start gap-1.5 break-words text-sm font-semibold leading-relaxed text-white/82">
+                      {item.value}
+                      {item.external ? (
+                        <ExternalLink size={13} className="mt-1 shrink-0 text-white/38" aria-hidden="true" />
+                      ) : null}
+                    </span>
+                  </span>
+                </a>
+              );
+            })}
           </div>
+        </div>
+      </aside>
 
+      <div className="p-6 sm:p-8 lg:p-10">
+        <div className="max-w-xl">
+          <p className="text-xs font-bold uppercase tracking-[0.17em] text-muted">
+            {t("form.messageEyebrow")}
+          </p>
+          <h3 className="mt-3 text-2xl font-bold tracking-tight text-foreground">
+            {t("form.messageTitle")}
+          </h3>
+          <p className="mt-3 text-sm leading-relaxed text-muted">
+            {t("form.messageDescription")}
+          </p>
         </div>
 
-        {/* Contact Form - Right Side */}
-        <div className="w-full lg:w-7/12 p-8 md:p-12">
-          <h2 className="text-2xl font-bold text-foreground mb-8">Send a Message</h2>
-          
-          {status === "success" ? (
-            <div className="flex items-center gap-3 p-4 rounded-lg bg-green-500/10 border border-green-500/30 text-green-700 dark:text-green-300 mb-6">
-              <CheckCircle size={20} />
-              <p className="text-sm font-medium">{t("form.success")}</p>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-8">
-              
-              <div className="relative border-b border-border/50 focus-within:border-accent transition-colors pb-1">
+        {status === "success" ? (
+          <div className="mt-8 flex min-h-40 items-start gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 text-emerald-700 dark:text-emerald-300">
+            <CheckCircle size={21} className="mt-0.5 shrink-0" aria-hidden="true" />
+            <p className="text-sm font-medium leading-relaxed">{t("form.success")}</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div>
+                <label htmlFor="name" className="mb-2 block text-xs font-semibold text-foreground/75">
+                  {t("form.name")}
+                </label>
                 <input
                   type="text"
                   id="name"
                   name="name"
                   required
-                  className="peer min-h-11 w-full bg-transparent pt-4 text-sm text-foreground placeholder-transparent focus:outline-none"
-                  placeholder=" "
+                  autoComplete="name"
+                  className={fieldClassName}
+                  placeholder={t("form.namePlaceholder")}
                 />
-                <label
-                  htmlFor="name"
-                  className="absolute left-0 top-0 text-xs font-medium text-muted transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-4 peer-placeholder-shown:text-muted/60 peer-focus:top-0 peer-focus:text-xs peer-focus:text-accent pointer-events-none"
-                >
-                  {t("form.name")}
-                </label>
               </div>
 
-              <div className="relative border-b border-border/50 focus-within:border-accent transition-colors pb-1">
+              <div>
+                <label htmlFor="email" className="mb-2 block text-xs font-semibold text-foreground/75">
+                  {t("form.email")}
+                </label>
                 <input
                   type="email"
                   id="email"
                   name="email"
                   required
-                  className="peer min-h-11 w-full bg-transparent pt-4 text-sm text-foreground placeholder-transparent focus:outline-none"
-                  placeholder=" "
+                  autoComplete="email"
+                  className={fieldClassName}
+                  placeholder={t("form.emailPlaceholder")}
                 />
-                <label
-                  htmlFor="email"
-                  className="absolute left-0 top-0 text-xs font-medium text-muted transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-4 peer-placeholder-shown:text-muted/60 peer-focus:top-0 peer-focus:text-xs peer-focus:text-accent pointer-events-none"
-                >
-                  {t("form.email")}
-                </label>
               </div>
+            </div>
 
-              <div className="group relative border-b border-border/50 pb-1 pt-4 transition-colors focus-within:border-accent [&_.react-tel-input_.form-control]:!h-11 [&_.react-tel-input_.form-control]:!w-full [&_.react-tel-input_.form-control]:!border-none [&_.react-tel-input_.form-control]:!bg-transparent [&_.react-tel-input_.form-control]:!pl-[46px] [&_.react-tel-input_.form-control]:!text-foreground [&_.react-tel-input_.form-control]:!shadow-none [&_.react-tel-input_.flag-dropdown]:!border-none [&_.react-tel-input_.flag-dropdown]:!bg-transparent [&_.react-tel-input_.selected-flag]:!bg-transparent [&_.react-tel-input_.selected-flag]:!outline-none [&_.react-tel-input_.selected-flag]:!shadow-none [&_.react-tel-input_.selected-flag:hover]:!bg-transparent [&_.react-tel-input_.selected-flag:focus]:!bg-transparent [&_.react-tel-input_.country-list]:!border-border/50 [&_.react-tel-input_.country-list]:!bg-card [&_.react-tel-input_.country-list]:!text-foreground [&_.react-tel-input_.country-list_.country.highlight]:!bg-accent/20 [&_.react-tel-input_.country-list_.country:hover]:!bg-accent/20 [&_.react-tel-input_.search]:!bg-card [&_.react-tel-input_.search-box]:!border-border/50 [&_.react-tel-input_.search-box]:!bg-primary-darker [&_.react-tel-input_.search-box]:!text-foreground">
-                <label
-                  htmlFor="phone"
-                  className="absolute left-0 top-0 text-xs font-medium text-accent pointer-events-none transition-all group-has-[:placeholder-shown]:text-sm group-has-[:placeholder-shown]:top-[22px] group-has-[:placeholder-shown]:left-[46px] group-has-[:placeholder-shown]:text-muted/60 group-focus-within:!top-0 group-focus-within:!text-xs group-focus-within:!left-0 group-focus-within:!text-accent z-10"
-                >
-                  {t("form.phone")}
-                </label>
+            <div>
+              <label htmlFor="phone" className="mb-2 block text-xs font-semibold text-foreground/75">
+                {t("form.phone")}
+              </label>
+              <div className="[&_.react-tel-input]:!w-full [&_.react-tel-input_.form-control]:!h-12 [&_.react-tel-input_.form-control]:!w-full [&_.react-tel-input_.form-control]:!rounded-xl [&_.react-tel-input_.form-control]:!border-border [&_.react-tel-input_.form-control]:!bg-background/70 [&_.react-tel-input_.form-control]:!pl-[50px] [&_.react-tel-input_.form-control]:!text-sm [&_.react-tel-input_.form-control]:!text-foreground [&_.react-tel-input_.form-control]:!shadow-none [&_.react-tel-input_.form-control:focus]:!border-foreground/35 [&_.react-tel-input_.flag-dropdown]:!rounded-l-xl [&_.react-tel-input_.flag-dropdown]:!border-border [&_.react-tel-input_.flag-dropdown]:!bg-transparent [&_.react-tel-input_.selected-flag]:!rounded-l-xl [&_.react-tel-input_.selected-flag]:!bg-transparent [&_.react-tel-input_.country-list]:!border-border [&_.react-tel-input_.country-list]:!bg-card [&_.react-tel-input_.country-list]:!text-foreground [&_.react-tel-input_.country-list_.country.highlight]:!bg-primary-darker [&_.react-tel-input_.country-list_.country:hover]:!bg-primary-darker [&_.react-tel-input_.search]:!bg-card [&_.react-tel-input_.search-box]:!border-border [&_.react-tel-input_.search-box]:!bg-background [&_.react-tel-input_.search-box]:!text-foreground">
                 <PhoneInput
                   country="mz"
                   value={phoneValue}
                   onChange={(phone) => setPhoneValue(phone)}
-                  enableSearch={true}
-                  disableSearchIcon={true}
-                  disableCountryCode={true}
+                  enableSearch
+                  disableSearchIcon
+                  disableCountryCode
                   inputProps={{
                     id: "phone",
                     name: "phone",
                     required: true,
-                    className: "form-control placeholder-transparent",
-                    placeholder: " "
+                    autoComplete: "tel",
+                    "aria-label": t("form.phone"),
+                    placeholder: t("form.phonePlaceholder"),
                   }}
                 />
               </div>
+            </div>
 
-              <div className="relative border-b border-border/50 focus-within:border-accent transition-colors pb-1">
-                <textarea
-                  id="message"
-                  name="message"
-                  required
-                  rows={2}
-                  className="peer min-h-24 w-full resize-y bg-transparent pt-4 text-sm text-foreground placeholder-transparent focus:outline-none"
-                  placeholder=" "
-                />
-                <label
-                  htmlFor="message"
-                  className="absolute left-0 top-0 text-xs font-medium text-muted transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-4 peer-placeholder-shown:text-muted/60 peer-focus:top-0 peer-focus:text-xs peer-focus:text-accent pointer-events-none"
-                >
-                  {t("form.message")}
-                </label>
+            <div>
+              <label htmlFor="message" className="mb-2 block text-xs font-semibold text-foreground/75">
+                {t("form.message")}
+              </label>
+              <textarea
+                id="message"
+                name="message"
+                required
+                rows={5}
+                className={`${fieldClassName} min-h-36 resize-y py-3.5`}
+                placeholder={t("form.messagePlaceholder")}
+              />
+            </div>
+
+            {status === "error" ? (
+              <div className="flex items-start gap-3 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-red-700 dark:text-red-300">
+                <AlertCircle size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
+                <p className="text-sm font-medium leading-relaxed">{t("form.error")}</p>
               </div>
+            ) : null}
 
-              {status === "error" && (
-                <div className="flex items-center gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300">
-                  <AlertCircle size={20} />
-                  <p className="text-sm font-medium">{t("form.error")}</p>
-                </div>
-              )}
-
-              <div className="pt-4">
-                <button 
-                  type="submit" 
-                  disabled={status === "submitting"} 
-                  className="w-full h-12 bg-accent hover:bg-accent/90 text-primary-dark rounded-lg text-sm font-bold flex justify-center items-center gap-2 cursor-pointer active:scale-95 hover:scale-[1.02] hover:shadow-[0_0_15px_var(--accent-glow)] transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
-                >
-                  {status === "submitting" ? t("form.submitting") : t("form.submit")}
-                  <Send size={16} />
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
+            <button
+              type="submit"
+              disabled={status === "submitting"}
+              className="inline-flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-foreground px-5 text-sm font-bold text-background shadow-sm transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-foreground/88 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/40 focus-visible:ring-offset-4 focus-visible:ring-offset-card disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 sm:w-auto"
+            >
+              {status === "submitting" ? t("form.submitting") : t("form.submit")}
+              <Send size={16} aria-hidden="true" />
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

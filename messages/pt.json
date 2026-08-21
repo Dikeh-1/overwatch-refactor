@@ -178,8 +178,24 @@
     "label": "Protecção de Empresas",
     "title": "Desenvolvido para Logística, Armazéns e Operações Comerciais",
     "description": "Proteja os seus activos, equipa e operações com guarda virtual inteligente adaptada a ambientes comerciais.",
+    "hero": {
+      "eyebrow": "Protecção para operações activas",
+      "secondaryCta": "Explorar sectores protegidos",
+      "trust": [
+        "Detecção assistida por IA",
+        "Verificação humana",
+        "Procedimentos claros de escalada"
+      ],
+      "cardLabel": "Visibilidade operacional",
+      "cardTitle": "Veja o que importa num local movimentado",
+      "liveLabel": "Monitorização comercial activa",
+      "stages": ["Detectar", "Verificar", "Escalar"],
+      "imageAlt": "Uma operação comercial monitorizada pela Overwatch"
+    },
     "sectors": {
+      "eyebrow": "Concebido para operações reais",
       "title": "Sectores Que Protegemos",
+      "description": "Cada local tem movimentos, pontos de acesso, activos e riscos diferentes. Adaptamos a monitorização ao funcionamento real da sua operação.",
       "items": [
         {
           "title": "Empresas de Logística",
@@ -247,7 +263,9 @@
       ]
     },
     "implementation": {
+      "eyebrow": "Um caminho claro para a protecção",
       "title": "Implementação Simples em 4 Passos",
+      "description": "Passamos da avaliação à monitorização activa através de um processo prático, concebido para limitar a interrupção da sua operação.",
       "steps": [
         {
           "title": "Avaliação do Local",
@@ -268,6 +286,7 @@
       ]
     },
     "whyNow": {
+      "eyebrow": "Actue antes da perda",
       "title": "A Sua Empresa Não Pode Esperar Pelo Pós-Incidente",
       "description": "As ameaças à segurança não são apenas externas. Muitas perdas acontecem por falta de visibilidade, procedimentos fracos, resposta tardia ou ausência de responsabilização.\n\nPara empresas que lidam com stock, viaturas, equipamentos, entregas e dinheiro, um único incidente sério pode custar mais do que vários meses de monitorização activa.\n\nA Overwatch oferece à sua empresa uma forma prática de reduzir esse risco."
     },
@@ -277,6 +296,25 @@
     "label": "Para Residências",
     "title": "Tranquilidade para a Sua Família",
     "description": "Proteja o que mais importa com monitorização inteligente concebida para residências privadas — quer esteja em casa ou fora.",
+    "hero": {
+      "eyebrow": "Protecção pensada para a vida em casa",
+      "secondaryCta": "Explorar protecção residencial",
+      "trust": [
+        "Protecção em casa ou fora",
+        "Alertas verificados por pessoas",
+        "Passos de resposta acordados"
+      ],
+      "cardLabel": "Protecção residencial",
+      "cardTitle": "Consciência sem preocupação constante",
+      "liveLabel": "Monitorização residencial activa",
+      "stages": ["Vigiar", "Verificar", "Alertar"],
+      "imageAlt": "Uma residência privada protegida pela monitorização Overwatch"
+    },
+    "featuresSection": {
+      "eyebrow": "Cobertura cuidada",
+      "title": "Protecção para os momentos que importam",
+      "description": "Do portão ao jardim, a monitorização é configurada em torno dos espaços, rotinas e pessoas mais importantes para a sua família."
+    },
     "features": {
       "family": {
         "title": "Segurança Familiar",
@@ -294,6 +332,25 @@
         "title": "Monitorização Noturna",
         "description": "Durma descansado sabendo que operadores treinados estão a vigiar a sua propriedade durante a noite, prontos para dissuadir e escalar."
       }
+    },
+    "reassurance": {
+      "eyebrow": "Resposta calma e coordenada",
+      "title": "Segurança que apoia a sua vida diária",
+      "description": "A Overwatch combina tecnologia e profissionais treinados para que a actividade relevante seja compreendida e tratada através de um plano de resposta claro.",
+      "items": [
+        {
+          "title": "Monitorização focada",
+          "description": "Configuramos áreas prioritárias e regras de actividade de acordo com a sua propriedade e as rotinas da família."
+        },
+        {
+          "title": "Alertas verificados",
+          "description": "Os operadores analisam a actividade relevante antes da escalada, ajudando-o a receber informação mais clara."
+        },
+        {
+          "title": "Escalada prática",
+          "description": "Os contactos e passos de resposta acordados orientam o que acontece quando um incidente exige atenção."
+        }
+      ]
     },
     "cta": "Pedir Avaliação Residencial"
   },
@@ -609,10 +666,42 @@
     "label": "Contacto",
     "title": "Fale com a Overwatch",
     "description": "Quer já tenha CCTV e guardas, quer esteja a planear uma nova solução de segurança, a Overwatch pode avaliar a sua operação e identificar a abordagem mais adequada.\n\nMarque uma Avaliação de Segurança Gratuita",
+    "hero": {
+      "eyebrow": "Inicie uma conversa",
+      "primaryCta": "Marcar Avaliação Gratuita",
+      "secondaryCta": "Falar pelo WhatsApp",
+      "trust": [
+        "Avaliação sem compromisso",
+        "Recomendações práticas",
+        "Equipa local em Maputo"
+      ],
+      "cardLabel": "Overwatch Moçambique",
+      "cardTitle": "Escolha a forma mais fácil de falar connosco"
+    },
+    "details": {
+      "email": "E-mail",
+      "phone": "Telefone",
+      "whatsapp": "WhatsApp",
+      "location": "Localização"
+    },
+    "formSection": {
+      "eyebrow": "Diga-nos do que precisa",
+      "title": "Comece com uma avaliação de segurança prática",
+      "description": "Partilhe alguns detalhes sobre o seu local ou residência. A nossa equipa irá compreender as suas prioridades e recomendar o próximo passo adequado."
+    },
     "form": {
+      "detailsEyebrow": "Contacto directo",
+      "detailsTitle": "Detalhes de contacto",
+      "detailsDescription": "Prefere falar directamente? Contacte a nossa equipa por e-mail ou telefone, ou abra a nossa localização em Maputo no Google Maps.",
+      "messageEyebrow": "Pedido de avaliação",
+      "messageTitle": "Envie-nos uma mensagem",
+      "messageDescription": "Partilhe contexto suficiente para prepararmos a primeira conversa. Entraremos em contacto através dos dados que indicar.",
       "name": "Nome Completo",
+      "namePlaceholder": "O seu nome completo",
       "email": "Endereço de E-mail",
+      "emailPlaceholder": "voce@exemplo.com",
       "phone": "Número de Telefone",
+      "phonePlaceholder": "84 287 0793",
       "company": "Nome da Empresa / Propriedade",
       "type": "Tipo de Propriedade",
       "typeOptions": {
@@ -621,6 +710,7 @@
         "other": "Outro"
       },
       "message": "Fale-nos sobre as suas necessidades de segurança",
+      "messagePlaceholder": "Fale-nos sobre a propriedade, a segurança actual e as suas principais preocupações.",
       "submit": "Enviar Pedido",
       "submitting": "A enviar...",
       "success": "Obrigado! Entraremos em contacto num prazo de 24 horas.",

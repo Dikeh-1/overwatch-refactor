@@ -13,6 +13,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import { Link } from "@/i18n/navigation";
 import Button from "@/components/ui/Button";
+import { darkEyebrowClassName } from "@/components/ui/eyebrow";
 import CTABanner from "@/components/home/CTABanner";
 import SolutionsExplorer, {
   type SolutionService,
@@ -55,8 +56,8 @@ export default async function SolutionsPage({ params }: Props) {
 
         <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:gap-16 lg:px-8">
           <div className="max-w-2xl">
-            <span className="inline-flex min-h-9 items-center gap-2 rounded-full border border-white/18 bg-white/[0.065] px-3.5 text-xs font-bold uppercase tracking-[0.18em] text-white/78">
-              <Sparkles size={14} aria-hidden="true" />
+            <span className={darkEyebrowClassName}>
+              <Sparkles size={14} className="shrink-0" aria-hidden="true" />
               {t("hero.eyebrow")}
             </span>
             <h1 className="mt-6 text-balance text-[clamp(2.4rem,8vw,4.75rem)] font-bold leading-[1.01] tracking-[-0.045em] text-white">
@@ -70,7 +71,7 @@ export default async function SolutionsPage({ params }: Props) {
               <Button
                 href="#capabilities"
                 size="lg"
-                className="w-full bg-white text-[#0c0e12] hover:bg-white/90 sm:w-auto"
+                className="w-full whitespace-nowrap bg-white px-4 text-[clamp(0.68rem,3.5vw,0.875rem)] text-[#0c0e12] hover:bg-white/90 sm:w-auto sm:px-5 sm:text-sm"
               >
                 {t("hero.primaryCta")}
                 <ArrowDown size={17} className="ml-2" aria-hidden="true" />
@@ -79,7 +80,7 @@ export default async function SolutionsPage({ params }: Props) {
                 href="/contact#assessment-form"
                 size="lg"
                 variant="secondary"
-                className="w-full border-white/25 text-white hover:border-white/55 hover:bg-white/[0.07] sm:w-auto"
+                className="w-full whitespace-nowrap border-white/25 px-4 text-[clamp(0.68rem,3.5vw,0.875rem)] text-white hover:border-white/55 hover:bg-white/[0.07] sm:w-auto sm:px-5 sm:text-sm"
               >
                 {t("hero.secondaryCta")}
               </Button>
