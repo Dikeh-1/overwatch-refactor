@@ -547,6 +547,15 @@
     "searchLabel": "Pesquisar perguntas frequentes",
     "searchPlaceholder": "Pesquisar CCTV, alertas, instalação...",
     "clearSearch": "Limpar pesquisa",
+    "allQuestions": "Todas as perguntas",
+    "resultsLabel": "{count, plural, one {# resposta} other {# respostas}}",
+    "answerLabel": "Resposta Overwatch",
+    "quickFilters": [
+      { "label": "CCTV", "query": "CCTV" },
+      { "label": "IA e verificação", "query": "IA" },
+      { "label": "Incidentes", "query": "incidente" },
+      { "label": "Vários locais", "query": "locais" }
+    ],
     "noResultsTitle": "Não encontrámos uma resposta correspondente",
     "noResultsDescription": "Tente outra expressão ou fale com a nossa equipa para obter uma resposta directa.",
     "supportLabel": "Precisa de uma resposta específica?",
@@ -647,6 +656,10 @@
       "email": "Email",
       "phone": "Telefone",
       "location": "Localização"
+    },
+    "solutionLinks": {
+      "business": "Para Sectores",
+      "homes": "Para Residências"
     },
     "legal": {
       "privacy": "Política de Privacidade",
@@ -819,12 +832,32 @@
       "description": "Explore as soluções de segurança da OverWatch em Moçambique: monitorização CCTV com IA, avaliações de segurança, coordenação de tecnologia, implementação de SOPs e resposta a incidentes."
     },
     "hero": {
-      "title": "Nossas Soluções",
-      "description": "A Overwatch ajuda a transformar medidas de segurança isoladas numa operação de segurança coordenada."
+      "eyebrow": "Segurança integrada, de forma prática",
+      "title": "Uma operação de segurança conectada. Criada para a sua realidade.",
+      "description": "A Overwatch reúne monitorização inteligente, julgamento humano, procedimentos claros e resposta a incidentes—para que cada camada da sua operação de segurança tenha um propósito.",
+      "primaryCta": "Explorar as capacidades",
+      "secondaryCta": "Marcar avaliação gratuita",
+      "trust": [
+        "Sistemas existentes avaliados primeiro",
+        "Alertas verificados por pessoas",
+        "Procedimentos de resposta claros"
+      ],
+      "cardLabel": "Operações Overwatch",
+      "cardTitle": "Do sinal à acção coordenada",
+      "liveLabel": "Fluxo de monitorização activa",
+      "imageAlt": "Centro de controlo de monitorização de segurança da Overwatch",
+      "stages": ["Detectar", "Verificar", "Responder"]
     },
     "intro": {
       "title": "AS NOSSAS SOLUÇÕES",
       "subtitle": "A Overwatch fornece soluções integradas de segurança que combinam monitorização CCTV com IA, verificação humana, gestão de segurança, implementação tecnológica, procedimentos operacionais e resposta a incidentes."
+    },
+    "explorer": {
+      "eyebrow": "Explore a operação",
+      "title": "As camadas certas, a trabalhar como uma só",
+      "description": "Seleccione uma capacidade para ver como a Overwatch pode reforçar uma área específica da sua operação de segurança. Cada recomendação começa pelo local, pelo risco e pelo que já existe.",
+      "detailsLabel": "Detalhe da capacidade",
+      "includedLabel": "O que pode incluir"
     },
     "services": [
       {
@@ -926,8 +959,10 @@
       }
     ],
     "whoWeWorkWith": {
+      "eyebrow": "Criada para operações reais",
       "title": "Com Quem Trabalhamos",
       "description": "As soluções Overwatch são adequadas para uma vasta gama de sectores e organizações:",
+      "button": "Explorar soluções para sectores",
       "items": [
         "Armazéns",
         "Operações logísticas",

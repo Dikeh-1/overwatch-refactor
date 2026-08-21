@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import { ExternalLink } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import ContactForm from "@/components/shared/ContactForm";
 import FadeIn from "@/components/animations/FadeIn";
 import ContactParticles from "@/components/animations/ContactParticles";
 import GlowCard from "@/components/ui/GlowCard";
-import { getSiteAddress, siteContact } from "@/lib/site-config";
+import { getGoogleMapsUrl, getSiteAddress, siteContact } from "@/lib/site-config";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -30,6 +31,7 @@ export default async function ContactPage({ params }: Props) {
   const descriptionParts = t("description").split("\n\n");
   const intro = descriptionParts[0];
   const ctaLine = descriptionParts[1] ?? "";
+  const address = getSiteAddress(locale);
 
   return (
     <>
@@ -76,7 +78,15 @@ export default async function ContactPage({ params }: Props) {
                   </p>
                   <p className="text-muted">
                     <span className="text-foreground font-medium">Location: </span>
-                    {getSiteAddress(locale)}
+                    <a
+                      href={getGoogleMapsUrl(locale)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-foreground underline decoration-foreground/20 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
+                    >
+                      {address}
+                      <ExternalLink size={14} className="shrink-0" aria-hidden="true" />
+                    </a>
                   </p>
                 </div>
               </GlowCard>

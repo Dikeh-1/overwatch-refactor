@@ -19,3 +19,7 @@ export const solutionNavigationLinks = [
 export function getSiteAddress(locale: string) {
   return siteContact.address[locale === "pt" ? "pt" : "en"];
 }
+
+export function getGoogleMapsUrl(locale: string) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(getSiteAddress(locale))}`;
+}

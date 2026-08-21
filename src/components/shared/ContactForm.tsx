@@ -2,10 +2,10 @@
 
 import { useState, FormEvent } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Mail, Phone, MapPin, Send, CheckCircle, AlertCircle } from "lucide-react";
+import { Mail, Phone, MapPin, Send, CheckCircle, AlertCircle, ExternalLink } from "lucide-react";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
-import { getSiteAddress, siteContact } from "@/lib/site-config";
+import { getGoogleMapsUrl, getSiteAddress, siteContact } from "@/lib/site-config";
 
 type FormStatus = "idle" | "submitting" | "success" | "error";
 
@@ -97,7 +97,15 @@ export default function ContactForm() {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-[10px] font-semibold text-muted tracking-widest uppercase mb-0.5">Location</span>
-                  <span className="text-foreground text-sm font-semibold">{getSiteAddress(locale)}</span>
+                  <a
+                    href={getGoogleMapsUrl(locale)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold leading-relaxed text-foreground underline decoration-foreground/20 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
+                  >
+                    {getSiteAddress(locale)}
+                    <ExternalLink size={13} className="shrink-0" aria-hidden="true" />
+                  </a>
                 </div>
               </div>
             </div>

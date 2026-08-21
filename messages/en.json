@@ -547,6 +547,15 @@
     "searchLabel": "Search frequently asked questions",
     "searchPlaceholder": "Search CCTV, alerts, installation...",
     "clearSearch": "Clear search",
+    "allQuestions": "All questions",
+    "resultsLabel": "{count, plural, one {# answer} other {# answers}}",
+    "answerLabel": "Overwatch answer",
+    "quickFilters": [
+      { "label": "CCTV", "query": "CCTV" },
+      { "label": "AI & verification", "query": "AI" },
+      { "label": "Incidents", "query": "incident" },
+      { "label": "Multi-site", "query": "site" }
+    ],
     "noResultsTitle": "No matching answers found",
     "noResultsDescription": "Try another phrase or speak with our team for a direct answer.",
     "supportLabel": "Need a specific answer?",
@@ -647,6 +656,10 @@
       "email": "Email",
       "phone": "Phone",
       "location": "Location"
+    },
+    "solutionLinks": {
+      "business": "For Industries",
+      "homes": "For Homes"
     },
     "legal": {
       "privacy": "Privacy Policy",
@@ -820,12 +833,32 @@
       "description": "Explore OverWatch's security solutions in Mozambique: AI CCTV monitoring, security assessments, technology coordination, SOP implementation, and incident response."
     },
     "hero": {
-      "title": "Our Solutions",
-      "description": "Overwatch helps turn separate security measures into one coordinated security operation."
+      "eyebrow": "Integrated security, made practical",
+      "title": "One connected security operation. Built around your reality.",
+      "description": "Overwatch brings intelligent monitoring, human judgment, clear procedures and incident response together—so every layer of your security operation has a purpose.",
+      "primaryCta": "Explore our capabilities",
+      "secondaryCta": "Book a free assessment",
+      "trust": [
+        "Existing systems considered first",
+        "Human-verified alerts",
+        "Clear response procedures"
+      ],
+      "cardLabel": "Overwatch operations",
+      "cardTitle": "From signal to coordinated action",
+      "liveLabel": "Active monitoring workflow",
+      "imageAlt": "Overwatch security monitoring control room",
+      "stages": ["Detect", "Verify", "Respond"]
     },
     "intro": {
       "title": "OUR SOLUTIONS",
       "subtitle": "Overwatch provides integrated security solutions that combine AI-powered CCTV monitoring, human verification, security management, technology implementation, operational procedures and incident response."
+    },
+    "explorer": {
+      "eyebrow": "Explore the operation",
+      "title": "The right layers, working as one",
+      "description": "Select a capability to see how Overwatch can strengthen a specific part of your security operation. Every recommendation starts with the site, the risk and what is already in place.",
+      "detailsLabel": "Capability detail",
+      "includedLabel": "What this can include"
     },
     "services": [
       {
@@ -927,8 +960,10 @@
       }
     ],
     "whoWeWorkWith": {
+      "eyebrow": "Built for real operations",
       "title": "Who We Work With",
       "description": "Overwatch solutions are suitable for a wide range of industries and organizations:",
+      "button": "Explore solutions for industries",
       "items": [
         "Warehouses",
         "Logistics operations",

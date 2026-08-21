@@ -5,7 +5,12 @@ import { ArrowRight, ExternalLink, Mail, MapPin, Phone } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import Logo from "@/components/ui/Logo";
 import Button from "@/components/ui/Button";
-import { getSiteAddress, siteContact, solutionNavigationLinks } from "@/lib/site-config";
+import {
+  getGoogleMapsUrl,
+  getSiteAddress,
+  siteContact,
+  solutionNavigationLinks,
+} from "@/lib/site-config";
 
 const socialLinks = [
   {
@@ -58,7 +63,7 @@ export default function Footer() {
   const locale = useLocale();
   const year = new Date().getFullYear();
   const location = getSiteAddress(locale);
-  const mapHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
+  const mapHref = getGoogleMapsUrl(locale);
 
   const footerSections = [
     {
@@ -129,7 +134,11 @@ export default function Footer() {
                         href={link.href}
                         className="flex min-h-11 items-center text-sm font-medium text-white/76 transition-colors hover:text-white"
                       >
-                        {tNav(link.key)}
+                        {section.titleKey === "solutions" && link.key === "business"
+                          ? t("solutionLinks.business")
+                          : section.titleKey === "solutions" && link.key === "homes"
+                            ? t("solutionLinks.homes")
+                            : tNav(link.key)}
                       </Link>
                     </li>
                   ))}

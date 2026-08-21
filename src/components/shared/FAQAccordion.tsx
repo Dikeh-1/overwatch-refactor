@@ -2,12 +2,17 @@
 
 import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronDown, Search, X } from "lucide-react";
+import { ChevronDown, Search, ShieldCheck, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type FAQItem = {
   question: string;
   answer: string;
+};
+
+type QuickFilter = {
+  label: string;
+  query: string;
 };
 
 type FAQAccordionProps = {
@@ -18,6 +23,7 @@ type FAQAccordionProps = {
 export default function FAQAccordion({ limit, searchable = false }: FAQAccordionProps) {
   const t = useTranslations("faq");
   const allItems = t.raw("items") as FAQItem[];
+  const quickFilters = searchable ? (t.raw("quickFilters") as QuickFilter[]) : [];
   const items = limit ? allItems.slice(0, limit) : allItems;
   const [openQuestion, setOpenQuestion] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -38,33 +44,79 @@ export default function FAQAccordion({ limit, searchable = false }: FAQAccordion
   return (
     <div>
       {searchable && (
-        <div className="relative mb-5 sm:mb-6">
-          <label htmlFor={`${accordionId}-search`} className="sr-only">
-            {t("searchLabel")}
-          </label>
-          <Search
-            size={20}
-            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted"
-            aria-hidden="true"
-          />
-          <input
-            id={`${accordionId}-search`}
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={t("searchPlaceholder")}
-            className="min-h-14 w-full appearance-none rounded-2xl border border-border bg-card py-3 pl-12 pr-12 text-base text-foreground shadow-sm outline-none transition-[border-color,box-shadow] placeholder:text-muted/75 focus:border-foreground/30 focus:ring-4 focus:ring-foreground/5"
-          />
-          {query && (
+        <div className="mb-5 rounded-[1.35rem] border border-border bg-card p-3 shadow-[0_16px_42px_rgba(2,6,23,0.075)] sm:mb-6 sm:p-4">
+          <div className="relative">
+            <label htmlFor={`${accordionId}-search`} className="sr-only">
+              {t("searchLabel")}
+            </label>
+            <Search
+              size={20}
+              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted"
+              aria-hidden="true"
+            />
+            <input
+              id={`${accordionId}-search`}
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={t("searchPlaceholder")}
+              className="min-h-14 w-full appearance-none rounded-2xl border border-border bg-background py-3 pl-12 pr-12 text-base text-foreground outline-none transition-[border-color,box-shadow] placeholder:text-muted/75 focus:border-[#9b7b51]/50 focus:ring-4 focus:ring-[#9b7b51]/10 dark:focus:border-[#dfc69d]/40"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl text-muted transition-colors hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/30"
+                aria-label={t("clearSearch")}
+              >
+                <X size={18} aria-hidden="true" />
+              </button>
+            )}
+          </div>
+
+          <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <button
               type="button"
-              onClick={() => setQuery("")}
-              className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl text-muted transition-colors hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/30"
-              aria-label={t("clearSearch")}
+              onClick={() => {
+                setQuery("");
+                setOpenQuestion(null);
+              }}
+              className={cn(
+                "min-h-10 shrink-0 rounded-full border px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9b7b51]/40",
+                !normalizedQuery
+                  ? "border-[#9b7b51]/25 bg-[#8b6b42] text-white dark:bg-[#dfc69d] dark:text-[#17130e]"
+                  : "border-border bg-background text-muted hover:border-foreground/20 hover:text-foreground",
+              )}
             >
-              <X size={18} aria-hidden="true" />
+              {t("allQuestions")}
             </button>
-          )}
+            {quickFilters.map((filter) => {
+              const isActive = normalizedQuery === filter.query.toLocaleLowerCase();
+              return (
+                <button
+                  key={filter.label}
+                  type="button"
+                  onClick={() => {
+                    setQuery(filter.query);
+                    setOpenQuestion(null);
+                  }}
+                  className={cn(
+                    "min-h-10 shrink-0 rounded-full border px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9b7b51]/40",
+                    isActive
+                      ? "border-[#9b7b51]/25 bg-[#8b6b42] text-white dark:bg-[#dfc69d] dark:text-[#17130e]"
+                      : "border-border bg-background text-muted hover:border-foreground/20 hover:text-foreground",
+                  )}
+                >
+                  {filter.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-2 flex items-center justify-between gap-3 px-1 text-[0.7rem] font-bold uppercase tracking-[0.13em] text-muted">
+            <span>{t("resultsLabel", { count: visibleItems.length })}</span>
+            <span className="h-px flex-1 bg-border/75" aria-hidden="true" />
+          </div>
         </div>
       )}
 
@@ -128,8 +180,14 @@ export default function FAQAccordion({ limit, searchable = false }: FAQAccordion
                 )}
               >
                 <div className="overflow-hidden">
-                  <div className="border-t border-border/70 px-4 pb-5 pt-4 text-[0.95rem] leading-relaxed text-muted sm:ml-[3.25rem] sm:px-5 sm:pb-6 sm:text-base">
-                    {item.answer}
+                  <div className="border-t border-border/70 px-4 pb-5 pt-4 sm:ml-[3.25rem] sm:px-5 sm:pb-6">
+                    <div className="mb-3 flex items-center gap-2 text-[0.68rem] font-bold uppercase tracking-[0.15em] text-[#8b6b42] dark:text-[#dfc69d]">
+                      <ShieldCheck size={14} aria-hidden="true" />
+                      {t("answerLabel")}
+                    </div>
+                    <p className="text-[0.95rem] leading-relaxed text-muted sm:text-base">
+                      {item.answer}
+                    </p>
                   </div>
                 </div>
               </div>

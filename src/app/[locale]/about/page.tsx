@@ -14,6 +14,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import Button from "@/components/ui/Button";
 import CTABanner from "@/components/home/CTABanner";
+import { getGoogleMapsUrl } from "@/lib/site-config";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -73,10 +74,15 @@ export default async function AboutPage({ params }: Props) {
 
         <div className="relative mx-auto grid min-h-[620px] max-w-7xl items-center gap-10 px-4 pb-14 pt-28 sm:px-6 sm:pb-16 lg:grid-cols-[1.08fr_0.92fr] lg:gap-16 lg:px-8 lg:pb-20 lg:pt-32">
           <div className="max-w-3xl">
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3 py-2 text-xs font-bold uppercase tracking-[0.18em] text-white/75">
+            <a
+              href={getGoogleMapsUrl(locale)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mb-5 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3 py-2 text-xs font-bold uppercase tracking-[0.18em] text-white/75 transition-colors hover:border-white/30 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+            >
               <MapPin size={14} className="text-accent" aria-hidden="true" />
               {t("hero.eyebrow")}
-            </div>
+            </a>
 
             <h1 className="max-w-3xl text-balance text-[clamp(2.35rem,9vw,4.75rem)] font-bold leading-[1.02] tracking-[-0.04em] text-white">
               {t("hero.title")}
