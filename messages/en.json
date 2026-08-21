@@ -522,7 +522,37 @@
   "faq": {
     "label": "FAQ",
     "title": "Frequently Asked Questions",
-    "description": "Everything you need to know about Overwatch virtual guarding and remote monitoring.",
+    "description": "Clear, practical answers about how Overwatch works with your cameras, people and procedures to strengthen security.",
+    "heroCardLabel": "How Overwatch works",
+    "heroCardTitle": "Technology guided by people",
+    "browseQuestions": "Browse the questions",
+    "highlights": [
+      {
+        "title": "Works with suitable CCTV",
+        "description": "We assess what you already have before recommending changes."
+      },
+      {
+        "title": "Alerts are human-reviewed",
+        "description": "AI identifies relevant activity; operators verify what happens next."
+      },
+      {
+        "title": "Built around your site",
+        "description": "Monitoring and escalation follow procedures agreed with your team."
+      }
+    ],
+    "processSteps": ["Detect", "Verify", "Respond"],
+    "questionsLabel": "Explore the details",
+    "questionsTitle": "The answers you need, without the jargon",
+    "questionsDescription": "Search by topic or open any question to understand how our monitoring, response and security support fit your operation.",
+    "searchLabel": "Search frequently asked questions",
+    "searchPlaceholder": "Search CCTV, alerts, installation...",
+    "clearSearch": "Clear search",
+    "noResultsTitle": "No matching answers found",
+    "noResultsDescription": "Try another phrase or speak with our team for a direct answer.",
+    "supportLabel": "Need a specific answer?",
+    "supportTitle": "Let’s look at your site together.",
+    "supportDescription": "A free security assessment turns general questions into a practical recommendation for your location.",
+    "supportButton": "Book a free assessment",
     "items": [
       {
         "question": "Do we need to replace our existing CCTV system?",
@@ -612,6 +642,7 @@
     "description": "Integrated Security Solutions",
     "quickLinks": "Quick Links",
     "contact": "Contact",
+    "openMap": "Open location in Google Maps",
     "rights": "All rights reserved.",
     "sections": {
       "solutions": "Solutions",

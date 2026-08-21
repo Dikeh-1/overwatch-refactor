@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { ArrowRight, Mail, MapPin, Phone } from "lucide-react";
+import { ArrowRight, ExternalLink, Mail, MapPin, Phone } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import Logo from "@/components/ui/Logo";
 import Button from "@/components/ui/Button";
@@ -56,6 +56,8 @@ export default function Footer() {
   const tMeta = useTranslations("metadata");
   const tSections = useTranslations("navSections");
   const year = new Date().getFullYear();
+  const location = tContact("location");
+  const mapHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
 
   const footerSections = [
     {
@@ -158,10 +160,23 @@ export default function Footer() {
                 <Phone size={18} className="mt-0.5 shrink-0 text-accent" aria-hidden="true" />
                 <span>{tContact("phone")}</span>
               </a>
-              <div className="flex items-start gap-3 text-sm leading-relaxed text-white/62">
+              <a
+                href={mapHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex min-h-11 items-start gap-3 rounded-lg text-sm leading-relaxed text-white/62 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-4 focus-visible:ring-offset-[#0b0f18]"
+                aria-label={`${t("openMap")}: ${location}`}
+              >
                 <MapPin size={18} className="mt-0.5 shrink-0 text-accent" aria-hidden="true" />
-                <span>{tContact("location")}</span>
-              </div>
+                <span className="underline decoration-white/0 underline-offset-4 transition-colors group-hover:decoration-white/45">
+                  {location}
+                </span>
+                <ExternalLink
+                  size={14}
+                  className="mt-0.5 shrink-0 text-white/35 transition-colors group-hover:text-white/75"
+                  aria-hidden="true"
+                />
+              </a>
             </div>
 
             <Button href="/contact#assessment-form" size="sm" className="mt-6 w-full sm:w-auto lg:w-full">

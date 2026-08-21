@@ -522,7 +522,37 @@
   "faq": {
     "label": "FAQ",
     "title": "Perguntas Frequentes",
-    "description": "Tudo o que precisa de saber sobre a guarda virtual e monitorização remota da Overwatch.",
+    "description": "Respostas claras e práticas sobre como a Overwatch trabalha com as suas câmaras, pessoas e procedimentos para reforçar a segurança.",
+    "heroCardLabel": "Como funciona a Overwatch",
+    "heroCardTitle": "Tecnologia orientada por pessoas",
+    "browseQuestions": "Ver as perguntas",
+    "highlights": [
+      {
+        "title": "Funciona com CCTV adequado",
+        "description": "Avaliamos o que já possui antes de recomendar alterações."
+      },
+      {
+        "title": "Alertas verificados por pessoas",
+        "description": "A IA identifica actividade relevante; os operadores verificam o que acontece a seguir."
+      },
+      {
+        "title": "Pensado para o seu local",
+        "description": "A monitorização e o escalonamento seguem procedimentos acordados com a sua equipa."
+      }
+    ],
+    "processSteps": ["Detectar", "Verificar", "Responder"],
+    "questionsLabel": "Explore os detalhes",
+    "questionsTitle": "As respostas de que precisa, sem complicações",
+    "questionsDescription": "Pesquise por tema ou abra qualquer pergunta para perceber como a nossa monitorização, resposta e apoio de segurança se adaptam à sua operação.",
+    "searchLabel": "Pesquisar perguntas frequentes",
+    "searchPlaceholder": "Pesquisar CCTV, alertas, instalação...",
+    "clearSearch": "Limpar pesquisa",
+    "noResultsTitle": "Não encontrámos uma resposta correspondente",
+    "noResultsDescription": "Tente outra expressão ou fale com a nossa equipa para obter uma resposta directa.",
+    "supportLabel": "Precisa de uma resposta específica?",
+    "supportTitle": "Vamos analisar o seu local consigo.",
+    "supportDescription": "Uma avaliação de segurança gratuita transforma questões gerais numa recomendação prática para o seu local.",
+    "supportButton": "Marcar uma avaliação gratuita",
     "items": [
       {
         "question": "Precisamos de substituir o nosso sistema CCTV actual?",
@@ -612,6 +642,7 @@
     "description": "Soluções Integradas de Segurança",
     "quickLinks": "Links Rápidos",
     "contact": "Contacto",
+    "openMap": "Abrir localização no Google Maps",
     "rights": "Todos os direitos reservados.",
     "sections": {
       "solutions": "Soluções",
