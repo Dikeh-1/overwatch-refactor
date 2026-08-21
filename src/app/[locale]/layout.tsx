@@ -11,6 +11,37 @@ import ScrollToTop from "@/components/ui/ScrollToTop";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import "../globals.css";
 
+const themeInitScript = `
+(function(){
+  try {
+    var themeKey = "theme";
+    var versionKey = "theme_version";
+    var version = "3";
+    var theme = localStorage.getItem(themeKey);
+
+    if (localStorage.getItem(versionKey) !== version) {
+      theme = "dark";
+      localStorage.setItem(themeKey, theme);
+      localStorage.setItem(versionKey, version);
+    }
+
+    if (theme === "light") {
+      document.documentElement.classList.remove("dark");
+      document.documentElement.classList.add("light");
+      document.documentElement.style.colorScheme = "light";
+    } else {
+      document.documentElement.classList.add("dark");
+      document.documentElement.classList.remove("light");
+      document.documentElement.style.colorScheme = "dark";
+    }
+  } catch (error) {
+    document.documentElement.classList.add("dark");
+    document.documentElement.classList.remove("light");
+    document.documentElement.style.colorScheme = "dark";
+  }
+})();
+`;
+
 type Props = {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
@@ -33,10 +64,11 @@ export default async function LocaleLayout({ children, params }: Props) {
   return (
     <html
       lang={locale}
-      className="h-full"
+      className="h-full dark"
       suppressHydrationWarning
     >
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <link rel="preload" href="/hero_dark.webp" as="image" type="image/webp" />
         <link rel="preconnect" href="https://res.cloudinary.com" />
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />

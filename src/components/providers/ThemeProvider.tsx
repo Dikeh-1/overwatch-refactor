@@ -9,6 +9,10 @@ import {
 } from "react";
 
 type Theme = "dark" | "light";
+const DEFAULT_THEME: Theme = "dark";
+const THEME_STORAGE_KEY = "theme";
+const THEME_VERSION_KEY = "theme_version";
+const THEME_VERSION = "3";
 
 interface ThemeContextType {
   theme: Theme;
@@ -35,18 +39,17 @@ function isTheme(value: string | null): value is Theme {
 
 function getInitialTheme(): Theme {
   if (typeof window === "undefined") {
-    return "light";
+    return DEFAULT_THEME;
   }
 
-  const savedTheme = localStorage.getItem("theme");
-  const themeVersion = localStorage.getItem("theme_version");
-  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+  const themeVersion = localStorage.getItem(THEME_VERSION_KEY);
 
-  if (themeVersion === "2" && isTheme(savedTheme)) {
+  if (themeVersion === THEME_VERSION && isTheme(savedTheme)) {
     return savedTheme;
   }
 
-  return prefersDark ? "dark" : "light";
+  return DEFAULT_THEME;
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
@@ -58,12 +61,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
-    const themeVersion = localStorage.getItem("theme_version");
+    const themeVersion = localStorage.getItem(THEME_VERSION_KEY);
 
-    // v2: light mode is now the default. Clear old saved dark preference from v1.
-    if (themeVersion !== "2") {
-      localStorage.removeItem("theme");
-      localStorage.setItem("theme_version", "2");
+    if (themeVersion !== THEME_VERSION) {
+      localStorage.setItem(THEME_STORAGE_KEY, DEFAULT_THEME);
+      localStorage.setItem(THEME_VERSION_KEY, THEME_VERSION);
     }
   }, []);
 
@@ -71,15 +73,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (!mounted) return;
     
     const root = document.documentElement;
-    // Only .dark class is needed; :root handles light mode by default
-    if (theme === "dark") {
-      root.classList.add("dark");
-      root.classList.remove("light");
-    } else {
-      root.classList.remove("dark");
-      root.classList.remove("light");
-    }
-    localStorage.setItem("theme", theme);
+    root.classList.toggle("dark", theme === "dark");
+    root.classList.toggle("light", theme === "light");
+    root.style.colorScheme = theme;
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme, mounted]);
 
   const toggleTheme = () => {

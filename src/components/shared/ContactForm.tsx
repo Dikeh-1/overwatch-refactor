@@ -109,7 +109,7 @@ export default function ContactForm() {
           <h2 className="text-2xl font-bold text-foreground mb-8">Send a Message</h2>
           
           {status === "success" ? (
-            <div className="flex items-center gap-3 p-4 rounded-lg bg-green-500/10 border border-green-500/30 text-green-400 mb-6">
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-green-500/10 border border-green-500/30 text-green-700 dark:text-green-300 mb-6">
               <CheckCircle size={20} />
               <p className="text-sm font-medium">{t("form.success")}</p>
             </div>
@@ -192,7 +192,7 @@ export default function ContactForm() {
               </div>
 
               {status === "error" && (
-                <div className="flex items-center gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400">
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300">
                   <AlertCircle size={20} />
                   <p className="text-sm font-medium">{t("form.error")}</p>
                 </div>

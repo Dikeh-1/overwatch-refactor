@@ -4,10 +4,10 @@ import Particles, { ParticlesProvider } from "@tsparticles/react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { initParticles } from "@/lib/particles";
 
-export default function ParticleNetwork() {
+export default function ParticleNetwork({ forceDark = false }: { forceDark?: boolean }) {
   const { theme } = useTheme();
 
-  const isDark = theme === "dark";
+  const isDark = forceDark || theme === "dark";
   const particleColor = isDark ? "#ffffff" : "#0f1117";
   const linkColor = isDark ? "#ffffff" : "#0f1117";
 

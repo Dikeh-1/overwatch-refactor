@@ -19,12 +19,12 @@ export default function Hero() {
   ];
 
   return (
-    <section className="hero-section relative min-h-screen flex items-center overflow-hidden dark">
+    <section className="hero-section relative min-h-screen flex items-center overflow-hidden bg-[#0f1117] text-white dark">
       {/* Theme-aware background via CSS (see globals.css) */}
       <div className="hero-bg absolute inset-0 z-0" />
 
       {/* Interactive Particle Network */}
-      <ParticleNetwork />
+      <ParticleNetwork forceDark />
 
       {/* Gradient overlay — theme-aware */}
       <div className="hero-overlay absolute inset-0 z-10 pointer-events-none" />
@@ -43,18 +43,18 @@ export default function Hero() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className="inline-block px-4 py-1.5 rounded-full border border-accent/50 bg-accent/10 text-accent text-xs font-bold tracking-[0.2em] uppercase mb-6 shadow-lg shadow-accent/10"
+              className="inline-block px-4 py-1.5 rounded-full border border-white/50 bg-white/10 text-white text-xs font-bold tracking-[0.2em] uppercase mb-6 shadow-lg shadow-white/10"
             >
               {t("badge")}
             </motion.span>
 
             {/* Headline */}
             <h1 className="text-[clamp(2rem,8.5vw,3rem)] sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.1] mb-6 min-h-[6.75rem] sm:min-h-[150px]">
-              <span className="text-foreground block">
+              <span className="text-white block">
                 <ScrambleText text={t("headline")} delay={0.2} />
               </span>
               {t("headlineAccent") && (
-                <span className="text-accent glow-text block mt-2">
+                <span className="text-white glow-text block mt-2">
                   <ScrambleText text={t("headlineAccent")} delay={0.8} />
                 </span>
               )}
@@ -67,13 +67,14 @@ export default function Hero() {
 
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row items-start gap-4 mb-14">
-              <Button href="/contact" size="md">
+              <Button href="/contact" size="md" className="bg-white text-[#0f1117] hover:bg-white/90">
                 {t("ctaPrimary")}
               </Button>
               <Button
                 href={WHATSAPP_URL}
                 variant="secondary"
                 size="md"
+                className="border-white/50 text-white hover:border-white hover:bg-white/10"
                 external
               >
                 {t("ctaSecondary")}
@@ -89,7 +90,7 @@ export default function Hero() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.35 + i * 0.1 }}
                 >
-                  <div className="text-xl md:text-2xl font-bold text-accent">
+                  <div className="text-xl md:text-2xl font-bold text-white">
                     {stat.value}
                   </div>
                   <div className="text-[10px] sm:text-xs text-white/65 mt-1 uppercase tracking-wider font-semibold">

@@ -33,7 +33,7 @@ export default function LanguageSwitcher({ className }: { className?: string }) 
             "px-3 py-1.5 text-sm font-medium transition-colors",
             locale === loc
               ? "bg-accent/20 text-accent"
-              : "text-muted hover:text-foreground hover:bg-white/5"
+              : "text-muted hover:text-foreground hover:bg-accent/10"
           )}
           aria-current={locale === loc ? "true" : undefined}
         >

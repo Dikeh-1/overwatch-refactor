@@ -122,7 +122,7 @@ export default function CareersForm() {
             type="tel"
             required
             placeholder="+258 85 000 0000"
-            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-foreground placeholder:text-muted/30 focus:outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/10 focus:bg-white/8 transition-all duration-300"
+            className="w-full px-4 py-3 rounded-xl bg-primary-darker border border-border text-foreground placeholder:text-muted/50 focus:outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/10 transition-all duration-300"
           />
         </div>
         <div>
@@ -216,7 +216,7 @@ export default function CareersForm() {
 
       {/* Error */}
       {status === "error" && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/8 border border-red-500/25 text-red-400">
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/8 border border-red-500/25 text-red-700 dark:text-red-300">
           <AlertCircle size={18} className="shrink-0" />
           <p className="text-sm">Something went wrong. Please try again or email us directly at comercial@overwatchmoz.com</p>
         </div>
