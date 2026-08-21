@@ -33,6 +33,8 @@ export async function POST(request: Request) {
     const phone = formData.get("phone") as string;
     const position = formData.get("position") as string;
     const message = formData.get("message") as string;
+    const locale = formData.get("locale") as string;
+    const isPortuguese = locale === "pt";
     const cvFile = formData.get("cv") as File | null;
 
     if (!name || !email || !phone || !position) {
@@ -138,6 +140,40 @@ export async function POST(request: Request) {
     // 1. Send alert email to HR Team
     await sendBrevoEmail(payload);
 
+    const hrCopy = isPortuguese
+      ? {
+          title: "Candidatura Recebida",
+          greeting: `Caro(a) ${name},`,
+          thanks: `Obrigado por submeter a sua candidatura para <strong>${positionLabel}</strong> na Overwatch.`,
+          received: "Recebemos os seus dados e o CV. A nossa equipa de recrutamento está a analisar as candidaturas para identificar os perfis cujas competências e experiência correspondem às nossas necessidades.",
+          nextSteps: "Se o seu perfil corresponder ao que procuramos, entraremos em contacto directamente por e-mail ou telefone para conversar sobre os próximos passos do processo de recrutamento.",
+          interest: "Obrigado pelo seu interesse em fazer parte da equipa Overwatch.",
+          noticeTitle: "⚠️ Aviso Importante",
+          notice: "Esta é uma resposta automática. Por favor, <strong>não responda</strong> directamente a este e-mail, pois esta caixa de correio não é monitorizada.",
+          enquiries: `Para qualquer questão adicional, contacte-nos através de <a href="mailto:${siteContact.email}" style="color: #3b82f6; text-decoration: none; font-weight: 500;">${siteContact.email}</a> ou utilize o assistente do nosso website para uma resposta mais rápida.`,
+          regards: "Com os melhores cumprimentos,",
+          team: "Equipa de Recursos Humanos",
+          company: "Overwatch Moçambique",
+          rights: "Todos os direitos reservados.",
+          subject: "Candidatura Recebida — Overwatch",
+        }
+      : {
+          title: "Application Received",
+          greeting: `Dear ${name},`,
+          thanks: `Thank you for submitting your application for the <strong>${positionLabel}</strong> position at Overwatch.`,
+          received: "We have successfully received your details and CV. Our hiring team is currently reviewing all submissions to identify candidates whose skills and experience align with our requirements.",
+          nextSteps: "If your profile is a strong match, we will contact you directly via email or phone to discuss the next steps in our recruitment process.",
+          interest: "Thank you for your interest in joining the Overwatch team.",
+          noticeTitle: "⚠️ Important Notice",
+          notice: "This is an automated response. Please <strong>do not reply</strong> directly to this email as this inbox is not monitored.",
+          enquiries: `For any further enquiries, please email us directly at <a href="mailto:${siteContact.email}" style="color: #3b82f6; text-decoration: none; font-weight: 500;">${siteContact.email}</a>, or use our website chatbot for a faster response.`,
+          regards: "Best regards,",
+          team: "HR Team",
+          company: "Overwatch Mozambique",
+          rights: "All rights reserved.",
+          subject: "Application Received — Overwatch",
+        };
+
     // 2. Send professional auto-responder confirmation to the applicant
     const hrHtmlContent = `
       <div style="background-color: #f8fafc; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155; line-height: 1.6;">
@@ -147,28 +183,28 @@ export async function POST(request: Request) {
           
           <!-- Body Content -->
           <div style="padding: 32px;">
-            <h1 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0 0 16px 0;">Application Received</h1>
-            <p>Dear ${name},</p>
-            <p>Thank you for submitting your application for the <strong>${positionLabel}</strong> position at Overwatch.</p>
-            <p>We have successfully received your details and CV. Our hiring team is currently reviewing all submissions to identify candidates whose skills and experience align with our requirements.</p>
-            <p>If your profile is a strong match, we will contact you directly via email or phone to discuss the next steps in our recruitment process.</p>
-            <p>Thank you for your interest in joining the Overwatch team.</p>
+            <h1 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0 0 16px 0;">${hrCopy.title}</h1>
+            <p>${hrCopy.greeting}</p>
+            <p>${hrCopy.thanks}</p>
+            <p>${hrCopy.received}</p>
+            <p>${hrCopy.nextSteps}</p>
+            <p>${hrCopy.interest}</p>
 
             <div style="margin-top: 24px; padding: 16px; background: #f1f5f9; border-radius: 8px; border-left: 3px solid #cbd5e1; font-size: 13px; color: #64748b;">
-              <p style="margin: 0 0 8px 0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #475569;">⚠️ Important Notice</p>
-              <p style="margin: 0 0 8px 0; line-height: 1.5;">This is an automated response. Please <strong>do not reply</strong> directly to this email as this inbox is not monitored.</p>
-              <p style="margin: 0; line-height: 1.5;">For any further enquiries, please email us directly at <a href="mailto:${siteContact.email}" style="color: #3b82f6; text-decoration: none; font-weight: 500;">${siteContact.email}</a>, or use our website chatbot for a faster response.</p>
+              <p style="margin: 0 0 8px 0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #475569;">${hrCopy.noticeTitle}</p>
+              <p style="margin: 0 0 8px 0; line-height: 1.5;">${hrCopy.notice}</p>
+              <p style="margin: 0; line-height: 1.5;">${hrCopy.enquiries}</p>
             </div>
             
             <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
-            <p style="font-size: 14px; color: #64748b; margin: 0;">Best regards,</p>
-            <p style="font-size: 14px; font-weight: 600; color: #0f172a; margin: 4px 0 0 0;">HR Team</p>
-            <p style="font-size: 13px; color: #94a3b8; margin: 0;">Overwatch Mozambique</p>
+            <p style="font-size: 14px; color: #64748b; margin: 0;">${hrCopy.regards}</p>
+            <p style="font-size: 14px; font-weight: 600; color: #0f172a; margin: 4px 0 0 0;">${hrCopy.team}</p>
+            <p style="font-size: 13px; color: #94a3b8; margin: 0;">${hrCopy.company}</p>
           </div>
           
           <!-- Footer -->
           <div style="background-color: #f8fafc; padding: 24px 32px; border-top: 1px solid #e2e8f0; text-align: center;">
-            <p style="font-size: 11px; color: #94a3b8; margin: 0;">© 2026 Overwatch Mozambique. All rights reserved.</p>
+            <p style="font-size: 11px; color: #94a3b8; margin: 0;">© 2026 ${hrCopy.company}. ${hrCopy.rights}</p>
           </div>
         </div>
       </div>
@@ -177,7 +213,7 @@ export async function POST(request: Request) {
     await sendBrevoEmail({
       sender: { name: "Overwatch HR Team", email: FROM_EMAIL },
       to: [{ email, name }],
-      subject: `Application Received — Overwatch`,
+      subject: hrCopy.subject,
       htmlContent: hrHtmlContent,
     });
 

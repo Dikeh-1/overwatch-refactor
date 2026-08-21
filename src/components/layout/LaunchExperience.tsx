@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Download, X } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 
@@ -23,6 +24,7 @@ function isStandaloneApp() {
 }
 
 export default function LaunchExperience() {
+  const t = useTranslations("preferences");
   const [showLaunch, setShowLaunch] = useState(true);
   const [installPrompt, setInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
@@ -131,7 +133,7 @@ export default function LaunchExperience() {
               <div className="launch-progress h-full rounded-full bg-white/70" />
             </div>
             <p className="mt-5 text-xs font-semibold uppercase tracking-[0.4em] text-white/70">
-              Loading...
+              {t("loading")}
             </p>
           </div>
         </div>
@@ -143,7 +145,7 @@ export default function LaunchExperience() {
             type="button"
             onClick={dismissInstallPrompt}
             className="absolute right-3 top-3 rounded-full p-1 text-white/60 transition hover:bg-white/10 hover:text-white"
-            aria-label="Close install prompt"
+            aria-label={t("closeInstallPrompt")}
           >
             <X size={16} />
           </button>
@@ -152,17 +154,16 @@ export default function LaunchExperience() {
               <Download size={20} />
             </div>
             <div>
-              <p className="font-semibold">Install Overwatch</p>
+              <p className="font-semibold">{t("installTitle")}</p>
               <p className="mt-1 text-sm leading-relaxed text-white/75">
-                Add this website to your phone for faster access and an app-like
-                experience.
+                {t("installDescription")}
               </p>
               <button
                 type="button"
                 onClick={installApp}
                 className="mt-3 rounded-full bg-white px-4 py-2 text-sm font-semibold text-primary-dark transition hover:bg-white/90"
               >
-                Install App
+                {t("installButton")}
               </button>
             </div>
           </div>

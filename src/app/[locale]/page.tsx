@@ -19,6 +19,7 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "metadata.home" });
+  const tMetadata = await getTranslations({ locale, namespace: "metadata" });
 
   return {
     title: t("title"),
@@ -34,7 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
           url: "/overwatch-social-preview.png",
           width: 1200,
           height: 630,
-          alt: "Overwatch AI CCTV monitoring and virtual guarding",
+          alt: tMetadata("socialImageAlt"),
         },
       ],
     },

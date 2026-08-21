@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronUp, ChevronDown } from "lucide-react";
 
 export default function ScrollToTop() {
+  const t = useTranslations("preferences");
   const [isVisible, setIsVisible] = useState(false);
   const [isScrollingDown, setIsScrollingDown] = useState(false);
   const lastScrollY = useRef(0);
@@ -68,7 +70,7 @@ export default function ScrollToTop() {
           transition={{ duration: 0.2 }}
           onClick={handleClick}
           className="group fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-4 z-[90] flex h-11 w-11 touch-manipulation items-center justify-center rounded-xl bg-primary-darker/75 text-foreground/70 shadow-md backdrop-blur-md transition-all duration-300 hover:bg-primary-dark/90 hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:bottom-6 sm:left-6"
-          aria-label={isScrollingDown ? "Scroll down" : "Scroll to top"}
+          aria-label={isScrollingDown ? t("scrollDown") : t("scrollTop")}
         >
           {isScrollingDown ? (
             <ChevronDown size={22} className="group-hover:translate-y-0.5 transition-transform duration-300" />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
+import { useTranslations } from "next-intl";
 import { Moon, Sun, Check, ChevronDown } from "lucide-react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,7 @@ function getServerSnapshot() {
 }
 
 export default function ThemeDropdown() {
+  const t = useTranslations("preferences");
   const { theme, toggleTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const mounted = useSyncExternalStore(
@@ -31,7 +33,7 @@ export default function ThemeDropdown() {
       <div className="relative">
         <button
           className="flex min-h-11 min-w-11 touch-manipulation items-center justify-center gap-1 rounded-lg text-foreground/70 transition-colors hover:bg-accent/5 hover:text-accent"
-          aria-label="Theme"
+          aria-label={t("theme")}
         >
           <Moon size={18} />
           <ChevronDown size={14} className="transition-transform" />
@@ -45,7 +47,7 @@ export default function ThemeDropdown() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex min-h-11 min-w-11 touch-manipulation items-center justify-center gap-1 rounded-lg text-foreground/70 transition-colors hover:bg-accent/5 hover:text-accent"
-        aria-label="Theme"
+        aria-label={t("theme")}
       >
         {theme === "dark" ? <Moon size={18} /> : <Sun size={18} />}
         <ChevronDown size={14} className="transition-transform" />
@@ -72,7 +74,7 @@ export default function ThemeDropdown() {
             >
               <div className="flex items-center gap-2">
                 <Moon size={16} />
-                Dark
+                {t("dark")}
               </div>
               {theme === "dark" && <Check size={16} />}
             </button>
@@ -90,7 +92,7 @@ export default function ThemeDropdown() {
             >
               <div className="flex items-center gap-2">
                 <Sun size={16} />
-                Light
+                {t("light")}
               </div>
               {theme === "light" && <Check size={16} />}
             </button>

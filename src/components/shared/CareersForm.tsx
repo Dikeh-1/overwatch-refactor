@@ -1,20 +1,16 @@
 "use client";
 
 import { useState, FormEvent, useRef } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { Send, CheckCircle, AlertCircle, Upload, X, FileText, Loader2 } from "lucide-react";
 import { siteContact } from "@/lib/site-config";
 
 type FormStatus = "idle" | "submitting" | "success" | "error";
 
-const POSITIONS = [
-  "AI Monitoring Operator",
-  "Security Operations Manager",
-  "Technical Support Specialist",
-  "Sales & Business Development",
-  "General Application",
-];
-
 export default function CareersForm() {
+  const t = useTranslations("careers.form");
+  const locale = useLocale();
+  const positions = t.raw("positions") as string[];
   const [status, setStatus] = useState<FormStatus>("idle");
   const [fileName, setFileName] = useState<string>("");
   const [fileSize, setFileSize] = useState<string>("");
@@ -65,15 +61,15 @@ export default function CareersForm() {
           </div>
           <div className="absolute inset-0 rounded-full border-2 border-accent/20 animate-ping" />
         </div>
-        <h3 className="text-3xl font-bold text-foreground mb-3">Application Sent!</h3>
+        <h3 className="text-3xl font-bold text-foreground mb-3">{t("success")}</h3>
         <p className="text-muted text-lg max-w-md mb-8 leading-relaxed">
-          Thank you for applying. Our HR team will review your profile and get back to you shortly.
+          {t("successDescription")}
         </p>
         <button
           onClick={() => { setStatus("idle"); setFileName(""); setFileSize(""); }}
           className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-border text-muted hover:text-foreground hover:border-foreground/30 transition-all duration-300 cursor-pointer"
         >
-          Submit Another Application
+          {t("submitAnother")}
         </button>
       </div>
     );
@@ -81,31 +77,32 @@ export default function CareersForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <input type="hidden" name="locale" value={locale} />
       {/* Row 1: Name + Email */}
       <div className="grid sm:grid-cols-2 gap-5">
         <div className="group">
           <label htmlFor="cf-name" className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">
-            Full Name <span className="text-accent">*</span>
+            {t("name")} <span className="text-accent">*</span>
           </label>
           <input
             id="cf-name"
             name="name"
             type="text"
             required
-            placeholder="e.g. João Machava"
+            placeholder={t("namePlaceholder")}
             className="w-full px-4 py-3 rounded-xl bg-primary-darker border border-border text-foreground placeholder:text-muted/50 focus:outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/10 transition-all duration-300"
           />
         </div>
         <div className="group">
           <label htmlFor="cf-email" className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">
-            Email Address <span className="text-accent">*</span>
+            {t("email")} <span className="text-accent">*</span>
           </label>
           <input
             id="cf-email"
             name="email"
             type="email"
             required
-            placeholder="you@example.com"
+            placeholder={t("emailPlaceholder")}
             className="w-full px-4 py-3 rounded-xl bg-primary-darker border border-border text-foreground placeholder:text-muted/50 focus:outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/10 transition-all duration-300"
           />
         </div>
@@ -115,20 +112,20 @@ export default function CareersForm() {
       <div className="grid sm:grid-cols-2 gap-5">
         <div>
           <label htmlFor="cf-phone" className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">
-            Phone Number <span className="text-accent">*</span>
+            {t("phone")} <span className="text-accent">*</span>
           </label>
           <input
             id="cf-phone"
             name="phone"
             type="tel"
             required
-            placeholder="+258 85 000 0000"
+            placeholder={t("phonePlaceholder")}
             className="w-full px-4 py-3 rounded-xl bg-primary-darker border border-border text-foreground placeholder:text-muted/50 focus:outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/10 transition-all duration-300"
           />
         </div>
         <div>
           <label htmlFor="cf-position" className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">
-            Position Applying For <span className="text-accent">*</span>
+            {t("position")} <span className="text-accent">*</span>
           </label>
           <select
             id="cf-position"
@@ -136,8 +133,8 @@ export default function CareersForm() {
             required
             className="w-full px-4 py-3 rounded-xl bg-primary-darker border border-border text-foreground focus:outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/10 transition-all duration-300 appearance-none cursor-pointer"
           >
-            <option value="" className="bg-primary-darker text-foreground">Select a position…</option>
-            {POSITIONS.map((p) => (
+            <option value="" className="bg-primary-darker text-foreground">{t("selectPosition")}</option>
+            {positions.map((p) => (
               <option key={p} value={p} className="bg-primary-darker text-foreground">{p}</option>
             ))}
           </select>
@@ -147,7 +144,7 @@ export default function CareersForm() {
       {/* CV Upload */}
       <div>
         <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">
-          Upload CV / Resume <span className="text-accent">*</span>
+          {t("cvLabel")} <span className="text-accent">*</span>
         </label>
         <input
           ref={fileInputRef}
@@ -176,8 +173,10 @@ export default function CareersForm() {
               <Upload className="text-accent" size={22} />
             </div>
             <div className="text-center">
-              <p className="text-foreground font-semibold">Drop your CV here or <span className="text-accent">browse</span></p>
-              <p className="text-muted text-sm mt-1">PDF, DOC or DOCX — max 5 MB</p>
+              <p className="text-foreground font-semibold">
+                {t("cvDrop")} <span className="text-accent">{t("cvBrowse")}</span>
+              </p>
+              <p className="text-muted text-sm mt-1">{t("cvHint")}</p>
             </div>
           </label>
         ) : (
@@ -193,7 +192,7 @@ export default function CareersForm() {
               type="button"
               onClick={clearFile}
               className="w-8 h-8 rounded-full bg-primary-darker hover:bg-border flex items-center justify-center transition-colors cursor-pointer shrink-0"
-              aria-label="Remove file"
+              aria-label={t("removeFile")}
             >
               <X size={16} className="text-muted" />
             </button>
@@ -204,13 +203,13 @@ export default function CareersForm() {
       {/* Cover Message */}
       <div>
         <label htmlFor="cf-message" className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">
-          Cover Message
+          {t("message")}
         </label>
         <textarea
           id="cf-message"
           name="message"
           rows={5}
-          placeholder="Tell us about yourself, your experience, and why you'd like to join Overwatch…"
+          placeholder={t("messagePlaceholder")}
           className="w-full px-4 py-3 rounded-xl bg-primary-darker border border-border text-foreground placeholder:text-muted/50 focus:outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/10 transition-all duration-300 resize-none"
         />
       </div>
@@ -219,7 +218,7 @@ export default function CareersForm() {
       {status === "error" && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/8 border border-red-500/25 text-red-700 dark:text-red-300">
           <AlertCircle size={18} className="shrink-0" />
-          <p className="text-sm">Something went wrong. Please try again or email us directly at {siteContact.email}</p>
+          <p className="text-sm">{t("error", { email: siteContact.email })}</p>
         </div>
       )}
 
@@ -232,12 +231,12 @@ export default function CareersForm() {
         {status === "submitting" ? (
           <>
             <Loader2 size={20} className="animate-spin" />
-            Sending Application…
+            {t("submitting")}
           </>
         ) : (
           <>
             <Send size={18} />
-            Submit Application
+            {t("submit")}
           </>
         )}
       </button>

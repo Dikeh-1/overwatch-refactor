@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import Image from "next/image";
-import Link from "next/link";
+import GlobalNotFoundContent from "@/components/shared/GlobalNotFoundContent";
 
 export const metadata: Metadata = {
   title: "404 | Overwatch",
@@ -11,43 +10,7 @@ export default function GlobalNotFound() {
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <main className="not-found-page">
-          <section className="not-found-shell">
-            <div className="not-found-copy">
-              <Image
-                src="/logo.png"
-                alt="Overwatch"
-                width={230}
-                height={34}
-                className="not-found-logo"
-                priority
-              />
-              <p className="not-found-kicker">Security route unavailable</p>
-              <h1>404: Signal Lost</h1>
-              <p className="not-found-text">
-                This page is outside the monitored perimeter. Return to the
-                homepage or contact Overwatch so we can get you back on track.
-              </p>
-              <div className="not-found-actions">
-                <Link href="/en">Back to Home</Link>
-                <Link href="/en/contact" className="secondary">
-                  Contact Team
-                </Link>
-              </div>
-            </div>
-
-            <div className="not-found-radar" aria-hidden="true">
-              <span className="code">404</span>
-              <span className="ring one" />
-              <span className="ring two" />
-              <span className="ring three" />
-              <span className="sweep" />
-              <span className="dot a" />
-              <span className="dot b" />
-              <span className="dot c" />
-            </div>
-          </section>
-        </main>
+        <GlobalNotFoundContent />
 
         <style>{`
           * { box-sizing: border-box; }

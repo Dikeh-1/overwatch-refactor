@@ -95,7 +95,7 @@ export default function Footer() {
       <div className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
         <div className="grid gap-12 lg:grid-cols-12 lg:gap-10">
           <div className="lg:col-span-4">
-            <Link href="/" className="inline-flex min-h-11 items-center" aria-label="Overwatch home">
+            <Link href="/" className="inline-flex min-h-11 items-center" aria-label={t("homeLabel")}>
               <Logo size="sm" />
             </Link>
             <p className="mt-5 max-w-sm text-base font-medium leading-relaxed text-white/68">
@@ -121,7 +121,7 @@ export default function Footer() {
             </div>
           </div>
 
-          <nav className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:col-span-5" aria-label="Footer navigation">
+          <nav className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:col-span-5" aria-label={t("navigationLabel")}>
             {footerSections.map((section) => (
               <div key={section.titleKey}>
                 <h3 className="text-xs font-bold uppercase tracking-[0.17em] text-white/45">

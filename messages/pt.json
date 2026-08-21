@@ -2,17 +2,18 @@
   "metadata": {
     "siteName": "Overwatch",
     "tagline": "Segurança com IA. Verificação Humana. Resposta Real.",
+    "socialImageAlt": "Monitorização CCTV com IA e guarda virtual da Overwatch",
     "home": {
-      "title": "OverWatch Moçambique | Guarda Virtual e Monitoramento CCTV 24/7",
-      "description": "A OverWatch Moçambique oferece monitoramento CCTV com IA, verificação humana, alertas por WhatsApp e telefone, e registo de incidentes para empresas."
+      "title": "OverWatch Moçambique | Guarda Virtual e Monitorização CCTV 24/7",
+      "description": "A OverWatch Moçambique oferece monitorização CCTV com IA, verificação humana, alertas por WhatsApp e telefone e registo de incidentes para empresas."
     },
     "business": {
-      "title": "Guarda Virtual e Monitoramento CCTV em Moçambique | OverWatch",
-      "description": "Proteja empresas, armazéns, lojas e escritórios com monitoramento CCTV com IA, vigilância remota 24 horas, verificação humana e alertas rápidos."
+      "title": "Guarda Virtual e Monitorização CCTV em Moçambique | OverWatch",
+      "description": "Proteja empresas, armazéns, lojas e escritórios com monitorização CCTV com IA, vigilância remota 24 horas, verificação humana e alertas rápidos."
     },
     "homes": {
-      "title": "Monitoramento CCTV Residencial em Moçambique | OverWatch",
-      "description": "Proteja residências com câmeras de segurança com monitoramento, vigilância remota 24 horas, alertas por WhatsApp e verificação de riscos."
+      "title": "Monitorização CCTV Residencial em Moçambique | OverWatch",
+      "description": "Proteja residências com câmaras de segurança monitorizadas, vigilância remota 24 horas, alertas por WhatsApp e verificação de riscos."
     },
     "about": {
       "title": "Sobre a OverWatch | Operações de Segurança Activa em Moçambique",
@@ -20,15 +21,15 @@
     },
     "faq": {
       "title": "Perguntas Frequentes sobre Guarda Virtual | OverWatch",
-      "description": "Perguntas sobre guarda virtual Moçambique, monitoramento CCTV, segurança para empresas em Maputo, alertas, instalação e pacotes de vigilância."
+      "description": "Perguntas sobre guarda virtual em Moçambique, monitorização CCTV, segurança para empresas em Maputo, alertas, instalação e planos de vigilância."
     },
     "contact": {
       "title": "Avaliação Gratuita de Segurança em Maputo | OverWatch",
-      "description": "Contacte a OverWatch para avaliação gratuita, segurança para empresas em Maputo, monitoramento CCTV Moçambique e vigilância remota 24 horas."
+      "description": "Contacte a OverWatch para uma avaliação gratuita, segurança para empresas em Maputo, monitorização CCTV em Moçambique e vigilância remota 24 horas."
     },
     "careers": {
       "title": "Carreiras em Segurança em Moçambique | OverWatch",
-      "description": "Junte-se à equipa OverWatch e trabalhe com monitoramento CCTV, guarda virtual, verificação de alertas e operações modernas de segurança."
+      "description": "Junte-se à equipa OverWatch e trabalhe com monitorização CCTV, guarda virtual, verificação de alertas e operações modernas de segurança."
     }
   },
   "nav": {
@@ -55,7 +56,7 @@
       "faq": "Ajuda",
       "contact": "Contacte-nos",
       "pricing": "Planos",
-      "careers": "Junte-se à Nossa Equipe"
+      "careers": "Junte-se à Nossa Equipa"
     },
     "aria": {
       "mainNav": "Navegação principal",
@@ -419,6 +420,11 @@
     "percentOff": "({percent}% desconto)",
     "saveLabel": "Poupe {savings} {currency}/ano ({percent}% de desconto)",
     "totalCommitment": "Total a pagar: {total} {currency}",
+    "whatsapp": {
+      "perYear": "/ano",
+      "zeroSavings": "0 MZN/ano",
+      "message": "Olá, equipa Overwatch,\n\nGostaria de iniciar a integração para o seguinte plano de monitorização de segurança:\n\n📋 Detalhes do Plano:\n• Plano: *{planName}*\n• Período de Pagamento Antecipado: *{upfrontMonths}*\n• Desconto Aplicado: *{discount}*\n• Mensalidade: *{monthlyRate}*\n• Total do Compromisso Antecipado: *{totalDue}*\n• Poupança Anual: *{annualSavings}*\n\n🔧 Custos Padrão de Configuração:\n• Taxa de instalação de 2.500 MZN\n• Depósito de hardware de 4.000 MZN\n\nPor favor, indiquem-me os próximos passos para agendar a avaliação do local e a configuração.\n\nObrigado!"
+    },
     "plans": {
       "four": {
         "name": "4 Câmaras",
@@ -736,6 +742,8 @@
     "quickLinks": "Links Rápidos",
     "contact": "Contacto",
     "openMap": "Abrir localização no Google Maps",
+    "homeLabel": "Página inicial da Overwatch",
+    "navigationLabel": "Navegação do rodapé",
     "rights": "Todos os direitos reservados.",
     "sections": {
       "solutions": "Soluções",
@@ -757,12 +765,15 @@
     }
   },
   "notFound": {
+    "routeUnavailable": "Rota indisponível",
     "title": "Página Não Encontrada",
     "description": "A página que procura não existe ou foi movida.",
-    "back": "Voltar ao Início"
+    "extendedDescription": "A página pode ter sido movida ou a rota pode estar fora do perímetro monitorizado.",
+    "back": "Voltar ao Início",
+    "suggestions": ["Verificar o endereço", "Voltar ao início", "Marcar avaliação"]
   },
   "careers": {
-    "label": "Junte-se à Nossa Equipe",
+    "label": "Junte-se à Nossa Equipa",
     "title": "Construa o Futuro da Segurança Connosco",
     "description": "Estamos a crescer rapidamente e procuramos indivíduos talentosos que queiram fazer a diferença. Junte-se à nossa equipa e ajude-nos a redefinir as operações de segurança.",
     "whyJoin": {
@@ -795,7 +806,9 @@
       "title": "Vagas Disponíveis",
       "description": "Estamos sempre à procura de indivíduos talentosos para se juntarem à nossa equipa. Envie-nos o seu CV e vamos explorar oportunidades juntos.",
       "spontaneous": "Candidaturas Espontâneas",
-      "spontaneousDescription": "Estamos a crescer rapidamente e procuramos sempre indivíduos talentosos para se juntarem à nossa equipa. Não encontra uma vaga adequada às suas competências? Envie-nos o seu CV de qualquer forma — estamos sempre interessados em conhecer pessoas apaixonadas."
+      "spontaneousDescription": "Estamos a crescer rapidamente e procuramos sempre indivíduos talentosos para se juntarem à nossa equipa. Não encontra uma vaga adequada às suas competências? Envie-nos o seu CV de qualquer forma — estamos sempre interessados em conhecer pessoas apaixonadas.",
+      "sendCv": "Enviar o Seu CV",
+      "emailSubject": "Candidatura Espontânea"
     },
     "cta": {
       "title": "Não Encontra uma Vaga Adequada?",
@@ -805,16 +818,181 @@
       "title": "Submeta a Sua Candidatura",
       "description": "Preencha o formulário abaixo e faça upload do seu CV. Analisaremos a sua candidatura e entraremos em contacto dentro de 5-7 dias úteis.",
       "name": "Nome Completo",
+      "namePlaceholder": "Ex.: João Machava",
       "email": "Endereço de E-mail",
+      "emailPlaceholder": "voce@exemplo.com",
       "phone": "Número de Telefone",
+      "phonePlaceholder": "+258 84 000 0000",
       "position": "Cargo Pretendido",
+      "selectPosition": "Seleccione um cargo…",
+      "positions": [
+        "Operador de Monitorização com IA",
+        "Gestor de Operações de Segurança",
+        "Especialista de Suporte Técnico",
+        "Vendas e Desenvolvimento de Negócios",
+        "Candidatura Geral"
+      ],
       "cv": "Upload de CV",
+      "cvLabel": "Carregar CV",
+      "cvDrop": "Arraste o seu CV para aqui ou",
+      "cvBrowse": "procurar ficheiro",
+      "cvHint": "PDF, DOC ou DOCX — máximo de 5 MB",
+      "removeFile": "Remover ficheiro",
       "message": "Mensagem de Apresentação",
+      "messagePlaceholder": "Fale-nos sobre si, a sua experiência e porque gostaria de trabalhar na Overwatch…",
       "submit": "Submeter Candidatura",
-      "submitting": "A submeter...",
-      "success": "Candidatura Submetida!",
-      "error": "Ocorreu um erro. Por favor tente novamente ou envie-nos um e-mail diretamente."
+      "submitting": "A enviar candidatura…",
+      "success": "Candidatura Enviada!",
+      "successDescription": "Obrigado pela sua candidatura. A nossa equipa de Recursos Humanos irá analisar o seu perfil e entrará em contacto brevemente.",
+      "submitAnother": "Submeter Outra Candidatura",
+      "error": "Ocorreu um erro. Tente novamente ou envie-nos um e-mail directamente para {email}."
     }
+  },
+  "preferences": {
+    "theme": "Tema",
+    "dark": "Escuro",
+    "light": "Claro",
+    "language": "Idioma",
+    "languageSwitcher": "Selector de idioma",
+    "settings": "Definições",
+    "scrollDown": "Descer na página",
+    "scrollTop": "Voltar ao topo",
+    "loading": "A carregar...",
+    "closeInstallPrompt": "Fechar sugestão de instalação",
+    "installTitle": "Instalar Overwatch",
+    "installDescription": "Adicione este website ao seu telefone para um acesso mais rápido e uma experiência semelhante a uma aplicação.",
+    "installButton": "Instalar Aplicação"
+  },
+  "privacyPage": {
+    "metadata": {
+      "title": "Política de Privacidade | OverWatch Moçambique",
+      "description": "Saiba como a OverWatch Moçambique protege dados pessoais, imagens CCTV, metadados de IA e informações recolhidas durante os serviços de monitorização de segurança."
+    },
+    "title": "Política de Privacidade",
+    "lastUpdated": "Última actualização: Julho de 2026",
+    "sections": [
+      {
+        "title": "1. Introdução",
+        "paragraphs": [
+          "A Overwatch Lda (\"Overwatch\", \"nós\" ou \"nossa\") respeita a sua privacidade e está empenhada em proteger os dados pessoais dos nossos clientes, visitantes do website e pessoas registadas pelos nossos sistemas de segurança. Esta Política de Privacidade explica como recolhemos, utilizamos, armazenamos e protegemos os seus dados quando utiliza o nosso website, interage com os nossos serviços ou é monitorizado pelos nossos sistemas CCTV e de IA em nome dos nossos clientes."
+        ]
+      },
+      {
+        "title": "2. Informações Que Recolhemos",
+        "subsections": [
+          {
+            "title": "A. Informações fornecidas directamente por si:",
+            "items": [
+              { "label": "Informações de contacto:", "text": "Nome, endereço de e-mail, número de telefone e dados da empresa quando solicita uma avaliação de segurança ou entra em contacto connosco." },
+              { "label": "Informações da conta:", "text": "Credenciais utilizadas para aceder ao painel de cliente da Overwatch." }
+            ]
+          },
+          {
+            "title": "B. Informações recolhidas através dos nossos Serviços de Segurança:",
+            "items": [
+              { "label": "Transmissões de vídeo e áudio:", "text": "Imagens CCTV em directo e gravadas por câmaras instaladas nas instalações dos clientes." },
+              { "label": "Metadados de IA:", "text": "Dados analíticos gerados pelos nossos sistemas de IA, incluindo detecção de objectos (viaturas e pessoas), alertas de intrusão e seguimento de movimentos." }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "3. Como Utilizamos os Seus Dados",
+        "paragraphs": ["Utilizamos as informações recolhidas para os seguintes fins:"],
+        "items": [
+          { "text": "Prestar, gerir e monitorizar os serviços de segurança contratados pelos nossos clientes." },
+          { "text": "Detectar, verificar e responder a ameaças de segurança, intrusões e acessos não autorizados através do nosso centro de controlo." },
+          { "text": "Comunicar consigo sobre a sua conta, apoio técnico e alertas críticos de segurança." },
+          { "text": "Treinar e melhorar os nossos algoritmos de detecção com IA (os dados de vídeo utilizados para este fim são agregados e anonimizados sempre que possível)." }
+        ]
+      },
+      {
+        "title": "4. Responsável pelo Tratamento e Subcontratante",
+        "paragraphs": [
+          "Relativamente às imagens de videovigilância e aos metadados de IA recolhidos nas instalações dos nossos clientes, o Cliente é o Responsável pelo Tratamento. A Overwatch actua estritamente como Subcontratante, tratando as imagens apenas segundo as instruções do cliente para garantir a segurança do seu local. Qualquer pessoa que pretenda exercer os seus direitos de privacidade relativos a imagens CCTV deve contactar directamente o proprietário do local em causa (o cliente)."
+        ]
+      },
+      {
+        "title": "5. Retenção e Segurança dos Dados",
+        "paragraphs": [
+          "Aplicamos encriptação de acordo com as práticas do sector, firewalls e controlos de acesso rigorosos no nosso centro de controlo para proteger todos os dados contra acesso, alteração ou destruição não autorizados.",
+          "As imagens CCTV são conservadas apenas durante o período definido no contrato do cliente (normalmente entre 14 e 30 dias), excepto quando seja necessário mantê-las por mais tempo para uma investigação de segurança em curso ou por solicitação das autoridades. Após esse período, são eliminadas de forma segura."
+        ]
+      },
+      {
+        "title": "6. Partilha de Informações",
+        "paragraphs": ["Não vendemos os seus dados pessoais. Podemos partilhar dados com:"],
+        "items": [
+          { "label": "Autoridades competentes:", "text": "Quando legalmente obrigados ou quando entregamos provas de um crime detectado nas instalações de um cliente." },
+          { "label": "Prestadores de serviços:", "text": "Fornecedores de infraestrutura de confiança, como serviços de alojamento na nuvem, vinculados por acordos rigorosos de confidencialidade." }
+        ]
+      },
+      {
+        "title": "7. Contacte-nos",
+        "paragraphs": ["Se tiver dúvidas ou preocupações sobre esta Política de Privacidade ou sobre as nossas práticas de tratamento de dados, contacte-nos através de:"],
+        "showEmail": true
+      }
+    ]
+  },
+  "termsPage": {
+    "metadata": {
+      "title": "Termos de Serviço | OverWatch Moçambique",
+      "description": "Leia os termos dos serviços de monitorização CCTV, guarda virtual, detecção com IA e operações de segurança da OverWatch Moçambique."
+    },
+    "title": "Termos de Serviço",
+    "lastUpdated": "Última actualização: Julho de 2026",
+    "privacyLinkLabel": "Política de Privacidade",
+    "sections": [
+      {
+        "title": "1. Aceitação dos Termos",
+        "paragraphs": [
+          "Ao aceder ao nosso website e utilizar os serviços prestados pela Overwatch Lda (\"Overwatch\", \"nós\" ou \"nossa\"), incluindo, entre outros, monitorização CCTV, detecção de ameaças com IA, serviços de vigilância e operações do centro de controlo, concorda em ficar vinculado a estes Termos de Serviço. Se não concordar com estes termos, não utilize os nossos serviços."
+        ]
+      },
+      {
+        "title": "2. Descrição dos Serviços",
+        "paragraphs": [
+          "A Overwatch presta soluções de segurança abrangentes, incluindo monitorização remota de locais, análise de câmaras com IA e modelos operacionais de vigilância. O âmbito específico, a duração e os requisitos de equipamento dos serviços prestados serão definidos no seu Acordo de Nível de Serviço (SLA) ou Contrato-Quadro de Serviços (MSA).",
+          "Reservamo-nos o direito de alterar, suspender ou descontinuar qualquer aspecto dos nossos serviços mediante aviso prévio, de acordo com os termos do seu contrato específico."
+        ]
+      },
+      {
+        "title": "3. Responsabilidades do Cliente",
+        "paragraphs": ["Na qualidade de cliente, compromete-se a:"],
+        "items": [
+          { "text": "Fornecer informações exactas e completas sobre a disposição do local, os sistemas de segurança existentes e os procedimentos operacionais durante as nossas avaliações de segurança." },
+          { "text": "Garantir que qualquer equipamento CCTV existente que pretenda integrar cumpre as nossas especificações técnicas mínimas de compatibilidade com a detecção por IA." },
+          { "text": "Manter energia e conectividade à Internet fiáveis nas suas instalações, para permitir que o nosso centro de controlo receba transmissões sem interrupções, salvo se for expressamente fornecida por nós uma solução sem ligação à rede." },
+          { "text": "Cumprir todas as leis e regulamentos locais relativos à utilização de equipamentos de videovigilância e à gravação de pessoas na sua propriedade." }
+        ]
+      },
+      {
+        "title": "4. Privacidade e Tratamento de Dados",
+        "linkParagraph": {
+          "before": "O nosso tratamento de transmissões de vídeo, metadados de IA e informações pessoais é regulado pela nossa",
+          "after": "Actuamos como subcontratante relativamente às imagens de vídeo captadas nas suas instalações. O cliente continua a ser o responsável pelo tratamento e deve garantir que possui uma base legal para gravar e monitorizar o seu local."
+        }
+      },
+      {
+        "title": "5. Limitação de Responsabilidade",
+        "paragraphs": [
+          "Embora a Overwatch utilize tecnologia avançada de detecção com IA e protocolos rigorosos no centro de controlo, os sistemas de segurança estão sujeitos a limitações, como condições meteorológicas severas que obstruem a visão das câmaras, falhas da rede eléctrica ou interrupções de conectividade.",
+          "Na máxima medida permitida por lei, a Overwatch não será responsável por quaisquer danos indirectos, incidentais, especiais, consequenciais ou punitivos, perda de lucros ou receitas, quer ocorram directa ou indirectamente, nem por perda de dados, utilização, reputação ou outros prejuízos intangíveis resultantes de falhas de segurança nas suas instalações."
+        ]
+      },
+      {
+        "title": "6. Propriedade Intelectual",
+        "paragraphs": [
+          "Todo o software, modelos de IA, painéis, marcas e metodologias próprias utilizados na prestação dos nossos serviços permanecem propriedade exclusiva da Overwatch. É-lhe concedida uma licença limitada, não exclusiva e intransmissível para aceder ao nosso painel de cliente durante a vigência do seu contrato."
+        ]
+      },
+      {
+        "title": "7. Legislação Aplicável",
+        "paragraphs": [
+          "Estes Termos são regidos e interpretados de acordo com as leis de Moçambique. Qualquer litígio decorrente ou relacionado com estes Termos fica sujeito à jurisdição exclusiva dos tribunais competentes de Maputo."
+        ]
+      }
+    ]
   },
   "about": {
     "hero": {

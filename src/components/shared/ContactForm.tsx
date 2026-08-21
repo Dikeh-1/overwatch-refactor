@@ -12,6 +12,7 @@ import {
   Send,
 } from "lucide-react";
 import PhoneInput from "react-phone-input-2";
+import phoneLocalePt from "react-phone-input-2/lang/pt.json";
 import "react-phone-input-2/lib/style.css";
 import { getGoogleMapsUrl, getSiteAddress, siteContact } from "@/lib/site-config";
 
@@ -43,6 +44,7 @@ export default function ContactForm() {
           email: data.email,
           phone: phoneValue,
           message: data.message,
+          locale,
         }),
       });
 
@@ -195,6 +197,7 @@ export default function ContactForm() {
                   enableSearch
                   disableSearchIcon
                   disableCountryCode
+                  localization={locale === "pt" ? phoneLocalePt : undefined}
                   inputProps={{
                     id: "phone",
                     name: "phone",

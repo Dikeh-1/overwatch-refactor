@@ -2,6 +2,7 @@
   "metadata": {
     "siteName": "Overwatch",
     "tagline": "AI-Powered Security. Human Verification. Real Response.",
+    "socialImageAlt": "Overwatch AI CCTV monitoring and virtual guarding",
     "home": {
       "title": "OverWatch Mozambique | AI CCTV Monitoring & Virtual Guard Service",
       "description": "OverWatch Mozambique provides 24/7 AI-powered CCTV monitoring, human-verified alerts, deterrence support, and incident reporting for businesses in Mozambique."
@@ -419,6 +420,11 @@
     "percentOff": "({percent}% off)",
     "saveLabel": "Save {savings} {currency}/year ({percent}% off)",
     "totalCommitment": "Total due: {total} {currency}",
+    "whatsapp": {
+      "perYear": "/year",
+      "zeroSavings": "0 MZN/year",
+      "message": "Hello Overwatch Team,\n\nI would like to initialize onboarding for the following security monitoring plan:\n\n📋 Plan Details:\n• Plan: *{planName}*\n• Upfront Payment Period: *{upfrontMonths}*\n• Discount Applied: *{discount}*\n• Monthly Rate: *{monthlyRate}*\n• Upfront Commitment Total: *{totalDue}*\n• Annual Savings: *{annualSavings}*\n\n🔧 Standard Setup Fees:\n• 2,500 MZN installation fee\n• 4,000 MZN hardware deposit\n\nPlease let me know the next steps to schedule our site assessment and setup.\n\nThank you!"
+    },
     "plans": {
       "four": {
         "name": "4 Cameras",
@@ -736,6 +742,8 @@
     "quickLinks": "Quick Links",
     "contact": "Contact",
     "openMap": "Open location in Google Maps",
+    "homeLabel": "Overwatch home",
+    "navigationLabel": "Footer navigation",
     "rights": "All rights reserved.",
     "sections": {
       "solutions": "Solutions",
@@ -757,9 +765,12 @@
     }
   },
   "notFound": {
+    "routeUnavailable": "Route unavailable",
     "title": "Page Not Found",
     "description": "The page you're looking for doesn't exist or has been moved.",
-    "back": "Back to Home"
+    "extendedDescription": "The page may have moved, or the route may be outside the monitored perimeter.",
+    "back": "Back to Home",
+    "suggestions": ["Check the URL", "Return home", "Book assessment"]
   },
   "careers": {
     "label": "Join Our Team",
@@ -795,7 +806,9 @@
       "title": "Open Positions",
       "description": "We're always looking for talented individuals to join our team. Send us your CV and let's explore opportunities together.",
       "spontaneous": "Spontaneous Applications",
-      "spontaneousDescription": "We're growing fast and always looking for talented individuals to join our team. Don't see a position that matches your skills? Send us your CV anyway — we're always interested in meeting passionate people."
+      "spontaneousDescription": "We're growing fast and always looking for talented individuals to join our team. Don't see a position that matches your skills? Send us your CV anyway — we're always interested in meeting passionate people.",
+      "sendCv": "Send Your CV",
+      "emailSubject": "Spontaneous Application"
     },
     "cta": {
       "title": "Don't See a Perfect Fit?",
@@ -805,16 +818,181 @@
       "title": "Submit Your Application",
       "description": "Fill out the form below and upload your CV. We'll review your application and get back to you within 5-7 business days.",
       "name": "Full Name",
+      "namePlaceholder": "e.g. João Machava",
       "email": "Email Address",
+      "emailPlaceholder": "you@example.com",
       "phone": "Phone Number",
+      "phonePlaceholder": "+258 84 000 0000",
       "position": "Position Applied For",
+      "selectPosition": "Select a position…",
+      "positions": [
+        "AI Monitoring Operator",
+        "Security Operations Manager",
+        "Technical Support Specialist",
+        "Sales & Business Development",
+        "General Application"
+      ],
       "cv": "Upload CV",
+      "cvLabel": "Upload CV / Resume",
+      "cvDrop": "Drop your CV here or",
+      "cvBrowse": "browse",
+      "cvHint": "PDF, DOC or DOCX — max 5 MB",
+      "removeFile": "Remove file",
       "message": "Cover Message",
+      "messagePlaceholder": "Tell us about yourself, your experience, and why you'd like to join Overwatch…",
       "submit": "Submit Application",
-      "submitting": "Submitting...",
-      "success": "Application Submitted!",
-      "error": "Something went wrong. Please try again or email us directly."
+      "submitting": "Sending Application…",
+      "success": "Application Sent!",
+      "successDescription": "Thank you for applying. Our HR team will review your profile and get back to you shortly.",
+      "submitAnother": "Submit Another Application",
+      "error": "Something went wrong. Please try again or email us directly at {email}."
     }
+  },
+  "preferences": {
+    "theme": "Theme",
+    "dark": "Dark",
+    "light": "Light",
+    "language": "Language",
+    "languageSwitcher": "Language switcher",
+    "settings": "Settings",
+    "scrollDown": "Scroll down",
+    "scrollTop": "Scroll to top",
+    "loading": "Loading...",
+    "closeInstallPrompt": "Close install prompt",
+    "installTitle": "Install Overwatch",
+    "installDescription": "Add this website to your phone for faster access and an app-like experience.",
+    "installButton": "Install App"
+  },
+  "privacyPage": {
+    "metadata": {
+      "title": "Privacy Policy | OverWatch Mozambique",
+      "description": "Learn how OverWatch Mozambique protects personal data, CCTV footage, AI metadata, and information collected during security monitoring services."
+    },
+    "title": "Privacy Policy",
+    "lastUpdated": "Last Updated: July 2026",
+    "sections": [
+      {
+        "title": "1. Introduction",
+        "paragraphs": [
+          "Overwatch Lda (\"Overwatch\", \"we\", \"us\", or \"our\") respects your privacy and is committed to protecting the personal data of our clients, website visitors, and individuals recorded by our security systems. This Privacy Policy explains how we collect, use, store, and safeguard your data when you use our website, interact with our services, or are monitored by our CCTV and AI systems on behalf of our clients."
+        ]
+      },
+      {
+        "title": "2. The Information We Collect",
+        "subsections": [
+          {
+            "title": "A. Information provided directly by you:",
+            "items": [
+              { "label": "Contact Information:", "text": "Name, email address, phone number, and company details when you request a security assessment or contact us." },
+              { "label": "Account Information:", "text": "Credentials used to access the Overwatch client dashboard." }
+            ]
+          },
+          {
+            "title": "B. Information collected through our Security Services:",
+            "items": [
+              { "label": "Video & Audio Feeds:", "text": "Live and recorded CCTV footage from cameras installed at client premises." },
+              { "label": "AI Metadata:", "text": "Analytical data generated by our AI systems, including object detection (vehicles, persons), intrusion alerts, and movement tracking." }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "3. How We Use Your Data",
+        "paragraphs": ["We use the collected information for the following purposes:"],
+        "items": [
+          { "text": "To provide, manage, and monitor the security services contracted by our clients." },
+          { "text": "To detect, verify, and respond to security threats, intrusions, and unauthorized access using our surveillance control room." },
+          { "text": "To communicate with you regarding your account, technical support, and critical security alerts." },
+          { "text": "To train and improve our AI detection algorithms (video data used for this purpose is aggregated and anonymized wherever possible)." }
+        ]
+      },
+      {
+        "title": "4. Data Controller vs. Data Processor",
+        "paragraphs": [
+          "For the video surveillance footage and AI metadata collected on our clients' premises, the Client is the Data Controller. Overwatch acts strictly as the Data Processor, processing this footage solely on the instructions of the client to ensure the security of their site. Any individual wishing to exercise their privacy rights regarding CCTV footage should contact the respective property owner (the client) directly."
+        ]
+      },
+      {
+        "title": "5. Data Retention and Security",
+        "paragraphs": [
+          "We implement industry-standard encryption, firewalls, and strict access controls within our surveillance control room to protect all data against unauthorized access, alteration, or destruction.",
+          "CCTV footage is retained only for the period specified in the client's contract (typically 14 to 30 days) unless required longer for an ongoing security investigation or law enforcement request, after which it is securely deleted."
+        ]
+      },
+      {
+        "title": "6. Sharing of Information",
+        "paragraphs": ["We do not sell your personal data. We may share data with:"],
+        "items": [
+          { "label": "Law Enforcement:", "text": "When legally required to do so, or when turning over evidence of a crime detected on a client's premises." },
+          { "label": "Service Providers:", "text": "Trusted third-party infrastructure providers (e.g., cloud hosting) who are bound by strict confidentiality agreements." }
+        ]
+      },
+      {
+        "title": "7. Contact Us",
+        "paragraphs": ["If you have any questions or concerns about this Privacy Policy or our data practices, please contact us at:"],
+        "showEmail": true
+      }
+    ]
+  },
+  "termsPage": {
+    "metadata": {
+      "title": "Terms of Service | OverWatch Mozambique",
+      "description": "Read the terms for OverWatch Mozambique CCTV monitoring, virtual guard service, AI threat detection, and security operations."
+    },
+    "title": "Terms of Service",
+    "lastUpdated": "Last Updated: July 2026",
+    "privacyLinkLabel": "Privacy Policy",
+    "sections": [
+      {
+        "title": "1. Acceptance of Terms",
+        "paragraphs": [
+          "By accessing our website and utilizing the services provided by Overwatch Lda (\"Overwatch\", \"we\", \"us\", or \"our\"), including but not limited to CCTV monitoring, AI threat detection, guarding services, and control room operations, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services."
+        ]
+      },
+      {
+        "title": "2. Description of Services",
+        "paragraphs": [
+          "Overwatch provides comprehensive security solutions, including remote site monitoring, AI-powered camera analytics, and operational guarding models. The specific scope, duration, and hardware requirements of the services provided to you will be outlined in your individual Service Level Agreement (SLA) or Master Services Agreement (MSA).",
+          "We reserve the right to modify, suspend, or discontinue any aspect of our services at any time with prior notice, subject to the terms of your specific contract."
+        ]
+      },
+      {
+        "title": "3. Client Responsibilities",
+        "paragraphs": ["As a client, you agree to:"],
+        "items": [
+          { "text": "Provide accurate and complete information regarding your site layout, current security systems, and operational procedures during our security assessments." },
+          { "text": "Ensure that any existing CCTV hardware you wish to integrate meets our minimum technical specifications for AI detection compatibility." },
+          { "text": "Maintain reliable power and internet connectivity at your premises to allow our surveillance control room to receive uninterrupted feeds, unless an off-grid solution is explicitly provided by us." },
+          { "text": "Comply with all local laws and regulations regarding the use of surveillance equipment and the recording of individuals on your property." }
+        ]
+      },
+      {
+        "title": "4. Privacy and Data Handling",
+        "linkParagraph": {
+          "before": "Our processing of video feeds, AI metadata, and personal information is governed by our",
+          "after": "We act as a data processor in respect of the video footage captured on your premises. You remain the data controller and are responsible for ensuring that you have the lawful basis to record and monitor your site."
+        }
+      },
+      {
+        "title": "5. Limitation of Liability",
+        "paragraphs": [
+          "While Overwatch utilizes state-of-the-art AI detection and rigorous control room protocols, security systems are inherently subject to limitations (e.g., severe weather obstructing camera views, power grid failures, or network outages).",
+          "To the fullest extent permitted by law, Overwatch shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenues, whether incurred directly or indirectly, or any loss of data, use, goodwill, or other intangible losses resulting from breaches of security at your premises."
+        ]
+      },
+      {
+        "title": "6. Intellectual Property",
+        "paragraphs": [
+          "All software, AI models, dashboards, trademarks, and proprietary methodologies used to deliver our services remain the exclusive property of Overwatch. You are granted a limited, non-exclusive, non-transferable license to access our client dashboard for the duration of your contract."
+        ]
+      },
+      {
+        "title": "7. Governing Law",
+        "paragraphs": [
+          "These Terms shall be governed by and construed in accordance with the laws of Mozambique. Any disputes arising under or in connection with these Terms shall be subject to the exclusive jurisdiction of the competent courts in Maputo."
+        ]
+      }
+    ]
   },
   "about": {
     "hero": {

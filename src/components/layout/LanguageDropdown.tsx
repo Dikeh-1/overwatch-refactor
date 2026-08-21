@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Globe, ChevronDown } from "lucide-react";
 import LanguageSwitcher from "./LanguageSwitcher";
 
 export default function LanguageDropdown() {
+  const t = useTranslations("preferences");
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -12,7 +14,7 @@ export default function LanguageDropdown() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex min-h-11 min-w-11 touch-manipulation items-center justify-center gap-1 rounded-lg text-foreground/70 transition-colors hover:bg-accent/5 hover:text-accent"
-        aria-label="Language"
+        aria-label={t("language")}
       >
         <Globe size={18} />
         <ChevronDown size={14} className="transition-transform" />

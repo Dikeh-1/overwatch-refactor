@@ -29,7 +29,7 @@ export default function Logo({
     <div className={`flex items-center ${className}`}>
       <Image
         src="/logo.png"
-        alt="Overwatch Logo"
+        alt="Overwatch"
         width={width}
         height={height}
         className={`${sizeClasses[size]} h-auto max-w-full object-contain transition-all duration-300 dark:brightness-0 dark:invert`}

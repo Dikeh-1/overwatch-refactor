@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import ScrollReveal from "@/components/animations/ScrollReveal";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Check, Settings2 } from "lucide-react";
 import SectionHeader from "@/components/ui/SectionHeader";
 import GlowCard from "@/components/ui/GlowCard";
@@ -21,6 +21,8 @@ type Plan = {
 
 export default function Pricing() {
   const t = useTranslations("pricing");
+  const locale = useLocale();
+  const numberLocale = locale === "pt" ? "pt-MZ" : "en-US";
   const plans = [
     t.raw("plans.four") as Plan,
     t.raw("plans.eight") as Plan,
@@ -59,29 +61,20 @@ export default function Pricing() {
     const planName = plan.badge ? `${plan.name} (${plan.badge})` : plan.name;
     const upfrontMonths = `${months} ${t("monthsLabel")}`;
     const formattedDiscount = discount > 0 ? `${discount}%` : "0%";
-    const monthlyRate = `${discountedPrice.toLocaleString()} ${plan.currency.trim()}/month`;
-    const totalDue = `${(discountedPrice * months).toLocaleString()} ${plan.currency.trim()}`;
-    const annualSaveText = discount > 0 ? `${annualSavings.toLocaleString()} ${plan.currency.trim()}/year` : "0 MZN/year";
+    const monthlyRate = `${discountedPrice.toLocaleString(numberLocale)} ${plan.currency.trim()}${t("perMonth")}`;
+    const totalDue = `${(discountedPrice * months).toLocaleString(numberLocale)} ${plan.currency.trim()}`;
+    const annualSaveText = discount > 0
+      ? `${annualSavings.toLocaleString(numberLocale)} ${plan.currency.trim()}${t("whatsapp.perYear")}`
+      : t("whatsapp.zeroSavings");
 
-    const text = `Hello Overwatch Team,
-
-I would like to initialize onboarding for the following security monitoring plan:
-
-📋 Plan Details:
-• Plan: *${planName}*
-• Upfront Payment Period: *${upfrontMonths}*
-• Discount Applied: *${formattedDiscount}*
-• Monthly Rate: *${monthlyRate}*
-• Upfront Commitment Total: *${totalDue}*
-• Annual Savings: *${annualSaveText}*
-
-🔧 Standard Setup Fees:
-• 2,500 MZN installation fee
-• 4,000 MZN hardware deposit
-
-Please let me know the next steps to schedule our site assessment and setup.
-
-Thank you!`;
+    const text = t("whatsapp.message", {
+      planName,
+      upfrontMonths,
+      discount: formattedDiscount,
+      monthlyRate,
+      totalDue,
+      annualSavings: annualSaveText,
+    });
 
     return `https://api.whatsapp.com/send/?phone=${siteContact.whatsappNumber}&text=${encodeURIComponent(text)}`;
   };
@@ -148,7 +141,7 @@ Thank you!`;
                     <div className="mt-5 border-b border-border/75 pb-5">
                       <div className="flex min-w-0 flex-wrap items-end gap-x-2 gap-y-1">
                         <span className="min-w-0 text-[clamp(2.35rem,5vw,3.35rem)] font-bold leading-none tracking-[-0.045em] text-foreground">
-                          {discountedPrice.toLocaleString()}
+                          {discountedPrice.toLocaleString(numberLocale)}
                         </span>
                         <span className="pb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
                           {plan.currency.trim()} {t("perMonth")}
@@ -157,12 +150,12 @@ Thank you!`;
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
                         <span className="text-sm text-muted">
                           <span className="line-through decoration-foreground/35">
-                            {originalPrice.toLocaleString()} {plan.currency.trim()}
+                            {originalPrice.toLocaleString(numberLocale)} {plan.currency.trim()}
                           </span>
                         </span>
                         <span className="text-xs font-semibold text-foreground">
                           {t("saveLabel", {
-                            savings: annualSavings.toLocaleString(),
+                            savings: annualSavings.toLocaleString(numberLocale),
                             currency: plan.currency.trim(),
                             percent: discount,
                           })}

@@ -29,7 +29,8 @@ async function sendBrevoEmail(payload: object) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, email, phone, company, type, message } = body;
+    const { name, email, phone, company, type, message, locale } = body;
+    const isPortuguese = locale === "pt";
 
     if (!name || !email || !message) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -106,6 +107,36 @@ export async function POST(request: Request) {
       htmlContent,
     });
 
+    const clientCopy = isPortuguese
+      ? {
+          title: "Pedido de Avaliação de Segurança Recebido",
+          greeting: `Caro(a) ${name},`,
+          thanks: "Obrigado por contactar a Overwatch para uma avaliação profissional de segurança do local.",
+          received: "Recebemos os dados do seu pedido. A nossa equipa de operações de segurança está a analisar a sua mensagem e as características do local. Um dos nossos especialistas entrará em contacto assim que possível para esclarecer detalhes ou marcar uma data conveniente para a avaliação.",
+          noticeTitle: "⚠️ Aviso Importante",
+          notice: "Esta é uma resposta automática. Por favor, <strong>não responda</strong> directamente a este e-mail, pois esta caixa de correio não é monitorizada.",
+          enquiries: `Para qualquer questão adicional, contacte-nos através de <a href="mailto:${siteContact.email}" style="color: #3b82f6; text-decoration: none; font-weight: 500;">${siteContact.email}</a> ou utilize o assistente do nosso website para uma resposta mais rápida.`,
+          regards: "Com os melhores cumprimentos,",
+          team: "Equipa de Operações com Clientes",
+          company: "Overwatch Moçambique",
+          rights: "Todos os direitos reservados.",
+          subject: "Obrigado por contactar a Overwatch",
+        }
+      : {
+          title: "Security Assessment Request Received",
+          greeting: `Dear ${name},`,
+          thanks: "Thank you for contacting Overwatch regarding a professional site security assessment.",
+          received: "We have successfully received your request details. Our security operations team is currently reviewing your message and site criteria. One of our experts will get back to you as soon as possible to discuss details or arrange a convenient time for the assessment.",
+          noticeTitle: "⚠️ Important Notice",
+          notice: "This is an automated response. Please <strong>do not reply</strong> directly to this email as this inbox is not monitored.",
+          enquiries: `For any further enquiries, please email us directly at <a href="mailto:${siteContact.email}" style="color: #3b82f6; text-decoration: none; font-weight: 500;">${siteContact.email}</a>, or use our website chatbot for a faster response.`,
+          regards: "Best regards,",
+          team: "Customer Operations Team",
+          company: "Overwatch Mozambique",
+          rights: "All rights reserved.",
+          subject: "Thank you for contacting Overwatch",
+        };
+
     // 2. Send professional auto-responder confirmation to the client
     const clientHtmlContent = `
       <div style="background-color: #f8fafc; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155; line-height: 1.6;">
@@ -115,26 +146,26 @@ export async function POST(request: Request) {
           
           <!-- Body Content -->
           <div style="padding: 32px;">
-            <h1 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0 0 16px 0;">Security Assessment Request Received</h1>
-            <p>Dear ${name},</p>
-            <p>Thank you for contacting Overwatch regarding a professional site security assessment.</p>
-            <p>We have successfully received your request details. Our security operations team is currently reviewing your message and site criteria. One of our experts will get back to you as soon as possible to discuss details or arrange a convenient time for the assessment.</p>
+            <h1 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0 0 16px 0;">${clientCopy.title}</h1>
+            <p>${clientCopy.greeting}</p>
+            <p>${clientCopy.thanks}</p>
+            <p>${clientCopy.received}</p>
             
             <div style="margin-top: 24px; padding: 16px; background: #f1f5f9; border-radius: 8px; border-left: 3px solid #cbd5e1; font-size: 13px; color: #64748b;">
-              <p style="margin: 0 0 8px 0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #475569;">⚠️ Important Notice</p>
-              <p style="margin: 0 0 8px 0; line-height: 1.5;">This is an automated response. Please <strong>do not reply</strong> directly to this email as this inbox is not monitored.</p>
-              <p style="margin: 0; line-height: 1.5;">For any further enquiries, please email us directly at <a href="mailto:${siteContact.email}" style="color: #3b82f6; text-decoration: none; font-weight: 500;">${siteContact.email}</a>, or use our website chatbot for a faster response.</p>
+              <p style="margin: 0 0 8px 0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #475569;">${clientCopy.noticeTitle}</p>
+              <p style="margin: 0 0 8px 0; line-height: 1.5;">${clientCopy.notice}</p>
+              <p style="margin: 0; line-height: 1.5;">${clientCopy.enquiries}</p>
             </div>
             
             <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
-            <p style="font-size: 14px; color: #64748b; margin: 0;">Best regards,</p>
-            <p style="font-size: 14px; font-weight: 600; color: #0f172a; margin: 4px 0 0 0;">Customer Operations Team</p>
-            <p style="font-size: 13px; color: #94a3b8; margin: 0;">Overwatch Mozambique</p>
+            <p style="font-size: 14px; color: #64748b; margin: 0;">${clientCopy.regards}</p>
+            <p style="font-size: 14px; font-weight: 600; color: #0f172a; margin: 4px 0 0 0;">${clientCopy.team}</p>
+            <p style="font-size: 13px; color: #94a3b8; margin: 0;">${clientCopy.company}</p>
           </div>
 
           <!-- Footer -->
           <div style="background-color: #f8fafc; padding: 24px 32px; border-top: 1px solid #e2e8f0; text-align: center;">
-            <p style="font-size: 11px; color: #94a3b8; margin: 0;">© 2026 Overwatch Mozambique. All rights reserved.</p>
+            <p style="font-size: 11px; color: #94a3b8; margin: 0;">© 2026 ${clientCopy.company}. ${clientCopy.rights}</p>
           </div>
         </div>
       </div>
@@ -143,7 +174,7 @@ export async function POST(request: Request) {
     await sendBrevoEmail({
       sender: { name: "Overwatch Operations", email: FROM_EMAIL },
       to: [{ email, name }],
-      subject: `Thank you for contacting Overwatch`,
+      subject: clientCopy.subject,
       htmlContent: clientHtmlContent,
     });
 

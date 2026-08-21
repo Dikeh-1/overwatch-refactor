@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Settings, Moon, Sun, Globe, Check } from "lucide-react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { cn } from "@/lib/utils";
 
 export default function SettingsDropdown() {
+  const t = useTranslations("preferences");
   const { theme, toggleTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -15,7 +17,7 @@ export default function SettingsDropdown() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex min-h-11 min-w-11 touch-manipulation items-center justify-center gap-2 rounded-lg text-foreground/70 transition-colors hover:bg-accent/5 hover:text-accent"
-        aria-label="Settings"
+        aria-label={t("settings")}
       >
         <Globe size={16} />
         <Settings size={20} />
@@ -32,7 +34,7 @@ export default function SettingsDropdown() {
             <div className="px-4 mb-4">
               <div className="flex items-center gap-2 text-xs font-semibold text-foreground/70 uppercase tracking-wider mb-3">
                 <Sun size={14} />
-                Theme
+                {t("theme")}
               </div>
               <div className="space-y-1">
                 <button
@@ -48,7 +50,7 @@ export default function SettingsDropdown() {
                 >
                   <div className="flex items-center gap-2">
                     <Moon size={16} />
-                    Dark
+                    {t("dark")}
                   </div>
                   {theme === "dark" && <Check size={16} />}
                 </button>
@@ -65,7 +67,7 @@ export default function SettingsDropdown() {
                 >
                   <div className="flex items-center gap-2">
                     <Sun size={16} />
-                    Light
+                    {t("light")}
                   </div>
                   {theme === "light" && <Check size={16} />}
                 </button>
@@ -76,7 +78,7 @@ export default function SettingsDropdown() {
             <div className="px-4 border-t border-border pt-4">
               <div className="flex items-center gap-2 text-xs font-semibold text-foreground/70 uppercase tracking-wider mb-3">
                 <Globe size={14} />
-                Language
+                {t("language")}
               </div>
               <div className="flex items-center gap-2">
                 <LanguageSwitcher />

@@ -63,7 +63,7 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   return (
     <html
-      lang={locale}
+      lang={locale === "pt" ? "pt-MZ" : "en"}
       className="h-full dark"
       suppressHydrationWarning
     >

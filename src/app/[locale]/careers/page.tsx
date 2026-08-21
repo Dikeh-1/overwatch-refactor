@@ -110,10 +110,10 @@ export default async function CareersPage({ params }: Props) {
                   {t("openings.spontaneousDescription")}
                 </p>
                 <a
-                  href={`mailto:${siteContact.email}?subject=Spontaneous Application`}
+                  href={`mailto:${siteContact.email}?subject=${encodeURIComponent(tOpenings("emailSubject"))}`}
                   className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-accent px-6 py-3 font-semibold text-primary-dark transition-all duration-300 hover:bg-accent/90"
                 >
-                  Send Your CV
+                  {tOpenings("sendCv")}
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>

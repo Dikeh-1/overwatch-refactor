@@ -6,6 +6,7 @@ import { Link } from "@/i18n/navigation";
 export default function NotFoundPage() {
   const t = useTranslations("notFound");
   const tNav = useTranslations("nav");
+  const suggestions = t.raw("suggestions") as string[];
 
   return (
     <section className="relative isolate min-h-[78vh] overflow-hidden bg-primary-dark px-4 py-24 text-white sm:px-6 lg:px-8">
@@ -17,7 +18,7 @@ export default function NotFoundPage() {
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/8 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-white/75">
             <ShieldAlert size={15} />
-            Route unavailable
+            {t("routeUnavailable")}
           </div>
 
           <h1 className="mt-7 max-w-3xl text-5xl font-black leading-[0.95] tracking-tight text-white sm:text-6xl lg:text-7xl">
@@ -26,8 +27,7 @@ export default function NotFoundPage() {
           </h1>
 
           <p className="mt-6 max-w-2xl text-base leading-8 text-white/72 sm:text-lg">
-            {t("description")} The page may have moved, or the route may be
-            outside the monitored perimeter.
+            {t("description")} {t("extendedDescription")}
           </p>
 
           <div className="mt-9 flex flex-col gap-4 sm:flex-row">
@@ -42,7 +42,7 @@ export default function NotFoundPage() {
           </div>
 
           <div className="mt-10 grid max-w-2xl gap-3 sm:grid-cols-3">
-            {["Check the URL", "Return home", "Book assessment"].map((item) => (
+            {suggestions.map((item) => (
               <div
                 key={item}
                 className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white/70 transition hover:-translate-y-1 hover:border-white/25 hover:bg-white/10"
