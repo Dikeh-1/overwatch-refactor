@@ -21,9 +21,9 @@ export default function Hero() {
     <section className="hero-section dark relative flex min-h-[100svh] items-center overflow-hidden bg-[#0d0f14] text-white">
       <div className="hero-bg absolute inset-0 z-0" />
       <div className="hero-overlay absolute inset-0 z-10 pointer-events-none" />
-      <div className="pointer-events-none absolute inset-0 z-[11] bg-[radial-gradient(circle_at_16%_24%,rgba(227,199,156,0.13),transparent_27%),radial-gradient(circle_at_78%_70%,rgba(86,110,146,0.10),transparent_30%)]" />
-      <div className="pointer-events-none absolute -right-44 top-28 z-[11] h-[38rem] w-[38rem] rounded-full border border-[#e2c99f]/[0.055]" />
-      <div className="pointer-events-none absolute -right-20 top-52 z-[11] h-[25rem] w-[25rem] rounded-full border border-[#e2c99f]/[0.065]" />
+      <div className="pointer-events-none absolute inset-0 z-[11] bg-[radial-gradient(circle_at_16%_24%,rgba(255,255,255,0.09),transparent_27%),radial-gradient(circle_at_78%_70%,rgba(59,130,246,0.10),transparent_30%)]" />
+      <div className="pointer-events-none absolute -right-44 top-28 z-[11] h-[38rem] w-[38rem] rounded-full border border-white/[0.05]" />
+      <div className="pointer-events-none absolute -right-20 top-52 z-[11] h-[25rem] w-[25rem] rounded-full border border-white/[0.06]" />
 
       <ScrollFadeHero className="relative z-20 w-full">
         <div className="mx-auto max-w-7xl px-4 pb-14 pt-28 sm:px-6 sm:pb-16 sm:pt-32 lg:px-8 lg:pb-20 lg:pt-36">
@@ -37,7 +37,7 @@ export default function Hero() {
               initial={{ opacity: 0, x: -14 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.55, delay: 0.08 }}
-              className="inline-flex min-h-9 max-w-full items-center gap-2 rounded-full border border-[#e6cea7]/25 bg-[#e6cea7]/[0.075] px-3.5 py-2 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-[#ecd9bb] sm:text-xs"
+              className="inline-flex min-h-9 max-w-full items-center gap-2 rounded-full border border-white/18 bg-white/[0.065] px-3.5 py-2 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-white/78 sm:text-xs"
             >
               <ShieldCheck size={15} className="shrink-0" aria-hidden="true" />
               <span>{t("badge")}</span>
@@ -46,7 +46,7 @@ export default function Hero() {
             <h1 className="mt-6 max-w-[44rem] text-balance text-[clamp(2.35rem,8.2vw,4.7rem)] font-bold leading-[1.01] tracking-[-0.045em] text-white">
               <span className="block">{t("headline")}</span>
               {t("headlineAccent") ? (
-                <span className="mt-1 block text-[#ead7b8]">{t("headlineAccent")}</span>
+                <span className="mt-1 block text-white">{t("headlineAccent")}</span>
               ) : null}
             </h1>
 
@@ -58,7 +58,7 @@ export default function Hero() {
               <Button
                 href="/contact#assessment-form"
                 size="lg"
-                className="w-full bg-[#ead7b8] px-5 text-sm text-[#17130e] hover:bg-[#f1e2ca] sm:w-auto sm:px-7 sm:text-base"
+                className="w-full bg-white px-5 text-sm text-[#0d0f14] hover:bg-white/90 sm:w-auto sm:px-7 sm:text-base"
               >
                 {t("ctaPrimary")}
                 <ArrowRight size={17} className="ml-2" aria-hidden="true" />
@@ -86,7 +86,7 @@ export default function Hero() {
                   >
                     <CheckCircle2
                       size={17}
-                      className="shrink-0 text-[#e2c99f] sm:mb-2"
+                      className="shrink-0 text-white/85 sm:mb-2"
                       aria-hidden="true"
                     />
                     <div>

@@ -48,14 +48,14 @@ export default async function SolutionsPage({ params }: Props) {
   return (
     <>
       <section className="dark relative isolate overflow-hidden bg-[#0c0e12] pb-16 pt-28 text-white sm:pb-20 sm:pt-32 lg:pb-24 lg:pt-36">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_25%,rgba(220,190,143,0.13),transparent_30%),radial-gradient(circle_at_88%_35%,rgba(93,118,155,0.13),transparent_34%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_25%,rgba(255,255,255,0.09),transparent_30%),radial-gradient(circle_at_88%_35%,rgba(59,130,246,0.12),transparent_34%)]" />
         <div className="absolute inset-0 tech-grid opacity-30" />
-        <div className="absolute -right-28 top-20 h-[32rem] w-[32rem] rounded-full border border-[#e1c89f]/[0.055]" />
-        <div className="absolute -right-10 top-40 h-[24rem] w-[24rem] rounded-full border border-[#e1c89f]/[0.065]" />
+        <div className="absolute -right-28 top-20 h-[32rem] w-[32rem] rounded-full border border-white/[0.05]" />
+        <div className="absolute -right-10 top-40 h-[24rem] w-[24rem] rounded-full border border-white/[0.06]" />
 
         <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:gap-16 lg:px-8">
           <div className="max-w-2xl">
-            <span className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[#e2c99f]/20 bg-[#e2c99f]/[0.065] px-3.5 text-xs font-bold uppercase tracking-[0.18em] text-[#ead7b8]">
+            <span className="inline-flex min-h-9 items-center gap-2 rounded-full border border-white/18 bg-white/[0.065] px-3.5 text-xs font-bold uppercase tracking-[0.18em] text-white/78">
               <Sparkles size={14} aria-hidden="true" />
               {t("hero.eyebrow")}
             </span>
@@ -70,7 +70,7 @@ export default async function SolutionsPage({ params }: Props) {
               <Button
                 href="#capabilities"
                 size="lg"
-                className="w-full bg-[#ead7b8] text-[#17130e] hover:bg-[#f1e2ca] sm:w-auto"
+                className="w-full bg-white text-[#0c0e12] hover:bg-white/90 sm:w-auto"
               >
                 {t("hero.primaryCta")}
                 <ArrowDown size={17} className="ml-2" aria-hidden="true" />
@@ -90,7 +90,7 @@ export default async function SolutionsPage({ params }: Props) {
                 <li key={item} className="flex items-start gap-2">
                   <CheckCircle2
                     size={16}
-                    className="mt-0.5 shrink-0 text-[#e1c89f]"
+                    className="mt-0.5 shrink-0 text-white/80"
                     aria-hidden="true"
                   />
                   <span>{item}</span>
@@ -100,7 +100,7 @@ export default async function SolutionsPage({ params }: Props) {
           </div>
 
           <div className="relative mx-auto w-full max-w-xl pb-7 [perspective:1300px] lg:max-w-none">
-            <div className="absolute inset-x-8 bottom-0 top-14 rounded-[2rem] border border-[#e2c99f]/10 bg-[#e2c99f]/[0.035] [transform:translate3d(0,24px,-90px)]" />
+            <div className="absolute inset-x-8 bottom-0 top-14 rounded-[2rem] border border-white/[0.08] bg-white/[0.025] [transform:translate3d(0,24px,-90px)]" />
             <div className="absolute inset-x-4 bottom-3 top-8 rounded-[2rem] border border-white/[0.09] bg-white/[0.035] [transform:translate3d(0,12px,-40px)]" />
             <div className="relative overflow-hidden rounded-[2rem] border border-white/12 bg-[#151821]/95 p-3 shadow-[0_38px_90px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:p-4 lg:[transform:rotateY(-3deg)_rotateX(1deg)]">
               <div className="flex items-center justify-between gap-4 px-2 pb-3 pt-1 sm:px-3 sm:pb-4">
@@ -112,7 +112,7 @@ export default async function SolutionsPage({ params }: Props) {
                     {t("hero.cardTitle")}
                   </p>
                 </div>
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#e1c89f]/20 bg-[#e1c89f]/10 text-[#e1c89f]">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/[0.07] text-white/82">
                   <ShieldCheck size={20} aria-hidden="true" />
                 </span>
               </div>
@@ -147,7 +147,7 @@ export default async function SolutionsPage({ params }: Props) {
                   <div className="contents" key={stage}>
                     <span>{stage}</span>
                     {index < stages.length - 1 ? (
-                      <ArrowRight size={13} className="text-[#e1c89f]/40" aria-hidden="true" />
+                      <ArrowRight size={13} className="text-white/28" aria-hidden="true" />
                     ) : null}
                   </div>
                 ))}
@@ -161,11 +161,11 @@ export default async function SolutionsPage({ params }: Props) {
         id="capabilities"
         className="relative scroll-mt-20 overflow-hidden bg-background py-16 sm:py-20 lg:py-28"
       >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_10%,rgba(171,132,78,0.07),transparent_30%)] dark:bg-[radial-gradient(circle_at_85%_10%,rgba(220,190,143,0.055),transparent_30%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_10%,rgba(59,130,246,0.055),transparent_30%)] dark:bg-[radial-gradient(circle_at_85%_10%,rgba(96,165,250,0.05),transparent_30%)]" />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-5 lg:grid-cols-[0.7fr_1.3fr] lg:items-end lg:gap-12">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#8b6b42] dark:text-[#dfc69d]">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-foreground/65">
                 {t("explorer.eyebrow")}
               </p>
               <h2 className="mt-4 max-w-xl text-balance text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl lg:text-5xl">
@@ -189,10 +189,10 @@ export default async function SolutionsPage({ params }: Props) {
 
       <section className="dark relative overflow-hidden border-y border-white/8 bg-[#111218] py-16 text-white sm:py-20 lg:py-24">
         <div className="absolute inset-0 tech-grid opacity-25" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_8%_80%,rgba(219,187,137,0.10),transparent_32%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_8%_80%,rgba(59,130,246,0.10),transparent_32%)]" />
         <div className="relative mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[0.7fr_1.3fr] lg:gap-16 lg:px-8">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#e1c89f]">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/60">
               {t("whoWeWorkWith.eyebrow")}
             </p>
             <h2 className="mt-4 text-balance text-3xl font-bold tracking-tight text-white sm:text-4xl">
@@ -203,7 +203,7 @@ export default async function SolutionsPage({ params }: Props) {
             </p>
             <Link
               href="/business"
-              className="mt-6 inline-flex min-h-11 items-center gap-2 font-semibold text-[#ead7b8] underline decoration-[#ead7b8]/30 underline-offset-4 transition-colors hover:decoration-[#ead7b8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ead7b8]/60 focus-visible:ring-offset-4 focus-visible:ring-offset-[#111218]"
+              className="mt-6 inline-flex min-h-11 items-center gap-2 font-semibold text-white underline decoration-white/25 underline-offset-4 transition-colors hover:decoration-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/55 focus-visible:ring-offset-4 focus-visible:ring-offset-[#111218]"
             >
               {t("whoWeWorkWith.button")}
               <ArrowRight size={16} aria-hidden="true" />
@@ -214,9 +214,9 @@ export default async function SolutionsPage({ params }: Props) {
             {industries.map((industry) => (
               <div
                 key={industry}
-                className="flex min-h-16 items-center gap-3 rounded-2xl border border-white/[0.09] bg-white/[0.045] px-4 py-3 shadow-sm transition-[transform,border-color,background-color] duration-300 hover:-translate-y-0.5 hover:border-[#e1c89f]/25 hover:bg-[#e1c89f]/[0.065]"
+                className="flex min-h-16 items-center gap-3 rounded-2xl border border-white/[0.09] bg-white/[0.045] px-4 py-3 shadow-sm transition-[transform,border-color,background-color] duration-300 hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.07]"
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#e1c89f]/15 bg-[#e1c89f]/10 text-[#e1c89f]">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/12 bg-white/[0.065] text-white/75">
                   <Building2 size={17} aria-hidden="true" />
                 </span>
                 <span className="text-sm font-semibold leading-snug text-white/82">

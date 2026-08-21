@@ -60,7 +60,7 @@ export default function FAQAccordion({ limit, searchable = false }: FAQAccordion
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t("searchPlaceholder")}
-              className="min-h-14 w-full appearance-none rounded-2xl border border-border bg-background py-3 pl-12 pr-12 text-base text-foreground outline-none transition-[border-color,box-shadow] placeholder:text-muted/75 focus:border-[#9b7b51]/50 focus:ring-4 focus:ring-[#9b7b51]/10 dark:focus:border-[#dfc69d]/40"
+              className="min-h-14 w-full appearance-none rounded-2xl border border-border bg-background py-3 pl-12 pr-12 text-base text-foreground outline-none transition-[border-color,box-shadow] placeholder:text-muted/75 focus:border-foreground/30 focus:ring-4 focus:ring-foreground/5"
             />
             {query && (
               <button
@@ -82,9 +82,9 @@ export default function FAQAccordion({ limit, searchable = false }: FAQAccordion
                 setOpenQuestion(null);
               }}
               className={cn(
-                "min-h-10 shrink-0 rounded-full border px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9b7b51]/40",
+                "min-h-10 shrink-0 rounded-full border px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/35",
                 !normalizedQuery
-                  ? "border-[#9b7b51]/25 bg-[#8b6b42] text-white dark:bg-[#dfc69d] dark:text-[#17130e]"
+                  ? "border-foreground bg-foreground text-background"
                   : "border-border bg-background text-muted hover:border-foreground/20 hover:text-foreground",
               )}
             >
@@ -101,9 +101,9 @@ export default function FAQAccordion({ limit, searchable = false }: FAQAccordion
                     setOpenQuestion(null);
                   }}
                   className={cn(
-                    "min-h-10 shrink-0 rounded-full border px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9b7b51]/40",
+                    "min-h-10 shrink-0 rounded-full border px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/35",
                     isActive
-                      ? "border-[#9b7b51]/25 bg-[#8b6b42] text-white dark:bg-[#dfc69d] dark:text-[#17130e]"
+                      ? "border-foreground bg-foreground text-background"
                       : "border-border bg-background text-muted hover:border-foreground/20 hover:text-foreground",
                   )}
                 >
@@ -181,7 +181,7 @@ export default function FAQAccordion({ limit, searchable = false }: FAQAccordion
               >
                 <div className="overflow-hidden">
                   <div className="border-t border-border/70 px-4 pb-5 pt-4 sm:ml-[3.25rem] sm:px-5 sm:pb-6">
-                    <div className="mb-3 flex items-center gap-2 text-[0.68rem] font-bold uppercase tracking-[0.15em] text-[#8b6b42] dark:text-[#dfc69d]">
+                    <div className="mb-3 flex items-center gap-2 text-[0.68rem] font-bold uppercase tracking-[0.15em] text-foreground">
                       <ShieldCheck size={14} aria-hidden="true" />
                       {t("answerLabel")}
                     </div>
