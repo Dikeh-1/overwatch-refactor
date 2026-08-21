@@ -3,7 +3,7 @@
 import { useState } from "react";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 import { useTranslations } from "next-intl";
-import { Check } from "lucide-react";
+import { Check, Settings2 } from "lucide-react";
 import SectionHeader from "@/components/ui/SectionHeader";
 import GlowCard from "@/components/ui/GlowCard";
 import Button from "@/components/ui/Button";
@@ -87,126 +87,152 @@ Thank you!`;
   };
 
   return (
-    <section id="pricing" className="py-20 md:py-28">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <SectionHeader title={t("title")} description={t("description")} />
+    <section id="pricing" className="relative overflow-hidden py-20 md:py-28">
+      <div className="pointer-events-none absolute inset-0 tech-grid opacity-25" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_15%,rgba(59,130,246,0.055),transparent_30%)]" />
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="relative">
+          <SectionHeader title={t("title")} description={t("description")} />
 
-        <div className="text-center mb-12">
-          <div className="inline-block rounded-lg border border-accent/30 bg-accent/5 px-5 py-3 text-sm">
-            <strong className="text-accent">{t("setup.label")}</strong>{" "}
-            <span className="text-muted">{t("setup.value")}</span>
+          <div className="mx-auto mb-10 flex max-w-2xl items-start gap-3 rounded-2xl border border-border bg-card px-4 py-4 text-left shadow-sm sm:items-center sm:px-5">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-foreground">
+              <Settings2 size={18} aria-hidden="true" />
+            </span>
+            <p className="text-sm leading-relaxed text-muted">
+              <strong className="font-semibold text-foreground">{t("setup.label")}</strong>{" "}
+              {t("setup.value")}
+            </p>
           </div>
-        </div>
 
-        <div className="grid md:grid-cols-3 gap-6 lg:gap-8 items-stretch">
-          {plans.map((plan, i) => {
-            const discount = calculateDiscount(i);
-            const originalPrice = parseInt(plan.price.replace(/[^0-9]/g, ''));
-            const discountedPrice = Math.round(originalPrice * (1 - discount / 100));
-            const monthlySavings = originalPrice - discountedPrice;
-            const annualSavings = monthlySavings * 12;
+          <div className="grid items-stretch gap-5 md:grid-cols-2 xl:grid-cols-3 xl:gap-6">
+            {plans.map((plan, i) => {
+              const discount = calculateDiscount(i);
+              const originalPrice = parseInt(plan.price.replace(/[^0-9]/g, ""));
+              const discountedPrice = Math.round(originalPrice * (1 - discount / 100));
+              const monthlySavings = originalPrice - discountedPrice;
+              const annualSavings = monthlySavings * 12;
 
-            return (
-              <ScrollReveal
-                key={plan.name}
-                direction="up"
-                delay={i * 0.1}
-                className="relative flex"
-              >
-                {plan.badge && (
-                  <span className="absolute -top-4.5 left-1/2 -translate-x-1/2 z-20 bg-accent text-primary-dark text-[10px] font-bold uppercase tracking-wider px-4 py-1.5 rounded shadow-lg">
-                    {plan.badge}
-                  </span>
-                )}
-                <GlowCard
+              return (
+                <ScrollReveal
+                  key={plan.name}
+                  direction="up"
+                  delay={i * 0.08}
                   className={cn(
-                    "h-full w-full flex flex-col transition-all duration-500",
-                    !plan.featured && "border-border/60 hover:border-accent/40 bg-card/45",
-                    plan.featured && "border-accent border-2 bg-card/95 shadow-2xl shadow-accent/10 lg:scale-[1.04] lg:-translate-y-2 z-10"
+                    "flex min-w-0",
+                    i === 2 && "md:col-span-2 md:w-full md:max-w-md md:justify-self-center xl:col-span-1 xl:max-w-none",
                   )}
-                  hover={!plan.featured}
                 >
-                  <h3 className="text-xl font-semibold text-foreground mb-2">{plan.name}</h3>
+                  <article
+                    className={cn(
+                      "relative flex h-full w-full min-w-0 flex-col overflow-hidden rounded-[1.5rem] border bg-card p-5 shadow-[0_18px_48px_rgba(2,6,23,0.07)] transition-[transform,border-color,box-shadow] duration-300 sm:p-6",
+                      plan.featured
+                        ? "border-foreground/25 shadow-[0_22px_58px_rgba(2,6,23,0.12)]"
+                        : "border-border hover:-translate-y-0.5 hover:border-foreground/20",
+                    )}
+                  >
+                    {plan.featured ? (
+                      <div className="absolute inset-x-0 top-0 h-1 bg-foreground" aria-hidden="true" />
+                    ) : null}
 
-                  {/* Price Display */}
-                  <div className="mb-4">
-                    {discount > 0 ? (
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-2xl text-foreground/50 line-through">
-                          {originalPrice.toLocaleString()}
+                    <div className="flex min-h-12 items-start justify-between gap-3">
+                      <h3 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+                        {plan.name}
+                      </h3>
+                      {plan.badge ? (
+                        <span className="max-w-[9rem] rounded-full border border-foreground/15 bg-foreground/[0.06] px-3 py-1.5 text-right text-[0.62rem] font-bold uppercase leading-tight tracking-[0.12em] text-foreground">
+                          {plan.badge}
                         </span>
-                        <span className="text-4xl font-bold text-accent">
+                      ) : null}
+                    </div>
+
+                    <div className="mt-5 border-b border-border/75 pb-5">
+                      <div className="flex min-w-0 flex-wrap items-end gap-x-2 gap-y-1">
+                        <span className="min-w-0 text-[clamp(2.35rem,5vw,3.35rem)] font-bold leading-none tracking-[-0.045em] text-foreground">
                           {discountedPrice.toLocaleString()}
                         </span>
-                        <span className="text-foreground text-sm ml-1">{plan.currency}</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-bold text-foreground">
-                          {plan.price}
+                        <span className="pb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+                          {plan.currency.trim()} {t("perMonth")}
                         </span>
-                        <span className="text-foreground text-sm ml-1">{plan.currency}</span>
                       </div>
-                    )}
-                    <div className="text-sm text-muted mt-0.5">
-                      {t("perMonth")}
-                    </div>
-                    {discount > 0 && (
-                      <div className="text-sm text-accent font-semibold mt-1">
-                        {t("saveLabel", { savings: annualSavings.toLocaleString(), currency: plan.currency.trim(), percent: discount })}
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                        <span className="text-sm text-muted">
+                          <span className="line-through decoration-foreground/35">
+                            {originalPrice.toLocaleString()} {plan.currency.trim()}
+                          </span>
+                        </span>
+                        <span className="text-xs font-semibold text-foreground">
+                          {t("saveLabel", {
+                            savings: annualSavings.toLocaleString(),
+                            currency: plan.currency.trim(),
+                            percent: discount,
+                          })}
+                        </span>
                       </div>
-                    )}
-                    <div className="text-xs text-foreground/60 mt-1">
-                      {t("totalCommitment", { total: (discount > 0 ? discountedPrice : originalPrice) * planOptions[i], currency: plan.currency.trim() })}
+                      <p className="mt-2 text-xs text-muted/80">
+                        {t("totalCommitment", {
+                          total: discountedPrice * planOptions[i],
+                          currency: plan.currency.trim(),
+                        })}
+                      </p>
                     </div>
-                  </div>
 
-                  {/* Discount Options */}
-                  <div className="mb-4">
-                    <label className="block text-xs font-semibold text-foreground mb-2">
-                      {t("upfrontLabel")}
-                    </label>
-                    <div className="flex gap-1">
-                      {[3, 6, 12].map((months) => {
-                        const discountPercent = months === 12 ? 12 : months === 6 ? 7 : 2;
-                        return (
-                          <button
-                            key={months}
-                            onClick={() => updatePlanOption(i, months)}
-                            className={cn(
-                              "min-h-11 flex-1 cursor-pointer rounded border px-1.5 py-2 text-xs font-semibold leading-tight transition-all sm:px-2",
-                              planOptions[i] === months
-                                ? "bg-accent text-primary-dark border-accent"
-                                : "bg-primary-darker/50 text-foreground border-border hover:border-accent/50"
-                            )}
-                          >
-                            {months}{t("monthsLabel")} {t("percentOff", { percent: discountPercent })}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                    <fieldset className="mt-5">
+                      <legend className="mb-2.5 text-xs font-semibold text-foreground">
+                        {t("upfrontLabel")}
+                      </legend>
+                      <div className="grid grid-cols-3 gap-1 rounded-xl border border-border bg-background/55 p-1">
+                        {[3, 6, 12].map((months) => {
+                          const discountPercent = months === 12 ? 12 : months === 6 ? 7 : 2;
+                          const isSelected = planOptions[i] === months;
+                          return (
+                            <button
+                              key={months}
+                              type="button"
+                              onClick={() => updatePlanOption(i, months)}
+                              aria-label={`${plan.name}: ${months}${t("monthsLabel")}, -${discountPercent}%`}
+                              aria-pressed={isSelected}
+                              className={cn(
+                                "min-h-12 touch-manipulation rounded-lg px-2 py-1.5 text-center transition-[background-color,color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/35",
+                                isSelected
+                                  ? "bg-foreground text-background shadow-sm"
+                                  : "text-muted hover:bg-foreground/[0.05] hover:text-foreground",
+                              )}
+                            >
+                              <span className="block text-sm font-bold">
+                                {months}{t("monthsLabel")}
+                              </span>
+                              <span className={cn("mt-0.5 block text-[0.65rem] font-semibold", isSelected ? "text-background/70" : "text-muted/75")}>
+                                -{discountPercent}%
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </fieldset>
 
-                  <ul className="space-y-3 mb-6 flex-1">
-                    {plan.features.map((feature) => (
-                      <li key={feature} className="flex gap-2 text-sm text-foreground">
-                        <Check size={16} className="text-accent shrink-0 mt-0.5" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button
-                    href={getWhatsAppOnboardingUrl(plan, planOptions[i], discountedPrice, discount, annualSavings)}
-                    variant={plan.featured ? "primary" : "secondary"}
-                    className="w-full"
-                    external
-                  >
-                    {t("cta")}
-                  </Button>
-                </GlowCard>
-              </ScrollReveal>
-            );
-          })}
+                    <ul className="my-6 flex-1 space-y-3.5">
+                      {plan.features.map((feature) => (
+                        <li key={feature} className="flex items-start gap-3 text-sm leading-relaxed text-foreground/85">
+                          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
+                            <Check size={12} strokeWidth={3} aria-hidden="true" />
+                          </span>
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <Button
+                      href={getWhatsAppOnboardingUrl(plan, planOptions[i], discountedPrice, discount, annualSavings)}
+                      variant={plan.featured ? "primary" : "secondary"}
+                      className="w-full"
+                      external
+                    >
+                      {t("cta")}
+                    </Button>
+                  </article>
+                </ScrollReveal>
+              );
+            })}
+          </div>
         </div>
 
         <div className="mt-16 space-y-8">
