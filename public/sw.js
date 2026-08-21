@@ -1,6 +1,5 @@
-const CACHE_NAME = "overwatch-app-v3";
+const CACHE_NAME = "overwatch-app-v4";
 const PRECACHE_URLS = [
-  "/en",
   "/logo.png",
   "/hero_dark.webp",
   "/monitoring.webp",
@@ -46,9 +45,7 @@ self.addEventListener("fetch", (event) => {
 
   if (event.request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request).catch(() =>
-        caches.match("/en").then((cached) => cached || caches.match("/")),
-      ),
+      fetch(new Request(event.request, { cache: "reload" })),
     );
     return;
   }

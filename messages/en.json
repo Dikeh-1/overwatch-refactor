@@ -616,12 +616,6 @@
       "submitting": "Sending...",
       "success": "Thank you! We'll be in touch within 24 hours.",
       "error": "Something went wrong. Please try again or call us directly."
-    },
-    "info": {
-      "email": "info@overwatchmoz.com",
-      "phone": "+258 84 287 0793",
-      "website": "www.overwatchmoz.com",
-      "location": "Avenida Paulo Samuel Kankhomba, No. 1498, Maputo, Mozambique"
     }
   },
   "cta": {

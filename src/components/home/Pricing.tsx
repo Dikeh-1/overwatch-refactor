@@ -8,6 +8,7 @@ import SectionHeader from "@/components/ui/SectionHeader";
 import GlowCard from "@/components/ui/GlowCard";
 import Button from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
+import { siteContact } from "@/lib/site-config";
 
 type Plan = {
   name: string;
@@ -55,7 +56,6 @@ export default function Pricing() {
     discount: number,
     annualSavings: number
   ) => {
-    const phone = "258842870793";
     const planName = plan.badge ? `${plan.name} (${plan.badge})` : plan.name;
     const upfrontMonths = `${months} ${t("monthsLabel")}`;
     const formattedDiscount = discount > 0 ? `${discount}%` : "0%";
@@ -83,7 +83,7 @@ Please let me know the next steps to schedule our site assessment and setup.
 
 Thank you!`;
 
-    return `https://api.whatsapp.com/send/?phone=${phone}&text=${encodeURIComponent(text)}`;
+    return `https://api.whatsapp.com/send/?phone=${siteContact.whatsappNumber}&text=${encodeURIComponent(text)}`;
   };
 
   return (

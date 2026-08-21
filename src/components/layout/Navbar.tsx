@@ -9,17 +9,14 @@ import Button from "@/components/ui/Button";
 import ThemeDropdown from "./ThemeDropdown";
 import LanguageDropdown from "./LanguageDropdown";
 import { cn } from "@/lib/utils";
+import { solutionNavigationLinks } from "@/lib/site-config";
 
 const navLinks = [{ href: "/", key: "home" as const }];
 
 const dropdownMenus = [
   {
     titleKey: "solutions" as const,
-    links: [
-      { href: "/solutions", key: "allSolutions" as const },
-      { href: "/business", key: "business" as const },
-      { href: "/homes", key: "homes" as const },
-    ],
+    links: solutionNavigationLinks,
   },
   {
     titleKey: "company" as const,

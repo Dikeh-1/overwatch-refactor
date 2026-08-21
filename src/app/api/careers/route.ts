@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import dns from "dns";
+import { siteContact } from "@/lib/site-config";
 
 dns.setDefaultResultOrder("ipv4first");
 
@@ -122,7 +123,7 @@ export async function POST(request: Request) {
       sender: { name: FROM_NAME, email: FROM_EMAIL },
       to: [{ email: "filipa@overwatchmoz.com", name: "Filipa" }],
       cc: [
-        { email: "comercial@overwatchmoz.com", name: "Overwatch Operations" },
+        { email: siteContact.email, name: "Overwatch Operations" },
         { email: "ebube.michael@overwatchmoz.com", name: "Ebube Michael" },
       ],
       replyTo: { email, name },
@@ -156,7 +157,7 @@ export async function POST(request: Request) {
             <div style="margin-top: 24px; padding: 16px; background: #f1f5f9; border-radius: 8px; border-left: 3px solid #cbd5e1; font-size: 13px; color: #64748b;">
               <p style="margin: 0 0 8px 0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #475569;">⚠️ Important Notice</p>
               <p style="margin: 0 0 8px 0; line-height: 1.5;">This is an automated response. Please <strong>do not reply</strong> directly to this email as this inbox is not monitored.</p>
-              <p style="margin: 0; line-height: 1.5;">For any further enquiries, please email us directly at <a href="mailto:comercial@overwatchmoz.com" style="color: #3b82f6; text-decoration: none; font-weight: 500;">comercial@overwatchmoz.com</a>, or use our website chatbot for a faster response.</p>
+              <p style="margin: 0; line-height: 1.5;">For any further enquiries, please email us directly at <a href="mailto:${siteContact.email}" style="color: #3b82f6; text-decoration: none; font-weight: 500;">${siteContact.email}</a>, or use our website chatbot for a faster response.</p>
             </div>
             
             <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;" />

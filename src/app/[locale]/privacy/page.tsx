@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
+import { siteContact } from "@/lib/site-config";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -99,7 +100,7 @@ export default async function PrivacyPage({ params }: Props) {
             <p>
               If you have any questions or concerns about this Privacy Policy or our data practices, please contact us at:
             </p>
-            <p className="mt-4 font-mono text-accent">comercial@overwatchmoz.com</p>
+            <p className="mt-4 font-mono text-accent">{siteContact.email}</p>
           </section>
         </div>
       </div>

@@ -7,6 +7,7 @@ import CTABanner from "@/components/home/CTABanner";
 import CareersForm from "@/components/shared/CareersForm";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 import ScrollFadeHero from "@/components/animations/ScrollFadeHero";
+import { siteContact } from "@/lib/site-config";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -109,7 +110,7 @@ export default async function CareersPage({ params }: Props) {
                   {t("openings.spontaneousDescription")}
                 </p>
                 <a
-                  href="mailto:comercial@overwatchmoz.com?subject=Spontaneous Application"
+                  href={`mailto:${siteContact.email}?subject=Spontaneous Application`}
                   className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-accent px-6 py-3 font-semibold text-primary-dark transition-all duration-300 hover:bg-accent/90"
                 >
                   Send Your CV

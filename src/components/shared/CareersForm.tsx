@@ -2,6 +2,7 @@
 
 import { useState, FormEvent, useRef } from "react";
 import { Send, CheckCircle, AlertCircle, Upload, X, FileText, Loader2 } from "lucide-react";
+import { siteContact } from "@/lib/site-config";
 
 type FormStatus = "idle" | "submitting" | "success" | "error";
 
@@ -218,7 +219,7 @@ export default function CareersForm() {
       {status === "error" && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/8 border border-red-500/25 text-red-700 dark:text-red-300">
           <AlertCircle size={18} className="shrink-0" />
-          <p className="text-sm">Something went wrong. Please try again or email us directly at comercial@overwatchmoz.com</p>
+          <p className="text-sm">Something went wrong. Please try again or email us directly at {siteContact.email}</p>
         </div>
       )}
 

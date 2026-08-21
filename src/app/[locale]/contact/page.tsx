@@ -5,6 +5,7 @@ import ContactForm from "@/components/shared/ContactForm";
 import FadeIn from "@/components/animations/FadeIn";
 import ContactParticles from "@/components/animations/ContactParticles";
 import GlowCard from "@/components/ui/GlowCard";
+import { getSiteAddress, siteContact } from "@/lib/site-config";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -63,19 +64,19 @@ export default async function ContactPage({ params }: Props) {
                 <div className="space-y-4 text-sm">
                   <p className="text-muted">
                     <span className="text-foreground font-medium">Email: </span>
-                    {t("info.email")}
+                    {siteContact.email}
                   </p>
                   <p className="text-muted">
                     <span className="text-foreground font-medium">Website: </span>
-                    {t("info.website")}
+                    {siteContact.website}
                   </p>
                   <p className="text-muted">
                     <span className="text-foreground font-medium">WhatsApp: </span>
-                    {t("info.phone")}
+                    {siteContact.phone}
                   </p>
                   <p className="text-muted">
                     <span className="text-foreground font-medium">Location: </span>
-                    {t("info.location")}
+                    {getSiteAddress(locale)}
                   </p>
                 </div>
               </GlowCard>

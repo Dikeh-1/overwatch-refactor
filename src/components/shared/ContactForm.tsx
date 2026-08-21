@@ -1,16 +1,17 @@
 "use client";
 
 import { useState, FormEvent } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Mail, Phone, MapPin, Send, CheckCircle, AlertCircle } from "lucide-react";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
+import { getSiteAddress, siteContact } from "@/lib/site-config";
 
 type FormStatus = "idle" | "submitting" | "success" | "error";
 
 export default function ContactForm() {
   const t = useTranslations("contact");
-  const tInfo = useTranslations("contact.info");
+  const locale = useLocale();
   const [status, setStatus] = useState<FormStatus>("idle");
   const [phoneValue, setPhoneValue] = useState("");
 
@@ -67,10 +68,10 @@ export default function ContactForm() {
                 <div className="flex flex-col">
                   <span className="text-[10px] font-semibold text-muted tracking-widest uppercase mb-0.5">Email</span>
                   <a
-                    href={`mailto:${tInfo("email")}`}
+                    href={`mailto:${siteContact.email}`}
                     className="inline-flex min-h-11 items-center text-sm font-semibold text-foreground transition-colors hover:text-accent"
                   >
-                    {tInfo("email")}
+                    {siteContact.email}
                   </a>
                 </div>
               </div>
@@ -82,10 +83,10 @@ export default function ContactForm() {
                 <div className="flex flex-col">
                   <span className="text-[10px] font-semibold text-muted tracking-widest uppercase mb-0.5">Phone</span>
                   <a
-                    href={`tel:${tInfo("phone").replace(/\s/g, "")}`}
+                    href={`tel:${siteContact.phoneHref}`}
                     className="inline-flex min-h-11 items-center text-sm font-semibold text-foreground transition-colors hover:text-accent"
                   >
-                    {tInfo("phone")}
+                    {siteContact.phone}
                   </a>
                 </div>
               </div>
@@ -96,7 +97,7 @@ export default function ContactForm() {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-[10px] font-semibold text-muted tracking-widest uppercase mb-0.5">Location</span>
-                  <span className="text-foreground text-sm font-semibold">{tInfo("location")}</span>
+                  <span className="text-foreground text-sm font-semibold">{getSiteAddress(locale)}</span>
                 </div>
               </div>
             </div>
