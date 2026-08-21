@@ -27,13 +27,13 @@ export default function Solution() {
             viewport={{ once: true }}
             className="lg:sticky lg:top-28"
           >
-            <div className="relative aspect-[4/5] rounded-xl overflow-hidden border border-border">
+            <div className="relative mx-auto aspect-[16/9] w-full max-w-2xl overflow-hidden rounded-xl border border-border lg:aspect-[4/5] lg:max-w-none">
               <Image
                 src={IMAGES.process}
                 alt=""
                 fill
                 unoptimized
-                className="object-cover"
+                className="object-cover object-[center_32%] lg:object-center"
                 sizes="(max-width: 1024px) 100vw, 50vw"
               />
               <div className="absolute inset-0 bg-primary-dark/20" />
