@@ -1,10 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowRight, BadgeCheck, RadioTower, ShieldCheck, TimerReset } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import { darkEyebrowClassName } from "@/components/ui/eyebrow";
+import ScrambleText from "@/components/ui/ScrambleText";
 import ScrollFadeHero from "@/components/animations/ScrollFadeHero";
 import { WHATSAPP_URL } from "@/lib/constants";
 
@@ -13,9 +14,24 @@ export default function Hero() {
   const tStats = useTranslations("stats");
 
   const stats = [
-    { value: tStats("monitoring.value"), label: tStats("monitoring.label") },
-    { value: tStats("response.value"), label: tStats("response.label") },
-    { value: tStats("compliance.value"), label: tStats("compliance.label") },
+    {
+      value: tStats("monitoring.value"),
+      label: tStats("monitoring.label"),
+      shortLabel: tStats("monitoring.shortLabel"),
+      icon: RadioTower,
+    },
+    {
+      value: tStats("response.value"),
+      label: tStats("response.label"),
+      shortLabel: tStats("response.shortLabel"),
+      icon: TimerReset,
+    },
+    {
+      value: tStats("compliance.value"),
+      label: tStats("compliance.label"),
+      shortLabel: tStats("compliance.shortLabel"),
+      icon: BadgeCheck,
+    },
   ];
 
   return (
@@ -44,10 +60,15 @@ export default function Hero() {
               <span>{t("badge")}</span>
             </motion.span>
 
-            <h1 className="mt-5 max-w-[43rem] text-balance text-[clamp(2.35rem,5vw,3.5rem)] font-bold leading-[1.04] tracking-[-0.04em] text-white">
-              <span className="block">{t("headline")}</span>
+            <h1 className="mt-5 min-h-[7.7rem] max-w-[43rem] text-balance text-[clamp(2.35rem,5vw,3.5rem)] font-bold leading-[1.04] tracking-[-0.04em] text-white sm:min-h-[7.25rem]">
+              <span className="block">
+                <ScrambleText text={t("headline")} delay={0.2} />
+              </span>
+              {" "}
               {t("headlineAccent") ? (
-                <span className="mt-1 block text-white">{t("headlineAccent")}</span>
+                <span className="mt-1 block text-white">
+                  <ScrambleText text={t("headlineAccent")} delay={0.75} />
+                </span>
               ) : null}
             </h1>
 
@@ -75,23 +96,33 @@ export default function Hero() {
               </Button>
             </div>
 
-            <div className="mt-8 grid max-w-[43rem] gap-3 border-t border-white/12 pt-5 sm:grid-cols-3 sm:gap-4">
+            <div className="mt-8 max-w-[43rem] border-y border-white/12 py-3.5 sm:py-4">
+              <div className="grid grid-cols-3 divide-x divide-white/12">
               {stats.map((stat, index) => (
                 <motion.div
                   key={stat.label}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, delay: 0.28 + index * 0.07 }}
-                  className="min-w-0"
+                  className="flex min-w-0 items-center gap-2 px-2 first:pl-0 last:pr-0 sm:gap-3 sm:px-4"
                 >
-                  <span className="block text-sm font-bold leading-none text-white sm:text-base">
-                    {stat.value}
+                  <span className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/[0.05] text-white/72 sm:flex">
+                    <stat.icon size={15} aria-hidden="true" />
                   </span>
-                  <span className="mt-1.5 block text-[0.6rem] font-semibold uppercase leading-relaxed tracking-[0.09em] text-white/48 sm:text-[0.64rem]">
-                    {stat.label}
+                  <span className="min-w-0">
+                    <span className="block truncate text-[0.72rem] font-bold leading-none tracking-[-0.02em] text-white min-[360px]:text-xs sm:text-sm">
+                      {stat.value}
+                    </span>
+                    <span className="mt-1.5 block truncate text-[0.48rem] font-semibold uppercase leading-none tracking-[0.08em] text-white/48 min-[360px]:text-[0.52rem] sm:hidden">
+                      {stat.shortLabel}
+                    </span>
+                    <span className="mt-1.5 hidden text-[0.58rem] font-semibold uppercase leading-tight tracking-[0.08em] text-white/48 sm:block">
+                      {stat.label}
+                    </span>
                   </span>
                 </motion.div>
               ))}
+              </div>
             </div>
           </motion.div>
         </div>

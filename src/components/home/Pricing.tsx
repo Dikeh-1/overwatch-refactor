@@ -67,7 +67,7 @@ export default function Pricing() {
   };
 
   return (
-    <section id="pricing" className="relative overflow-hidden py-20 md:py-28">
+    <section id="pricing" className="relative overflow-hidden py-16 md:py-28">
       <div className="pointer-events-none absolute inset-0 tech-grid opacity-[0.16]" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_8%,rgba(59,130,246,0.07),transparent_29%)]" />
 
@@ -91,7 +91,7 @@ export default function Pricing() {
         </div>
 
         <ScrollReveal direction="up" distance={24}>
-          <div className="mx-auto mb-8 max-w-4xl rounded-[1.5rem] border border-border bg-card p-3 shadow-[0_16px_45px_rgba(2,6,23,0.07)] sm:p-4 md:mb-10">
+          <div className="mobile-flat-surface mx-auto mb-8 max-w-4xl rounded-[1.5rem] border border-border bg-card p-3 shadow-[0_16px_45px_rgba(2,6,23,0.07)] sm:p-4 md:mb-10">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex min-w-0 items-start gap-3 px-1 sm:px-2">
                 <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-foreground">
@@ -149,7 +149,11 @@ export default function Pricing() {
           </div>
         </ScrollReveal>
 
-        <div className="grid items-stretch gap-5 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+        <div
+          className="-mx-4 flex snap-x snap-mandatory items-stretch gap-4 overflow-x-auto overscroll-x-contain px-4 pb-3 md:mx-0 md:grid md:snap-none md:grid-cols-2 md:gap-5 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-3 lg:gap-6"
+          role="region"
+          aria-label={t("title")}
+        >
           {plans.map((plan, index) => {
             const { originalPrice, monthlyPrice, upfrontTotal } = getPlanPricing(plan);
             const currency = plan.currency.trim();
@@ -161,7 +165,7 @@ export default function Pricing() {
                 distance={28}
                 delay={index * 0.06}
                 className={cn(
-                  "flex min-w-0",
+                  "flex w-[86vw] shrink-0 snap-center md:w-auto md:shrink",
                   index === 2 &&
                     "md:col-span-2 md:w-full md:max-w-xl md:justify-self-center lg:col-span-1 lg:max-w-none",
                 )}
@@ -219,7 +223,7 @@ export default function Pricing() {
                     </div>
                   </div>
 
-                  <div className="mt-5 rounded-2xl border border-border bg-background/55 p-4">
+                  <div className="mobile-inline-summary mt-5 rounded-2xl border border-border bg-background/55 p-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted">
                       {t("billingSummary.label")}
                     </p>
@@ -266,7 +270,7 @@ export default function Pricing() {
         </div>
 
         <ScrollReveal direction="up" distance={24}>
-          <div className="mt-8 grid gap-4 rounded-[1.75rem] border border-border bg-card p-5 shadow-[0_16px_45px_rgba(2,6,23,0.06)] sm:p-6 lg:grid-cols-[1.15fr_1fr_1fr] lg:items-center">
+          <div className="mobile-flat-surface mt-8 grid gap-4 rounded-[1.75rem] border border-border bg-card p-5 shadow-[0_16px_45px_rgba(2,6,23,0.06)] sm:p-6 lg:grid-cols-[1.15fr_1fr_1fr] lg:items-center">
             <div className="flex items-start gap-3">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-foreground">
                 <Settings2 size={18} aria-hidden="true" />
@@ -277,14 +281,14 @@ export default function Pricing() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-border bg-background/55 p-4">
+            <div className="mobile-inline-summary rounded-2xl border border-border bg-background/55 p-4">
               <p className="text-sm font-medium text-muted">{t("installation.title")}</p>
               <p className="mt-1 text-xl font-semibold tracking-tight text-foreground">
                 {t("installation.price")}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-border bg-background/55 p-4">
+            <div className="mobile-inline-summary rounded-2xl border border-border bg-background/55 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm font-medium text-muted">{t("cloudBridge.title")}</p>
                 <span className="rounded-full bg-foreground/[0.07] px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-foreground">
@@ -299,7 +303,7 @@ export default function Pricing() {
         </ScrollReveal>
 
         <ScrollReveal direction="up" distance={24}>
-          <div className="mt-6 flex flex-col gap-6 rounded-[1.75rem] border border-border bg-foreground/[0.045] p-6 sm:p-8 lg:flex-row lg:items-center lg:justify-between">
+          <div className="mobile-flat-surface mt-6 flex flex-col gap-6 rounded-[1.75rem] border border-border bg-foreground/[0.045] p-6 sm:p-8 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex max-w-3xl items-start gap-4">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-foreground text-background">
                 <ShieldCheck size={21} aria-hidden="true" />

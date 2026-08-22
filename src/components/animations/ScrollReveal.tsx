@@ -1,7 +1,8 @@
 "use client";
 
 import { ReactNode } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
+import { useConstrainedDevice } from "@/lib/device-performance";
 
 interface ScrollRevealProps {
   children: ReactNode;
@@ -27,6 +28,13 @@ export default function ScrollReveal({
   duration = 0.65,
   once = true,
 }: ScrollRevealProps) {
+  const prefersReducedMotion = useReducedMotion();
+  const isConstrained = useConstrainedDevice();
+
+  if (prefersReducedMotion || isConstrained) {
+    return <div className={className}>{children}</div>;
+  }
+
   const initial = {
     opacity: 0,
     y: direction === "up" ? distance : direction === "down" ? -distance : 0,

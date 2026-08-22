@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { isConstrainedDevice } from "@/lib/device-performance";
 
 type SalesIQ = {
   ready?: () => void;
@@ -27,6 +28,7 @@ const ZOHO_WIDGET_SRC =
 export default function ZohoChatbot() {
   useEffect(() => {
     let interactionTimer: number | undefined;
+    const isConstrained = isConstrainedDevice();
 
     const loadZohoChat = () => {
       if (document.getElementById("zsiqscript")) return;
@@ -60,16 +62,16 @@ export default function ZohoChatbot() {
     // fallback so support remains available to visitors who pause on a page.
     window.addEventListener("pointerdown", requestLoad, { once: true, passive: true });
     window.addEventListener("touchstart", requestLoad, { once: true, passive: true });
-    window.addEventListener("scroll", requestLoad, { once: true, passive: true });
     window.addEventListener("keydown", requestLoad, { once: true });
-    const fallbackTimer = window.setTimeout(requestLoad, 10000);
+    const fallbackTimer = isConstrained
+      ? undefined
+      : window.setTimeout(requestLoad, 15000);
 
     return () => {
       window.removeEventListener("pointerdown", requestLoad);
       window.removeEventListener("touchstart", requestLoad);
-      window.removeEventListener("scroll", requestLoad);
       window.removeEventListener("keydown", requestLoad);
-      window.clearTimeout(fallbackTimer);
+      if (fallbackTimer) window.clearTimeout(fallbackTimer);
       if (interactionTimer) window.clearTimeout(interactionTimer);
     };
   }, []);

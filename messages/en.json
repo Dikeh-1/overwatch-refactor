@@ -405,9 +405,9 @@
     }
   },
   "stats": {
-    "monitoring": { "value": "24/7/365", "label": "Centralized Monitoring" },
-    "response": { "value": "<30s", "label": "Critical Response Time" },
-    "compliance": { "value": "ISO-Certified", "label": "Compliance Standards" }
+    "monitoring": { "value": "24/7/365", "label": "Centralized Monitoring", "shortLabel": "Monitoring" },
+    "response": { "value": "<30s", "label": "Critical Response Time", "shortLabel": "Response" },
+    "compliance": { "value": "ISO-Certified", "label": "Compliance Standards", "shortLabel": "Standards" }
   },
   "pricing": {
     "label": "Monitoring Plans",

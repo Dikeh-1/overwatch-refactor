@@ -11,14 +11,14 @@ export default function Comparison() {
   const rows = t.raw("rows") as { traditional: string; overwatch: string }[];
 
   return (
-    <section className="py-20 md:py-28 border-t border-border bg-primary-dark/20 relative">
+    <section className="relative border-t border-border bg-primary-dark/20 py-16 md:py-28">
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <SectionHeader title={t("title")} />
 
-        <div className="grid md:grid-cols-2 gap-8 items-stretch">
+        <div className="grid items-stretch divide-y divide-border/70 md:grid-cols-2 md:gap-8 md:divide-y-0">
           {/* Traditional CCTV column */}
-          <ScrollReveal direction="left" delay={0.1}>
-            <GlowCard techCorners={true} accentColor="slate" className="h-full border-border hover:border-accent/20 bg-primary-darker/20">
+          <ScrollReveal direction="left" delay={0.1} className="pb-8 md:pb-0">
+            <GlowCard techCorners={true} accentColor="slate" className="mobile-flat-card h-full border-border bg-primary-darker/20 hover:border-accent/20">
               <h3 className="text-xl font-bold text-muted mb-6 text-center tracking-wide uppercase">
                 {t("headers.traditional")}
               </h3>
@@ -37,8 +37,8 @@ export default function Comparison() {
           </ScrollReveal>
 
           {/* Overwatch column */}
-          <ScrollReveal direction="right" delay={0.2}>
-            <GlowCard techCorners={true} accentColor="gold" className="h-full border-accent/30 bg-accent/5 glow-accent">
+          <ScrollReveal direction="right" delay={0.2} className="pt-8 md:pt-0">
+            <GlowCard techCorners={true} accentColor="gold" className="mobile-flat-card glow-accent h-full border-accent/30 bg-accent/5">
               <h3 className="text-xl font-bold text-accent mb-6 text-center tracking-wide uppercase glow-text">
                 {t("headers.overwatch")}
               </h3>

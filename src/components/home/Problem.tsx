@@ -13,16 +13,16 @@ export default function Problem() {
   const passiveCost = t.raw("passiveCost.items") as string[];
 
   return (
-    <section id="about" className="py-20 md:py-28 bg-primary-darker/50">
+    <section id="about" className="bg-primary-darker/50 py-16 md:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <ScrollReveal direction="up">
           <SectionHeader title={t("title")} />
         </ScrollReveal>
 
         {/* Split Cards Grid */}
-        <div className="grid md:grid-cols-2 gap-8 items-stretch mb-16">
-          <ScrollReveal direction="left" delay={0.1}>
-            <GlowCard techCorners={true} accentColor="gold" className="h-full flex flex-col justify-between">
+        <div className="mb-12 grid items-stretch divide-y divide-border/70 md:mb-16 md:grid-cols-2 md:gap-8 md:divide-y-0">
+          <ScrollReveal direction="left" delay={0.1} className="pb-8 md:pb-0">
+            <GlowCard techCorners={true} accentColor="gold" className="mobile-flat-card flex h-full flex-col justify-between">
               <div>
                 <h3 className="text-xl font-bold text-foreground mb-4 glow-text">
                   {t("quietRisks.title")}
@@ -42,8 +42,8 @@ export default function Problem() {
             </GlowCard>
           </ScrollReveal>
 
-          <ScrollReveal direction="right" delay={0.2}>
-            <GlowCard techCorners={true} accentColor="slate" className="h-full flex flex-col justify-between">
+          <ScrollReveal direction="right" delay={0.2} className="pt-8 md:pt-0">
+            <GlowCard techCorners={true} accentColor="slate" className="mobile-flat-card flex h-full flex-col justify-between">
               <div>
                 <h3 className="text-xl font-bold text-foreground mb-4 glow-text">
                   {t("passiveCost.title")}

@@ -13,7 +13,7 @@ export default async function CTABanner() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(255,255,255,0.08),transparent_30%),radial-gradient(circle_at_85%_80%,rgba(59,130,246,0.11),transparent_34%)]" />
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="overflow-hidden rounded-3xl border border-white/12 bg-white/[0.045] p-6 shadow-2xl shadow-black/20 sm:p-8 lg:p-12">
+        <div className="mobile-flat-surface overflow-hidden rounded-3xl border border-white/12 bg-white/[0.045] p-6 shadow-2xl shadow-black/20 sm:p-8 lg:p-12">
           <div className="grid gap-10 lg:grid-cols-[0.88fr_1.12fr] lg:items-center lg:gap-16">
             <div>
               <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-white/60">
@@ -36,12 +36,12 @@ export default async function CTABanner() {
               </Button>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-black/15 p-4 sm:p-6">
+            <div className="mobile-flat-surface rounded-2xl border border-white/10 bg-black/15 p-4 sm:p-6">
               <ul className="grid gap-3 sm:grid-cols-2 sm:gap-4">
                 {items.map((item) => (
                   <li
                     key={item}
-                    className="flex min-h-14 items-start gap-3 rounded-xl border border-white/8 bg-white/[0.045] p-4 text-sm font-medium leading-relaxed text-white/82"
+                    className="mobile-flat-row flex min-h-14 items-start gap-3 rounded-xl border border-white/8 bg-white/[0.045] p-4 text-sm font-medium leading-relaxed text-white/82 last:border-b-0"
                   >
                     <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-accent" aria-hidden="true" />
                     <span>{item}</span>

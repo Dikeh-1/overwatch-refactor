@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useConstrainedDevice } from "@/lib/device-performance";
 
 type LazyVideoProps = Omit<VideoHTMLAttributes<HTMLVideoElement>, "children"> & {
   rootMargin?: string;
@@ -26,8 +27,11 @@ export default function LazyVideo({
 }: LazyVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [shouldLoad, setShouldLoad] = useState(false);
+  const allowMotionMedia = !useConstrainedDevice();
 
   useEffect(() => {
+    if (!allowMotionMedia) return;
+
     const video = videoRef.current;
     if (!video) return;
 
@@ -48,7 +52,7 @@ export default function LazyVideo({
 
     observer.observe(video);
     return () => observer.disconnect();
-  }, [rootMargin]);
+  }, [allowMotionMedia, rootMargin]);
 
   useEffect(() => {
     const video = videoRef.current;
