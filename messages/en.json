@@ -77,7 +77,7 @@
     "badge": "AI-Powered Security. Human Verification. Real Response.",
     "headline": "Turn Your CCTV Into",
     "headlineAccent": "an Active Security System",
-    "description": "Overwatch provides integrated security solutions that combine AI-powered CCTV monitoring, human verification, security management, technology implementation, operational procedures and incident response.\n\nWe assess your current security operation, identify the gaps and build the right combination of technology, people and procedures for your site.",
+    "description": "Overwatch turns compatible CCTV into an active security operation. AI detects relevant activity, trained operators verify it, and agreed response procedures are activated when needed.",
     "ctaPrimary": "Book a Free Security Assessment",
     "ctaSecondary": "Speak to an Agent",
     "benefits": [
@@ -123,8 +123,12 @@
   },
   "solution": {
     "label": "How It Works",
-    "title": "How It Works",
-    "description": "From assessment to active monitoring and response.",
+    "title": "From assessment to active response",
+    "description": "Five disciplined steps bring your cameras, operators and procedures into one coordinated security operation.",
+    "imageAlt": "Overwatch operator monitoring a security system",
+    "visualLabel": "One connected operation",
+    "visualTitle": "Detect. Verify. Respond.",
+    "visualDescription": "Technology, trained operators and agreed procedures working together as one system.",
     "steps": [
       {
         "title": "Assess",
@@ -644,6 +648,8 @@
     "searchPlaceholder": "Search CCTV, alerts, installation...",
     "clearSearch": "Clear search",
     "allQuestions": "All questions",
+    "filterNavigationLabel": "FAQ topic filters",
+    "filterScrollHint": "Swipe for more topics",
     "resultsLabel": "{count, plural, one {# answer} other {# answers}}",
     "answerLabel": "Overwatch answer",
     "quickFilters": [

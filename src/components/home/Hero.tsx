@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, CheckCircle2, ShieldCheck } from "lucide-react";
+import { ArrowRight, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import { darkEyebrowClassName } from "@/components/ui/eyebrow";
@@ -32,7 +32,7 @@ export default function Hero() {
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
-            className="max-w-[46rem]"
+            className="max-w-[43rem]"
           >
             <motion.span
               initial={{ opacity: 0, x: -14 }}
@@ -44,18 +44,18 @@ export default function Hero() {
               <span>{t("badge")}</span>
             </motion.span>
 
-            <h1 className="mt-6 max-w-[44rem] text-balance text-[clamp(2.35rem,8.2vw,4.7rem)] font-bold leading-[1.01] tracking-[-0.045em] text-white">
+            <h1 className="mt-5 max-w-[43rem] text-balance text-[clamp(2.35rem,5vw,3.5rem)] font-bold leading-[1.04] tracking-[-0.04em] text-white">
               <span className="block">{t("headline")}</span>
               {t("headlineAccent") ? (
                 <span className="mt-1 block text-white">{t("headlineAccent")}</span>
               ) : null}
             </h1>
 
-            <p className="mt-6 max-w-[40rem] whitespace-pre-line text-pretty text-base font-medium leading-relaxed text-white/72 sm:text-lg lg:text-xl">
+            <p className="mt-5 max-w-[37rem] text-pretty text-base font-normal leading-relaxed text-white/68 sm:text-lg">
               {t("description")}
             </p>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <Button
                 href="/contact#assessment-form"
                 size="lg"
@@ -75,32 +75,23 @@ export default function Hero() {
               </Button>
             </div>
 
-            <div className="mt-9 max-w-[47rem] overflow-hidden rounded-2xl border border-white/12 bg-[#10131a]/68 p-3 shadow-[0_24px_60px_rgba(0,0,0,0.26)] backdrop-blur-md sm:p-4">
-              <div className="grid gap-2.5 sm:grid-cols-3">
-                {stats.map((stat, index) => (
-                  <motion.div
-                    key={stat.label}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.45, delay: 0.3 + index * 0.08 }}
-                    className="flex min-h-20 items-center gap-3 rounded-xl border border-white/[0.075] bg-white/[0.045] px-3.5 py-3 sm:block sm:min-h-24 sm:px-4"
-                  >
-                    <CheckCircle2
-                      size={17}
-                      className="shrink-0 text-white/85 sm:mb-2"
-                      aria-hidden="true"
-                    />
-                    <div>
-                      <div className="text-lg font-bold leading-none text-white sm:text-xl">
-                        {stat.value}
-                      </div>
-                      <div className="mt-1.5 text-[0.62rem] font-semibold uppercase leading-relaxed tracking-[0.11em] text-white/55 sm:text-[0.68rem]">
-                        {stat.label}
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+            <div className="mt-8 grid max-w-[43rem] gap-3 border-t border-white/12 pt-5 sm:grid-cols-3 sm:gap-4">
+              {stats.map((stat, index) => (
+                <motion.div
+                  key={stat.label}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.28 + index * 0.07 }}
+                  className="min-w-0"
+                >
+                  <span className="block text-sm font-bold leading-none text-white sm:text-base">
+                    {stat.value}
+                  </span>
+                  <span className="mt-1.5 block text-[0.6rem] font-semibold uppercase leading-relaxed tracking-[0.09em] text-white/48 sm:text-[0.64rem]">
+                    {stat.label}
+                  </span>
+                </motion.div>
+              ))}
             </div>
           </motion.div>
         </div>

@@ -77,7 +77,7 @@
     "badge": "Segurança com IA. Verificação Humana. Resposta Real.",
     "headline": "Transforme CCTV em",
     "headlineAccent": "Segurança Activa",
-    "description": "A Overwatch fornece soluções integradas de segurança que combinam monitorização CCTV com IA, verificação humana, gestão de segurança, implementação tecnológica, procedimentos operacionais e resposta a incidentes.\n\nAvaliamos a sua operação de segurança actual, identificamos as falhas e desenvolvemos a combinação certa de tecnologia, pessoas e procedimentos para o seu local.",
+    "description": "A Overwatch transforma CCTV compatível numa operação de segurança activa. A IA detecta actividade relevante, operadores qualificados verificam o evento e os procedimentos de resposta acordados são activados quando necessário.",
     "ctaPrimary": "Marque uma Avaliação de Segurança Gratuita",
     "ctaSecondary": "Falar com um Agente",
     "benefits": [
@@ -123,8 +123,12 @@
   },
   "solution": {
     "label": "Como Funciona",
-    "title": "Como Funciona",
-    "description": "Da avaliação à monitorização activa e resposta.",
+    "title": "Da avaliação à resposta activa",
+    "description": "Cinco passos disciplinados integram as suas câmaras, operadores e procedimentos numa única operação de segurança coordenada.",
+    "imageAlt": "Operadora da Overwatch a monitorizar um sistema de segurança",
+    "visualLabel": "Uma operação integrada",
+    "visualTitle": "Detectar. Verificar. Responder.",
+    "visualDescription": "Tecnologia, operadores qualificados e procedimentos acordados a funcionar em conjunto como um único sistema.",
     "steps": [
       {
         "title": "Avaliamos",
@@ -644,6 +648,8 @@
     "searchPlaceholder": "Pesquisar CCTV, alertas, instalação...",
     "clearSearch": "Limpar pesquisa",
     "allQuestions": "Todas as perguntas",
+    "filterNavigationLabel": "Filtros de temas das perguntas frequentes",
+    "filterScrollHint": "Deslize para ver mais temas",
     "resultsLabel": "{count, plural, one {# resposta} other {# respostas}}",
     "answerLabel": "Resposta Overwatch",
     "quickFilters": [

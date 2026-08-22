@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronDown, Search, ShieldCheck, X } from "lucide-react";
+import { ChevronDown, MoveHorizontal, Search, ShieldCheck, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type FAQItem = {
@@ -60,7 +60,7 @@ export default function FAQAccordion({ limit, searchable = false }: FAQAccordion
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t("searchPlaceholder")}
-              className="min-h-14 w-full appearance-none rounded-2xl border border-border bg-background py-3 pl-12 pr-12 text-base text-foreground outline-none transition-[border-color,box-shadow] placeholder:text-muted/75 focus:border-foreground/30 focus:ring-4 focus:ring-foreground/5"
+              className="min-h-14 w-full appearance-none rounded-2xl border border-border bg-background py-3 pl-12 pr-12 text-base text-foreground outline-none transition-[border-color,box-shadow] placeholder:text-muted/75 focus:border-foreground/30 focus:ring-4 focus:ring-foreground/5 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
             />
             {query && (
               <button
@@ -74,7 +74,12 @@ export default function FAQAccordion({ limit, searchable = false }: FAQAccordion
             )}
           </div>
 
-          <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div
+            role="region"
+            aria-label={t("filterNavigationLabel")}
+            tabIndex={0}
+            className="mt-3 flex max-w-full touch-pan-x snap-x snap-proximity items-center gap-2 overflow-x-auto overscroll-x-contain scroll-smooth pb-2 pr-8 [scrollbar-color:rgba(148,163,184,0.45)_transparent] [scrollbar-width:thin] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/30 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-foreground/20 [&::-webkit-scrollbar-track]:bg-transparent"
+          >
             <button
               type="button"
               onClick={() => {
@@ -82,7 +87,7 @@ export default function FAQAccordion({ limit, searchable = false }: FAQAccordion
                 setOpenQuestion(null);
               }}
               className={cn(
-                "min-h-10 shrink-0 rounded-full border px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/35",
+                "min-h-10 shrink-0 snap-start rounded-full border px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/35",
                 !normalizedQuery
                   ? "border-foreground bg-foreground text-background"
                   : "border-border bg-background text-muted hover:border-foreground/20 hover:text-foreground",
@@ -101,7 +106,7 @@ export default function FAQAccordion({ limit, searchable = false }: FAQAccordion
                     setOpenQuestion(null);
                   }}
                   className={cn(
-                    "min-h-10 shrink-0 rounded-full border px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/35",
+                    "min-h-10 shrink-0 snap-start rounded-full border px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/35",
                     isActive
                       ? "border-foreground bg-foreground text-background"
                       : "border-border bg-background text-muted hover:border-foreground/20 hover:text-foreground",
@@ -116,6 +121,10 @@ export default function FAQAccordion({ limit, searchable = false }: FAQAccordion
           <div className="mt-2 flex items-center justify-between gap-3 px-1 text-[0.7rem] font-bold uppercase tracking-[0.13em] text-muted">
             <span>{t("resultsLabel", { count: visibleItems.length })}</span>
             <span className="h-px flex-1 bg-border/75" aria-hidden="true" />
+            <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[0.68rem] font-medium normal-case tracking-normal lg:hidden">
+              <MoveHorizontal size={13} aria-hidden="true" />
+              {t("filterScrollHint")}
+            </span>
           </div>
         </div>
       )}
