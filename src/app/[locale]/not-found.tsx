@@ -9,7 +9,7 @@ export default function NotFoundPage() {
   const suggestions = t.raw("suggestions") as string[];
 
   return (
-    <section className="relative isolate min-h-[78vh] overflow-hidden bg-primary-dark px-4 py-24 text-white sm:px-6 lg:px-8">
+    <section className="dark relative isolate min-h-[78vh] overflow-hidden bg-primary-dark px-4 py-24 text-white sm:px-6 lg:px-8">
       <div className="absolute inset-0 -z-20 bg-[radial-gradient(circle_at_78%_18%,rgba(255,255,255,0.12),transparent_30%),radial-gradient(circle_at_18%_75%,rgba(255,255,255,0.08),transparent_28%),linear-gradient(135deg,#0f1117_0%,#111827_58%,#06101d_100%)]" />
       <div className="contact-particle-field absolute inset-0 -z-10 opacity-45" />
       <div className="absolute inset-x-0 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent" />

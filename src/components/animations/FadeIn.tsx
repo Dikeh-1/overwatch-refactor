@@ -22,7 +22,7 @@ export default function FadeIn({ children, delay = 0, className = "", direction 
   return (
     <motion.div
       initial={{ 
-        opacity: 0, 
+        opacity: 1,
         ...directionOffset[direction] 
       }}
       whileInView={{ 

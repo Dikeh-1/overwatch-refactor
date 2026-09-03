@@ -140,7 +140,7 @@ export default function LaunchExperience() {
       )}
 
       {showInstallPrompt && installPrompt && (
-        <div className="fixed inset-x-4 bottom-5 z-[9998] mx-auto max-w-md rounded-2xl border border-white/12 bg-primary-dark/95 p-4 text-white shadow-2xl backdrop-blur-md">
+        <div className="dark fixed inset-x-4 bottom-5 z-[9998] mx-auto max-w-md rounded-2xl border border-white/12 bg-primary-dark/95 p-4 text-white shadow-2xl backdrop-blur-md">
           <button
             type="button"
             onClick={dismissInstallPrompt}

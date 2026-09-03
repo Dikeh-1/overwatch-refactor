@@ -36,7 +36,9 @@ export default function ScrollReveal({
   }
 
   const initial = {
-    opacity: 0,
+    // Keep content readable before hydration and if IntersectionObserver is
+    // delayed or unavailable. The positional reveal still provides motion.
+    opacity: 1,
     y: direction === "up" ? distance : direction === "down" ? -distance : 0,
     x: direction === "left" ? distance : direction === "right" ? -distance : 0,
     scale: direction === "scale" ? 0.88 : 1,

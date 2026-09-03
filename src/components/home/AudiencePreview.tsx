@@ -15,7 +15,7 @@ export default function AudiencePreview() {
       <div className="mx-auto max-w-6xl px-3 sm:px-4 lg:px-6">
         <div className="grid md:grid-cols-2 gap-8">
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
+            initial={{ opacity: 1, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
           >
@@ -35,7 +35,7 @@ export default function AudiencePreview() {
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, x: 20 }}
+            initial={{ opacity: 1, x: 20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
           >

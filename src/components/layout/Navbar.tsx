@@ -38,6 +38,7 @@ export default function Navbar() {
   const tNavSections = useTranslations("navSections");
   const tMobile = useTranslations("mobileMenu");
   const pathname = usePathname();
+  const hasDarkHero = !pathname.startsWith("/privacy") && !pathname.startsWith("/terms");
   const [scrolled, setScrolled] = useState(false);
   const [currentHash, setCurrentHash] = useState(
     typeof window === "undefined" ? "" : window.location.hash,
@@ -181,7 +182,9 @@ export default function Navbar() {
           "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
           scrolled
             ? "bg-primary-dark/95 backdrop-blur-md border-b border-border shadow-lg"
-            : "bg-transparent dark",
+            : hasDarkHero
+              ? "bg-transparent dark"
+              : "bg-primary-dark/95 backdrop-blur-md border-b border-border",
         )}
       >
         <nav
