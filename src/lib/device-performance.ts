@@ -13,12 +13,8 @@ export function isConstrainedDevice() {
   const navigatorWithDeviceHints = navigator as NavigatorWithDeviceHints;
 
   return (
-    window.matchMedia("(max-width: 767px)").matches ||
     window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
-    navigatorWithDeviceHints.connection?.saveData === true ||
-    (navigator.hardwareConcurrency > 0 && navigator.hardwareConcurrency <= 4) ||
-    (navigatorWithDeviceHints.deviceMemory !== undefined &&
-      navigatorWithDeviceHints.deviceMemory <= 4)
+    navigatorWithDeviceHints.connection?.saveData === true
   );
 }
 

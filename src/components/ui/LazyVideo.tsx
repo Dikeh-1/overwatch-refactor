@@ -6,7 +6,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { useConstrainedDevice } from "@/lib/device-performance";
 
 type LazyVideoProps = Omit<VideoHTMLAttributes<HTMLVideoElement>, "children"> & {
   rootMargin?: string;
@@ -15,7 +14,7 @@ type LazyVideoProps = Omit<VideoHTMLAttributes<HTMLVideoElement>, "children"> & 
 };
 
 export default function LazyVideo({
-  rootMargin = "500px",
+  rootMargin = "600px",
   src,
   type = "video/mp4",
   preload = "metadata",
@@ -27,13 +26,16 @@ export default function LazyVideo({
 }: LazyVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [shouldLoad, setShouldLoad] = useState(false);
-  const allowMotionMedia = !useConstrainedDevice();
 
   useEffect(() => {
-    if (!allowMotionMedia) return;
-
     const video = videoRef.current;
     if (!video) return;
+
+    // Mobile browsers (iOS Safari, Android Chrome) strictly require muted and playsInline
+    video.muted = true;
+    video.defaultMuted = true;
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
 
     if (typeof IntersectionObserver === "undefined") {
       const timeoutId = window.setTimeout(() => setShouldLoad(true), 0);
@@ -52,16 +54,30 @@ export default function LazyVideo({
 
     observer.observe(video);
     return () => observer.disconnect();
-  }, [allowMotionMedia, rootMargin]);
+  }, [rootMargin]);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !shouldLoad || !autoPlay) return;
 
+    video.muted = true;
+    video.defaultMuted = true;
     video.load();
-    void video.play().catch(() => {
-      // Autoplay can be blocked by browser policy; the poster remains visible.
-    });
+
+    const playPromise = video.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        // Fallback: If device is in low-power mode and paused autoplay,
+        // trigger playback on first user touch/interaction
+        const resumePlayback = () => {
+          video.play().catch(() => {});
+          window.removeEventListener("touchstart", resumePlayback);
+          window.removeEventListener("click", resumePlayback);
+        };
+        window.addEventListener("touchstart", resumePlayback, { once: true, passive: true });
+        window.addEventListener("click", resumePlayback, { once: true, passive: true });
+      });
+    }
   }, [autoPlay, shouldLoad]);
 
   return (
