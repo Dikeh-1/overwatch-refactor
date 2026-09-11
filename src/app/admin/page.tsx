@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 import TechGrid from "@/components/ui/TechGrid";
+import LazyVideo from "@/components/ui/LazyVideo";
+import { IMAGES } from "@/lib/constants";
 import { type Application, type Role, stages } from "@/lib/careers";
 import "./admin.css";
 
@@ -212,10 +214,21 @@ export default function AdminPage() {
   if (!auth) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-[#090d16] text-white relative isolate overflow-hidden px-4 py-12">
-        <TechGrid className="absolute inset-0 opacity-40 pointer-events-none" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.08),transparent_40%),radial-gradient(circle_at_80%_80%,rgba(255,255,255,0.04),transparent_40%)] pointer-events-none" />
+        {/* Soft Background Video */}
+        <div className="absolute inset-0 z-0 opacity-30 pointer-events-none">
+          <LazyVideo
+            className="h-full w-full object-cover mix-blend-luminosity"
+            poster={IMAGES.videoPoster}
+            rootMargin="700px"
+            src={IMAGES.videoSrc}
+          />
+        </div>
+        {/* Soft dark dimming overlay to keep it soft, not too bright, matching Overwatch theme */}
+        <div className="absolute inset-0 bg-[#090d16]/80 z-0 pointer-events-none" />
+        <TechGrid className="absolute inset-0 opacity-35 pointer-events-none z-0" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.06),transparent_40%),radial-gradient(circle_at_80%_80%,rgba(255,255,255,0.03),transparent_40%)] pointer-events-none z-0" />
 
-        <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#121827]/95 p-8 shadow-[0_32px_80px_rgba(0,0,0,0.5)] backdrop-blur-md">
+        <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-[#121827]/95 p-8 shadow-[0_32px_80px_rgba(0,0,0,0.6)] backdrop-blur-md">
           <div className="text-center pb-6 border-b border-white/10">
             <div className="flex justify-center mb-4">
               {/* Crisp Light Logo */}

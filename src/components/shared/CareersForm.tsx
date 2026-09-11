@@ -2,7 +2,6 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useLocale } from "next-intl";
-import Image from "next/image";
 import {
   ArrowDown,
   ArrowRight,
@@ -18,6 +17,8 @@ import {
 import { type Role, MAX_CV } from "@/lib/careers";
 import { darkEyebrowClassName } from "@/components/ui/eyebrow";
 import TechGrid from "@/components/ui/TechGrid";
+import LazyVideo from "@/components/ui/LazyVideo";
+import { IMAGES } from "@/lib/constants";
 
 export default function CareersForm({
   initialLocale,
@@ -234,19 +235,19 @@ export default function CareersForm({
     <div className="min-h-screen bg-background text-foreground">
       {/* ─── HERO SECTION ────────────────────────────────────────────── */}
       <section className="dark relative isolate overflow-hidden bg-[#090d16] pb-16 pt-28 text-white sm:pb-20 sm:pt-32 lg:pb-24 lg:pt-36">
-        {/* Authentic Physical Security / CCTV Control Room Image */}
-        <Image
-          src="/careers-hero.jpg"
-          alt="Overwatch CCTV Surveillance Control Center"
-          fill
-          priority
-          sizes="100vw"
-          className="pointer-events-none object-cover object-center opacity-35 mix-blend-luminosity"
-        />
-        <TechGrid className="absolute inset-0 opacity-40 pointer-events-none" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_25%,rgba(255,255,255,0.08),transparent_32%),radial-gradient(circle_at_85%_20%,rgba(255,255,255,0.06),transparent_30%),linear-gradient(to_bottom,transparent_45%,rgba(9,13,22,0.95))]" />
+        {/* Authentic Security Surveillance Background Video */}
+        <div className="absolute inset-0 z-0 opacity-35 pointer-events-none">
+          <LazyVideo
+            className="h-full w-full object-cover mix-blend-luminosity"
+            poster={IMAGES.videoPoster}
+            rootMargin="700px"
+            src={IMAGES.videoSrc}
+          />
+        </div>
+        <TechGrid className="absolute inset-0 opacity-35 pointer-events-none z-0" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_25%,rgba(255,255,255,0.08),transparent_32%),radial-gradient(circle_at_85%_20%,rgba(255,255,255,0.06),transparent_30%),linear-gradient(to_bottom,transparent_45%,rgba(9,13,22,0.95))] pointer-events-none z-0" />
 
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
             <span className={darkEyebrowClassName}>
               <ShieldCheck size={15} className="shrink-0" aria-hidden="true" />
