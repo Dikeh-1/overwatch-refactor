@@ -24,6 +24,7 @@ import {
 import Logo from "@/components/ui/Logo";
 import TechGrid from "@/components/ui/TechGrid";
 import LazyVideo from "@/components/ui/LazyVideo";
+import DocxViewer from "@/components/admin/DocxViewer";
 import { IMAGES } from "@/lib/constants";
 import { type Application, type Role, stages } from "@/lib/careers";
 import "./admin.css";
@@ -1045,8 +1046,8 @@ export default function AdminPage() {
                 </span>
               </div>
 
-              {/* Embedded Document Frame (for PDFs) */}
-              {(current.cvType === "application/pdf" || current.cvName.toLowerCase().endsWith(".pdf")) && (
+              {/* Embedded Document Frame (for PDFs and Word documents) */}
+              {current.cvType === "application/pdf" || current.cvName.toLowerCase().endsWith(".pdf") ? (
                 <div className="rounded-2xl border border-white/15 bg-black/60 overflow-hidden shadow-inner">
                   <div className="flex items-center justify-between px-3.5 py-2.5 bg-white/[0.04] border-b border-white/10 text-xs">
                     <span className="text-white/80 font-medium truncate max-w-[220px]">
@@ -1066,6 +1067,20 @@ export default function AdminPage() {
                     src={`/api/admin/cv?id=${current.id}&inline=1`}
                     title={`CV - ${current.name}`}
                     className="w-full h-80 sm:h-96 border-0 bg-white"
+                  />
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-white/15 bg-black/60 overflow-hidden shadow-inner">
+                  <div className="flex items-center justify-between px-3.5 py-2.5 bg-white/[0.04] border-b border-white/10 text-xs">
+                    <span className="text-white/80 font-medium truncate max-w-[220px]">
+                      {current.cvName}
+                    </span>
+                    <span className="text-[0.68rem] text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
+                      Word Document Preview
+                    </span>
+                  </div>
+                  <DocxViewer
+                    url={`/api/admin/cv?id=${current.id}&inline=1`}
                   />
                 </div>
               )}
