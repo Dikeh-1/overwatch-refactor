@@ -43,6 +43,9 @@ yarn-error.log*
 next-env.d.ts
 
 portfolio_repo/
+/public/portfolio/
+/src/app/portfolio/
+/src/components/portfolio/
 
 # Local recruitment records and private CVs
 /.careers-data/
