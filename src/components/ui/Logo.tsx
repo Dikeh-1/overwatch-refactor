@@ -35,14 +35,15 @@ export default function Logo({
         : "dark:brightness-0 dark:invert";
 
   return (
-    <div className={`flex items-center ${className}`}>
+    <div className={`flex items-center ${className}`} translate="no">
       <Image
         src="/logo.png"
         alt="Overwatch"
         width={width}
         height={height}
         className={`${sizeClasses[size]} h-auto max-w-full object-contain transition-all duration-300 ${variantClass}`}
-        preload={preload}
+        priority={preload}
+        suppressHydrationWarning
       />
     </div>
   );

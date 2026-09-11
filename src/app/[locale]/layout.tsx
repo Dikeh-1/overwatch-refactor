@@ -9,39 +9,7 @@ import LaunchExperience from "@/components/layout/LaunchExperience";
 import ZohoChatbot from "@/components/layout/ZohoChatbot";
 import ScrollToTop from "@/components/ui/ScrollToTop";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
-import Script from "next/script";
 import "../globals.css";
-
-const themeInitScript = `
-(function(){
-  try {
-    var themeKey = "theme";
-    var versionKey = "theme_version";
-    var version = "3";
-    var theme = localStorage.getItem(themeKey);
-
-    if (localStorage.getItem(versionKey) !== version) {
-      theme = "dark";
-      localStorage.setItem(themeKey, theme);
-      localStorage.setItem(versionKey, version);
-    }
-
-    if (theme === "light") {
-      document.documentElement.classList.remove("dark");
-      document.documentElement.classList.add("light");
-      document.documentElement.style.colorScheme = "light";
-    } else {
-      document.documentElement.classList.add("dark");
-      document.documentElement.classList.remove("light");
-      document.documentElement.style.colorScheme = "dark";
-    }
-  } catch (error) {
-    document.documentElement.classList.add("dark");
-    document.documentElement.classList.remove("light");
-    document.documentElement.style.colorScheme = "dark";
-  }
-})();
-`;
 
 type Props = {
   children: React.ReactNode;
@@ -68,14 +36,10 @@ export default async function LocaleLayout({ children, params }: Props) {
       className="h-full dark"
       suppressHydrationWarning
     >
-      <head>
-        <Script
-          id="theme-init"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{ __html: themeInitScript }}
-        />
-      </head>
-      <body className="min-h-full flex flex-col bg-background text-foreground antialiased">
+      <body
+        className="min-h-full flex flex-col bg-background text-foreground antialiased"
+        suppressHydrationWarning
+      >
         <ThemeProvider>
           <NextIntlClientProvider messages={messages}>
             <Navbar />
