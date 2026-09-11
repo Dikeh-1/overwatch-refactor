@@ -5,7 +5,7 @@ import { routing } from "./i18n/routing";
 const intlMiddleware = createMiddleware(routing);
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
-export function proxy(request: NextRequest) {
+export default function middleware(request: NextRequest) {
   const response = intlMiddleware(request);
 
   response.cookies.set({
@@ -19,6 +19,9 @@ export function proxy(request: NextRequest) {
   return response;
 }
 
+export { middleware as proxy };
+
 export const config = {
-  matcher: ["/", "/(en|pt)/:path*"],
+  matcher: ["/((?!api|admin|_next|_vercel|.*\\..*).*)"],
 };
+

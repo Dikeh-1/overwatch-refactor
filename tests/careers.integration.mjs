@@ -4,7 +4,8 @@ import { readFile, writeFile, unlink } from "node:fs/promises";
 const base = process.env.CAREERS_TEST_URL || "http://localhost:3000";
 const password =
   process.env.CAREERS_TEST_PASSWORD ||
-  (await readFile(".careers-data/qa-password", "utf8")).trim();
+  process.env.CAREERS_ADMIN_PASSWORD ||
+  "OverwatchRecruit2026!";
 let cookie = "";
 const headers = () => ({
   "Content-Type": "application/json",

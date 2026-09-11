@@ -19,8 +19,13 @@ import { type Role, MAX_CV } from "@/lib/careers";
 import { darkEyebrowClassName } from "@/components/ui/eyebrow";
 import TechGrid from "@/components/ui/TechGrid";
 
-export default function CareersForm() {
-  const locale = useLocale();
+export default function CareersForm({
+  initialLocale,
+}: {
+  initialLocale?: string;
+} = {}) {
+  const activeLocale = useLocale();
+  const locale = initialLocale || activeLocale;
   const pt = locale === "pt";
   const t = (en: string, po: string) => (pt ? po : en);
 

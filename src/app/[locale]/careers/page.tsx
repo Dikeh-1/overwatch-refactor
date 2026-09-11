@@ -17,5 +17,5 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function CareersPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
-  return <CareersForm />;
+  return <CareersForm initialLocale={locale} />;
 }
