@@ -9,6 +9,7 @@ import LaunchExperience from "@/components/layout/LaunchExperience";
 import ZohoChatbot from "@/components/layout/ZohoChatbot";
 import ScrollToTop from "@/components/ui/ScrollToTop";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import Script from "next/script";
 import "../globals.css";
 
 const themeInitScript = `
@@ -68,7 +69,11 @@ export default async function LocaleLayout({ children, params }: Props) {
       suppressHydrationWarning
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: themeInitScript }}
+        />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground antialiased">
         <ThemeProvider>

@@ -1,0 +1,26 @@
+/* Overwatch Recruitment Admin Styles */
+html,
+body {
+  background-color: #090d16;
+  color: #ffffff;
+  font-family: var(--font-inter, Inter, sans-serif);
+}
+
+/* Custom scrollbars for admin table */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}

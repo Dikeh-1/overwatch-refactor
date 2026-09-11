@@ -31,6 +31,7 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+
 # env files (can opt-in for committing if needed)
 .env*
 
@@ -42,3 +43,13 @@ yarn-error.log*
 next-env.d.ts
 
 portfolio_repo/
+
+# Local recruitment records and private CVs
+/.careers-data/
+
+# Temporary QA artifacts & screenshots
+/mejforge-qa/
+/mejforge-qa-current/
+/output/
+/.agents/
+skills-lock.json
