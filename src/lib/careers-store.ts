@@ -4,18 +4,33 @@ import path from "node:path";
 import { roles, type Role, type Application } from "./careers";
 
 const directory = path.join(process.cwd(), ".careers-data");
-const remote = !!(
-  process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-function localOnly() {
-  if (process.env.NODE_ENV === "production")
-    throw new Error(
-      "Configure Supabase before accepting applications in production.",
-    );
+
+function getSupabaseUrl() {
+  return (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim().replace(/\/+$/, "");
 }
+
+function getSupabaseKey() {
+  return (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "").trim();
+}
+
+function isRemote() {
+  return !!(getSupabaseUrl() && getSupabaseKey());
+}
+
+function localOnly() {
+  if (process.env.NODE_ENV === "production") {
+    const missing: string[] = [];
+    if (!getSupabaseUrl()) missing.push("SUPABASE_URL");
+    if (!getSupabaseKey()) missing.push("SUPABASE_SERVICE_ROLE_KEY");
+    throw new Error(
+      `Missing in Vercel: ${missing.join(" and ")}. Please add in Vercel Settings > Environment Variables, then click Redeploy.`,
+    );
+  }
+}
+
 async function api(endpoint: string, init: RequestInit = {}) {
-  const baseUrl = (process.env.SUPABASE_URL || "").trim().replace(/\/+$/, "");
-  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
+  const baseUrl = getSupabaseUrl();
+  const key = getSupabaseKey();
 
   const headers: Record<string, string> = {
     apikey: key,
@@ -63,7 +78,7 @@ export function exclusive<T>(fn: () => Promise<T>): Promise<T> {
   return result;
 }
 export async function getRoles(): Promise<Role[]> {
-  if (!remote) return read("roles.json", roles);
+  if (!isRemote()) return read("roles.json", roles);
   const rows = (await (
     await api("/rest/v1/career_roles?select=id,open")
   ).json()) as { id: string; open: boolean }[];
@@ -73,7 +88,7 @@ export async function getRoles(): Promise<Role[]> {
   }));
 }
 export async function setRole(id: string, open: boolean) {
-  if (remote) {
+  if (isRemote()) {
     await api(`/rest/v1/career_roles?id=eq.${id}`, {
       method: "PATCH",
       body: JSON.stringify({ open }),
@@ -88,14 +103,14 @@ export async function setRole(id: string, open: boolean) {
   );
 }
 export async function getApplications(): Promise<Application[]> {
-  if (!remote) return read("applications.json", []);
+  if (!isRemote()) return read("applications.json", []);
   const rows = await (
     await api("/rest/v1/career_applications?select=data&order=created_at.desc")
   ).json();
   return rows.map((r: { data: Application }) => r.data);
 }
 export async function saveApplication(application: Application, cv: Buffer) {
-  if (remote) {
+  if (isRemote()) {
     await api(`/storage/v1/object/career-cvs/${application.id}`, {
       method: "POST",
       headers: { "Content-Type": application.cvType },
@@ -127,7 +142,7 @@ export async function saveApplication(application: Application, cv: Buffer) {
   });
 }
 export async function setStatus(id: string, status: Application["status"]) {
-  if (remote) {
+  if (isRemote()) {
     await api("/rest/v1/rpc/update_career_status", {
       method: "POST",
       body: JSON.stringify({ application_id: id, new_status: status }),
@@ -144,7 +159,7 @@ export async function setStatus(id: string, status: Application["status"]) {
   );
 }
 export async function getCV(id: string) {
-  if (remote)
+  if (isRemote())
     return Buffer.from(
       await (await api(`/storage/v1/object/career-cvs/${id}`)).arrayBuffer(),
     );
