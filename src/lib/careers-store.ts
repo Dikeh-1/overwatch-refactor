@@ -14,18 +14,30 @@ function localOnly() {
     );
 }
 async function api(endpoint: string, init: RequestInit = {}) {
-  const response = await fetch(`${process.env.SUPABASE_URL}${endpoint}`, {
+  const baseUrl = (process.env.SUPABASE_URL || "").trim().replace(/\/+$/, "");
+  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
+
+  const headers: Record<string, string> = {
+    apikey: key,
+    "Content-Type": "application/json",
+    ...((init.headers as Record<string, string>) || {}),
+  };
+
+  // Only attach Bearer authorization if using legacy JWT service_role key (starts with eyJ).
+  // New Supabase sb_secret_ keys are passed via apikey header and rejected by PostgREST if placed in Authorization header.
+  if (key.startsWith("eyJ")) {
+    headers.Authorization = `Bearer ${key}`;
+  }
+
+  const response = await fetch(`${baseUrl}${endpoint}`, {
     ...init,
     cache: "no-store",
-    headers: {
-      apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
-      "Content-Type": "application/json",
-      ...init.headers,
-    },
+    headers,
   });
-  if (!response.ok)
-    throw new Error(`Careers storage failed (${response.status})`);
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => "");
+    throw new Error(`Careers storage failed (${response.status}): ${errorBody}`);
+  }
   return response;
 }
 async function read<T>(file: string, fallback: T): Promise<T> {

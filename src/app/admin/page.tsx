@@ -58,7 +58,10 @@ export default function AdminPage() {
         return;
       }
       if (!r.ok) {
-        throw new Error("Could not load applications. Please check connection.");
+        const d = await r.json().catch(() => ({}));
+        throw new Error(
+          d.details || d.error || "Could not load applications. Please check connection.",
+        );
       }
       const d = await r.json();
       setApplications(d.applications || []);

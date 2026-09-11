@@ -13,9 +13,13 @@ export async function GET() {
       { applications: await getApplications(), roles: await getRoles() },
       { headers: { "Cache-Control": "no-store" } },
     );
-  } catch {
+  } catch (err) {
+    console.error("Admin careers GET error:", err);
     return Response.json(
-      { error: "Storage unavailable. Check the Supabase connection." },
+      {
+        error: "Storage unavailable. Check the Supabase connection.",
+        details: (err as Error)?.message || String(err),
+      },
       { status: 503 },
     );
   }
