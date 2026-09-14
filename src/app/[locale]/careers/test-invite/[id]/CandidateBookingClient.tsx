@@ -207,7 +207,7 @@ export default function CandidateBookingClient({
               </div>
 
               <div className="mt-5 space-y-2">
-                <div className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+                <div className="text-xs font-semibold text-sky-400 uppercase tracking-wider">
                   {isPt ? "Convocatória Oficial para Teste Presencial" : "Official In-Person Selection Test"}
                 </div>
                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
@@ -223,15 +223,15 @@ export default function CandidateBookingClient({
 
             {/* If Already Confirmed: Clean Official Confirmation Card */}
             {isAlreadyBooked && (
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-6 space-y-4">
-                <div className="flex items-center justify-between border-b border-emerald-500/20 pb-4">
+              <div className="rounded-xl border border-sky-500/30 bg-sky-500/[0.05] p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-white/10 pb-4">
                   <div className="flex items-center gap-2.5">
-                    <CheckCircle2 size={20} className="text-emerald-400" />
+                    <CheckCircle2 size={20} className="text-sky-400" />
                     <span className="text-sm font-bold text-white">
                       {isPt ? "Presença Confirmada no Teste" : "Attendance Confirmed"}
                     </span>
                   </div>
-                  <span className="text-[0.68rem] font-semibold text-emerald-400 bg-emerald-500/20 px-2.5 py-0.5 rounded-full">
+                  <span className="text-[0.68rem] font-semibold text-white bg-white/10 border border-white/20 px-2.5 py-0.5 rounded-full">
                     {isPt ? "Agendado no Sistema" : "Recorded in System"}
                   </span>
                 </div>
@@ -342,7 +342,7 @@ export default function CandidateBookingClient({
                       </div>
 
                       {isCurrentSaved && (
-                        <span className="text-[0.65rem] font-semibold text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded border border-emerald-500/25">
+                        <span className="text-[0.65rem] font-semibold text-sky-300 bg-sky-500/15 px-2 py-0.5 rounded border border-sky-500/25">
                           {isPt ? "Data Atual" : "Current"}
                         </span>
                       )}
@@ -359,8 +359,8 @@ export default function CandidateBookingClient({
               )}
 
               {successNotice && (
-                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300 flex items-center gap-2">
-                  <CheckCircle2 size={15} className="shrink-0 text-emerald-400" />
+                <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 p-3 text-xs text-sky-200 flex items-center gap-2">
+                  <CheckCircle2 size={15} className="shrink-0 text-sky-400" />
                   <span>
                     {isPt
                       ? "Presença confirmada com sucesso! Os detalhes do agendamento foram enviados para o seu e-mail."
@@ -429,7 +429,7 @@ export default function CandidateBookingClient({
                   href={`https://wa.me/${siteContact.whatsappNumber}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-emerald-400 hover:underline inline-flex items-center gap-1 font-medium"
+                  className="text-sky-400 hover:underline inline-flex items-center gap-1 font-medium"
                 >
                   <Phone size={11} />
                   <span>WhatsApp: +258 84 287 0793</span>

@@ -33,6 +33,10 @@ import {
   Archive,
   Filter,
   Globe,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 import TechGrid from "@/components/ui/TechGrid";
@@ -163,6 +167,17 @@ export default function AdminPage() {
     "edit",
   );
 
+  // ─── Live Admin Presence Tracking ─────────────────────────────────
+  const [onlineCount, setOnlineCount] = useState<number>(1);
+
+  // ─── Applications Table Pagination, Quick Filters & Bulk Selection ─
+  const [pageSize, setPageSize] = useState<number>(20);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [selectedAppIds, setSelectedAppIds] = useState<string[]>([]);
+  const [appQuickFilter, setAppQuickFilter] = useState<
+    "all" | "review" | "shortlisted" | "booked" | "archived"
+  >("all");
+
   // Load language preference
   useEffect(() => {
     const saved = localStorage.getItem("overwatch_admin_lang");
@@ -244,6 +259,65 @@ export default function AdminPage() {
     return () => document.removeEventListener("keydown", listener);
   }, [selected]);
 
+  // ─── Reset pagination & selection on filter changes ───────────────
+  useEffect(() => {
+    setCurrentPage(1);
+    setSelectedAppIds([]);
+  }, [query, roleFilter, stageFilter, appQuickFilter, pageSize]);
+
+  // ─── Live Admin Presence Heartbeat ────────────────────────────────
+  useEffect(() => {
+    if (!auth) return;
+
+    let sessionId = "";
+    try {
+      sessionId = sessionStorage.getItem("overwatch_admin_sid") || "";
+      if (!sessionId) {
+        sessionId =
+          "sid_" +
+          Math.random().toString(36).substring(2, 10) +
+          "_" +
+          Date.now().toString(36);
+        sessionStorage.setItem("overwatch_admin_sid", sessionId);
+      }
+    } catch {
+      sessionId = "sid_fallback_" + Date.now().toString(36);
+    }
+
+    const sendHeartbeat = async () => {
+      try {
+        const res = await fetch("/api/admin/presence", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId, name: "Admin" }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (typeof data.onlineCount === "number") {
+            setOnlineCount(Math.max(1, data.onlineCount));
+          }
+        }
+      } catch {
+        // fail silently
+      }
+    };
+
+    sendHeartbeat();
+    const interval = setInterval(sendHeartbeat, 25000);
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        sendHeartbeat();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [auth]);
+
   async function signIn(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
@@ -289,14 +363,96 @@ export default function AdminPage() {
       : roles.find((r) => r.id === id)?.en || roles.find((r) => r.id === id)?.pt) ||
     id;
 
-  const filtered = applications.filter(
-    (a) =>
-      (stageFilter === "all" || a.status === stageFilter) &&
-      (roleFilter === "all" || a.role === roleFilter) &&
-      `${a.name} ${a.email} ${a.whatsapp} ${a.lastProfession} ${a.coverLetter || ""}`
-        .toLowerCase()
-        .includes(query.toLowerCase()),
-  );
+  const filtered = useMemo(() => {
+    return applications.filter((a) => {
+      // Quick filter tabs
+      if (appQuickFilter === "archived" && a.status !== "archived") return false;
+      if (appQuickFilter === "booked" && !a.testSlot) return false;
+      if (appQuickFilter === "shortlisted" && a.status !== "shortlisted") return false;
+      if (appQuickFilter === "review" && a.status !== "reviewing" && a.status !== "new") return false;
+
+      // When "all" is active, by default hide archived unless stageFilter specifically targets archived
+      if (appQuickFilter === "all" && stageFilter === "all" && a.status === "archived") return false;
+
+      if (stageFilter !== "all" && a.status !== stageFilter) return false;
+      if (roleFilter !== "all" && a.role !== roleFilter) return false;
+
+      if (query.trim()) {
+        const q = query.toLowerCase();
+        const haystack = `${a.name} ${a.email} ${a.whatsapp} ${a.lastProfession} ${a.coverLetter || ""}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+
+      return true;
+    });
+  }, [applications, appQuickFilter, stageFilter, roleFilter, query]);
+
+  // Pagination calculation
+  const totalCandidates = filtered.length;
+  const isAll = pageSize >= 9999;
+  const totalPages = isAll ? 1 : Math.max(1, Math.ceil(totalCandidates / pageSize));
+  const activePage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = isAll ? 0 : (activePage - 1) * pageSize;
+  const endIndex = isAll ? totalCandidates : Math.min(startIndex + pageSize, totalCandidates);
+  const paginatedCandidates = useMemo(() => {
+    return filtered.slice(startIndex, endIndex);
+  }, [filtered, startIndex, endIndex]);
+
+  // Application selection helpers
+  const allCurrentPageSelected =
+    paginatedCandidates.length > 0 &&
+    paginatedCandidates.every((c) => selectedAppIds.includes(c.id));
+
+  const toggleSelectAllOnPage = () => {
+    if (allCurrentPageSelected) {
+      const pageIds = new Set(paginatedCandidates.map((c) => c.id));
+      setSelectedAppIds((prev) => prev.filter((id) => !pageIds.has(id)));
+    } else {
+      const pageIds = paginatedCandidates.map((c) => c.id);
+      setSelectedAppIds((prev) => Array.from(new Set([...prev, ...pageIds])));
+    }
+  };
+
+  const toggleSelectApp = (id: string) => {
+    setSelectedAppIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  };
+
+  // Mass action on applications
+  const handleBulkStatusChange = async (targetIds: string[], newStatus: string) => {
+    if (!targetIds.length) return;
+    setBusy(true);
+    try {
+      const r = await fetch("/api/admin/careers", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "bulk_status",
+          ids: targetIds,
+          status: newStatus,
+        }),
+      });
+      if (!r.ok) {
+        throw new Error("Bulk status update failed.");
+      }
+      setSelectedAppIds([]);
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleToggleArchive = async (candidate: Application) => {
+    const nextStatus = candidate.status === "archived" ? "review" : "archived";
+    await change({
+      kind: "status",
+      id: candidate.id,
+      status: nextStatus,
+    });
+  };
 
   // ─── Filtered Audience for Convocatórias (Manual Criteria + Presets) ─
   const broadcastAudience = useMemo(() => {
@@ -751,11 +907,32 @@ export default function AdminPage() {
 
           <div className="mt-2.5 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-400"></span>
+              </span>
               <span className="text-[0.68rem] font-bold uppercase tracking-widest text-white/60">
                 {t("Talent Operations", "Operações de Recrutamento")}
               </span>
             </div>
+          </div>
+
+          {/* Live Admin Presence Indicator */}
+          <div className="mt-3 flex items-center justify-between rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2 text-[0.68rem]">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-400"></span>
+              </span>
+              <span className="font-medium text-white/90">
+                {lang === "pt"
+                  ? `${onlineCount} Admin${onlineCount > 1 ? "s" : ""} Online`
+                  : `${onlineCount} Admin${onlineCount > 1 ? "s" : ""} Live`}
+              </span>
+            </div>
+            <span className="text-[0.62rem] font-mono text-sky-400 font-semibold bg-sky-500/15 border border-sky-500/25 px-1.5 py-0.5 rounded">
+              {t("Active", "Activo")}
+            </span>
           </div>
         </div>
 
@@ -824,15 +1001,15 @@ export default function AdminPage() {
             onClick={() => setView("broadcast")}
             className={`w-full flex items-center justify-between gap-3 rounded-xl px-3.5 py-3 text-xs font-semibold transition-all cursor-pointer ${
               view === "broadcast"
-                ? "bg-emerald-500/20 text-white border border-emerald-500/40 shadow-sm"
+                ? "bg-white/[0.1] text-white border border-white/20 shadow-sm"
                 : "text-white/70 hover:bg-white/[0.05] hover:text-white border border-transparent"
             }`}
           >
             <div className="flex items-center gap-2.5">
-              <Mail size={17} className="text-emerald-400" />
+              <Mail size={17} className="text-white" />
               <span>{t("Convocations", "Convocatórias")}</span>
             </div>
-            <span className="rounded-full bg-emerald-500/30 text-emerald-300 px-2 py-0.5 text-[0.65rem] font-bold">
+            <span className="rounded-full bg-white/10 text-white border border-white/20 px-2 py-0.5 text-[0.65rem] font-bold">
               {targetCount} {t("Target", "Alvo")}
             </span>
           </button>
@@ -868,7 +1045,7 @@ export default function AdminPage() {
               <SlidersHorizontal size={17} />
               <span>{t("Manage Roles", "Gestão de Vagas")}</span>
             </div>
-            <span className="text-[0.65rem] font-mono text-emerald-400">
+            <span className="text-[0.65rem] font-mono text-white/60">
               {roles.filter((r) => r.open).length} {t("open", "abertas")}
             </span>
           </button>
@@ -961,6 +1138,19 @@ export default function AdminPage() {
               </button>
             </div>
 
+            {/* Live Admin Count Pill */}
+            <div className="hidden sm:flex items-center gap-2 rounded-xl bg-white/[0.04] border border-white/10 px-3 py-1.5 text-xs">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-400"></span>
+              </span>
+              <span className="font-semibold text-white/90 text-[0.72rem]">
+                {lang === "pt"
+                  ? `${onlineCount} Admin${onlineCount > 1 ? "s" : ""} Online`
+                  : `${onlineCount} Admin${onlineCount > 1 ? "s" : ""} Live`}
+              </span>
+            </div>
+
             <button
               onClick={() => void load()}
               aria-label="Refresh data"
@@ -985,7 +1175,7 @@ export default function AdminPage() {
               <button
                 onClick={() => exportAttendanceCSV()}
                 disabled={!confirmedCount}
-                className="flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-[#090d16] shadow-sm hover:bg-emerald-400 disabled:opacity-50 cursor-pointer transition-transform hover:-translate-y-0.5"
+                className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-bold text-[#090d16] shadow-sm hover:bg-white/90 disabled:opacity-50 cursor-pointer transition-transform hover:-translate-y-0.5"
               >
                 <Download size={14} />
                 <span>{t("Export Attendance Sheet (CSV)", "Exportar Lista de Presenças (CSV)")}</span>
@@ -1021,9 +1211,9 @@ export default function AdminPage() {
           <div className="rounded-2xl border border-white/10 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between text-xs font-semibold text-white/60">
               <span>{t("Eligible for Selection Test", "Elegíveis para Teste")}</span>
-              <UserCheck size={16} className="text-emerald-400" />
+              <UserCheck size={16} className="text-sky-400" />
             </div>
-            <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-emerald-400">
+            <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-white">
               {targetCount}
             </strong>
             <span className="text-[0.7rem] text-white/40">
@@ -1084,7 +1274,7 @@ export default function AdminPage() {
                       <div
                         className={`flex h-10 w-10 items-center justify-center rounded-xl border ${
                           r.open
-                            ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+                            ? "border-sky-500/30 bg-sky-500/10 text-sky-400"
                             : "border-white/10 bg-white/[0.05] text-white/50"
                         }`}
                       >
@@ -1107,7 +1297,7 @@ export default function AdminPage() {
                     <div className="flex items-center gap-4">
                       <span
                         className={`text-xs font-semibold ${
-                          r.open ? "text-emerald-400" : "text-white/40"
+                          r.open ? "text-sky-400" : "text-white/40"
                         }`}
                       >
                         {r.open ? t("Accepting applications", "A receber candidaturas") : t("Locked / Closed", "Trancada / Fechada")}
@@ -1125,7 +1315,7 @@ export default function AdminPage() {
                           })
                         }
                         className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                          r.open ? "bg-emerald-600" : "bg-white/20"
+                          r.open ? "bg-sky-500" : "bg-white/20"
                         }`}
                       >
                         <span
@@ -1154,14 +1344,14 @@ export default function AdminPage() {
         {view === "broadcast" && (
           <section className="space-y-6">
             {broadcastResult && (
-              <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-5 flex items-center justify-between gap-4">
+              <div className="rounded-2xl border border-sky-500/30 bg-sky-500/10 p-5 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <CheckCircle2 size={24} className="text-emerald-400 shrink-0" />
+                  <CheckCircle2 size={24} className="text-sky-400 shrink-0" />
                   <div>
                     <h4 className="text-sm font-bold text-white">
                       {t("Convocations sent successfully!", "Convocatórias enviadas com sucesso!")}
                     </h4>
-                    <p className="text-xs text-emerald-300 mt-0.5">
+                    <p className="text-xs text-sky-300 mt-0.5">
                       {broadcastResult.count} {t("emails dispatched.", "e-mails enviados.")}{" "}
                       {broadcastResult.failed > 0
                         ? `(${broadcastResult.failed} ${t("failed", "falharam")})`
@@ -1183,11 +1373,11 @@ export default function AdminPage() {
               <div>
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                    <Users size={18} className="text-emerald-400" />
+                    <Users size={18} className="text-white" />
                     <span>{t("Audience Criteria & Emailing Queue", "Critérios de Selecção e Fila de Envio")}</span>
                   </h2>
                   <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 text-xs font-bold">
+                    <span className="rounded-full bg-white/10 text-white border border-white/20 px-2.5 py-0.5 text-xs font-bold">
                       {broadcastAudience.length} {t("matching criteria", "cumprem critérios")}
                     </span>
                     <span className="rounded-full bg-white/10 text-white px-2.5 py-0.5 text-xs font-bold">
@@ -1224,7 +1414,7 @@ export default function AdminPage() {
                   }}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                     filterRule === "target"
-                      ? "bg-emerald-500 text-[#090d16] font-bold shadow-md shadow-emerald-500/20"
+                      ? "bg-white text-[#090d16] font-bold shadow-md"
                       : "bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white border border-white/10"
                   }`}
                 >
@@ -1245,7 +1435,7 @@ export default function AdminPage() {
                   }}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                     filterRule === "custom" && filterStage === "shortlisted"
-                      ? "bg-emerald-500 text-[#090d16] font-bold shadow-md"
+                      ? "bg-white text-[#090d16] font-bold shadow-md"
                       : "bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white border border-white/10"
                   }`}
                 >
@@ -1266,7 +1456,7 @@ export default function AdminPage() {
                   }}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                     filterRule === "custom" && filterSex === "female" && filterExp === "all"
-                      ? "bg-emerald-500 text-[#090d16] font-bold shadow-md"
+                      ? "bg-white text-[#090d16] font-bold shadow-md"
                       : "bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white border border-white/10"
                   }`}
                 >
@@ -1287,7 +1477,7 @@ export default function AdminPage() {
                   }}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                     filterRule === "custom" && filterSex === "male" && filterExp === "yes"
-                      ? "bg-emerald-500 text-[#090d16] font-bold shadow-md"
+                      ? "bg-white text-[#090d16] font-bold shadow-md"
                       : "bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white border border-white/10"
                   }`}
                 >
@@ -1465,7 +1655,7 @@ export default function AdminPage() {
                     type="button"
                     onClick={handleMassShortlist}
                     disabled={selectedCandidateIds.length === 0 || bulkActionBusy}
-                    className="flex items-center gap-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-3.5 py-2 text-xs font-bold text-[#090d16] disabled:opacity-40 shadow-sm transition-all cursor-pointer"
+                    className="flex items-center gap-1.5 rounded-xl bg-white hover:bg-white/90 px-3.5 py-2 text-xs font-bold text-[#090d16] disabled:opacity-40 shadow-sm transition-all cursor-pointer"
                   >
                     <UserCheck size={14} />
                     <span>
@@ -1494,7 +1684,7 @@ export default function AdminPage() {
               </div>
 
               {bulkSuccessMsg && (
-                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300 flex items-center justify-between">
+                <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-3 text-xs text-sky-200 flex items-center justify-between">
                   <span>{bulkSuccessMsg}</span>
                   <button onClick={() => setBulkSuccessMsg(null)} className="text-white/60 hover:text-white cursor-pointer">
                     <X size={14} />
@@ -1513,7 +1703,7 @@ export default function AdminPage() {
                         selectedCandidateIds.length === broadcastAudience.length
                       }
                       onChange={toggleSelectAllBroadcast}
-                      className="rounded border-white/20 bg-white/10 text-emerald-500 focus:ring-0 cursor-pointer h-4 w-4"
+                      className="rounded border-white/20 bg-white/10 accent-white focus:ring-0 cursor-pointer h-4 w-4"
                     />
                     <span>{t("Select All Matching", "Selecionar Todos Correspondentes")} ({broadcastAudience.length})</span>
                   </label>
@@ -1546,7 +1736,7 @@ export default function AdminPage() {
                               type="checkbox"
                               checked={isChecked}
                               onChange={() => toggleSelectCandidate(a.id)}
-                              className="rounded border-white/20 bg-white/10 text-emerald-500 focus:ring-0 cursor-pointer h-4 w-4"
+                              className="rounded border-white/20 bg-white/10 accent-white focus:ring-0 cursor-pointer h-4 w-4"
                             />
                             <div>
                               <span className="font-semibold text-white block">
@@ -1563,7 +1753,7 @@ export default function AdminPage() {
                             <span
                               className={`px-2 py-0.5 rounded text-[0.65rem] font-semibold uppercase tracking-wider ${
                                 a.status === "shortlisted"
-                                  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                                  ? "bg-white/10 text-white border border-white/20"
                                   : a.status === "archived"
                                     ? "bg-slate-500/20 text-slate-400 border border-slate-500/30"
                                     : "bg-white/10 text-white/70"
@@ -1579,7 +1769,7 @@ export default function AdminPage() {
                             <span
                               className={`px-2 py-0.5 rounded text-[0.68rem] font-medium ${
                                 a.experience === "yes"
-                                  ? "bg-emerald-500/20 text-emerald-400"
+                                  ? "bg-white/10 text-white border border-white/15"
                                   : "bg-white/5 text-white/50"
                               }`}
                             >
@@ -1607,11 +1797,21 @@ export default function AdminPage() {
                               className="p-1 text-white/50 hover:text-white transition-colors cursor-pointer"
                             >
                               {copiedLinkId === a.id ? (
-                                <Check size={14} className="text-emerald-400" />
+                                <Check size={14} className="text-sky-400" />
                               ) : (
                                 <Copy size={14} />
                               )}
                             </button>
+
+                            <a
+                              href={`/${lang}/careers/test-invite/${a.id}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              title={t("Open candidate booking page in a new tab", "Abrir página de agendamento num novo separador")}
+                              className="p-1 text-white/50 hover:text-white transition-colors cursor-pointer"
+                            >
+                              <ExternalLink size={14} />
+                            </a>
                           </div>
                         </div>
                       );
@@ -1627,7 +1827,7 @@ export default function AdminPage() {
               <div className="rounded-2xl border border-white/10 bg-[#121827]/95 p-6 shadow-sm space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <FileText size={17} className="text-emerald-400" />
+                    <FileText size={17} className="text-white" />
                     <span>{t("Convocation Template (Email)", "Modelo da Convocatória (E-mail)")}</span>
                   </h3>
                   <div className="flex items-center gap-1.5">
@@ -1727,7 +1927,7 @@ export default function AdminPage() {
                     {broadcastSlots.map((s, idx) => (
                       <div
                         key={idx}
-                        className="flex items-center gap-2 text-emerald-400 font-medium"
+                        className="flex items-center gap-2 text-sky-300 font-medium"
                       >
                         <Calendar size={13} />
                         <span>{formatSlotDisplay(s, lang)}</span>
@@ -1752,11 +1952,11 @@ export default function AdminPage() {
                   {/* Document Card Mirroring Actual Email */}
                   <div className="rounded-xl border border-slate-200 bg-white text-slate-800 shadow-xl overflow-hidden text-xs">
                     {/* Official Letterhead Header */}
-                    <div className="bg-[#0b1329] px-5 py-4 border-b-2 border-emerald-500 text-white">
+                    <div className="bg-[#0b1329] px-5 py-4 border-b-2 border-white/20 text-white">
                       <div className="flex items-center justify-between">
                         <Logo size="sm" variant="light" />
                         <div className="text-right">
-                          <span className="inline-block bg-white/10 text-emerald-300 font-mono text-[0.6rem] px-2 py-0.5 rounded border border-white/10 font-bold">
+                          <span className="inline-block bg-white/10 text-white font-mono text-[0.6rem] px-2 py-0.5 rounded border border-white/10 font-bold">
                             REF: CCO-2026/MAPUTO
                           </span>
                           <div className="text-[0.65rem] text-slate-300 mt-0.5 font-medium">
@@ -1828,11 +2028,14 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    {/* Document Footer */}
-                    <div className="bg-slate-50 px-5 py-3 border-t border-slate-200 text-center text-[0.65rem] text-slate-500 space-y-0.5">
-                      <div className="font-semibold text-slate-700">Overwatch Moçambique, Lda.</div>
-                      <div>{siteContact.address.pt}</div>
-                      <div>WhatsApp: +258 84 287 0793 · info@overwatchmoz.com</div>
+                    {/* Sign-Off & Official Footer */}
+                    <div className="bg-slate-50 px-5 py-3 border-t border-slate-200 text-[0.68rem] text-slate-600 flex items-center justify-between">
+                      <div>
+                        <strong>Equipa de Recrutamento</strong> · Overwatch Moçambique
+                      </div>
+                      <span className="font-mono text-[0.62rem] text-slate-400">
+                        Maputo, MZ
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1843,7 +2046,7 @@ export default function AdminPage() {
                     type="button"
                     onClick={() => setConfirmModalOpen(true)}
                     disabled={selectedCandidateIds.length === 0 || sendingBroadcast}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-6 py-4 text-sm font-bold text-[#090d16] shadow-xl transition-all cursor-pointer disabled:opacity-40"
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-white hover:bg-white/90 px-6 py-4 text-sm font-bold text-[#090d16] shadow-xl transition-all cursor-pointer disabled:opacity-40"
                   >
                     <Send size={16} />
                     <span>
@@ -1869,7 +2072,7 @@ export default function AdminPage() {
                 <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#121827] p-6 shadow-2xl space-y-5">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400">
+                      <div className="p-2.5 rounded-xl bg-white/10 text-white">
                         <Send size={20} />
                       </div>
                       <div>
@@ -1896,7 +2099,7 @@ export default function AdminPage() {
                         "Está prestes a enviar e-mails de convocatória oficial para:",
                       )}
                     </p>
-                    <div className="text-2xl font-bold text-emerald-400">
+                    <div className="text-2xl font-bold text-white">
                       {selectedCandidateIds.length} {t("candidates", "candidatos")}
                     </div>
                     <ul className="list-disc pl-5 space-y-1 text-white/70">
@@ -1935,7 +2138,7 @@ export default function AdminPage() {
                       type="button"
                       onClick={handleSendBroadcast}
                       disabled={sendingBroadcast}
-                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 py-3 text-xs font-bold text-[#090d16] shadow-lg transition-all cursor-pointer disabled:opacity-50"
+                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-white hover:bg-white/90 py-3 text-xs font-bold text-[#090d16] shadow-lg transition-all cursor-pointer disabled:opacity-50"
                     >
                       {sendingBroadcast ? (
                         <>
@@ -2118,19 +2321,32 @@ export default function AdminPage() {
                                 href={`https://wa.me/${c.whatsapp.replace(/\D/g, "")}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="inline-flex items-center gap-1 text-emerald-400 hover:underline"
+                                className="inline-flex items-center gap-1 text-sky-400 hover:underline"
                               >
                                 <Phone size={11} />
                                 <span>{c.whatsapp}</span>
                               </a>
 
-                              <button
-                                type="button"
-                                onClick={() => setSelected(c)}
-                                className="text-white/60 hover:text-white underline cursor-pointer"
-                              >
-                                {t("View Profile / CV", "Ver Perfil / CV")}
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <a
+                                  href={`/${lang}/careers/test-invite/${c.id}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  title={t("Open booking page in a new tab", "Abrir link de agendamento")}
+                                  className="text-white/60 hover:text-white inline-flex items-center gap-1"
+                                >
+                                  <span>{t("Booking Page", "Página de Teste")}</span>
+                                  <ExternalLink size={11} />
+                                </a>
+
+                                <button
+                                  type="button"
+                                  onClick={() => setSelected(c)}
+                                  className="text-white/60 hover:text-white underline cursor-pointer"
+                                >
+                                  {t("View CV", "Ver CV")}
+                                </button>
+                              </div>
                             </div>
                           </div>
                         ))
@@ -2184,25 +2400,37 @@ export default function AdminPage() {
                           href={`https://wa.me/${c.whatsapp.replace(/\D/g, "")}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-[0.68rem] text-emerald-400 hover:underline flex items-center gap-1 mt-0.5"
+                          className="text-[0.68rem] text-sky-400 hover:underline flex items-center gap-1 mt-0.5"
                         >
                           <Phone size={10} />
                           <span>{c.whatsapp}</span>
                         </a>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => copyBookingLink(c.id)}
-                        title={t("Copy personal booking link to send via WhatsApp", "Copiar link de marcação para enviar via WhatsApp")}
-                        className="rounded-lg bg-white/5 border border-white/10 p-1.5 text-white/70 hover:text-white"
-                      >
-                        {copiedLinkId === c.id ? (
-                          <Check size={13} className="text-emerald-400" />
-                        ) : (
-                          <Copy size={13} />
-                        )}
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => copyBookingLink(c.id)}
+                          title={t("Copy personal booking link to send via WhatsApp", "Copiar link de marcação para enviar via WhatsApp")}
+                          className="rounded-lg bg-white/5 border border-white/10 p-1.5 text-white/70 hover:text-white cursor-pointer"
+                        >
+                          {copiedLinkId === c.id ? (
+                            <Check size={13} className="text-sky-400" />
+                          ) : (
+                            <Copy size={13} />
+                          )}
+                        </button>
+
+                        <a
+                          href={`/${lang}/careers/test-invite/${c.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          title={t("Open candidate booking page in a new tab", "Abrir página de agendamento")}
+                          className="rounded-lg bg-white/5 border border-white/10 p-1.5 text-white/70 hover:text-white cursor-pointer"
+                        >
+                          <ExternalLink size={13} />
+                        </a>
+                      </div>
                     </div>
                   ))}
               </div>
@@ -2214,49 +2442,198 @@ export default function AdminPage() {
         {view === "applications" && (
           <section className="space-y-4">
             {/* Filters Bar */}
-            <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-[#121827]/95 p-4 shadow-sm">
-              <div className="relative flex-1 min-w-[220px]">
-                <Search
-                  size={16}
-                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40"
-                />
-                <input
-                  aria-label="Search candidates"
-                  placeholder={t("Search name, email, WhatsApp, profession, cover letter…", "Pesquisar nome, email, WhatsApp, profissão, carta…")}
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2 pl-9 pr-3 text-xs text-white placeholder:text-white/40 focus:border-white/40 focus:outline-none transition-colors"
-                />
+            <div className="rounded-2xl border border-white/10 bg-[#121827]/95 p-4 shadow-sm space-y-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative flex-1 min-w-[220px]">
+                  <Search
+                    size={16}
+                    className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40"
+                  />
+                  <input
+                    aria-label="Search candidates"
+                    placeholder={t("Search name, email, WhatsApp, profession, cover letter…", "Pesquisar nome, email, WhatsApp, profissão, carta…")}
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2 pl-9 pr-3 text-xs text-white placeholder:text-white/40 focus:border-white/40 focus:outline-none transition-colors"
+                  />
+                </div>
+
+                <select
+                  aria-label="Filter by role"
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                  className="rounded-xl border border-white/10 bg-[#121827] px-3 py-2 text-xs text-white focus:border-white/40 focus:outline-none cursor-pointer"
+                >
+                  <option value="all">{t("All roles", "Todas as vagas")}</option>
+                  {roles.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {lang === "pt" ? r.pt : r.en}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  aria-label="Filter by stage"
+                  value={stageFilter}
+                  onChange={(e) => setStageFilter(e.target.value)}
+                  className="rounded-xl border border-white/10 bg-[#121827] px-3 py-2 text-xs text-white focus:border-white/40 focus:outline-none cursor-pointer"
+                >
+                  <option value="all">{t("All stages", "Todas as fases")}</option>
+                  {stages.map((s) => (
+                    <option key={s} value={s}>
+                      {stageLabels[lang][s]}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Per Page Selector */}
+                <div className="flex items-center gap-1.5 text-xs text-white/60">
+                  <span>{t("Show:", "Ver:")}</span>
+                  <select
+                    aria-label="Items per page"
+                    value={pageSize}
+                    onChange={(e) => setPageSize(Number(e.target.value))}
+                    className="rounded-xl border border-white/10 bg-[#121827] px-2.5 py-2 text-xs text-white font-medium focus:border-white/40 focus:outline-none cursor-pointer"
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={30}>30</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                    <option value={9999}>{t("All", "Todos")}</option>
+                  </select>
+                </div>
               </div>
 
-              <select
-                aria-label="Filter by role"
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                className="rounded-xl border border-white/10 bg-[#121827] px-3 py-2 text-xs text-white focus:border-white/40 focus:outline-none cursor-pointer"
-              >
-                <option value="all">{t("All roles", "Todas as vagas")}</option>
-                {roles.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {lang === "pt" ? r.pt : r.en}
-                  </option>
-                ))}
-              </select>
+              {/* Quick Filter Pills Bar */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/5">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[0.68rem] font-semibold text-white/40 mr-1 flex items-center gap-1">
+                    <Filter size={11} />
+                    <span>{t("Filter:", "Filtrar:")}</span>
+                  </span>
 
-              <select
-                aria-label="Filter by stage"
-                value={stageFilter}
-                onChange={(e) => setStageFilter(e.target.value)}
-                className="rounded-xl border border-white/10 bg-[#121827] px-3 py-2 text-xs text-white focus:border-white/40 focus:outline-none cursor-pointer"
-              >
-                <option value="all">{t("All stages", "Todas as fases")}</option>
-                {stages.map((s) => (
-                  <option key={s} value={s}>
-                    {stageLabels[lang][s]}
-                  </option>
-                ))}
-              </select>
+                  <button
+                    type="button"
+                    onClick={() => setAppQuickFilter("all")}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      appQuickFilter === "all"
+                        ? "bg-white text-[#090d16] font-bold shadow-sm"
+                        : "bg-white/[0.04] text-white/60 hover:text-white"
+                    }`}
+                  >
+                    {t("Active Pipeline", "Candidaturas Activas")} ({applications.filter((a) => a.status !== "archived").length})
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setAppQuickFilter("review")}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      appQuickFilter === "review"
+                        ? "bg-white text-[#090d16] font-bold shadow-sm"
+                        : "bg-white/[0.04] text-white/60 hover:text-white"
+                    }`}
+                  >
+                    {t("Under Review", "Em Análise")} ({applications.filter((a) => a.status === "reviewing" || a.status === "new").length})
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setAppQuickFilter("shortlisted")}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      appQuickFilter === "shortlisted"
+                        ? "bg-white text-[#090d16] font-bold shadow-sm"
+                        : "bg-white/[0.04] text-white/60 hover:text-white"
+                    }`}
+                  >
+                    {t("Shortlisted", "Pré-selecionados")} ({applications.filter((a) => a.status === "shortlisted").length})
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setAppQuickFilter("booked")}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      appQuickFilter === "booked"
+                        ? "bg-white text-[#090d16] font-bold shadow-sm"
+                        : "bg-white/[0.04] text-white/60 hover:text-white"
+                    }`}
+                  >
+                    {t("Test Booked", "Teste Agendado")} ({confirmedCount})
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setAppQuickFilter("archived")}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      appQuickFilter === "archived"
+                        ? "bg-white text-[#090d16] font-bold shadow-sm"
+                        : "bg-white/[0.04] text-white/60 hover:text-white"
+                    }`}
+                  >
+                    {t("Archived", "Arquivados")} ({applications.filter((a) => a.status === "archived").length})
+                  </button>
+                </div>
+
+                {(query || roleFilter !== "all" || stageFilter !== "all" || appQuickFilter !== "all") && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuery("");
+                      setRoleFilter("all");
+                      setStageFilter("all");
+                      setAppQuickFilter("all");
+                    }}
+                    className="text-[0.7rem] text-sky-400 hover:text-sky-300 underline cursor-pointer"
+                  >
+                    {t("Reset all filters", "Limpar todos os filtros")}
+                  </button>
+                )}
+              </div>
             </div>
+
+            {/* Mass Selection Toolbar */}
+            {selectedAppIds.length > 0 && (
+              <div className="rounded-xl border border-white/20 bg-[#141b2c] p-3 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[#090d16] font-bold text-xs">
+                    {selectedAppIds.length}
+                  </span>
+                  <span className="text-xs font-semibold text-white">
+                    {t(`${selectedAppIds.length} candidate(s) selected`, `${selectedAppIds.length} candidato(s) selecionado(s)`)}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleBulkStatusChange(selectedAppIds, "archived")}
+                    disabled={busy}
+                    className="flex items-center gap-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <Archive size={13} />
+                    <span>{t("Archive Selected", "Arquivar Selecionados")}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleBulkStatusChange(selectedAppIds, "shortlisted")}
+                    disabled={busy}
+                    className="flex items-center gap-1.5 rounded-lg bg-white hover:bg-white/90 text-[#090d16] px-3 py-1.5 text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <UserCheck size={13} />
+                    <span>{t("Shortlist Selected", "Pré-selecionar Selecionados")}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAppIds([])}
+                    className="text-xs text-white/50 hover:text-white px-2 py-1 cursor-pointer"
+                  >
+                    {t("Clear", "Desmarcar")}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Candidate Table */}
             <div className="rounded-2xl border border-white/10 bg-[#121827]/95 shadow-sm overflow-hidden">
@@ -2264,6 +2641,16 @@ export default function AdminPage() {
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="border-b border-white/10 bg-white/[0.02] text-white/60 uppercase font-semibold text-[0.68rem] tracking-wider">
+                      <th className="px-3.5 py-3.5 w-10 text-center">
+                        <input
+                          type="checkbox"
+                          checked={allCurrentPageSelected}
+                          onChange={toggleSelectAllOnPage}
+                          className="rounded border-white/20 bg-white/10 accent-white focus:ring-0 cursor-pointer h-4 w-4"
+                          title={t("Select all on this page", "Selecionar todos nesta página")}
+                        />
+                      </th>
+                      <th className="px-3 py-3.5 w-12 text-center">{t("#", "Nº")}</th>
                       <th className="px-4 py-3.5">{t("Candidate", "Candidato")}</th>
                       <th className="px-4 py-3.5">{t("Role", "Vaga")}</th>
                       <th className="px-4 py-3.5">{t("Status", "Estado")}</th>
@@ -2282,211 +2669,265 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
-                    {filtered.map((a) => (
-                      <tr
-                        key={a.id}
-                        className="hover:bg-white/[0.03] transition-colors"
-                      >
-                        {/* Candidate Name & Email */}
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <button
-                            onClick={() => setSelected(a)}
-                            className="flex items-center gap-2.5 text-left cursor-pointer group"
-                          >
-                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 border border-white/15 text-white font-bold text-xs">
-                              {a.name
-                                .split(" ")
-                                .map((n) => n[0])
-                                .slice(0, 2)
-                                .join("")
-                                .toUpperCase()}
-                            </span>
-                            <div>
-                              <strong className="block text-white font-medium group-hover:text-white/80 transition-colors">
-                                {a.name}
-                              </strong>
-                              <span className="text-[0.68rem] text-white/40">
-                                {a.email}
-                              </span>
-                            </div>
-                          </button>
-                        </td>
+                    {paginatedCandidates.map((a, index) => {
+                      const isChecked = selectedAppIds.includes(a.id);
+                      const rowNumber = startIndex + index + 1;
 
-                        {/* Role */}
-                        <td className="px-4 py-3 whitespace-nowrap text-white/80">
-                          {roleLabel(a.role)}
-                        </td>
+                      return (
+                        <tr
+                          key={a.id}
+                          className={`hover:bg-white/[0.03] transition-colors ${
+                            isChecked ? "bg-white/[0.04]" : ""
+                          }`}
+                        >
+                          {/* Checkbox */}
+                          <td className="px-3.5 py-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => toggleSelectApp(a.id)}
+                              className="rounded border-white/20 bg-white/10 accent-white focus:ring-0 cursor-pointer h-4 w-4"
+                            />
+                          </td>
 
-                        {/* Stage Selector Dropdown */}
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <select
-                            aria-label={`Stage for ${a.name}`}
-                            value={a.status}
-                            disabled={busy}
-                            onChange={(e) =>
-                              void change({
-                                kind: "status",
-                                id: a.id,
-                                status: e.target.value,
-                              })
-                            }
-                            className={`rounded-lg border px-2.5 py-1 text-[0.7rem] font-semibold bg-[#121827] focus:outline-none cursor-pointer ${
-                              a.status === "hired"
-                                ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/10"
-                                : a.status === "shortlisted" ||
-                                    a.status === "interview"
-                                  ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10"
-                                  : a.status === "archived"
-                                    ? "border-slate-500/30 text-slate-400 bg-slate-500/10"
-                                    : a.status === "rejected"
-                                      ? "border-red-500/30 text-red-400 bg-red-500/10"
-                                      : "border-amber-500/30 text-amber-400 bg-amber-500/10"
-                            }`}
-                          >
-                            {stages.map((s) => (
-                              <option key={s} value={s}>
-                                {stageLabels[lang][s]}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
+                          {/* Numbered Row */}
+                          <td className="px-3 py-3 text-center text-[0.72rem] font-mono text-white/50">
+                            {rowNumber}
+                          </td>
 
-                        {/* Test Slot / Convocatória Status */}
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          {a.testSlot ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-cyan-500/20 border border-cyan-500/30 px-2.5 py-0.5 text-[0.68rem] font-semibold text-cyan-300">
-                              <CalendarCheck size={11} />
-                              {formatSlotDisplay(a.testSlot.split("–")[0].trim(), lang)}
-                            </span>
-                          ) : a.invitedAt ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-500/30 px-2.5 py-0.5 text-[0.68rem] font-medium text-amber-300">
-                              <Clock size={11} /> {t("Invited", "Convocado")}
-                            </span>
-                          ) : (
-                            <span className="text-white/30 text-[0.68rem]">—</span>
-                          )}
-                        </td>
-
-                        {/* WhatsApp */}
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <a
-                            href={`https://wa.me/${a.whatsapp.replace(/\D/g, "")}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-emerald-400 hover:underline"
-                          >
-                            <Phone size={12} />
-                            <span>{a.whatsapp}</span>
-                          </a>
-                        </td>
-
-                        {/* Cover Letter Preview */}
-                        <td className="px-4 py-3 max-w-[160px] truncate text-white/60">
-                          {a.coverLetter ? (
+                          {/* Candidate Name & Email */}
+                          <td className="px-4 py-3 whitespace-nowrap">
                             <button
-                              type="button"
                               onClick={() => setSelected(a)}
-                              className="text-left truncate hover:text-white hover:underline cursor-pointer"
+                              className="flex items-center gap-2.5 text-left cursor-pointer group"
                             >
-                              {a.coverLetter}
+                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 border border-white/15 text-white font-bold text-xs">
+                                {a.name
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .slice(0, 2)
+                                  .join("")
+                                  .toUpperCase()}
+                              </span>
+                              <div>
+                                <strong className="block text-white font-medium group-hover:text-white/80 transition-colors">
+                                  {a.name}
+                                </strong>
+                                <span className="text-[0.68rem] text-white/40">
+                                  {a.email}
+                                </span>
+                              </div>
                             </button>
-                          ) : (
-                            <span className="text-white/30 italic">{t("None", "Nenhuma")}</span>
-                          )}
-                        </td>
+                          </td>
 
-                        {/* Grade 12 */}
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          {a.grade12 === "yes" ? (
-                            <span className="text-emerald-400">{t("Yes", "Sim")}</span>
-                          ) : (
-                            <span className="text-white/40">{t("No", "Não")}</span>
-                          )}
-                        </td>
+                          {/* Role */}
+                          <td className="px-4 py-3 whitespace-nowrap text-white/80">
+                            {roleLabel(a.role)}
+                          </td>
 
-                        {/* Sex */}
-                        <td className="px-4 py-3 whitespace-nowrap capitalize text-white/70">
-                          {a.sex === "female" ? t("Female", "Feminino") : t("Male", "Masculino")}
-                        </td>
+                          {/* Stage Selector Dropdown */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <select
+                              aria-label={`Stage for ${a.name}`}
+                              value={a.status}
+                              disabled={busy}
+                              onChange={(e) =>
+                                void change({
+                                  kind: "status",
+                                  id: a.id,
+                                  status: e.target.value,
+                                })
+                              }
+                              className={`rounded-lg border px-2.5 py-1 text-[0.7rem] font-semibold bg-[#121827] focus:outline-none cursor-pointer ${
+                                a.status === "hired"
+                                  ? "border-sky-500/30 text-sky-300 bg-sky-500/10"
+                                  : a.status === "shortlisted" ||
+                                      a.status === "interview"
+                                    ? "border-white/20 text-white bg-white/10"
+                                    : a.status === "archived"
+                                      ? "border-slate-500/30 text-slate-400 bg-slate-500/10"
+                                      : a.status === "rejected"
+                                        ? "border-red-500/30 text-red-400 bg-red-500/10"
+                                        : "border-amber-500/30 text-amber-400 bg-amber-500/10"
+                              }`}
+                            >
+                              {stages.map((s) => (
+                                <option key={s} value={s}>
+                                  {stageLabels[lang][s]}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
 
-                        {/* Uses AI */}
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          {a.ai === "yes" ? (
-                            <span className="text-emerald-400 font-medium">
-                              {t("Yes", "Sim")}
-                            </span>
-                          ) : (
-                            <span className="text-white/40">{t("No", "Não")}</span>
-                          )}
-                        </td>
+                          {/* Test Slot / Convocatória Status */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {a.testSlot ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-cyan-500/20 border border-cyan-500/30 px-2.5 py-0.5 text-[0.68rem] font-semibold text-cyan-300">
+                                <CalendarCheck size={11} />
+                                {formatSlotDisplay(a.testSlot.split("–")[0].trim(), lang)}
+                              </span>
+                            ) : a.invitedAt ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-500/30 px-2.5 py-0.5 text-[0.68rem] font-medium text-amber-300">
+                                <Clock size={11} /> {t("Invited", "Convocado")}
+                              </span>
+                            ) : (
+                              <span className="text-white/30 text-[0.68rem]">—</span>
+                            )}
+                          </td>
 
-                        {/* CCTV Experience */}
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          {a.experience === "yes" ? (
-                            <span className="text-emerald-400 font-medium">
-                              {t("Yes", "Sim")}
-                            </span>
-                          ) : (
-                            <span className="text-white/40">{t("No", "Não")}</span>
-                          )}
-                        </td>
-
-                        {/* Last Profession */}
-                        <td className="px-4 py-3 max-w-[140px] truncate text-white/80">
-                          {a.lastProfession}
-                        </td>
-
-                        {/* Shifts */}
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          {a.shifts === "yes" ? (
-                            <span className="text-emerald-400 font-medium">
-                              {t("Available", "Disponível")}
-                            </span>
-                          ) : (
-                            <span className="text-red-400">{t("No", "Não")}</span>
-                          )}
-                        </td>
-
-                        {/* Date */}
-                        <td className="px-4 py-3 whitespace-nowrap text-white/50">
-                          {new Date(a.createdAt).toLocaleDateString(lang === "pt" ? "pt-MZ" : "en-GB")}
-                        </td>
-
-                        {/* CV View & Download */}
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="flex items-center gap-1.5">
+                          {/* WhatsApp */}
+                          <td className="px-4 py-3 whitespace-nowrap">
                             <a
-                              href={`/api/admin/cv?id=${a.id}&inline=1`}
+                              href={`https://wa.me/${a.whatsapp.replace(/\D/g, "")}`}
                               target="_blank"
                               rel="noreferrer"
-                              title={t("View attached CV", "Ver CV anexo")}
-                              className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/[0.05] px-2 py-1 text-[0.7rem] font-medium text-white hover:bg-white/[0.1] hover:border-white/30 transition-colors"
+                              className="inline-flex items-center gap-1 text-sky-400 hover:underline"
                             >
-                              <Eye size={12} />
-                              <span>{t("View", "Ver")}</span>
+                              <Phone size={12} />
+                              <span>{a.whatsapp}</span>
                             </a>
-                            <a
-                              href={`/api/admin/cv?id=${a.id}`}
-                              title={t("Download CV", "Descarregar CV")}
-                              className="inline-flex items-center rounded-lg border border-white/15 bg-white/[0.05] p-1 text-white/60 hover:text-white hover:bg-white/[0.1] transition-colors"
-                            >
-                              <Download size={12} />
-                            </a>
-                          </div>
-                        </td>
+                          </td>
 
-                        {/* View Button */}
-                        <td className="px-4 py-3 whitespace-nowrap text-right">
-                          <button
-                            onClick={() => setSelected(a)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/[0.05] px-2.5 py-1 text-[0.7rem] font-semibold text-white hover:bg-white/15 transition-all cursor-pointer"
-                          >
-                            <span>{t("Profile", "Perfil")}</span>
-                            <ArrowUpRight size={12} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                          {/* Cover Letter Preview */}
+                          <td className="px-4 py-3 max-w-[160px] truncate text-white/60">
+                            {a.coverLetter ? (
+                              <button
+                                type="button"
+                                onClick={() => setSelected(a)}
+                                className="text-left truncate hover:text-white hover:underline cursor-pointer"
+                              >
+                                {a.coverLetter}
+                              </button>
+                            ) : (
+                              <span className="text-white/30 italic">{t("None", "Nenhuma")}</span>
+                            )}
+                          </td>
+
+                          {/* Grade 12 */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {a.grade12 === "yes" ? (
+                              <span className="text-white font-medium">{t("Yes", "Sim")}</span>
+                            ) : (
+                              <span className="text-white/40">{t("No", "Não")}</span>
+                            )}
+                          </td>
+
+                          {/* Sex */}
+                          <td className="px-4 py-3 whitespace-nowrap capitalize text-white/70">
+                            {a.sex === "female" ? t("Female", "Feminino") : t("Male", "Masculino")}
+                          </td>
+
+                          {/* Uses AI */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {a.ai === "yes" ? (
+                              <span className="text-white font-medium">
+                                {t("Yes", "Sim")}
+                              </span>
+                            ) : (
+                              <span className="text-white/40">{t("No", "Não")}</span>
+                            )}
+                          </td>
+
+                          {/* CCTV Experience */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {a.experience === "yes" ? (
+                              <span className="text-white font-medium">
+                                {t("Yes", "Sim")}
+                              </span>
+                            ) : (
+                              <span className="text-white/40">{t("No", "Não")}</span>
+                            )}
+                          </td>
+
+                          {/* Last Profession */}
+                          <td className="px-4 py-3 max-w-[140px] truncate text-white/80">
+                            {a.lastProfession}
+                          </td>
+
+                          {/* Shifts */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {a.shifts === "yes" ? (
+                              <span className="text-white font-medium">
+                                {t("Available", "Disponível")}
+                              </span>
+                            ) : (
+                              <span className="text-red-400">{t("No", "Não")}</span>
+                            )}
+                          </td>
+
+                          {/* Date */}
+                          <td className="px-4 py-3 whitespace-nowrap text-white/50">
+                            {new Date(a.createdAt).toLocaleDateString(lang === "pt" ? "pt-MZ" : "en-GB")}
+                          </td>
+
+                          {/* CV View & Download */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <div className="flex items-center gap-1.5">
+                              <a
+                                href={`/api/admin/cv?id=${a.id}&inline=1`}
+                                target="_blank"
+                                rel="noreferrer"
+                                title={t("View attached CV", "Ver CV anexo")}
+                                className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/[0.05] px-2 py-1 text-[0.7rem] font-medium text-white hover:bg-white/[0.1] hover:border-white/30 transition-colors"
+                              >
+                                <Eye size={12} />
+                                <span>{t("View", "Ver")}</span>
+                              </a>
+                              <a
+                                href={`/api/admin/cv?id=${a.id}`}
+                                title={t("Download CV", "Descarregar CV")}
+                                className="inline-flex items-center rounded-lg border border-white/15 bg-white/[0.05] p-1 text-white/60 hover:text-white hover:bg-white/[0.1] transition-colors"
+                              >
+                                <Download size={12} />
+                              </a>
+                            </div>
+                          </td>
+
+                          {/* Row Actions: Open Booking Page, Archive, Profile */}
+                          <td className="px-4 py-3 whitespace-nowrap text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              {/* Open Candidate Booking Link */}
+                              <a
+                                href={`/${lang}/careers/test-invite/${a.id}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                title={t("Open candidate booking page in a new tab", "Abrir link de agendamento do candidato")}
+                                className="inline-flex items-center p-1.5 rounded-lg border border-white/10 bg-white/[0.03] text-white/60 hover:text-white hover:border-white/25 transition-colors cursor-pointer"
+                              >
+                                <ExternalLink size={12} />
+                              </a>
+
+                              {/* Single Archive / Restore Action */}
+                              <button
+                                type="button"
+                                onClick={() => handleToggleArchive(a)}
+                                title={
+                                  a.status === "archived"
+                                    ? t("Restore candidate to review", "Restaurar candidatura")
+                                    : t("Archive candidate", "Arquivar candidato")
+                                }
+                                className={`inline-flex items-center p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                                  a.status === "archived"
+                                    ? "border-sky-500/30 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20"
+                                    : "border-white/10 bg-white/[0.03] text-white/50 hover:text-white hover:border-white/25"
+                                }`}
+                              >
+                                <Archive size={12} />
+                              </button>
+
+                              {/* Open Profile Modal */}
+                              <button
+                                onClick={() => setSelected(a)}
+                                className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/[0.05] px-2 py-1 text-[0.7rem] font-semibold text-white hover:bg-white/15 transition-all cursor-pointer ml-0.5"
+                              >
+                                <span>{t("Profile", "Perfil")}</span>
+                                <ArrowUpRight size={12} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -2508,14 +2949,105 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* Table Footer */}
-              <div className="flex items-center justify-between border-t border-white/10 bg-white/[0.02] px-4 py-3 text-[0.7rem] text-white/50">
-                <span>
-                  {t("Showing", "A mostrar")} {filtered.length} {t("of", "de")} {applications.length} {t("applications", "candidaturas")}
-                </span>
-                <span className="hidden sm:inline">
-                  {t("Scroll table horizontally for full candidate answers →", "Desloque a tabela horizontalmente para ver todas as respostas →")}
-                </span>
+              {/* Enhanced Table Pagination Footer */}
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 bg-white/[0.02] px-4 py-3 text-[0.7rem] text-white/60">
+                <div className="flex items-center gap-2">
+                  <span>
+                    {totalCandidates > 0
+                      ? t(
+                          `Showing ${startIndex + 1}–${endIndex} of ${totalCandidates} candidates`,
+                          `A mostrar ${startIndex + 1}–${endIndex} de ${totalCandidates} candidatos`,
+                        )
+                      : t("No candidates", "Sem candidatos")}
+                  </span>
+                  <span className="text-white/20">|</span>
+                  <span className="text-white/40">
+                    {t(`Total: ${applications.length}`, `Total: ${applications.length}`)}
+                  </span>
+                </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-1">
+                    {/* First Page */}
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage(1)}
+                      disabled={activePage === 1}
+                      title={t("First page", "Primeira página")}
+                      className="p-1.5 rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] disabled:opacity-30 disabled:pointer-events-none text-white cursor-pointer"
+                    >
+                      <ChevronsLeft size={13} />
+                    </button>
+
+                    {/* Previous Page */}
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={activePage === 1}
+                      title={t("Previous page", "Página anterior")}
+                      className="p-1.5 rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] disabled:opacity-30 disabled:pointer-events-none text-white cursor-pointer"
+                    >
+                      <ChevronLeft size={13} />
+                    </button>
+
+                    {/* Page Numbers */}
+                    <div className="flex items-center gap-1 mx-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter(
+                          (p) =>
+                            p === 1 ||
+                            p === totalPages ||
+                            Math.abs(p - activePage) <= 1,
+                        )
+                        .map((p, i, arr) => {
+                          const prev = arr[i - 1];
+                          const showEllipsis = prev && p - prev > 1;
+
+                          return (
+                            <div key={p} className="flex items-center">
+                              {showEllipsis && (
+                                <span className="px-1 text-white/30 text-[0.65rem]">…</span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setCurrentPage(p)}
+                                className={`h-7 w-7 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                                  p === activePage
+                                    ? "bg-white text-[#090d16] font-bold shadow-sm"
+                                    : "border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] text-white/70 hover:text-white"
+                                }`}
+                              >
+                                {p}
+                              </button>
+                            </div>
+                          );
+                        })}
+                    </div>
+
+                    {/* Next Page */}
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={activePage === totalPages}
+                      title={t("Next page", "Próxima página")}
+                      className="p-1.5 rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] disabled:opacity-30 disabled:pointer-events-none text-white cursor-pointer"
+                    >
+                      <ChevronRight size={13} />
+                    </button>
+
+                    {/* Last Page */}
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={activePage === totalPages}
+                      title={t("Last page", "Última página")}
+                      className="p-1.5 rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] disabled:opacity-30 disabled:pointer-events-none text-white cursor-pointer"
+                    >
+                      <ChevronsRight size={13} />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </section>
@@ -2579,14 +3111,14 @@ export default function AdminPage() {
             </div>
 
             {/* ─── CONVOCATÓRIA & TESTE PRESENCIAL CARD ─── */}
-            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.06] p-4 space-y-3">
+            <div className="rounded-2xl border border-sky-500/20 bg-[#121827]/80 p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                <span className="text-xs font-bold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
                   <CalendarCheck size={14} />
                   <span>{t("Convocation & Selection Test", "Convocatória & Teste Presencial")}</span>
                 </span>
                 {current.testSlot ? (
-                  <span className="text-[0.65rem] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">
+                  <span className="text-[0.65rem] font-bold px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">
                     {t("Confirmed", "Confirmado")}
                   </span>
                 ) : current.invitedAt ? (
@@ -2639,7 +3171,7 @@ export default function AdminPage() {
                 >
                   {copiedLinkId === current.id ? (
                     <>
-                      <Check size={13} className="text-emerald-400" />
+                      <Check size={13} className="text-sky-400" />
                       <span>{t("Link Copied!", "Link Copiado!")}</span>
                     </>
                   ) : (
@@ -2654,12 +3186,23 @@ export default function AdminPage() {
                   type="button"
                   onClick={() => sendSingleInvite(current.id)}
                   disabled={busy}
-                  className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500 py-2 text-xs font-bold text-[#090d16] hover:bg-emerald-400 transition-colors cursor-pointer disabled:opacity-50"
+                  className="flex items-center justify-center gap-1.5 rounded-xl bg-white py-2 text-xs font-bold text-[#090d16] hover:bg-white/90 shadow-md transition-all cursor-pointer disabled:opacity-50"
                 >
                   <Send size={13} />
                   <span>{current.invitedAt ? t("Resend Email", "Reenviar E-mail") : t("Send Email", "Enviar E-mail")}</span>
                 </button>
               </div>
+
+              {/* Direct Booking Page Link */}
+              <a
+                href={`/${lang}/careers/test-invite/${current.id}`}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full flex items-center justify-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 py-2.5 text-xs font-semibold text-sky-300 hover:bg-sky-500/20 transition-all cursor-pointer"
+              >
+                <ExternalLink size={13} />
+                <span>{t("Open Candidate Booking Page ↗", "Ver Página de Agendamento ↗")}</span>
+              </a>
             </div>
 
             {/* Cover Letter Section */}
@@ -2700,7 +3243,7 @@ export default function AdminPage() {
                     href={`https://wa.me/${current.whatsapp.replace(/\D/g, "")}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-1 font-semibold text-emerald-400 hover:underline flex items-center gap-1"
+                    className="mt-1 font-semibold text-sky-400 hover:underline flex items-center gap-1"
                   >
                     <Phone size={12} />
                     <span>{current.whatsapp}</span>
@@ -2771,7 +3314,7 @@ export default function AdminPage() {
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-white/70 flex items-center gap-2">
-                  <FileText size={15} className="text-emerald-400" />
+                  <FileText size={15} className="text-sky-400" />
                   <span>{t("Curriculum Vitae (CV) Attached", "Curriculum Vitae (CV) Anexo")}</span>
                 </h3>
                 <span className="text-[0.68rem] text-white/50">
@@ -2807,7 +3350,7 @@ export default function AdminPage() {
                     <span className="text-white/80 font-medium truncate max-w-[220px]">
                       {current.cvName}
                     </span>
-                    <span className="text-[0.68rem] text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
+                    <span className="text-[0.68rem] text-sky-400 font-semibold px-2 py-0.5 rounded bg-sky-500/10 border border-sky-500/20">
                       Word Document Preview
                     </span>
                   </div>

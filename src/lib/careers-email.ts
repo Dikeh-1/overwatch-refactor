@@ -89,8 +89,8 @@ export async function notifyApplication(application: Application, cv: Buffer) {
                 </tr>
                 <tr style="border-bottom: 1px solid #f1f5f9;">
                   <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">WhatsApp</td>
-                  <td style="padding: 11px 0; font-size: 14px; font-weight: 600; color: #059669;">
-                    <a href="https://wa.me/${application.whatsapp.replace(/\D/g, "")}" style="color: #059669; text-decoration: none;">${application.whatsapp} →</a>
+                  <td style="padding: 11px 0; font-size: 14px; font-weight: 600; color: #090d16;">
+                    <a href="https://wa.me/${application.whatsapp.replace(/\D/g, "")}" style="color: #0284c7; text-decoration: underline;">${application.whatsapp} →</a>
                   </td>
                 </tr>
                 <tr style="border-bottom: 1px solid #f1f5f9;">
@@ -103,11 +103,11 @@ export async function notifyApplication(application: Application, cv: Buffer) {
                 </tr>
                 <tr style="border-bottom: 1px solid #f1f5f9;">
                   <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">Sabe Usar IA?</td>
-                  <td style="padding: 11px 0; font-size: 13px; font-weight: 600; color: ${application.ai === "yes" ? "#059669" : "#64748b"};">${aiText}</td>
+                  <td style="padding: 11px 0; font-size: 13px; font-weight: 600; color: ${application.ai === "yes" ? "#090d16" : "#64748b"};">${aiText}</td>
                 </tr>
                 <tr style="border-bottom: 1px solid #f1f5f9;">
                   <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">Experiência CCTV / Seg.</td>
-                  <td style="padding: 11px 0; font-size: 13px; font-weight: 600; color: ${application.experience === "yes" ? "#059669" : "#64748b"};">${experienceText}</td>
+                  <td style="padding: 11px 0; font-size: 13px; font-weight: 600; color: ${application.experience === "yes" ? "#090d16" : "#64748b"};">${experienceText}</td>
                 </tr>
                 <tr style="border-bottom: 1px solid #f1f5f9;">
                   <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">Última Profissão</td>
@@ -115,7 +115,7 @@ export async function notifyApplication(application: Application, cv: Buffer) {
                 </tr>
                 <tr style="border-bottom: 1px solid #f1f5f9;">
                   <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">Disponibilidade Turnos</td>
-                  <td style="padding: 11px 0; font-size: 13px; font-weight: 500; color: ${application.shifts === "yes" ? "#059669" : "#dc2626"};">${shiftsText}</td>
+                  <td style="padding: 11px 0; font-size: 13px; font-weight: 500; color: ${application.shifts === "yes" ? "#090d16" : "#dc2626"};">${shiftsText}</td>
                 </tr>
                 <tr>
                   <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">Data de Submissão</td>
@@ -437,7 +437,7 @@ ${processedMessage}
           <div style="background-color: #f8fafc; padding: 22px 32px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6;">
             <strong style="color: #090d16;">Overwatch Moçambique, Lda.</strong><br />
             ${siteContact.address.pt}<br />
-            Telefone / WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #059669; text-decoration: none; font-weight: 600;">+258 84 287 0793</a> · Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none;">${siteContact.email}</a> · Website: <a href="${origin}" style="color: #64748b; text-decoration: none;">www.overwatchmoz.com</a>
+            Telefone / WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #0284c7; text-decoration: none; font-weight: 600;">+258 84 287 0793</a> · Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none;">${siteContact.email}</a> · Website: <a href="${origin}" style="color: #64748b; text-decoration: none;">www.overwatchmoz.com</a>
           </div>
         </div>
       </div>
@@ -514,8 +514,8 @@ export async function sendBookingConfirmation({
       <div style="background-color: #f1f5f9; padding: 36px 16px;">
         <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; border: 1px solid #cbd5e1; box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06); overflow: hidden;">
           
-          <!-- Green Accent Bar -->
-          <div style="height: 4px; background-color: #059669;"></div>
+          <!-- Official Top Accent Bar -->
+          <div style="height: 4px; background-color: #090d16;"></div>
 
           <!-- Official Letterhead Header -->
           <div style="padding: 28px 32px 20px 32px; border-bottom: 1px solid #e2e8f0;">
@@ -525,7 +525,7 @@ export async function sendBookingConfirmation({
                   <img src="${logoUrl}" alt="Overwatch" height="26" style="height: 26px; width: auto; display: block; border: 0;" />
                 </td>
                 <td style="vertical-align: middle; text-align: right;">
-                  <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #059669; display: block;">
+                  <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #090d16; display: block;">
                     Presença Confirmada
                   </span>
                   <span style="font-size: 11px; color: #94a3b8; display: block; margin-top: 2px;">
@@ -546,7 +546,7 @@ export async function sendBookingConfirmation({
             </p>
 
             <!-- Confirmation Details Card -->
-            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #059669; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #090d16; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="padding: 6px 0; font-size: 12px; font-weight: 600; color: #64748b; width: 140px; text-transform: uppercase;">
@@ -573,7 +573,7 @@ export async function sendBookingConfirmation({
                   <td style="padding: 6px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase;">
                     Apresentação:
                   </td>
-                  <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: #059669;">
+                  <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: #090d16;">
                     09h45 (15 minutos antes do início)
                   </td>
                 </tr>
@@ -613,7 +613,7 @@ export async function sendBookingConfirmation({
           <div style="background-color: #f8fafc; padding: 22px 32px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6;">
             <strong style="color: #090d16;">Overwatch Moçambique, Lda.</strong><br />
             ${siteContact.address.pt}<br />
-            Telefone / WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #059669; text-decoration: none; font-weight: 600;">+258 84 287 0793</a> · Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none;">${siteContact.email}</a> · Website: <a href="${origin}" style="color: #64748b; text-decoration: none;">www.overwatchmoz.com</a>
+            Telefone / WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #0284c7; text-decoration: none; font-weight: 600;">+258 84 287 0793</a> · Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none;">${siteContact.email}</a> · Website: <a href="${origin}" style="color: #64748b; text-decoration: none;">www.overwatchmoz.com</a>
           </div>
         </div>
       </div>
