@@ -181,6 +181,17 @@ export default function AdminPage() {
     count: number;
     failed: number;
   } | null>(null);
+  const [broadcastProgress, setBroadcastProgress] = useState<{
+    current: number;
+    total: number;
+    currentBatch: number;
+    totalBatches: number;
+    successCount: number;
+    failedCount: number;
+    currentNames: string[];
+    recentLogs: string[];
+    done: boolean;
+  } | null>(null);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
   const [emailPreviewTab, setEmailPreviewTab] = useState<"edit" | "preview" | "split">(
     "split",
@@ -873,32 +884,117 @@ export default function AdminPage() {
     if (selectedCandidateIds.length === 0) return;
     setSendingBroadcast(true);
     setBroadcastResult(null);
+
+    const BATCH_SIZE = 5;
+    const allIds = [...selectedCandidateIds];
+    const total = allIds.length;
+    const totalBatches = Math.ceil(total / BATCH_SIZE);
+
+    const initialProgress = {
+      current: 0,
+      total,
+      currentBatch: 1,
+      totalBatches,
+      successCount: 0,
+      failedCount: 0,
+      currentNames: [] as string[],
+      recentLogs: [] as string[],
+      done: false,
+    };
+    setBroadcastProgress(initialProgress);
+
+    let cumulativeSuccess = 0;
+    let cumulativeFailed = 0;
+    const logs: string[] = [];
+
     try {
       const outgoingSubject = templatePT.subject || EMAIL_TEMPLATES.pt.subject;
       const outgoingMessage = templatePT.message || EMAIL_TEMPLATES.pt.message;
 
-      const res = await fetch("/api/admin/careers/bulk-invite", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          candidateIds: selectedCandidateIds,
-          subject: outgoingSubject,
-          messageText: outgoingMessage,
-          slots: broadcastSlots,
-        }),
-      });
+      for (let i = 0; i < totalBatches; i++) {
+        const batchIds = allIds.slice(i * BATCH_SIZE, (i + 1) * BATCH_SIZE);
+        const batchNames = batchIds.map(
+          (id) => applications.find((a) => a.id === id)?.name || id,
+        );
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to dispatch test invitations.");
+        setBroadcastProgress((prev) =>
+          prev
+            ? {
+                ...prev,
+                currentBatch: i + 1,
+                currentNames: batchNames,
+              }
+            : null,
+        );
+
+        try {
+          const res = await fetch("/api/admin/careers/bulk-invite", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              candidateIds: batchIds,
+              subject: outgoingSubject,
+              messageText: outgoingMessage,
+              slots: broadcastSlots,
+            }),
+          });
+
+          const data = await res.json();
+          if (res.ok) {
+            cumulativeSuccess += data.count || 0;
+            cumulativeFailed += data.failed || 0;
+            if (Array.isArray(data.results)) {
+              for (const r of data.results) {
+                if (r.success) {
+                  logs.push(`✓ ${r.name}`);
+                } else {
+                  logs.push(`✕ ${r.name} (${r.error || "Failed"})`);
+                }
+              }
+            }
+          } else {
+            cumulativeFailed += batchIds.length;
+            logs.push(`✕ Batch ${i + 1} error: ${data.error || "Request failed"}`);
+          }
+        } catch (batchErr) {
+          cumulativeFailed += batchIds.length;
+          logs.push(`✕ Batch ${i + 1} network error`);
+        }
+
+        const processedSoFar = Math.min((i + 1) * BATCH_SIZE, total);
+        setBroadcastProgress((prev) =>
+          prev
+            ? {
+                ...prev,
+                current: processedSoFar,
+                successCount: cumulativeSuccess,
+                failedCount: cumulativeFailed,
+                recentLogs: [...logs.slice(-8)],
+              }
+            : null,
+        );
+
+        // Polite 300ms pause between batches to protect Brevo deliverability & connection pool
+        if (i < totalBatches - 1) {
+          await new Promise((r) => setTimeout(r, 300));
+        }
       }
 
+      setBroadcastProgress((prev) =>
+        prev
+          ? {
+              ...prev,
+              done: true,
+            }
+          : null,
+      );
+
       setBroadcastResult({
-        success: true,
-        count: data.count || 0,
-        failed: data.failed || 0,
+        success: cumulativeSuccess > 0,
+        count: cumulativeSuccess,
+        failed: cumulativeFailed,
       });
-      setConfirmModalOpen(false);
+
       await load();
     } catch (err) {
       setError((err as Error).message);
@@ -2564,102 +2660,295 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Confirmation Modal */}
+            {/* Confirmation & Live Batch Progress Modal */}
             {confirmModalOpen && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-                <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#121827] p-6 shadow-2xl space-y-5">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2.5 rounded-xl bg-white/10 text-white">
-                        <Send size={20} />
+                <div className="w-full max-w-lg rounded-2xl border border-white/15 bg-[#121827] p-6 shadow-2xl space-y-5">
+                  {broadcastProgress ? (
+                    /* ─── Real-Time Batch Progress Monitor ───────────────────── */
+                    <div className="space-y-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`p-2.5 rounded-xl ${
+                              broadcastProgress.done
+                                ? "bg-emerald-500/20 text-emerald-400"
+                                : "bg-sky-500/20 text-sky-400"
+                            }`}
+                          >
+                            {broadcastProgress.done ? (
+                              <CheckCircle2 size={22} />
+                            ) : (
+                              <RefreshCw size={22} className="animate-spin" />
+                            )}
+                          </div>
+                          <div>
+                            <h3 className="text-base font-bold text-white">
+                              {broadcastProgress.done
+                                ? t("Convocations Dispatched!", "Convocatórias Enviadas!")
+                                : t(
+                                    "Sending Convocations in Batches...",
+                                    "A Enviar Convocatórias em Lotes...",
+                                  )}
+                            </h3>
+                            <p className="text-xs text-white/60">
+                              {broadcastProgress.done
+                                ? t(
+                                    "All selected candidates have been processed successfully.",
+                                    "Todos os candidatos selecionados foram processados com sucesso.",
+                                  )
+                                : t(
+                                    `Batch ${broadcastProgress.currentBatch} of ${broadcastProgress.totalBatches} (5 per batch · Paced for high deliverability)`,
+                                    `Lote ${broadcastProgress.currentBatch} de ${broadcastProgress.totalBatches} (5 por lote · Envio cadenciado contra bloqueios)`,
+                                  )}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-xl font-extrabold text-white font-mono">
+                          {Math.round(
+                            (broadcastProgress.current / broadcastProgress.total) *
+                              100,
+                          )}
+                          %
+                        </span>
                       </div>
-                      <div>
-                        <h3 className="text-base font-bold text-white">
-                          {t("Confirm Bulk Dispatch", "Confirmar Envio em Massa")}
-                        </h3>
-                        <p className="text-xs text-white/60">
-                          {t("Overwatch Recruitment Operations", "Operação de recrutamento Overwatch")}
+
+                      {/* Animated Progress Bar */}
+                      <div className="space-y-1.5">
+                        <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden p-0.5 border border-white/10">
+                          <div
+                            className={`h-full rounded-full transition-all duration-300 ${
+                              broadcastProgress.done
+                                ? "bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]"
+                                : "bg-gradient-to-r from-sky-400 to-emerald-400"
+                            }`}
+                            style={{
+                              width: `${Math.max(
+                                3,
+                                Math.round(
+                                  (broadcastProgress.current /
+                                    broadcastProgress.total) *
+                                    100,
+                                ),
+                              )}%`,
+                            }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between text-[0.68rem] text-white/50">
+                          <span>
+                            {t("Processed:", "Processados:")}{" "}
+                            <strong className="text-white">
+                              {broadcastProgress.current} / {broadcastProgress.total}
+                            </strong>
+                          </span>
+                          <span>
+                            {broadcastProgress.done
+                              ? t("Finished", "Concluído")
+                              : t("Safe Brevo Throttle Active", "Controlo de Ritmo Brevo Activo")}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Metrics 3-Card Grid */}
+                      <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
+                          <span className="text-[0.65rem] text-white/50 block font-semibold">
+                            {t("Total", "Total")}
+                          </span>
+                          <span className="font-bold text-white text-base">
+                            {broadcastProgress.total}
+                          </span>
+                        </div>
+                        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-2.5">
+                          <span className="text-[0.65rem] text-emerald-400 block font-semibold">
+                            {t("Success", "Sucesso")}
+                          </span>
+                          <span className="font-bold text-emerald-300 text-base">
+                            {broadcastProgress.successCount}
+                          </span>
+                        </div>
+                        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
+                          <span className="text-[0.65rem] text-rose-400 block font-semibold">
+                            {t("Failed", "Falhas")}
+                          </span>
+                          <span className="font-bold text-rose-300 text-base">
+                            {broadcastProgress.failedCount}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Current Batch Candidate Names */}
+                      {!broadcastProgress.done &&
+                        broadcastProgress.currentNames.length > 0 && (
+                          <div className="text-[0.68rem] text-white/70 bg-white/[0.03] p-3 rounded-xl border border-white/10 space-y-1">
+                            <span className="text-white/40 block font-semibold">
+                              {t("Active Batch:", "Lote em Envio:")}
+                            </span>
+                            <p className="text-sky-300 font-medium truncate">
+                              {broadcastProgress.currentNames.join(" · ")}
+                            </p>
+                          </div>
+                        )}
+
+                      {/* Live Activity Log */}
+                      {broadcastProgress.recentLogs.length > 0 && (
+                        <div className="rounded-xl border border-white/10 bg-black/40 p-3 space-y-1 text-[0.68rem] font-mono max-h-28 overflow-y-auto">
+                          {broadcastProgress.recentLogs.map((log, idx) => (
+                            <div
+                              key={idx}
+                              className={
+                                log.startsWith("✓")
+                                  ? "text-emerald-300"
+                                  : "text-rose-300"
+                              }
+                            >
+                              {log}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Action Button */}
+                      <div className="pt-2">
+                        {broadcastProgress.done ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setConfirmModalOpen(false);
+                              setBroadcastProgress(null);
+                            }}
+                            className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 py-3.5 text-xs font-bold text-[#090d16] shadow-lg transition-all cursor-pointer"
+                          >
+                            <Check size={16} />
+                            <span>
+                              {t(
+                                "Done — View Shortlisted Applications",
+                                "Concluído — Ver Candidaturas",
+                              )}
+                            </span>
+                          </button>
+                        ) : (
+                          <div className="text-center text-[0.68rem] text-white/40 italic">
+                            {t(
+                              "Please keep this tab open while batches are dispatched safely...",
+                              "Por favor, mantenha esta aba aberta enquanto os lotes são enviados com segurança...",
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    /* ─── Pre-Dispatch Confirmation ───────────────────────────── */
+                    <>
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2.5 rounded-xl bg-white/10 text-white">
+                            <Send size={20} />
+                          </div>
+                          <div>
+                            <h3 className="text-base font-bold text-white">
+                              {t("Confirm Bulk Dispatch", "Confirmar Envio em Massa")}
+                            </h3>
+                            <p className="text-xs text-white/60">
+                              {t(
+                                "Overwatch Recruitment Operations",
+                                "Operação de recrutamento Overwatch",
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setConfirmModalOpen(false)}
+                          className="p-1 text-white/50 hover:text-white cursor-pointer"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+
+                      <div className="space-y-3 text-xs text-white/80 bg-white/[0.03] p-4 rounded-xl border border-white/10">
+                        <p>
+                          {t(
+                            "You are about to send official test invitation emails to:",
+                            "Está prestes a enviar e-mails de convocatória oficial para:",
+                          )}
                         </p>
+                        <div className="text-2xl font-bold text-white flex items-baseline gap-2">
+                          <span>{selectedCandidateIds.length}</span>
+                          <span className="text-xs font-normal text-white/60">
+                            {t("candidates", "candidatos")} (
+                            {Math.ceil(selectedCandidateIds.length / 5)}{" "}
+                            {t("batches of 5", "lotes de 5")})
+                          </span>
+                        </div>
+                        <ul className="list-disc pl-5 space-y-1 text-white/70">
+                          <li>
+                            {t(
+                              "Sent in batches of 5 with safe pacing to avoid Brevo rate limits or timeouts.",
+                              "Enviado em lotes de 5 com ritmo cadenciado contra bloqueios ou limites de envio.",
+                            )}
+                          </li>
+                          <li>
+                            {t(
+                              "Each candidate receives an exclusive personal booking link.",
+                              "Cada candidato terá um link personalizado.",
+                            )}
+                          </li>
+                          <li>
+                            {t(
+                              "Application stage automatically advances to Shortlisted.",
+                              "A sua fase passará automaticamente para Shortlisted.",
+                            )}
+                          </li>
+                        </ul>
+
+                        {/* Portuguese Delivery Assurance */}
+                        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-3 text-xs space-y-1 mt-2">
+                          <div className="text-[0.68rem] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                            <Check size={12} />
+                            <span>
+                              {t(
+                                "Dispatched in Official Portuguese (Moçambique)",
+                                "Enviado em Português Oficial (Moçambique)",
+                              )}
+                            </span>
+                          </div>
+                          <p className="text-white font-medium text-[0.72rem] truncate">
+                            <span className="text-white/50">
+                              {t("Subject:", "Assunto:")}{" "}
+                            </span>
+                            {templatePT.subject || EMAIL_TEMPLATES.pt.subject}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <button
-                      onClick={() => setConfirmModalOpen(false)}
-                      className="p-1 text-white/50 hover:text-white"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
 
-                  <div className="space-y-3 text-xs text-white/80 bg-white/[0.03] p-4 rounded-xl border border-white/10">
-                    <p>
-                      {t(
-                        "You are about to send official test invitation emails to:",
-                        "Está prestes a enviar e-mails de convocatória oficial para:",
-                      )}
-                    </p>
-                    <div className="text-2xl font-bold text-white">
-                      {selectedCandidateIds.length} {t("candidates", "candidatos")}
-                    </div>
-                    <ul className="list-disc pl-5 space-y-1 text-white/70">
-                      <li>
-                        {t(
-                          "Each candidate receives an exclusive personal booking link.",
-                          "Cada candidato terá um link personalizado.",
-                        )}
-                      </li>
-                      <li>
-                        {t(
-                          "Application stage automatically advances to Shortlisted.",
-                          "A sua fase passará automaticamente para Shortlisted.",
-                        )}
-                      </li>
-                      <li>
-                        {t(
-                          "When candidates pick a slot, it automatically books into the Test Schedule.",
-                          "Ao escolherem o turno, a vaga fica registada na Agenda.",
-                        )}
-                      </li>
-                    </ul>
+                      <div className="flex items-center gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setConfirmModalOpen(false)}
+                          disabled={sendingBroadcast}
+                          className="flex-1 rounded-xl border border-white/10 bg-white/[0.05] py-3 text-xs font-semibold text-white hover:bg-white/[0.1] transition-colors cursor-pointer"
+                        >
+                          {t("Cancel", "Cancelar")}
+                        </button>
 
-                    {/* Portuguese Delivery Assurance */}
-                    <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-3 text-xs space-y-1 mt-2">
-                      <div className="text-[0.68rem] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-                        <Check size={12} />
-                        <span>{t("Dispatched in Official Portuguese (Moçambique)", "Enviado em Português Oficial (Moçambique)")}</span>
+                        <button
+                          type="button"
+                          onClick={handleSendBroadcast}
+                          disabled={sendingBroadcast}
+                          className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-white hover:bg-white/90 py-3 text-xs font-bold text-[#090d16] shadow-lg transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          {sendingBroadcast ? (
+                            <>
+                              <RefreshCw className="animate-spin" size={14} />
+                              <span>{t("Sending...", "A enviar...")}</span>
+                            </>
+                          ) : (
+                            <span>{t("Yes, Send Now", "Sim, Enviar Agora")}</span>
+                          )}
+                        </button>
                       </div>
-                      <p className="text-white font-medium text-[0.72rem] truncate">
-                        <span className="text-white/50">{t("Subject:", "Assunto:")} </span>
-                        {templatePT.subject || EMAIL_TEMPLATES.pt.subject}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setConfirmModalOpen(false)}
-                      disabled={sendingBroadcast}
-                      className="flex-1 rounded-xl border border-white/10 bg-white/[0.05] py-3 text-xs font-semibold text-white hover:bg-white/[0.1] transition-colors cursor-pointer"
-                    >
-                      {t("Cancel", "Cancelar")}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleSendBroadcast}
-                      disabled={sendingBroadcast}
-                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-white hover:bg-white/90 py-3 text-xs font-bold text-[#090d16] shadow-lg transition-all cursor-pointer disabled:opacity-50"
-                    >
-                      {sendingBroadcast ? (
-                        <>
-                          <RefreshCw className="animate-spin" size={14} />
-                          <span>{t("Sending...", "A enviar...")}</span>
-                        </>
-                      ) : (
-                        <span>{t("Yes, Send Now", "Sim, Enviar Agora")}</span>
-                      )}
-                    </button>
-                  </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}

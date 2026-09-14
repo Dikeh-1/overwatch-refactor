@@ -93,6 +93,9 @@ Overwatch Moçambique`;
         });
 
         results.push({ id, name: candidate.name, success: true });
+
+        // Safe pacing between sequential emails to respect Brevo SMTP API rate limits
+        await new Promise((r) => setTimeout(r, 120));
       } catch (err) {
         console.error(`Error sending test invite to ${id}:`, err);
         results.push({
