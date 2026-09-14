@@ -1,5 +1,5 @@
 import "server-only";
-import { mkdir, readFile, writeFile, rename } from "node:fs/promises";
+import { mkdir, readFile, writeFile, rename, unlink } from "node:fs/promises";
 import path from "node:path";
 import { roles, type Role, type Application } from "./careers";
 
@@ -210,3 +210,44 @@ export async function updateApplication(
     return merged;
   });
 }
+
+export async function deleteApplications(ids: string[]): Promise<void> {
+  const validIds = ids.filter((id) => /^[\da-f-]{36}$/i.test(id));
+  if (!validIds.length) return;
+
+  if (isRemote()) {
+    // Delete in chunks of 50 to prevent query string URL length issues
+    const chunkSize = 50;
+    for (let i = 0; i < validIds.length; i += chunkSize) {
+      const chunk = validIds.slice(i, i + chunkSize);
+      await api(`/rest/v1/career_applications?id=in.(${chunk.join(",")})`, {
+        method: "DELETE",
+      });
+      // Delete CV files from storage bucket
+      await Promise.allSettled(
+        chunk.map((id) =>
+          api(`/storage/v1/object/career-cvs/${id}`, { method: "DELETE" }),
+        ),
+      );
+    }
+    return;
+  }
+
+  // Local filesystem fallback
+  await exclusive(async () => {
+    const list = await getApplications();
+    const idSet = new Set(validIds);
+    const updated = list.filter((a) => !idSet.has(a.id));
+    await write("applications.json", updated);
+
+    // Delete local CV files if they exist
+    await Promise.allSettled(
+      validIds.map((id) => unlink(path.join(directory, id)).catch(() => {})),
+    );
+  });
+}
+
+export async function deleteApplication(id: string): Promise<void> {
+  await deleteApplications([id]);
+}
+

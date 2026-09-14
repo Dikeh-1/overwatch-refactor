@@ -41,6 +41,7 @@ import {
   RotateCcw,
   Columns,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 import TechGrid from "@/components/ui/TechGrid";
@@ -208,6 +209,14 @@ export default function AdminPage() {
   const [appQuickFilter, setAppQuickFilter] = useState<
     "all" | "review" | "shortlisted" | "booked" | "archived"
   >("all");
+
+  // ─── Permanent Delete State (Single & Mass Delete) ─────────────────
+  const [deleteModalState, setDeleteModalState] = useState<{
+    open: boolean;
+    ids: string[];
+    candidateNames?: string[];
+  }>({ open: false, ids: [] });
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   // Load language preference and persisted template customizations
   useEffect(() => {
@@ -731,6 +740,33 @@ export default function AdminPage() {
       id: candidate.id,
       status: nextStatus,
     });
+  };
+
+  const handleExecuteDelete = async () => {
+    if (!deleteModalState.ids.length) return;
+    setDeleteBusy(true);
+    try {
+      const res = await fetch("/api/admin/careers", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: deleteModalState.ids }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to delete");
+
+      if (selected && deleteModalState.ids.includes(selected.id)) {
+        setSelected(null);
+      }
+
+      const deletedSet = new Set(deleteModalState.ids);
+      setSelectedAppIds((prev) => prev.filter((id) => !deletedSet.has(id)));
+      setDeleteModalState({ open: false, ids: [] });
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setDeleteBusy(false);
+    }
   };
 
   // ─── Filtered Audience for Convocatórias (Manual Criteria + Presets) ─
@@ -3407,21 +3443,33 @@ export default function AdminPage() {
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleBulkStatusChange(selectedAppIds, "archived")}
-                    disabled={busy}
-                    className="flex items-center gap-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    <Archive size={13} />
-                    <span>{t("Archive Selected", "Arquivar Selecionados")}</span>
-                  </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  {appQuickFilter === "archived" ? (
+                    <button
+                      type="button"
+                      onClick={() => handleBulkStatusChange(selectedAppIds, "reviewing")}
+                      disabled={busy || deleteBusy}
+                      className="flex items-center gap-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <RotateCcw size={13} />
+                      <span>{t("Restore Selected", "Restaurar Selecionados")}</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleBulkStatusChange(selectedAppIds, "archived")}
+                      disabled={busy || deleteBusy}
+                      className="flex items-center gap-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <Archive size={13} />
+                      <span>{t("Archive Selected", "Arquivar Selecionados")}</span>
+                    </button>
+                  )}
 
                   <button
                     type="button"
                     onClick={() => handleBulkStatusChange(selectedAppIds, "shortlisted")}
-                    disabled={busy}
+                    disabled={busy || deleteBusy}
                     className="flex items-center gap-1.5 rounded-lg bg-white hover:bg-white/90 text-[#090d16] px-3 py-1.5 text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
                   >
                     <UserCheck size={13} />
@@ -3430,8 +3478,27 @@ export default function AdminPage() {
 
                   <button
                     type="button"
+                    onClick={() => {
+                      const names = applications
+                        .filter((a) => selectedAppIds.includes(a.id))
+                        .map((a) => a.name);
+                      setDeleteModalState({
+                        open: true,
+                        ids: selectedAppIds,
+                        candidateNames: names,
+                      });
+                    }}
+                    disabled={busy || deleteBusy}
+                    className="flex items-center gap-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 text-xs font-bold transition-all cursor-pointer disabled:opacity-50 shadow-sm"
+                  >
+                    <Trash2 size={13} />
+                    <span>{t("Delete Selected", "Eliminar Selecionados")}</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => setSelectedAppIds([])}
-                    className="text-xs text-white/50 hover:text-white px-2 py-1 cursor-pointer"
+                    className="text-xs text-white/50 hover:text-white px-2 py-1 cursor-pointer ml-1"
                   >
                     {t("Clear", "Desmarcar")}
                   </button>
@@ -3716,6 +3783,22 @@ export default function AdminPage() {
                                 }`}
                               >
                                 <Archive size={12} />
+                              </button>
+
+                              {/* Single Permanent Delete Action */}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setDeleteModalState({
+                                    open: true,
+                                    ids: [a.id],
+                                    candidateNames: [a.name],
+                                  })
+                                }
+                                title={t("Delete candidate permanently", "Eliminar candidatura permanentemente")}
+                                className="inline-flex items-center p-1.5 rounded-lg border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/25 hover:border-red-500/40 transition-colors cursor-pointer"
+                              >
+                                <Trash2 size={12} />
                               </button>
 
                               {/* Open Profile Modal */}
@@ -4184,6 +4267,130 @@ export default function AdminPage() {
                   <span>{t("Download CV", "Descarregar CV")}</span>
                 </a>
               </div>
+
+              {/* Danger Zone: Permanent Delete */}
+              <div className="pt-3 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeleteModalState({
+                      open: true,
+                      ids: [current.id],
+                      candidateNames: [current.name],
+                    });
+                  }}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 py-2.5 text-xs font-bold text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+                >
+                  <Trash2 size={14} />
+                  <span>{t("Delete Candidate Permanently", "Eliminar Candidato Definitivamente")}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── PERMANENT DELETE CONFIRMATION MODAL ─────────────────────── */}
+      {deleteModalState.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-red-500/30 bg-[#121827] p-6 shadow-2xl space-y-5">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30">
+                  <Trash2 size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">
+                    {deleteModalState.ids.length === 1
+                      ? t("Permanently Delete Candidate", "Eliminar Candidato Definitivamente")
+                      : t(
+                          `Permanently Delete ${deleteModalState.ids.length} Candidates`,
+                          `Eliminar ${deleteModalState.ids.length} Candidatos Definitivamente`,
+                        )}
+                  </h3>
+                  <p className="text-xs text-red-400/80 font-semibold">
+                    {t("Irreversible Action · Cannot be undone", "Ação Irreversível · Não pode ser desfeita")}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteModalState({ open: false, ids: [] })}
+                disabled={deleteBusy}
+                className="text-white/50 hover:text-white cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="rounded-xl border border-red-500/20 bg-red-500/[0.06] p-4 text-xs text-white/80 space-y-2">
+              <p>
+                {deleteModalState.ids.length === 1 ? (
+                  <>
+                    {t(
+                      "Are you sure you want to permanently delete",
+                      "Tem a certeza que deseja eliminar permanentemente",
+                    )}{" "}
+                    <strong className="text-white font-bold">
+                      {deleteModalState.candidateNames?.[0] || "this candidate"}
+                    </strong>
+                    {t(
+                      "? All application records and the attached CV document will be erased forever.",
+                      "? Todos os dados da candidatura e o documento do CV anexo serão eliminados para sempre.",
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {t(
+                      `Are you sure you want to permanently delete these ${deleteModalState.ids.length} selected candidates? All candidate profiles, test convocations, and attached CVs will be permanently removed from storage and database.`,
+                      `Tem a certeza que deseja eliminar permanentemente estes ${deleteModalState.ids.length} candidatos selecionados? Todos os perfis, convocatórias e CVs anexos serão removidos definitivamente da base de dados e do armazenamento.`,
+                    )}
+                  </>
+                )}
+              </p>
+              {deleteModalState.candidateNames && deleteModalState.candidateNames.length > 1 && (
+                <div className="max-h-28 overflow-y-auto rounded-lg bg-black/40 p-2.5 text-[0.7rem] text-white/60 space-y-1">
+                  {deleteModalState.candidateNames.slice(0, 10).map((name, idx) => (
+                    <div key={idx} className="truncate">• {name}</div>
+                  ))}
+                  {deleteModalState.candidateNames.length > 10 && (
+                    <div className="italic text-white/40">
+                      + {deleteModalState.candidateNames.length - 10}{" "}
+                      {t("more candidates...", "outros candidatos...")}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteModalState({ open: false, ids: [] })}
+                disabled={deleteBusy}
+                className="flex-1 rounded-xl border border-white/10 bg-white/[0.05] py-2.5 text-xs font-semibold text-white hover:bg-white/[0.1] transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {t("Cancel", "Cancelar")}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleExecuteDelete}
+                disabled={deleteBusy}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-red-600 hover:bg-red-500 py-2.5 text-xs font-bold text-white shadow-lg transition-all cursor-pointer disabled:opacity-50"
+              >
+                {deleteBusy ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>{t("Deleting...", "A eliminar...")}</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={14} />
+                    <span>{t("Delete Permanently", "Eliminar Definitivamente")}</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

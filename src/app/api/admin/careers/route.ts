@@ -4,6 +4,8 @@ import {
   getRoles,
   setRole,
   setStatus,
+  deleteApplication,
+  deleteApplications,
 } from "@/lib/careers-store";
 import { roles, stages } from "@/lib/careers";
 export async function GET() {
@@ -54,8 +56,51 @@ export async function PATCH(request: Request) {
       }
     }
     else return new Response(null, { status: 400 });
-    return Response.json({ success: true });
-  } catch {
-    return Response.json({ error: "Could not save changes." }, { status: 503 });
+      return Response.json({ success: true });
+    } catch {
+      return Response.json({ error: "Could not save changes." }, { status: 503 });
+    }
   }
-}
+
+  export async function DELETE(request: Request) {
+    if (!(await authenticated()) || !sameOrigin(request)) {
+      return new Response(null, { status: 403 });
+    }
+
+    try {
+      const data = await request.json();
+      if (
+        data.id &&
+        typeof data.id === "string" &&
+        /^[\da-f-]{36}$/i.test(data.id)
+      ) {
+        await deleteApplication(data.id);
+        return Response.json({ success: true, count: 1 });
+      } else if (
+        Array.isArray(data.ids) &&
+        data.ids.length > 0
+      ) {
+        const validIds = data.ids.filter(
+          (id: unknown): id is string =>
+            typeof id === "string" && /^[\da-f-]{36}$/i.test(id),
+        );
+        if (!validIds.length) {
+          return Response.json(
+            { error: "No valid application IDs provided." },
+            { status: 400 },
+          );
+        }
+        await deleteApplications(validIds);
+        return Response.json({ success: true, count: validIds.length });
+      } else {
+        return Response.json({ error: "Invalid delete payload." }, { status: 400 });
+      }
+    } catch (err) {
+      console.error("Admin careers DELETE error:", err);
+      return Response.json(
+        { error: "Could not delete application(s)." },
+        { status: 503 },
+      );
+    }
+  }
+
