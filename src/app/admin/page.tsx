@@ -40,6 +40,7 @@ import {
   Save,
   RotateCcw,
   Columns,
+  Loader2,
 } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 import TechGrid from "@/components/ui/TechGrid";
@@ -151,12 +152,27 @@ export default function AdminPage() {
   const [archiveModalOpen, setArchiveModalOpen] = useState(false);
   const [bulkSuccessMsg, setBulkSuccessMsg] = useState<string | null>(null);
 
+  // ─── Dual-Language Email Templates (Candidate email is ALWAYS PT) ──
+  const [templatePT, setTemplatePT] = useState<{ subject: string; message: string }>({
+    subject: EMAIL_TEMPLATES.pt.subject,
+    message: EMAIL_TEMPLATES.pt.message,
+  });
+  const [templateEN, setTemplateEN] = useState<{ subject: string; message: string }>({
+    subject: EMAIL_TEMPLATES.en.subject,
+    message: EMAIL_TEMPLATES.en.message,
+  });
+
+  // Current draft in the editor (never auto-saved on keystroke)
   const [broadcastSubject, setBroadcastSubject] = useState(
     EMAIL_TEMPLATES.en.subject,
   );
   const [broadcastMessage, setBroadcastMessage] = useState(
     EMAIL_TEMPLATES.en.message,
   );
+  const [isDraftDirty, setIsDraftDirty] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [previewLang, setPreviewLang] = useState<"pt" | "en">("pt");
+
   const [broadcastSlots] = useState<string[]>([...DEFAULT_TEST_SLOTS]);
   const [sendingBroadcast, setSendingBroadcast] = useState(false);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
@@ -188,36 +204,243 @@ export default function AdminPage() {
     if (savedLang === "pt" || savedLang === "en") {
       setLang(savedLang);
     }
-    const savedSub =
-      localStorage.getItem(`overwatch_template_subject_${savedLang}`) ||
-      EMAIL_TEMPLATES[savedLang].subject;
-    const savedMsg =
-      localStorage.getItem(`overwatch_template_message_${savedLang}`) ||
-      EMAIL_TEMPLATES[savedLang].message;
-    setBroadcastSubject(savedSub);
-    setBroadcastMessage(savedMsg);
+    const savedSubPT =
+      localStorage.getItem("overwatch_template_subject_pt") ||
+      EMAIL_TEMPLATES.pt.subject;
+    const savedMsgPT =
+      localStorage.getItem("overwatch_template_message_pt") ||
+      EMAIL_TEMPLATES.pt.message;
+    const savedSubEN =
+      localStorage.getItem("overwatch_template_subject_en") ||
+      EMAIL_TEMPLATES.en.subject;
+    const savedMsgEN =
+      localStorage.getItem("overwatch_template_message_en") ||
+      EMAIL_TEMPLATES.en.message;
+
+    const ptTpl = { subject: savedSubPT, message: savedMsgPT };
+    const enTpl = { subject: savedSubEN, message: savedMsgEN };
+    setTemplatePT(ptTpl);
+    setTemplateEN(enTpl);
+
+    const active = savedLang === "pt" ? ptTpl : enTpl;
+    setBroadcastSubject(active.subject);
+    setBroadcastMessage(active.message);
+    setIsDraftDirty(false);
   }, []);
 
-  const handleSetLang = (l: "en" | "pt") => {
+  const handleSetLang = async (l: "en" | "pt") => {
+    if (l === lang) return;
+
+    // If there were unsaved edits in current language, sync/translate them to the target language
+    if (isDraftDirty) {
+      setIsTranslating(true);
+      try {
+        const fromLang = lang;
+        const toLang = l;
+
+        let translatedSub = broadcastSubject;
+        let translatedMsg = broadcastMessage;
+        try {
+          const resSub = await fetch("/api/admin/translate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: broadcastSubject, from: fromLang, to: toLang }),
+          });
+          const dataSub = await resSub.json();
+          if (dataSub?.translated) translatedSub = dataSub.translated;
+
+          const resMsg = await fetch("/api/admin/translate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: broadcastMessage, from: fromLang, to: toLang }),
+          });
+          const dataMsg = await resMsg.json();
+          if (dataMsg?.translated) translatedMsg = dataMsg.translated;
+        } catch {
+          // Keep fallback
+        }
+
+        if (fromLang === "en") {
+          setTemplateEN({ subject: broadcastSubject, message: broadcastMessage });
+          localStorage.setItem("overwatch_template_subject_en", broadcastSubject);
+          localStorage.setItem("overwatch_template_message_en", broadcastMessage);
+
+          setTemplatePT({ subject: translatedSub, message: translatedMsg });
+          localStorage.setItem("overwatch_template_subject_pt", translatedSub);
+          localStorage.setItem("overwatch_template_message_pt", translatedMsg);
+          localStorage.setItem("overwatch_template_subject", translatedSub);
+          localStorage.setItem("overwatch_template_message", translatedMsg);
+        } else {
+          setTemplatePT({ subject: broadcastSubject, message: broadcastMessage });
+          localStorage.setItem("overwatch_template_subject_pt", broadcastSubject);
+          localStorage.setItem("overwatch_template_message_pt", broadcastMessage);
+          localStorage.setItem("overwatch_template_subject", broadcastSubject);
+          localStorage.setItem("overwatch_template_message", broadcastMessage);
+
+          setTemplateEN({ subject: translatedSub, message: translatedMsg });
+          localStorage.setItem("overwatch_template_subject_en", translatedSub);
+          localStorage.setItem("overwatch_template_message_en", translatedMsg);
+        }
+
+        setBroadcastSubject(translatedSub);
+        setBroadcastMessage(translatedMsg);
+        setIsDraftDirty(false);
+      } catch (err) {
+        console.error("Auto-sync error on lang toggle:", err);
+        const targetTpl = l === "pt" ? templatePT : templateEN;
+        setBroadcastSubject(targetTpl.subject);
+        setBroadcastMessage(targetTpl.message);
+        setIsDraftDirty(false);
+      } finally {
+        setIsTranslating(false);
+      }
+    } else {
+      const targetTpl = l === "pt" ? templatePT : templateEN;
+      setBroadcastSubject(targetTpl.subject);
+      setBroadcastMessage(targetTpl.message);
+    }
+
     setLang(l);
     localStorage.setItem("overwatch_admin_lang", l);
-    const savedSub =
-      localStorage.getItem(`overwatch_template_subject_${l}`) ||
-      EMAIL_TEMPLATES[l].subject;
-    const savedMsg =
-      localStorage.getItem(`overwatch_template_message_${l}`) ||
-      EMAIL_TEMPLATES[l].message;
-    setBroadcastSubject(savedSub);
-    setBroadcastMessage(savedMsg);
   };
 
-  const handleSaveTemplate = () => {
-    localStorage.setItem(`overwatch_template_subject_${lang}`, broadcastSubject);
-    localStorage.setItem(`overwatch_template_message_${lang}`, broadcastMessage);
-    localStorage.setItem("overwatch_template_subject", broadcastSubject);
-    localStorage.setItem("overwatch_template_message", broadcastMessage);
-    setTemplateSavedFeedback(true);
-    setTimeout(() => setTemplateSavedFeedback(false), 3000);
+  const handleSaveTemplate = async () => {
+    setIsTranslating(true);
+    try {
+      if (lang === "en") {
+        setTemplateEN({ subject: broadcastSubject, message: broadcastMessage });
+        localStorage.setItem("overwatch_template_subject_en", broadcastSubject);
+        localStorage.setItem("overwatch_template_message_en", broadcastMessage);
+
+        let translatedSub = broadcastSubject;
+        let translatedMsg = broadcastMessage;
+        try {
+          const resSub = await fetch("/api/admin/translate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: broadcastSubject, from: "en", to: "pt" }),
+          });
+          const dataSub = await resSub.json();
+          if (dataSub?.translated) translatedSub = dataSub.translated;
+
+          const resMsg = await fetch("/api/admin/translate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: broadcastMessage, from: "en", to: "pt" }),
+          });
+          const dataMsg = await resMsg.json();
+          if (dataMsg?.translated) translatedMsg = dataMsg.translated;
+        } catch {
+          // Keep fallback
+        }
+
+        setTemplatePT({ subject: translatedSub, message: translatedMsg });
+        localStorage.setItem("overwatch_template_subject_pt", translatedSub);
+        localStorage.setItem("overwatch_template_message_pt", translatedMsg);
+        localStorage.setItem("overwatch_template_subject", translatedSub);
+        localStorage.setItem("overwatch_template_message", translatedMsg);
+      } else {
+        setTemplatePT({ subject: broadcastSubject, message: broadcastMessage });
+        localStorage.setItem("overwatch_template_subject_pt", broadcastSubject);
+        localStorage.setItem("overwatch_template_message_pt", broadcastMessage);
+        localStorage.setItem("overwatch_template_subject", broadcastSubject);
+        localStorage.setItem("overwatch_template_message", broadcastMessage);
+
+        let translatedSub = broadcastSubject;
+        let translatedMsg = broadcastMessage;
+        try {
+          const resSub = await fetch("/api/admin/translate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: broadcastSubject, from: "pt", to: "en" }),
+          });
+          const dataSub = await resSub.json();
+          if (dataSub?.translated) translatedSub = dataSub.translated;
+
+          const resMsg = await fetch("/api/admin/translate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: broadcastMessage, from: "pt", to: "en" }),
+          });
+          const dataMsg = await resMsg.json();
+          if (dataMsg?.translated) translatedMsg = dataMsg.translated;
+        } catch {
+          // Keep fallback
+        }
+
+        setTemplateEN({ subject: translatedSub, message: translatedMsg });
+        localStorage.setItem("overwatch_template_subject_en", translatedSub);
+        localStorage.setItem("overwatch_template_message_en", translatedMsg);
+      }
+
+      setIsDraftDirty(false);
+      setTemplateSavedFeedback(true);
+      setTimeout(() => setTemplateSavedFeedback(false), 3500);
+    } catch (err) {
+      console.error("Save template error:", err);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleTranslateAndSync = async () => {
+    setIsTranslating(true);
+    try {
+      const fromLang = lang;
+      const toLang = lang === "en" ? "pt" : "en";
+
+      let translatedSub = broadcastSubject;
+      let translatedMsg = broadcastMessage;
+      try {
+        const resSub = await fetch("/api/admin/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: broadcastSubject, from: fromLang, to: toLang }),
+        });
+        const dataSub = await resSub.json();
+        if (dataSub?.translated) translatedSub = dataSub.translated;
+
+        const resMsg = await fetch("/api/admin/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: broadcastMessage, from: fromLang, to: toLang }),
+        });
+        const dataMsg = await resMsg.json();
+        if (dataMsg?.translated) translatedMsg = dataMsg.translated;
+      } catch {
+        // Keep fallback
+      }
+
+      if (toLang === "pt") {
+        setTemplatePT({ subject: translatedSub, message: translatedMsg });
+        localStorage.setItem("overwatch_template_subject_pt", translatedSub);
+        localStorage.setItem("overwatch_template_message_pt", translatedMsg);
+        localStorage.setItem("overwatch_template_subject", translatedSub);
+        localStorage.setItem("overwatch_template_message", translatedMsg);
+
+        setTemplateEN({ subject: broadcastSubject, message: broadcastMessage });
+        localStorage.setItem("overwatch_template_subject_en", broadcastSubject);
+        localStorage.setItem("overwatch_template_message_en", broadcastMessage);
+      } else {
+        setTemplateEN({ subject: translatedSub, message: translatedMsg });
+        localStorage.setItem("overwatch_template_subject_en", translatedSub);
+        localStorage.setItem("overwatch_template_message_en", translatedMsg);
+
+        setTemplatePT({ subject: broadcastSubject, message: broadcastMessage });
+        localStorage.setItem("overwatch_template_subject_pt", broadcastSubject);
+        localStorage.setItem("overwatch_template_message_pt", broadcastMessage);
+        localStorage.setItem("overwatch_template_subject", broadcastSubject);
+        localStorage.setItem("overwatch_template_message", broadcastMessage);
+      }
+
+      setIsDraftDirty(false);
+      setTemplateSavedFeedback(true);
+      setTimeout(() => setTemplateSavedFeedback(false), 3500);
+    } catch (err) {
+      console.error("Translate & sync error:", err);
+    } finally {
+      setIsTranslating(false);
+    }
   };
 
   const handleResetTemplate = (targetLang?: "en" | "pt") => {
@@ -226,10 +449,19 @@ export default function AdminPage() {
     const defaultMessage = EMAIL_TEMPLATES[l].message;
     setBroadcastSubject(defaultSubject);
     setBroadcastMessage(defaultMessage);
-    localStorage.setItem(`overwatch_template_subject_${l}`, defaultSubject);
-    localStorage.setItem(`overwatch_template_message_${l}`, defaultMessage);
-    localStorage.setItem("overwatch_template_subject", defaultSubject);
-    localStorage.setItem("overwatch_template_message", defaultMessage);
+    setIsDraftDirty(false);
+
+    if (l === "pt") {
+      setTemplatePT({ subject: defaultSubject, message: defaultMessage });
+      localStorage.setItem("overwatch_template_subject_pt", defaultSubject);
+      localStorage.setItem("overwatch_template_message_pt", defaultMessage);
+      localStorage.setItem("overwatch_template_subject", defaultSubject);
+      localStorage.setItem("overwatch_template_message", defaultMessage);
+    } else {
+      setTemplateEN({ subject: defaultSubject, message: defaultMessage });
+      localStorage.setItem("overwatch_template_subject_en", defaultSubject);
+      localStorage.setItem("overwatch_template_message_en", defaultMessage);
+    }
     setTemplateSavedFeedback(true);
     setTimeout(() => setTemplateSavedFeedback(false), 3000);
   };
@@ -642,13 +874,16 @@ export default function AdminPage() {
     setSendingBroadcast(true);
     setBroadcastResult(null);
     try {
+      const outgoingSubject = templatePT.subject || EMAIL_TEMPLATES.pt.subject;
+      const outgoingMessage = templatePT.message || EMAIL_TEMPLATES.pt.message;
+
       const res = await fetch("/api/admin/careers/bulk-invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           candidateIds: selectedCandidateIds,
-          subject: broadcastSubject,
-          messageText: broadcastMessage,
+          subject: outgoingSubject,
+          messageText: outgoingMessage,
           slots: broadcastSlots,
         }),
       });
@@ -675,13 +910,16 @@ export default function AdminPage() {
   async function sendSingleInvite(candidateId: string) {
     setBusy(true);
     try {
+      const outgoingSubject = templatePT.subject || EMAIL_TEMPLATES.pt.subject;
+      const outgoingMessage = templatePT.message || EMAIL_TEMPLATES.pt.message;
+
       const res = await fetch("/api/admin/careers/bulk-invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           candidateIds: [candidateId],
-          subject: broadcastSubject,
-          messageText: broadcastMessage,
+          subject: outgoingSubject,
+          messageText: outgoingMessage,
           slots: broadcastSlots,
         }),
       });
@@ -1905,8 +2143,14 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Action Buttons: Save Template, Load EN/PT, Reset */}
+                {/* Action Buttons: Save Template, Load EN/PT, Reset, Translate */}
                 <div className="flex items-center flex-wrap gap-2">
+                  {isDraftDirty && (
+                    <span className="text-[0.68rem] text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-md font-semibold animate-pulse">
+                      {t("● Unsaved Draft", "● Rascunho Não Salvo")}
+                    </span>
+                  )}
+
                   <div className="flex items-center gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/10 text-xs">
                     <span className="text-[0.68rem] text-white/40 px-1 font-semibold">{t("Load:", "Carregar:")}</span>
                     <button
@@ -1939,15 +2183,61 @@ export default function AdminPage() {
 
                   <button
                     type="button"
+                    onClick={handleTranslateAndSync}
+                    disabled={isTranslating}
+                    title={
+                      lang === "en"
+                        ? t(
+                            "Translate English draft to Portuguese and update candidate email",
+                            "Traduzir rascunho de inglês para português e atualizar e-mail do candidato",
+                          )
+                        : t(
+                            "Translate Portuguese draft to English",
+                            "Traduzir rascunho de português para inglês",
+                          )
+                    }
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-sky-500/30 bg-sky-500/10 text-xs font-semibold text-sky-300 hover:bg-sky-500/20 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {isTranslating ? (
+                      <Loader2 size={13} className="animate-spin" />
+                    ) : (
+                      <Globe size={13} />
+                    )}
+                    <span>
+                      {isTranslating
+                        ? t("Translating...", "A traduzir...")
+                        : lang === "en"
+                        ? t("Translate & Sync to PT", "Traduzir para PT")
+                        : t("Translate & Sync to EN", "Traduzir para EN")}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={handleSaveTemplate}
-                    className={`flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md ${
+                    disabled={isTranslating}
+                    className={`flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md disabled:opacity-50 ${
                       templateSavedFeedback
-                        ? "bg-sky-500 text-[#090d16]"
+                        ? "bg-emerald-500 text-[#090d16]"
+                        : isDraftDirty
+                        ? "bg-white text-[#090d16] hover:bg-white/90 ring-2 ring-sky-400"
                         : "bg-white text-[#090d16] hover:bg-white/90"
                     }`}
                   >
-                    {templateSavedFeedback ? <Check size={14} /> : <Save size={14} />}
-                    <span>{templateSavedFeedback ? t("✓ Saved & Applied!", "✓ Salvo & Aplicado!") : t("Save Template", "Salvar Modelo")}</span>
+                    {isTranslating ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : templateSavedFeedback ? (
+                      <Check size={14} />
+                    ) : (
+                      <Save size={14} />
+                    )}
+                    <span>
+                      {isTranslating
+                        ? t("Saving & Syncing...", "A guardar...")
+                        : templateSavedFeedback
+                        ? t("✓ Saved & Synced to PT!", "✓ Salvo & Sincronizado!")
+                        : t("Save Template", "Salvar Modelo")}
+                    </span>
                   </button>
                 </div>
               </div>
@@ -1964,12 +2254,17 @@ export default function AdminPage() {
                 {(emailPreviewTab === "edit" || emailPreviewTab === "split") && (
                   <div className="rounded-2xl border border-white/10 bg-[#121827]/95 p-6 shadow-sm space-y-4">
                     <div className="flex items-center justify-between flex-wrap gap-2">
-                      <h3 className="text-base font-bold text-white flex items-center gap-2">
+                      <div className="flex items-center gap-2">
                         <FileText size={17} className="text-white" />
-                        <span>{t("Convocation Template (Email)", "Modelo da Convocatória (E-mail)")}</span>
-                      </h3>
+                        <h3 className="text-base font-bold text-white">
+                          <span>{t("Convocation Template (Email)", "Modelo da Convocatória (E-mail)")}</span>
+                        </h3>
+                        <span className="text-[0.68rem] uppercase font-bold px-2 py-0.5 rounded bg-white/10 text-white/80">
+                          {lang.toUpperCase()}
+                        </span>
+                      </div>
                       {templateSavedFeedback && (
-                        <span className="text-[0.68rem] text-sky-300 bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 rounded-md font-semibold">
+                        <span className="text-[0.68rem] text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md font-semibold">
                           {t("✓ Template Applied & Active", "✓ Modelo Activo & Aplicado")}
                         </span>
                       )}
@@ -1983,10 +2278,8 @@ export default function AdminPage() {
                         type="text"
                         value={broadcastSubject}
                         onChange={(e) => {
-                          const val = e.target.value;
-                          setBroadcastSubject(val);
-                          localStorage.setItem(`overwatch_template_subject_${lang}`, val);
-                          localStorage.setItem("overwatch_template_subject", val);
+                          setBroadcastSubject(e.target.value);
+                          setIsDraftDirty(true);
                         }}
                         className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs text-white focus:border-white/40 focus:outline-none"
                       />
@@ -2005,19 +2298,24 @@ export default function AdminPage() {
                         rows={emailPreviewTab === "edit" ? 14 : 11}
                         value={broadcastMessage}
                         onChange={(e) => {
-                          const val = e.target.value;
-                          setBroadcastMessage(val);
-                          localStorage.setItem(`overwatch_template_message_${lang}`, val);
-                          localStorage.setItem("overwatch_template_message", val);
+                          setBroadcastMessage(e.target.value);
+                          setIsDraftDirty(true);
                         }}
                         className="w-full rounded-xl border border-white/10 bg-white/[0.04] p-4 text-xs font-mono text-white leading-relaxed focus:border-white/40 focus:outline-none"
                       />
-                      <p className="text-[0.68rem] text-white/40 italic">
-                        {t(
-                          "Note: Candidate message can be sent in English or Portuguese (default for Maputo candidates).",
-                          "Nota: A mensagem aos candidatos pode ser enviada em inglês ou português.",
+                      <div className="flex items-center justify-between flex-wrap gap-2 text-[0.68rem] text-white/40">
+                        <p className="italic">
+                          {t(
+                            "Outgoing emails to candidates are dispatched in Portuguese (Moçambique) by default.",
+                            "Os e-mails aos candidatos são enviados em português (Moçambique) por padrão.",
+                          )}
+                        </p>
+                        {isDraftDirty && (
+                          <span className="text-amber-300/90 font-medium">
+                            {t("Draft has unsaved changes.", "Rascunho com alterações não salvas.")}
+                          </span>
                         )}
-                      </p>
+                      </div>
                     </div>
 
                     {/* Slots info */}
@@ -2068,10 +2366,37 @@ export default function AdminPage() {
                 {(emailPreviewTab === "preview" || emailPreviewTab === "split") && (
                   <div className="rounded-2xl border border-white/10 bg-[#0e1320] p-6 shadow-sm flex flex-col justify-between">
                     <div>
-                      <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
-                        <span className="text-xs font-bold uppercase tracking-wider text-white/50">
-                          {t("Candidate Email Preview", "Pré-visualização do E-mail para Candidato")}
-                        </span>
+                      <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4 flex-wrap gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold uppercase tracking-wider text-white/50">
+                            {t("Candidate Email Preview", "Pré-visualização do E-mail para Candidato")}
+                          </span>
+                          <div className="flex items-center gap-1 bg-white/[0.08] p-0.5 rounded-lg border border-white/10 text-[0.65rem]">
+                            <button
+                              type="button"
+                              onClick={() => setPreviewLang("pt")}
+                              className={`px-2 py-0.5 rounded font-bold transition-colors cursor-pointer ${
+                                previewLang === "pt"
+                                  ? "bg-emerald-500 text-[#090d16]"
+                                  : "text-white/60 hover:text-white"
+                              }`}
+                            >
+                              PT (Oficial)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPreviewLang("en")}
+                              className={`px-2 py-0.5 rounded font-bold transition-colors cursor-pointer ${
+                                previewLang === "en"
+                                  ? "bg-white text-[#090d16]"
+                                  : "text-white/60 hover:text-white"
+                              }`}
+                            >
+                              EN (Draft)
+                            </button>
+                          </div>
+                        </div>
+
                         <div className="flex items-center gap-2">
                           {emailPreviewTab === "preview" && (
                             <button
@@ -2084,7 +2409,9 @@ export default function AdminPage() {
                             </button>
                           )}
                           <span className="text-[0.68rem] text-slate-300 bg-white/[0.06] border border-white/10 px-2.5 py-0.5 rounded-md font-mono">
-                            {t("Executive Letterhead", "Formato Oficial")}
+                            {previewLang === "pt"
+                              ? t("Maputo Delivery Version", "Versão Oficial Maputo")
+                              : t("Draft View", "Visualização de Rascunho")}
                           </span>
                         </div>
                       </div>
@@ -2106,6 +2433,16 @@ export default function AdminPage() {
                           </div>
                         </div>
 
+                        {/* Subject Bar */}
+                        <div className="bg-slate-100/90 px-5 py-2.5 border-b border-slate-200 text-[0.72rem] flex items-center gap-2 text-slate-700">
+                          <span className="font-bold text-slate-500 text-[0.65rem] uppercase tracking-wider">{t("Subject:", "Assunto:")}</span>
+                          <span className="font-semibold text-slate-900 truncate">
+                            {previewLang === "pt"
+                              ? (templatePT.subject || EMAIL_TEMPLATES.pt.subject)
+                              : broadcastSubject}
+                          </span>
+                        </div>
+
                         {/* Official Document Subheading */}
                         <div className="bg-slate-50 px-5 py-2.5 border-b border-slate-200 flex items-center justify-between text-[0.68rem]">
                           <span className="font-semibold text-slate-700 uppercase tracking-wide">
@@ -2119,7 +2456,10 @@ export default function AdminPage() {
                         {/* Letter Body */}
                         <div className="p-5 space-y-4">
                           <div className="text-slate-800 whitespace-pre-wrap font-sans text-xs leading-relaxed">
-                            {broadcastMessage.replace(
+                            {(previewLang === "pt"
+                              ? (templatePT.message || EMAIL_TEMPLATES.pt.message)
+                              : broadcastMessage
+                            ).replace(
                               /\{\{name\}\}/g,
                               broadcastAudience[0]?.name || "Maria João",
                             )}
@@ -2136,7 +2476,7 @@ export default function AdminPage() {
                                   key={idx}
                                   className="px-3.5 py-2 text-slate-800 font-medium text-[0.72rem] flex items-center justify-between"
                                 >
-                                  <span>{formatSlotDisplay(s, lang)}</span>
+                                  <span>{formatSlotDisplay(s, previewLang)}</span>
                                   <span className="text-[0.65rem] font-mono text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
                                     {t("Option 0", "Opção 0")}{idx + 1}
                                   </span>
@@ -2264,6 +2604,18 @@ export default function AdminPage() {
                         )}
                       </li>
                     </ul>
+
+                    {/* Portuguese Delivery Assurance */}
+                    <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-3 text-xs space-y-1 mt-2">
+                      <div className="text-[0.68rem] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                        <Check size={12} />
+                        <span>{t("Dispatched in Official Portuguese (Moçambique)", "Enviado em Português Oficial (Moçambique)")}</span>
+                      </div>
+                      <p className="text-white font-medium text-[0.72rem] truncate">
+                        <span className="text-white/50">{t("Subject:", "Assunto:")} </span>
+                        {templatePT.subject || EMAIL_TEMPLATES.pt.subject}
+                      </p>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-3 pt-2">
