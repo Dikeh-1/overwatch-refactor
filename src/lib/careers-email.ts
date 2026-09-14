@@ -1,11 +1,99 @@
 import "server-only";
+import nodemailer from "nodemailer";
 import { roles, type Application } from "./careers";
 import { siteContact } from "./site-config";
+
+interface SendEmailOptions {
+  sender?: { name: string; email: string };
+  to: { email: string; name: string }[];
+  cc?: { email: string; name: string }[];
+  replyTo?: { name: string; email: string };
+  subject: string;
+  htmlContent: string;
+  textContent: string;
+  attachment?: { name: string; content: string }[];
+}
+
+async function sendViaGmailSmtp(payload: SendEmailOptions) {
+  const user = process.env.FALLBACK_SMTP_USER;
+  const pass = process.env.FALLBACK_SMTP_PASS;
+  if (!user || !pass) {
+    throw new Error("Missing FALLBACK_SMTP_USER or FALLBACK_SMTP_PASS.");
+  }
+
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: { user, pass },
+  });
+
+  const attachments = payload.attachment?.map((att) => ({
+    filename: att.name,
+    content: Buffer.from(att.content, "base64"),
+  }));
+
+  const mailOptions = {
+    from: `"${payload.sender?.name || "Overwatch Recrutamento"}" <${user}>`,
+    to: payload.to.map((t) => t.email).join(", "),
+    cc: payload.cc?.map((c) => c.email).join(", "),
+    replyTo: payload.replyTo
+      ? payload.replyTo.email
+      : payload.sender?.email || "noreply@overwatchmoz.com",
+    subject: payload.subject,
+    html: payload.htmlContent,
+    text: payload.textContent,
+    attachments,
+  };
+
+  const info = await transporter.sendMail(mailOptions);
+  return { success: true, provider: "gmail-smtp", messageId: info.messageId };
+}
+
+async function sendTransactionalEmail(payload: SendEmailOptions) {
+  const fallbackUser = process.env.FALLBACK_SMTP_USER;
+  const fallbackPass = process.env.FALLBACK_SMTP_PASS;
+  const useFallback =
+    process.env.EMAIL_PROVIDER === "fallback" ||
+    process.env.EMAIL_PROVIDER === "gmail" ||
+    !process.env.BREVO_API_KEY;
+
+  if (useFallback && fallbackUser && fallbackPass) {
+    return sendViaGmailSmtp(payload);
+  }
+
+  // Attempt Brevo
+  if (process.env.BREVO_API_KEY) {
+    try {
+      const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "api-key": process.env.BREVO_API_KEY,
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(8000),
+      });
+
+      if (res.ok) {
+        return { success: true, provider: "brevo" };
+      }
+      console.warn(`Brevo returned status ${res.status}, falling back to Gmail SMTP...`);
+    } catch (err) {
+      console.warn("Brevo request failed, falling back to Gmail SMTP:", err);
+    }
+  }
+
+  // Auto-failover to Gmail SMTP
+  if (fallbackUser && fallbackPass) {
+    return sendViaGmailSmtp(payload);
+  }
+
+  throw new Error("No email provider available to send message.");
+}
 
 export async function notifyApplication(application: Application, cv: Buffer) {
   // Never dispatch test fixture emails to production inboxes
   if (
-    !process.env.BREVO_API_KEY ||
+    (!process.env.BREVO_API_KEY && !process.env.FALLBACK_SMTP_PASS) ||
     application.email.endsWith(".invalid") ||
     process.env.CAREERS_TEST_MODE === "true"
   ) {
@@ -271,18 +359,10 @@ export async function notifyApplication(application: Application, cv: Buffer) {
 
   await Promise.allSettled(
     payloads.map(async (payload) => {
-      const result = await fetch("https://api.brevo.com/v3/smtp/email", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "api-key": process.env.BREVO_API_KEY!,
-        },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(10000),
-      });
-      if (!result.ok) {
-        const errText = await result.text().catch(() => "");
-        console.error("Recruitment email delivery failed", result.status, errText);
+      try {
+        await sendTransactionalEmail(payload);
+      } catch (err) {
+        console.error("Recruitment email delivery failed:", err);
       }
     }),
   );
@@ -302,7 +382,7 @@ export async function sendTestInvitation({
   baseUrl?: string;
 }) {
   if (
-    !process.env.BREVO_API_KEY ||
+    (!process.env.BREVO_API_KEY && !process.env.FALLBACK_SMTP_PASS) ||
     application.email.endsWith(".invalid") ||
     process.env.CAREERS_TEST_MODE === "true"
   ) {
@@ -453,22 +533,7 @@ ${processedMessage}
     textContent: `${processedMessage}\n\nEscolha a data do teste no seguinte link:\n${bookingUrl}\n\nLocal do Teste:\n${siteContact.address.pt}\n\nCom os melhores cumprimentos,\nEquipa de Recrutamento\nOverwatch Moçambique`,
   };
 
-  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "api-key": process.env.BREVO_API_KEY!,
-    },
-    body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(10000),
-  });
-
-  if (!res.ok) {
-    const errorText = await res.text().catch(() => "");
-    throw new Error(`Brevo delivery failed (${res.status}): ${errorText}`);
-  }
-
-  return { success: true };
+  return sendTransactionalEmail(payload);
 }
 
 export async function sendBookingConfirmation({
@@ -481,7 +546,7 @@ export async function sendBookingConfirmation({
   baseUrl?: string;
 }) {
   if (
-    !process.env.BREVO_API_KEY ||
+    (!process.env.BREVO_API_KEY && !process.env.FALLBACK_SMTP_PASS) ||
     application.email.endsWith(".invalid") ||
     process.env.CAREERS_TEST_MODE === "true"
   ) {
@@ -629,20 +694,5 @@ export async function sendBookingConfirmation({
     textContent: `Olá, ${application.name}.\n\nA sua presença no teste presencial de Operadora de CCO está confirmada para:\n${slot}\n\nLocal:\n${siteContact.address.pt}\n\nRequisitos:\n- Trazer BI ou Passaporte original\n- Trazer caneta esferográfica\n- Chegar com 15 minutos de antecedência (09h45)\n\nCom os melhores cumprimentos,\nEquipa de Recrutamento\nOverwatch Moçambique`,
   };
 
-  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "api-key": process.env.BREVO_API_KEY!,
-    },
-    body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(10000),
-  });
-
-  if (!res.ok) {
-    const errorText = await res.text().catch(() => "");
-    console.error("Booking confirmation delivery failed", res.status, errorText);
-  }
-
-  return { success: true };
+  return sendTransactionalEmail(payload);
 }
