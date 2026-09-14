@@ -957,8 +957,8 @@ export default function AdminPage() {
           <div className="mt-3 flex items-center justify-between rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2 text-[0.68rem]">
             <div className="flex items-center gap-2">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-400"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
               </span>
               <span className="font-medium text-white/90">
                 {lang === "pt"
@@ -966,7 +966,7 @@ export default function AdminPage() {
                   : `${onlineCount} Admin${onlineCount > 1 ? "s" : ""} Live`}
               </span>
             </div>
-            <span className="text-[0.62rem] font-mono text-sky-400 font-semibold bg-sky-500/15 border border-sky-500/25 px-1.5 py-0.5 rounded">
+            <span className="text-[0.62rem] font-mono text-emerald-400 font-semibold bg-emerald-500/15 border border-emerald-500/25 px-1.5 py-0.5 rounded">
               {t("Active", "Activo")}
             </span>
           </div>
@@ -1177,8 +1177,8 @@ export default function AdminPage() {
             {/* Live Admin Count Pill */}
             <div className="hidden sm:flex items-center gap-2 rounded-xl bg-white/[0.04] border border-white/10 px-3 py-1.5 text-xs">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-400"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
               </span>
               <span className="font-semibold text-white/90 text-[0.72rem]">
                 {lang === "pt"
@@ -1779,7 +1779,7 @@ export default function AdminPage() {
                                 {a.name}
                               </span>
                               <span className="text-white/40 block text-[0.68rem]">
-                                {a.email} · {a.whatsapp}
+                                {a.email} · <span className="text-emerald-400/90 font-medium">{a.whatsapp}</span>
                               </span>
                             </div>
                           </div>
@@ -1789,7 +1789,7 @@ export default function AdminPage() {
                             <span
                               className={`px-2 py-0.5 rounded text-[0.65rem] font-semibold uppercase tracking-wider ${
                                 a.status === "shortlisted"
-                                  ? "bg-white/10 text-white border border-white/20"
+                                  ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 font-bold"
                                   : a.status === "archived"
                                     ? "bg-slate-500/20 text-slate-400 border border-slate-500/30"
                                     : "bg-white/10 text-white/70"
@@ -1813,7 +1813,7 @@ export default function AdminPage() {
                             </span>
 
                             {hasBooked ? (
-                              <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                              <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                                 {t("Booked:", "Agendado:")} {formatSlotDisplay(a.testSlot?.split("–")[0].trim() || "", lang)}
                               </span>
                             ) : isAlreadyInvited ? (
@@ -1833,7 +1833,7 @@ export default function AdminPage() {
                               className="p-1 text-white/50 hover:text-white transition-colors cursor-pointer"
                             >
                               {copiedLinkId === a.id ? (
-                                <Check size={14} className="text-sky-400" />
+                                <Check size={14} className="text-emerald-400" />
                               ) : (
                                 <Copy size={14} />
                               )}
@@ -2427,7 +2427,7 @@ export default function AdminPage() {
                         </span>
                       </div>
 
-                      <span className="rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-2.5 py-0.5 text-xs font-bold">
+                      <span className="rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 text-xs font-bold">
                         {candidatesInSlot.length}
                       </span>
                     </div>
@@ -2463,7 +2463,7 @@ export default function AdminPage() {
                                 href={`https://wa.me/${c.whatsapp.replace(/\D/g, "")}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="inline-flex items-center gap-1 text-sky-400 hover:underline"
+                                className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 hover:underline font-medium"
                               >
                                 <Phone size={11} />
                                 <span>{c.whatsapp}</span>
@@ -2684,8 +2684,8 @@ export default function AdminPage() {
                     onClick={() => setAppQuickFilter("shortlisted")}
                     className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                       appQuickFilter === "shortlisted"
-                        ? "bg-white text-[#090d16] font-bold shadow-sm"
-                        : "bg-white/[0.04] text-white/60 hover:text-white"
+                        ? "bg-emerald-500 text-[#090d16] font-bold shadow-sm"
+                        : "bg-white/[0.04] text-white/70 hover:text-emerald-300"
                     }`}
                   >
                     {t("Shortlisted", "Pré-selecionados")} ({applications.filter((a) => a.status === "shortlisted").length})
@@ -2696,8 +2696,8 @@ export default function AdminPage() {
                     onClick={() => setAppQuickFilter("booked")}
                     className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                       appQuickFilter === "booked"
-                        ? "bg-white text-[#090d16] font-bold shadow-sm"
-                        : "bg-white/[0.04] text-white/60 hover:text-white"
+                        ? "bg-emerald-500 text-[#090d16] font-bold shadow-sm"
+                        : "bg-white/[0.04] text-white/70 hover:text-emerald-300"
                     }`}
                   >
                     {t("Test Booked", "Teste Agendado")} ({confirmedCount})
@@ -2881,11 +2881,10 @@ export default function AdminPage() {
                                 })
                               }
                               className={`rounded-lg border px-2.5 py-1 text-[0.7rem] font-semibold bg-[#121827] focus:outline-none cursor-pointer ${
-                                a.status === "hired"
-                                  ? "border-sky-500/30 text-sky-300 bg-sky-500/10"
-                                  : a.status === "shortlisted" ||
-                                      a.status === "interview"
-                                    ? "border-white/20 text-white bg-white/10"
+                                a.status === "hired" || a.status === "shortlisted"
+                                  ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10 font-bold"
+                                  : a.status === "interview"
+                                    ? "border-sky-500/30 text-sky-300 bg-sky-500/10 font-medium"
                                     : a.status === "archived"
                                       ? "border-slate-500/30 text-slate-400 bg-slate-500/10"
                                       : a.status === "rejected"
@@ -2904,8 +2903,8 @@ export default function AdminPage() {
                           {/* Test Slot / Convocatória Status */}
                           <td className="px-4 py-3 whitespace-nowrap">
                             {a.testSlot ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-cyan-500/20 border border-cyan-500/30 px-2.5 py-0.5 text-[0.68rem] font-semibold text-cyan-300">
-                                <CalendarCheck size={11} />
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[0.68rem] font-semibold text-emerald-300">
+                                <CalendarCheck size={11} className="text-emerald-400" />
                                 {formatSlotDisplay(a.testSlot.split("–")[0].trim(), lang)}
                               </span>
                             ) : a.invitedAt ? (
@@ -2923,7 +2922,7 @@ export default function AdminPage() {
                               href={`https://wa.me/${a.whatsapp.replace(/\D/g, "")}`}
                               target="_blank"
                               rel="noreferrer"
-                              className="inline-flex items-center gap-1 text-sky-400 hover:underline"
+                              className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 hover:underline font-medium"
                             >
                               <Phone size={12} />
                               <span>{a.whatsapp}</span>
@@ -3260,7 +3259,7 @@ export default function AdminPage() {
                   <span>{t("Convocation & Selection Test", "Convocatória & Teste Presencial")}</span>
                 </span>
                 {current.testSlot ? (
-                  <span className="text-[0.65rem] font-bold px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                  <span className="text-[0.65rem] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                     {t("Confirmed", "Confirmado")}
                   </span>
                 ) : current.invitedAt ? (
@@ -3313,7 +3312,7 @@ export default function AdminPage() {
                 >
                   {copiedLinkId === current.id ? (
                     <>
-                      <Check size={13} className="text-sky-400" />
+                      <Check size={13} className="text-emerald-400" />
                       <span>{t("Link Copied!", "Link Copiado!")}</span>
                     </>
                   ) : (
@@ -3385,7 +3384,7 @@ export default function AdminPage() {
                     href={`https://wa.me/${current.whatsapp.replace(/\D/g, "")}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-1 font-semibold text-sky-400 hover:underline flex items-center gap-1"
+                    className="mt-1 font-semibold text-emerald-400 hover:text-emerald-300 hover:underline flex items-center gap-1 font-medium"
                   >
                     <Phone size={12} />
                     <span>{current.whatsapp}</span>

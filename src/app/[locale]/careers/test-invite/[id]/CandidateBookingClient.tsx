@@ -32,6 +32,17 @@ type CandidateData = {
   whatsapp: string;
 };
 
+function formatSlotDisplay(slot: string, isPt: boolean) {
+  if (isPt) return slot;
+  return slot
+    .replace("Terça-feira", "Tuesday")
+    .replace("Quarta-feira", "Wednesday")
+    .replace("Quinta-feira", "Thursday")
+    .replace("Sexta-feira", "Friday")
+    .replace("de Setembro", "September")
+    .replace("10h00", "10:00 AM");
+}
+
 export default function CandidateBookingClient({
   id,
   locale,
@@ -39,7 +50,41 @@ export default function CandidateBookingClient({
   id: string;
   locale: string;
 }) {
-  const isPt = locale === "pt";
+  // Language region: defaults to PT, inherits from main page, with option to switch to EN
+  const [activeLang, setActiveLang] = useState<"pt" | "en">("pt");
+
+  useEffect(() => {
+    let initial: "pt" | "en" = "pt"; // default is Portuguese
+    try {
+      const stored = localStorage.getItem("overwatch_preferred_locale");
+      if (stored === "en" || stored === "pt") {
+        initial = stored;
+      } else {
+        const match = document.cookie.match(/NEXT_LOCALE=([^;]+)/);
+        if (match && (match[1] === "en" || match[1] === "pt")) {
+          initial = match[1] as "pt" | "en";
+        } else if (locale === "en") {
+          initial = "en";
+        }
+      }
+    } catch {
+      // fallback
+    }
+    setActiveLang(initial);
+  }, [locale]);
+
+  const switchLanguage = (newLang: "pt" | "en") => {
+    setActiveLang(newLang);
+    try {
+      localStorage.setItem("overwatch_preferred_locale", newLang);
+      document.cookie = `NEXT_LOCALE=${newLang}; path=/; max-age=31536000; SameSite=Lax`;
+      if (typeof window !== "undefined" && window.history.replaceState) {
+        window.history.replaceState(null, "", `/${newLang}/careers/test-invite/${id}`);
+      }
+    } catch {}
+  };
+
+  const isPt = activeLang === "pt";
   const [candidate, setCandidate] = useState<CandidateData | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -149,7 +194,7 @@ export default function CandidateBookingClient({
     }
   }
 
-  const mapsUrl = getGoogleMapsUrl(locale);
+  const mapsUrl = getGoogleMapsUrl(activeLang);
   const slotsList =
     candidate?.slots && candidate.slots.length > 0
       ? candidate.slots
@@ -184,10 +229,10 @@ export default function CandidateBookingClient({
               href={`https://wa.me/${siteContact.whatsappNumber}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-xs font-bold text-[#090d16] hover:bg-white/90 transition-colors"
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2.5 text-xs font-bold text-[#090d16] hover:bg-emerald-400 transition-colors shadow-md"
             >
               <Phone size={14} />
-              <span>{isPt ? "Contactar Recursos Humanos" : "Contact HR via WhatsApp"}</span>
+              <span>{isPt ? "Contactar Recursos Humanos (WhatsApp)" : "Contact HR via WhatsApp"}</span>
             </a>
           </div>
         ) : candidate ? (
@@ -201,9 +246,38 @@ export default function CandidateBookingClient({
                     Overwatch Moçambique • Recrutamento & Selecção
                   </span>
                 </div>
-                <span className="text-[0.68rem] font-mono text-white/40">
-                  Ref: CCO-2026/MAPUTO
-                </span>
+
+                {/* Language Switcher & Ref */}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center bg-white/[0.06] border border-white/10 rounded-lg p-0.5 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => switchLanguage("pt")}
+                      className={`px-2.5 py-1 rounded-md text-[0.7rem] font-bold transition-all cursor-pointer ${
+                        activeLang === "pt"
+                          ? "bg-white text-[#090d16] shadow-sm"
+                          : "text-white/60 hover:text-white"
+                      }`}
+                    >
+                      PT
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => switchLanguage("en")}
+                      className={`px-2.5 py-1 rounded-md text-[0.7rem] font-bold transition-all cursor-pointer ${
+                        activeLang === "en"
+                          ? "bg-white text-[#090d16] shadow-sm"
+                          : "text-white/60 hover:text-white"
+                      }`}
+                    >
+                      EN
+                    </button>
+                  </div>
+
+                  <span className="text-[0.68rem] font-mono text-white/40 hidden sm:inline-block">
+                    Ref: CCO-2026/MAPUTO
+                  </span>
+                </div>
               </div>
 
               <div className="mt-5 space-y-2">
@@ -223,15 +297,15 @@ export default function CandidateBookingClient({
 
             {/* If Already Confirmed: Clean Official Confirmation Card */}
             {isAlreadyBooked && (
-              <div className="rounded-xl border border-sky-500/30 bg-sky-500/[0.05] p-6 space-y-4">
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-6 space-y-4">
                 <div className="flex items-center justify-between border-b border-white/10 pb-4">
                   <div className="flex items-center gap-2.5">
-                    <CheckCircle2 size={20} className="text-sky-400" />
+                    <CheckCircle2 size={20} className="text-emerald-400" />
                     <span className="text-sm font-bold text-white">
                       {isPt ? "Presença Confirmada no Teste" : "Attendance Confirmed"}
                     </span>
                   </div>
-                  <span className="text-[0.68rem] font-semibold text-white bg-white/10 border border-white/20 px-2.5 py-0.5 rounded-full">
+                  <span className="text-[0.68rem] font-semibold text-emerald-300 bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
                     {isPt ? "Agendado no Sistema" : "Recorded in System"}
                   </span>
                 </div>
@@ -242,7 +316,7 @@ export default function CandidateBookingClient({
                       {isPt ? "Turno Seleccionado:" : "Confirmed Slot:"}
                     </span>
                     <span className="text-white font-bold text-sm block">
-                      {candidate.testSlot}
+                      {formatSlotDisplay(candidate.testSlot || "", isPt)}
                     </span>
                     <span className="text-white/50 text-[0.68rem] block">
                       {isPt ? "Horário: 10h00 às 11h30 (Chegada às 09h45)" : "10:00 to 11:30 (Arrival at 09:45)"}
@@ -260,7 +334,7 @@ export default function CandidateBookingClient({
                       href={mapsUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-[0.68rem] text-cyan-400 hover:underline pt-1"
+                      className="inline-flex items-center gap-1 text-[0.68rem] text-sky-400 hover:underline pt-1"
                     >
                       {isPt ? "Abrir Google Maps" : "Open Google Maps"} <ExternalLink size={10} />
                     </a>
@@ -315,7 +389,7 @@ export default function CandidateBookingClient({
                       onClick={() => setSelectedSlot(slot)}
                       className={`w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between gap-3 cursor-pointer ${
                         isSelected
-                          ? "border-white/50 bg-white/[0.08] shadow-sm"
+                          ? "border-emerald-500/50 bg-emerald-500/[0.08] shadow-sm"
                           : "border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.05]"
                       }`}
                     >
@@ -323,7 +397,7 @@ export default function CandidateBookingClient({
                         <div
                           className={`h-4 w-4 rounded-full border flex items-center justify-center transition-colors shrink-0 ${
                             isSelected
-                              ? "border-white bg-white text-[#090d16]"
+                              ? "border-emerald-400 bg-emerald-400 text-[#090d16]"
                               : "border-white/30 bg-transparent"
                           }`}
                         >
@@ -331,7 +405,7 @@ export default function CandidateBookingClient({
                         </div>
                         <div>
                           <div className="text-xs sm:text-sm font-semibold text-white">
-                            {slot}
+                            {formatSlotDisplay(slot, isPt)}
                           </div>
                           <div className="text-[0.68rem] text-white/50 flex items-center gap-2 mt-0.5">
                             <span>{isPt ? "10h00 às 11h30" : "10:00 to 11:30"}</span>
@@ -342,7 +416,7 @@ export default function CandidateBookingClient({
                       </div>
 
                       {isCurrentSaved && (
-                        <span className="text-[0.65rem] font-semibold text-sky-300 bg-sky-500/15 px-2 py-0.5 rounded border border-sky-500/25">
+                        <span className="text-[0.65rem] font-semibold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-500/30">
                           {isPt ? "Data Atual" : "Current"}
                         </span>
                       )}
@@ -359,8 +433,8 @@ export default function CandidateBookingClient({
               )}
 
               {successNotice && (
-                <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 p-3 text-xs text-sky-200 flex items-center gap-2">
-                  <CheckCircle2 size={15} className="shrink-0 text-sky-400" />
+                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-200 flex items-center gap-2">
+                  <CheckCircle2 size={15} className="shrink-0 text-emerald-400" />
                   <span>
                     {isPt
                       ? "Presença confirmada com sucesso! Os detalhes do agendamento foram enviados para o seu e-mail."
@@ -387,7 +461,7 @@ export default function CandidateBookingClient({
                 ) : isAlreadyBooked ? (
                   candidate.testSlot === selectedSlot ? (
                     <>
-                      <Check size={16} />
+                      <Check size={16} className="text-emerald-500" />
                       <span>{isPt ? "Data Confirmada" : "Slot Confirmed"}</span>
                     </>
                   ) : (
@@ -416,7 +490,7 @@ export default function CandidateBookingClient({
                   href={mapsUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-[0.7rem] text-cyan-400 hover:underline"
+                  className="inline-flex items-center gap-1 text-[0.7rem] text-sky-400 hover:underline"
                 >
                   <MapPin size={12} />
                   <span>{isPt ? "Ver no Mapa" : "View Map"}</span>
@@ -429,7 +503,7 @@ export default function CandidateBookingClient({
                   href={`https://wa.me/${siteContact.whatsappNumber}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-sky-400 hover:underline inline-flex items-center gap-1 font-medium"
+                  className="text-emerald-400 hover:text-emerald-300 hover:underline inline-flex items-center gap-1 font-medium"
                 >
                   <Phone size={11} />
                   <span>WhatsApp: +258 84 287 0793</span>
