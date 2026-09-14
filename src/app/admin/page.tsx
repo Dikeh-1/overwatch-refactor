@@ -30,7 +30,7 @@ import {
   CalendarCheck,
   Clock,
   Sparkles,
-  MapPin,
+  Globe,
 } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 import TechGrid from "@/components/ui/TechGrid";
@@ -46,16 +46,27 @@ import {
 import { siteContact } from "@/lib/site-config";
 import "./admin.css";
 
-const stageLabels: Record<string, string> = {
-  new: "New",
-  reviewing: "In review",
-  shortlisted: "Shortlisted",
-  interview: "Interview",
-  hired: "Hired",
-  rejected: "Not selected",
+const stageLabels: Record<"en" | "pt", Record<string, string>> = {
+  en: {
+    new: "New",
+    reviewing: "In review",
+    shortlisted: "Shortlisted",
+    interview: "Interview",
+    hired: "Hired",
+    rejected: "Not selected",
+  },
+  pt: {
+    new: "Novo",
+    reviewing: "Em análise",
+    shortlisted: "Pré-selecionado",
+    interview: "Entrevista",
+    hired: "Contratado",
+    rejected: "Não selecionado",
+  },
 };
 
 export default function AdminPage() {
+  const [lang, setLang] = useState<"en" | "pt">("en");
   const [auth, setAuth] = useState<boolean | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -69,6 +80,21 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [updated, setUpdated] = useState("");
+
+  // Load language preference
+  useEffect(() => {
+    const saved = localStorage.getItem("overwatch_admin_lang");
+    if (saved === "pt" || saved === "en") {
+      setLang(saved);
+    }
+  }, []);
+
+  const handleSetLang = (l: "en" | "pt") => {
+    setLang(l);
+    localStorage.setItem("overwatch_admin_lang", l);
+  };
+
+  const t = (enStr: string, ptStr: string) => (lang === "en" ? enStr : ptStr);
 
   // ─── Convocatórias (Broadcast) State ──────────────────────────────
   const [presetFilter, setPresetFilter] = useState<
@@ -90,7 +116,8 @@ Por favor, escolha uma das seguintes opções de data e confirme a sua presença
 Após a sua selecção, a sua vaga fica automaticamente confirmada no nosso sistema.
 
 Atenciosamente,
-Equipa de Recrutamento Overwatch Moçambique`
+Equipa de Recrutamento
+Overwatch Moçambique`
   );
   const [broadcastSlots] = useState<string[]>([...DEFAULT_TEST_SLOTS]);
   const [sendingBroadcast, setSendingBroadcast] = useState(false);
@@ -204,8 +231,9 @@ Equipa de Recrutamento Overwatch Moçambique`
   }
 
   const roleLabel = (id: string) =>
-    roles.find((r) => r.id === id)?.en ||
-    roles.find((r) => r.id === id)?.pt ||
+    (lang === "pt"
+      ? roles.find((r) => r.id === id)?.pt || roles.find((r) => r.id === id)?.en
+      : roles.find((r) => r.id === id)?.en || roles.find((r) => r.id === id)?.pt) ||
     id;
 
   const filtered = applications.filter(
@@ -272,7 +300,7 @@ Equipa de Recrutamento Overwatch Moçambique`
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Falha ao enviar convocatórias.");
+        throw new Error(data.error || "Failed to dispatch test invitations.");
       }
 
       setBroadcastResult({
@@ -303,7 +331,7 @@ Equipa de Recrutamento Overwatch Moçambique`
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Falha ao enviar convocatória.");
+      if (!res.ok) throw new Error(data.error || "Failed to dispatch invitation.");
       await load();
     } catch (err) {
       setError((err as Error).message);
@@ -366,20 +394,20 @@ Equipa de Recrutamento Overwatch Moçambique`
       slotFilter ? a.testSlot === slotFilter : Boolean(a.testSlot),
     );
     if (!targetApps.length) {
-      alert("Nenhum candidato com teste confirmado para este filtro.");
+      alert(t("No confirmed candidates found for this slot filter.", "Nenhum candidato com teste confirmado para este filtro."));
       return;
     }
 
     const headers = [
-      "Turno / Data do Teste",
-      "Nome Completo",
-      "WhatsApp",
-      "Email",
-      "Genero",
-      "Experiencia CCTV",
-      "12a Classe Concluida",
-      "Data de Confirmacao",
-      "Assinatura de Presenca",
+      t("Test Slot / Date", "Turno / Data do Teste"),
+      t("Full Name", "Nome Completo"),
+      t("WhatsApp", "WhatsApp"),
+      t("Email", "Email"),
+      t("Gender", "Género"),
+      t("CCTV Experience", "Experiência CCTV"),
+      t("12th Grade Completed", "12.ª Classe Concluída"),
+      t("Confirmation Date", "Data de Confirmação"),
+      t("Attendance Signature", "Assinatura de Presença"),
     ];
 
     const rows = targetApps.map((a) => [
@@ -387,11 +415,11 @@ Equipa de Recrutamento Overwatch Moçambique`
       `"${a.name.replace(/"/g, '""')}"`,
       `"${a.whatsapp}"`,
       `"${a.email}"`,
-      `"${a.sex === "female" ? "Feminino" : "Masculino"}"`,
-      `"${a.experience === "yes" ? "Sim" : "Nao"}"`,
-      `"${a.grade12 === "yes" ? "Sim" : "Nao"}"`,
-      `"${a.testBookedAt ? new Date(a.testBookedAt).toLocaleString("pt-MZ") : ""}"`,
-      `""`, // Blank signature cell for print-out sheet
+      `"${a.sex === "female" ? t("Female", "Feminino") : t("Male", "Masculino")}"`,
+      `"${a.experience === "yes" ? t("Yes", "Sim") : t("No", "Não")}"`,
+      `"${a.grade12 === "yes" ? t("Yes", "Sim") : t("No", "Não")}"`,
+      `"${a.testBookedAt ? new Date(a.testBookedAt).toLocaleString(lang === "pt" ? "pt-MZ" : "en-GB") : ""}"`,
+      `""`, // Blank signature cell for physical sign-off sheet
     ]);
 
     const csvContent =
@@ -401,7 +429,7 @@ Equipa de Recrutamento Overwatch Moçambique`
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `overwatch-lista-presencas-teste-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `overwatch-attendance-roster-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -412,7 +440,7 @@ Equipa de Recrutamento Overwatch Moçambique`
       <main className="min-h-screen flex items-center justify-center bg-[#090d16] text-white">
         <div className="flex items-center gap-3 text-sm text-white/70">
           <RefreshCw className="animate-spin text-white/80" size={20} />
-          <span>Connecting to Overwatch recruitment workspace…</span>
+          <span>{t("Connecting to Overwatch recruitment workspace…", "A ligar ao portal de recrutamento Overwatch…")}</span>
         </div>
       </main>
     );
@@ -435,26 +463,57 @@ Equipa de Recrutamento Overwatch Moçambique`
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.06),transparent_40%),radial-gradient(circle_at_80%_80%,rgba(255,255,255,0.03),transparent_40%)] pointer-events-none z-0" />
 
         <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-[#121827]/95 p-8 shadow-[0_32px_80px_rgba(0,0,0,0.6)] backdrop-blur-md">
+          {/* Top Language Toggle */}
+          <div className="flex justify-end mb-2">
+            <div className="flex items-center rounded-xl bg-white/[0.06] border border-white/10 p-0.5 text-xs">
+              <button
+                type="button"
+                onClick={() => handleSetLang("en")}
+                className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                  lang === "en"
+                    ? "bg-white text-[#090d16] shadow-sm font-bold"
+                    : "text-white/60 hover:text-white"
+                }`}
+              >
+                🇬🇧 English
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetLang("pt")}
+                className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                  lang === "pt"
+                    ? "bg-white text-[#090d16] shadow-sm font-bold"
+                    : "text-white/60 hover:text-white"
+                }`}
+              >
+                🇲🇿 Português
+              </button>
+            </div>
+          </div>
+
           <div className="text-center pb-6 border-b border-white/10">
             <div className="flex justify-center mb-4">
               <Logo size="md" variant="light" />
             </div>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.06] px-3 py-1 text-[0.68rem] font-bold uppercase tracking-wider text-white/80">
               <ShieldCheck size={13} />
-              Talent Operations Portal
+              {t("Talent Operations Portal", "Portal de Operações de Recrutamento")}
             </span>
             <h1 className="mt-3 text-xl font-bold text-white tracking-tight">
-              Recruitment Workspace
+              {t("Recruitment Workspace", "Área de Recrutamento")}
             </h1>
             <p className="mt-1 text-xs text-white/60">
-              Sign in with your administrator key to review applications and manage role availability.
+              {t(
+                "Sign in with your administrator key to review applications and manage candidates.",
+                "Inicie sessão com a sua chave de administração para rever candidaturas e gerir vagas.",
+              )}
             </p>
           </div>
 
           <form onSubmit={signIn} className="mt-6 space-y-4">
             <label className="block space-y-1.5 text-left">
               <span className="text-xs font-semibold text-white/80">
-                Admin password
+                {t("Admin password", "Palavra-passe de administrador")}
               </span>
               <div className="relative">
                 <input
@@ -462,7 +521,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                   type="password"
                   required
                   autoComplete="current-password"
-                  placeholder="Enter private administrator password"
+                  placeholder={t("Enter administrator password", "Introduza a palavra-passe")}
                   className="w-full rounded-xl border border-white/15 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/15 transition-colors"
                 />
               </div>
@@ -483,20 +542,20 @@ Equipa de Recrutamento Overwatch Moçambique`
               className="w-full flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-3.5 text-sm font-semibold text-[#090d16] shadow-lg shadow-black/30 transition-all hover:bg-white/90 active:scale-[0.99] disabled:opacity-50 cursor-pointer"
             >
               {busy ? <RefreshCw className="animate-spin" size={16} /> : null}
-              <span>{busy ? "Authenticating…" : "Enter Workspace"}</span>
+              <span>{busy ? t("Authenticating…", "A autenticar…") : t("Enter Workspace", "Entrar no Portal")}</span>
               {!busy && <ArrowRight size={16} />}
             </button>
 
             <div className="pt-2 flex items-center justify-between text-xs text-white/50">
               <span className="flex items-center gap-1">
-                <LockKeyhole size={12} /> Confidential access
+                <LockKeyhole size={12} /> {t("Confidential access", "Acesso reservado")}
               </span>
               <Link
                 href="/en/careers"
                 target="_blank"
                 className="flex items-center gap-1 text-white/70 hover:text-white transition-colors"
               >
-                View Careers Page <ExternalLink size={12} />
+                {t("View Careers Page", "Ver Página de Carreiras")} <ExternalLink size={12} />
               </Link>
             </div>
           </form>
@@ -520,20 +579,59 @@ Equipa de Recrutamento Overwatch Moçambique`
 
       {/* ─── SIDEBAR ──────────────────────────────────────────────── */}
       <aside className="w-full lg:w-64 shrink-0 border-b lg:border-b-0 lg:border-r border-white/10 bg-[#0e1320]/95 p-5 lg:p-6 flex flex-col z-20 backdrop-blur-md lg:sticky lg:top-0 lg:h-screen">
-        <div className="pb-6 border-b border-white/10">
-          <Link href="/admin" className="block">
-            <Logo size="sm" variant="light" />
-          </Link>
-          <div className="mt-2.5 flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
-            <span className="text-[0.68rem] font-bold uppercase tracking-widest text-white/60">
-              Recruitment Portal
-            </span>
+        <div className="pb-5 border-b border-white/10">
+          <div className="flex items-center justify-between">
+            <Link href="/admin" className="block">
+              <Logo size="sm" variant="light" />
+            </Link>
+          </div>
+
+          <div className="mt-2.5 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+              <span className="text-[0.68rem] font-bold uppercase tracking-widest text-white/60">
+                {t("Talent Operations", "Operações de Recrutamento")}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Language Switcher in Sidebar */}
+        <div className="mt-4 pt-1">
+          <div className="flex items-center justify-between rounded-xl bg-white/[0.04] border border-white/10 p-1 text-xs">
+            <div className="flex items-center gap-1.5 pl-2 text-white/50 text-[0.68rem] font-semibold">
+              <Globe size={12} />
+              <span>{t("Language:", "Idioma:")}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => handleSetLang("en")}
+                className={`px-2.5 py-1 rounded-lg text-[0.7rem] font-semibold transition-all cursor-pointer ${
+                  lang === "en"
+                    ? "bg-white text-[#090d16] shadow-sm font-bold"
+                    : "text-white/60 hover:text-white"
+                }`}
+              >
+                🇬🇧 EN
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetLang("pt")}
+                className={`px-2.5 py-1 rounded-lg text-[0.7rem] font-semibold transition-all cursor-pointer ${
+                  lang === "pt"
+                    ? "bg-white text-[#090d16] shadow-sm font-bold"
+                    : "text-white/60 hover:text-white"
+                }`}
+              >
+                🇲🇿 PT
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Navigation Tabs */}
-        <nav className="mt-6 space-y-1.5">
+        <nav className="mt-5 space-y-1.5">
           {/* Applications Tab */}
           <button
             onClick={() => setView("applications")}
@@ -545,7 +643,7 @@ Equipa de Recrutamento Overwatch Moçambique`
           >
             <div className="flex items-center gap-2.5">
               <LayoutDashboard size={17} />
-              <span>Applications</span>
+              <span>{t("Applications", "Candidaturas")}</span>
             </div>
             <span
               className={`rounded-full px-2 py-0.5 text-[0.65rem] font-bold ${
@@ -558,7 +656,7 @@ Equipa de Recrutamento Overwatch Moçambique`
             </span>
           </button>
 
-          {/* Convocatórias (Bulk Invite) Tab */}
+          {/* Convocatórias Tab */}
           <button
             onClick={() => setView("broadcast")}
             className={`w-full flex items-center justify-between gap-3 rounded-xl px-3.5 py-3 text-xs font-semibold transition-all cursor-pointer ${
@@ -569,10 +667,10 @@ Equipa de Recrutamento Overwatch Moçambique`
           >
             <div className="flex items-center gap-2.5">
               <Mail size={17} className="text-emerald-400" />
-              <span>Convocatórias</span>
+              <span>{t("Convocations", "Convocatórias")}</span>
             </div>
             <span className="rounded-full bg-emerald-500/30 text-emerald-300 px-2 py-0.5 text-[0.65rem] font-bold">
-              {targetCount} Alvo
+              {targetCount} {t("Target", "Alvo")}
             </span>
           </button>
 
@@ -587,10 +685,10 @@ Equipa de Recrutamento Overwatch Moçambique`
           >
             <div className="flex items-center gap-2.5">
               <Calendar size={17} className="text-cyan-400" />
-              <span>Agenda de Testes</span>
+              <span>{t("Test Schedule", "Agenda de Testes")}</span>
             </div>
             <span className="rounded-full bg-cyan-500/20 text-cyan-300 px-2 py-0.5 text-[0.65rem] font-bold">
-              {confirmedCount} Confirmados
+              {confirmedCount} {t("Booked", "Confirmados")}
             </span>
           </button>
 
@@ -605,10 +703,10 @@ Equipa de Recrutamento Overwatch Moçambique`
           >
             <div className="flex items-center gap-2.5">
               <SlidersHorizontal size={17} />
-              <span>Manage Roles</span>
+              <span>{t("Manage Roles", "Gestão de Vagas")}</span>
             </div>
             <span className="text-[0.65rem] font-mono text-emerald-400">
-              {roles.filter((r) => r.open).length} open
+              {roles.filter((r) => r.open).length} {t("open", "abertas")}
             </span>
           </button>
         </nav>
@@ -621,7 +719,7 @@ Equipa de Recrutamento Overwatch Moçambique`
             rel="noreferrer"
             className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-xs text-white/70 hover:text-white hover:border-white/25 transition-all"
           >
-            <span>View live careers page</span>
+            <span>{t("View live careers page", "Ver página de carreiras")}</span>
             <ArrowUpRight size={14} />
           </a>
 
@@ -633,13 +731,13 @@ Equipa de Recrutamento Overwatch Moçambique`
                 setApplications([]);
                 setSelected(null);
               } catch {
-                setError("Sign out failed");
+                setError(t("Sign out failed", "Falha ao terminar sessão"));
               }
             }}
             className="w-full flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
           >
             <LogOut size={15} />
-            <span>Sign out</span>
+            <span>{t("Sign out", "Terminar sessão")}</span>
           </button>
         </div>
       </aside>
@@ -654,33 +752,61 @@ Equipa de Recrutamento Overwatch Moçambique`
               <span>/</span>
               <span className="text-white/90 capitalize">
                 {view === "roles"
-                  ? "Manage Roles"
+                  ? t("Manage Roles", "Gestão de Vagas")
                   : view === "broadcast"
-                    ? "Convocatórias de Teste"
+                    ? t("Test Convocations", "Convocatórias de Teste")
                     : view === "schedule"
-                      ? "Agenda de Testes Presenciais"
-                      : "Candidate Applications"}
+                      ? t("Selection Test Schedule", "Agenda de Testes Presenciais")
+                      : t("Applications Pipeline", "Pipeline de Candidaturas")}
               </span>
             </div>
             <h1 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
               {view === "roles"
-                ? "Role Availability"
+                ? t("Role Availability", "Disponibilidade de Vagas")
                 : view === "broadcast"
-                  ? "Envio de Convocatórias em Massa"
+                  ? t("Bulk Test Convocations", "Envio de Convocatórias em Massa")
                   : view === "schedule"
-                    ? "Agenda de Testes Presenciais"
-                    : "Recruitment Pipeline"}
+                    ? t("Selection Test Attendance Roster", "Agenda de Testes Presenciais")
+                    : t("Candidate Recruitment Pipeline", "Pipeline de Recrutamento")}
             </h1>
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Language Switcher in Header */}
+            <div className="flex items-center rounded-xl bg-white/[0.04] border border-white/10 p-1 text-xs">
+              <button
+                type="button"
+                onClick={() => handleSetLang("en")}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  lang === "en"
+                    ? "bg-white text-[#090d16] font-bold shadow-sm"
+                    : "text-white/60 hover:text-white"
+                }`}
+              >
+                <span>🇬🇧</span>
+                <span>English</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetLang("pt")}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  lang === "pt"
+                    ? "bg-white text-[#090d16] font-bold shadow-sm"
+                    : "text-white/60 hover:text-white"
+                }`}
+              >
+                <span>🇲🇿</span>
+                <span>Português</span>
+              </button>
+            </div>
+
             <button
               onClick={() => void load()}
               aria-label="Refresh data"
               className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2 text-xs font-semibold text-white/80 hover:bg-white/[0.08] hover:text-white transition-colors cursor-pointer"
             >
               <RefreshCw size={14} className={busy ? "animate-spin" : ""} />
-              <span>{updated ? `Updated ${updated}` : "Refresh"}</span>
+              <span>{updated ? `${t("Updated", "Atualizado às")} ${updated}` : t("Refresh", "Atualizar")}</span>
             </button>
 
             {view === "applications" && (
@@ -690,7 +816,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                 className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-bold text-[#090d16] shadow-sm hover:bg-white/90 disabled:opacity-50 cursor-pointer transition-transform hover:-translate-y-0.5"
               >
                 <Download size={14} />
-                <span>Export CSV</span>
+                <span>{t("Export CSV", "Exportar CSV")}</span>
               </button>
             )}
 
@@ -701,7 +827,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                 className="flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-[#090d16] shadow-sm hover:bg-emerald-400 disabled:opacity-50 cursor-pointer transition-transform hover:-translate-y-0.5"
               >
                 <Download size={14} />
-                <span>Exportar Lista de Presenças (CSV)</span>
+                <span>{t("Export Attendance Sheet (CSV)", "Exportar Lista de Presenças (CSV)")}</span>
               </button>
             )}
           </div>
@@ -720,53 +846,53 @@ Equipa de Recrutamento Overwatch Moçambique`
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="rounded-2xl border border-white/10 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between text-xs font-semibold text-white/60">
-              <span>Total Applicants</span>
+              <span>{t("Total Applicants", "Total de Candidatos")}</span>
               <Users size={16} className="text-white/70" />
             </div>
             <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-white">
               {applications.length}
             </strong>
             <span className="text-[0.7rem] text-white/40">
-              All registered candidates
+              {t("All registered candidates", "Todos os candidatos inscritos")}
             </span>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between text-xs font-semibold text-white/60">
-              <span>Elegíveis para Teste</span>
+              <span>{t("Eligible for Selection Test", "Elegíveis para Teste")}</span>
               <Sparkles size={16} className="text-emerald-400" />
             </div>
             <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-emerald-400">
               {targetCount}
             </strong>
             <span className="text-[0.7rem] text-white/40">
-              Mulheres + Homens c/ Exp.
+              {t("Women + Men w/ CCTV Exp.", "Mulheres + Homens c/ Exp.")}
             </span>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between text-xs font-semibold text-white/60">
-              <span>Testes Confirmados</span>
+              <span>{t("Confirmed Tests", "Testes Confirmados")}</span>
               <CalendarCheck size={16} className="text-cyan-400" />
             </div>
             <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-cyan-400">
               {confirmedCount}
             </strong>
             <span className="text-[0.7rem] text-white/40">
-              Presença marcada pelo candidato
+              {t("Date selected by candidate", "Presença marcada pelo candidato")}
             </span>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between text-xs font-semibold text-white/60">
-              <span>Open Roles</span>
+              <span>{t("Open Roles", "Vagas Abertas")}</span>
               <UnlockKeyhole size={16} className="text-white/70" />
             </div>
             <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-white">
               {roles.filter((r) => r.open).length}
             </strong>
             <span className="text-[0.7rem] text-white/40">
-              Of {roles.length} total roles
+              {t(`Of ${roles.length} total roles`, `De ${roles.length} vagas no total`)}
             </span>
           </div>
         </div>
@@ -777,10 +903,13 @@ Equipa de Recrutamento Overwatch Moçambique`
             <div className="rounded-2xl border border-white/10 bg-[#121827]/95 p-6 shadow-sm">
               <div className="mb-6">
                 <h2 className="text-lg font-bold text-white">
-                  Public Role Availability
+                  {t("Public Role Availability", "Disponibilidade Pública das Vagas")}
                 </h2>
                 <p className="mt-1 text-xs text-white/60">
-                  Toggle roles open or closed. Locked roles will show a padlock icon on the careers page and prevent submissions.
+                  {t(
+                    "Toggle roles open or closed. Locked roles will show a padlock icon on the careers page and prevent submissions.",
+                    "Abra ou tranque vagas. Vagas trancadas mostrarão um cadeado na página de carreiras e impedirão candidaturas.",
+                  )}
                 </p>
               </div>
 
@@ -806,9 +935,11 @@ Equipa de Recrutamento Overwatch Moçambique`
                       </div>
                       <div>
                         <h3 className="text-sm font-semibold text-white">
-                          {r.en}
+                          {lang === "pt" ? r.pt : r.en}
                         </h3>
-                        <p className="text-xs text-white/50">{r.pt}</p>
+                        <p className="text-xs text-white/50">
+                          {lang === "pt" ? r.en : r.pt}
+                        </p>
                       </div>
                     </div>
 
@@ -818,7 +949,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                           r.open ? "text-emerald-400" : "text-white/40"
                         }`}
                       >
-                        {r.open ? "Accepting applications" : "Locked / Closed"}
+                        {r.open ? t("Accepting applications", "A receber candidaturas") : t("Locked / Closed", "Trancada / Fechada")}
                       </span>
 
                       <button
@@ -848,8 +979,11 @@ Equipa de Recrutamento Overwatch Moçambique`
               </div>
 
               <div className="mt-6 rounded-xl border border-white/15 bg-white/[0.04] p-4 text-xs text-white/80">
-                <span className="font-semibold text-white">Live synchronization:</span>{" "}
-                Changes save instantly to database and sync to the live careers page within seconds.
+                <span className="font-semibold text-white">{t("Live synchronization:", "Sincronização em tempo real:")}</span>{" "}
+                {t(
+                  "Changes save instantly to database and sync to the live careers page within seconds.",
+                  "As alterações guardam instantaneamente na base de dados e reflectem-se na página de carreiras em segundos.",
+                )}
               </div>
             </div>
           </section>
@@ -864,10 +998,13 @@ Equipa de Recrutamento Overwatch Moçambique`
                   <CheckCircle2 size={24} className="text-emerald-400 shrink-0" />
                   <div>
                     <h4 className="text-sm font-bold text-white">
-                      Convocatórias enviadas com sucesso!
+                      {t("Convocations sent successfully!", "Convocatórias enviadas com sucesso!")}
                     </h4>
                     <p className="text-xs text-emerald-300 mt-0.5">
-                      {broadcastResult.count} e-mails enviados. {broadcastResult.failed > 0 ? `(${broadcastResult.failed} falharam)` : "Todos os candidatos foram notificados."}
+                      {broadcastResult.count} {t("emails dispatched.", "e-mails enviados.")}{" "}
+                      {broadcastResult.failed > 0
+                        ? `(${broadcastResult.failed} ${t("failed", "falharam")})`
+                        : t("All candidates notified.", "Todos os candidatos foram notificados.")}
                     </p>
                   </div>
                 </div>
@@ -886,14 +1023,17 @@ Equipa de Recrutamento Overwatch Moçambique`
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <h2 className="text-lg font-bold text-white flex items-center gap-2">
                     <Sparkles size={18} className="text-emerald-400" />
-                    <span>Selecção do Público-Alvo</span>
+                    <span>{t("Target Audience Selection", "Selecção do Público-Alvo")}</span>
                   </h2>
                   <span className="text-xs text-white/50">
-                    {broadcastAudience.length} candidatos elegíveis · {selectedCandidateIds.length} selecionados
+                    {broadcastAudience.length} {t("eligible candidates", "candidatos elegíveis")} · {selectedCandidateIds.length} {t("selected", "selecionados")}
                   </span>
                 </div>
                 <p className="mt-1 text-xs text-white/60">
-                  Filtre os candidatos com base nos critérios acordados (Mulheres + Homens com experiência CCTV prévia).
+                  {t(
+                    "Filter candidates based on criteria: All Women + Men with prior CCTV experience.",
+                    "Filtre os candidatos com base nos critérios acordados (Mulheres + Homens com experiência CCTV prévia).",
+                  )}
                 </p>
               </div>
 
@@ -908,7 +1048,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                       : "bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white border border-white/10"
                   }`}
                 >
-                  🎯 Mulheres + Homens c/ Exp. CCTV (Critério Principal)
+                  🎯 {t("Main Criterion: Women + Men w/ CCTV Exp.", "Critério Principal: Mulheres + Homens c/ Exp. CCTV")}
                 </button>
 
                 <button
@@ -920,7 +1060,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                       : "bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white border border-white/10"
                   }`}
                 >
-                  Todas as Mulheres ({applications.filter((a) => a.sex === "female").length})
+                  {t("All Women", "Todas as Mulheres")} ({applications.filter((a) => a.sex === "female").length})
                 </button>
 
                 <button
@@ -932,7 +1072,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                       : "bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white border border-white/10"
                   }`}
                 >
-                  Homens c/ Experiência CCTV ({applications.filter((a) => a.sex === "male" && a.experience === "yes").length})
+                  {t("Men w/ CCTV Experience", "Homens c/ Exp. CCTV")} ({applications.filter((a) => a.sex === "male" && a.experience === "yes").length})
                 </button>
 
                 <button
@@ -944,7 +1084,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                       : "bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white border border-white/10"
                   }`}
                 >
-                  Todas Candidaturas CCO ({applications.filter((a) => a.role === "cctv").length})
+                  {t("All CCTV Role Applicants", "Todas Candidaturas CCO")} ({applications.filter((a) => a.role === "cctv").length})
                 </button>
 
                 <button
@@ -956,7 +1096,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                       : "bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white border border-white/10"
                   }`}
                 >
-                  Todos ({applications.length})
+                  {t("All Candidates", "Todos")} ({applications.length})
                 </button>
               </div>
 
@@ -973,11 +1113,11 @@ Equipa de Recrutamento Overwatch Moçambique`
                       onChange={toggleSelectAllBroadcast}
                       className="rounded border-white/20 bg-white/10 text-emerald-500 focus:ring-0 cursor-pointer h-4 w-4"
                     />
-                    <span>Selecionar Todos ({broadcastAudience.length})</span>
+                    <span>{t("Select All", "Selecionar Todos")} ({broadcastAudience.length})</span>
                   </label>
 
-                  <span className="text-white/40">
-                    Clique nas caixas para incluir ou desmarcar candidatos
+                  <span className="text-white/40 text-[0.7rem]">
+                    {t("Check or uncheck boxes to select recipients", "Clique nas caixas para incluir ou desmarcar candidatos")}
                   </span>
                 </div>
 
@@ -1013,7 +1153,7 @@ Equipa de Recrutamento Overwatch Moçambique`
 
                         <div className="flex items-center gap-3">
                           <span className="capitalize px-2 py-0.5 rounded text-[0.68rem] bg-white/5 text-white/70">
-                            {a.sex}
+                            {a.sex === "female" ? t("Female", "Feminino") : t("Male", "Masculino")}
                           </span>
                           <span
                             className={`px-2 py-0.5 rounded text-[0.68rem] font-medium ${
@@ -1022,27 +1162,27 @@ Equipa de Recrutamento Overwatch Moçambique`
                                 : "bg-white/5 text-white/50"
                             }`}
                           >
-                            Exp: {a.experience === "yes" ? "Sim" : "Não"}
+                            {t("Exp: ", "Exp: ")}{a.experience === "yes" ? t("Yes", "Sim") : t("No", "Não")}
                           </span>
 
                           {hasBooked ? (
                             <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                              Agendado: {a.testSlot?.split("–")[0]}
+                              {t("Booked:", "Agendado:")} {a.testSlot?.split("–")[0]}
                             </span>
                           ) : isAlreadyInvited ? (
                             <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                              Convocado
+                              {t("Invited", "Convocado")}
                             </span>
                           ) : (
                             <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] text-white/40 bg-white/5">
-                              Não Convocado
+                              {t("Not Invited", "Não Convocado")}
                             </span>
                           )}
 
                           <button
                             type="button"
                             onClick={() => copyBookingLink(a.id)}
-                            title="Copiar link pessoal do candidato"
+                            title={t("Copy candidate personal booking link", "Copiar link pessoal do candidato")}
                             className="p-1 text-white/50 hover:text-white transition-colors"
                           >
                             {copiedLinkId === a.id ? (
@@ -1066,7 +1206,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                 <div className="flex items-center justify-between">
                   <h3 className="text-base font-bold text-white flex items-center gap-2">
                     <FileText size={17} className="text-emerald-400" />
-                    <span>Modelo da Convocatória (E-mail)</span>
+                    <span>{t("Convocation Template (Email)", "Modelo da Convocatória (E-mail)")}</span>
                   </h3>
                   <div className="flex items-center gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/10 text-xs">
                     <button
@@ -1078,7 +1218,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                           : "text-white/60 hover:text-white"
                       }`}
                     >
-                      Editar
+                      {t("Edit", "Editar")}
                     </button>
                     <button
                       type="button"
@@ -1089,14 +1229,14 @@ Equipa de Recrutamento Overwatch Moçambique`
                           : "text-white/60 hover:text-white"
                       }`}
                     >
-                      Pré-visualizar
+                      {t("Preview", "Pré-visualizar")}
                     </button>
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-white/70">
-                    Assunto do E-mail:
+                    {t("Email Subject:", "Assunto do E-mail:")}
                   </label>
                   <input
                     type="text"
@@ -1109,24 +1249,30 @@ Equipa de Recrutamento Overwatch Moçambique`
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-semibold text-white/70">
-                      Corpo da Mensagem (Texto):
+                      {t("Message Body (Text):", "Corpo da Mensagem (Texto):")}
                     </label>
                     <span className="text-[0.68rem] text-white/40">
-                      Tags dinâmicas: {"{{name}}"}, {"{{booking_link}}"}
+                      {t("Dynamic tags: {{name}}, {{booking_link}}", "Tags dinâmicas: {{name}}, {{booking_link}}")}
                     </span>
                   </div>
                   <textarea
-                    rows={10}
+                    rows={11}
                     value={broadcastMessage}
                     onChange={(e) => setBroadcastMessage(e.target.value)}
                     className="w-full rounded-xl border border-white/10 bg-white/[0.04] p-4 text-xs font-mono text-white leading-relaxed focus:border-white/40 focus:outline-none"
                   />
+                  <p className="text-[0.68rem] text-white/40 italic">
+                    {t(
+                      "Note: Candidate message is in Portuguese as the job is in Maputo, Mozambique.",
+                      "Nota: A mensagem aos candidatos é em português pois a vaga é sediada em Maputo.",
+                    )}
+                  </p>
                 </div>
 
                 {/* Slots info */}
                 <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 space-y-2 text-xs">
                   <span className="font-semibold text-white/80 block">
-                    Opções de Turnos Incluídas no E-mail e Portal:
+                    {t("Test Slots Included in Email & Candidate Portal:", "Opções de Turnos Incluídas no E-mail e Portal:")}
                   </span>
                   <div className="space-y-1">
                     {broadcastSlots.map((s, idx) => (
@@ -1147,21 +1293,24 @@ Equipa de Recrutamento Overwatch Moçambique`
                 <div>
                   <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
                     <span className="text-xs font-bold uppercase tracking-wider text-white/50">
-                      Pré-visualização do E-mail para Candidato
+                      {t("Candidate Email Preview", "Pré-visualização do E-mail para Candidato")}
                     </span>
                     <span className="text-[0.68rem] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                      Design Overwatch Dark
+                      {t("Overwatch Design System", "Design Overwatch Dark")}
                     </span>
                   </div>
 
                   <div className="rounded-xl border border-white/15 bg-[#121827] p-5 space-y-4 text-xs">
+                    {/* Branded Logo Pill */}
                     <div className="text-center pb-3 border-b border-white/10">
-                      <div className="flex justify-center mb-2">
-                        <Logo size="sm" variant="light" />
+                      <div className="inline-block bg-white p-2 rounded-xl mb-2">
+                        <Logo size="sm" variant="dark" />
                       </div>
-                      <span className="text-[0.65rem] uppercase font-bold text-emerald-400 tracking-wider">
-                        Convocatória Oficial · Teste Presencial
-                      </span>
+                      <div>
+                        <span className="text-[0.65rem] uppercase font-bold text-emerald-400 tracking-wider">
+                          Convocatória Oficial · Teste Presencial
+                        </span>
+                      </div>
                     </div>
 
                     <div className="text-white/80 whitespace-pre-wrap font-sans text-xs leading-relaxed">
@@ -1173,7 +1322,7 @@ Equipa de Recrutamento Overwatch Moçambique`
 
                     <div className="rounded-xl bg-[#090d16] border border-white/10 p-3 space-y-2">
                       <span className="text-[0.68rem] font-bold text-white/50 uppercase">
-                        Opções de Data e Hora Disponíveis:
+                        {t("Available Date & Time Options:", "Opções de Data e Hora Disponíveis:")}
                       </span>
                       {broadcastSlots.map((s, idx) => (
                         <div
@@ -1191,8 +1340,10 @@ Equipa de Recrutamento Overwatch Moçambique`
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t border-white/10 text-center text-[0.65rem] text-white/50">
-                      {siteContact.address.pt} · WhatsApp: +258 84 287 0793
+                    <div className="pt-3 border-t border-white/10 text-center text-[0.65rem] text-white/50 space-y-1">
+                      <div className="font-semibold text-white/70">Overwatch Moçambique</div>
+                      <div>{siteContact.address.pt}</div>
+                      <div>WhatsApp: +258 84 287 0793 · Email: info@overwatchmoz.com</div>
                     </div>
                   </div>
                 </div>
@@ -1207,11 +1358,17 @@ Equipa de Recrutamento Overwatch Moçambique`
                   >
                     <Send size={16} />
                     <span>
-                      Enviar Convocatórias para {selectedCandidateIds.length} Candidatos
+                      {t(
+                        `Send Convocations to ${selectedCandidateIds.length} Candidates`,
+                        `Enviar Convocatórias para ${selectedCandidateIds.length} Candidatos`,
+                      )}
                     </span>
                   </button>
                   <p className="text-center text-[0.68rem] text-white/40 mt-2">
-                    Cada candidato receberá um link individual e exclusivo para escolher o seu dia com 1 clique.
+                    {t(
+                      "Each candidate will receive a unique personalized link to choose their test date with 1 click.",
+                      "Cada candidato receberá um link individual e exclusivo para escolher o seu dia com 1 clique.",
+                    )}
                   </p>
                 </div>
               </div>
@@ -1228,10 +1385,10 @@ Equipa de Recrutamento Overwatch Moçambique`
                       </div>
                       <div>
                         <h3 className="text-base font-bold text-white">
-                          Confirmar Envio em Massa
+                          {t("Confirm Bulk Dispatch", "Confirmar Envio em Massa")}
                         </h3>
                         <p className="text-xs text-white/60">
-                          Operação de recrutamento Overwatch
+                          {t("Overwatch Recruitment Operations", "Operação de recrutamento Overwatch")}
                         </p>
                       </div>
                     </div>
@@ -1245,19 +1402,32 @@ Equipa de Recrutamento Overwatch Moçambique`
 
                   <div className="space-y-3 text-xs text-white/80 bg-white/[0.03] p-4 rounded-xl border border-white/10">
                     <p>
-                      Está prestes a enviar e-mails de convocatória oficial para:
+                      {t(
+                        "You are about to send official test invitation emails to:",
+                        "Está prestes a enviar e-mails de convocatória oficial para:",
+                      )}
                     </p>
                     <div className="text-2xl font-bold text-emerald-400">
-                      {selectedCandidateIds.length} candidatos
+                      {selectedCandidateIds.length} {t("candidates", "candidatos")}
                     </div>
                     <ul className="list-disc pl-5 space-y-1 text-white/70">
-                      <li>Cada candidato terá um link personalizado.</li>
                       <li>
-                        A sua fase passará automaticamente para{" "}
-                        <strong className="text-white">Shortlisted</strong>.
+                        {t(
+                          "Each candidate receives an exclusive personal booking link.",
+                          "Cada candidato terá um link personalizado.",
+                        )}
                       </li>
                       <li>
-                        Ao escolherem o turno, a vaga fica registada na Agenda.
+                        {t(
+                          "Application stage automatically advances to Shortlisted.",
+                          "A sua fase passará automaticamente para Shortlisted.",
+                        )}
+                      </li>
+                      <li>
+                        {t(
+                          "When candidates pick a slot, it automatically books into the Test Schedule.",
+                          "Ao escolherem o turno, a vaga fica registada na Agenda.",
+                        )}
                       </li>
                     </ul>
                   </div>
@@ -1269,7 +1439,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                       disabled={sendingBroadcast}
                       className="flex-1 rounded-xl border border-white/10 bg-white/[0.05] py-3 text-xs font-semibold text-white hover:bg-white/[0.1] transition-colors cursor-pointer"
                     >
-                      Cancelar
+                      {t("Cancel", "Cancelar")}
                     </button>
 
                     <button
@@ -1281,10 +1451,10 @@ Equipa de Recrutamento Overwatch Moçambique`
                       {sendingBroadcast ? (
                         <>
                           <RefreshCw className="animate-spin" size={14} />
-                          <span>A enviar...</span>
+                          <span>{t("Sending...", "A enviar...")}</span>
                         </>
                       ) : (
-                        <span>Sim, Enviar Agora</span>
+                        <span>{t("Yes, Send Now", "Sim, Enviar Agora")}</span>
                       )}
                     </button>
                   </div>
@@ -1301,10 +1471,13 @@ Equipa de Recrutamento Overwatch Moçambique`
               <div>
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
                   <Calendar size={20} className="text-cyan-400" />
-                  <span>Escala de Presenças por Turno</span>
+                  <span>{t("Candidate Attendance Roster by Slot", "Escala de Presenças por Turno")}</span>
                 </h2>
                 <p className="mt-1 text-xs text-white/60">
-                  Acompanhe em tempo real os candidatos que confirmaram presença em cada dia do teste.
+                  {t(
+                    "Real-time view of candidates who confirmed their in-person selection test attendance.",
+                    "Acompanhe em tempo real os candidatos que confirmaram presença em cada dia do teste.",
+                  )}
                 </p>
               </div>
 
@@ -1315,7 +1488,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                 className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-[#090d16] hover:bg-white/90 disabled:opacity-40 transition-transform hover:-translate-y-0.5 cursor-pointer"
               >
                 <Download size={14} />
-                <span>Exportar Lista Completa para Teste (CSV)</span>
+                <span>{t("Export Complete Attendance Sheet (CSV)", "Exportar Lista Completa para Teste (CSV)")}</span>
               </button>
             </div>
 
@@ -1335,13 +1508,13 @@ Equipa de Recrutamento Overwatch Moçambique`
                     <div className="pb-4 border-b border-white/10 flex items-start justify-between">
                       <div>
                         <span className="text-[0.65rem] font-bold uppercase tracking-wider text-cyan-400">
-                          Turno de Teste
+                          {t("Test Slot", "Turno de Teste")}
                         </span>
                         <h3 className="text-sm font-bold text-white mt-0.5">
                           {slot}
                         </h3>
                         <span className="text-[0.68rem] text-white/40 flex items-center gap-1 mt-1">
-                          <Clock size={11} /> 10h00 às 11h30 (Chegada 09h45)
+                          <Clock size={11} /> {t("10:00 to 11:30 (Arrival 09:45)", "10h00 às 11h30 (Chegada 09h45)")}
                         </span>
                       </div>
 
@@ -1354,7 +1527,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                     <div className="flex-1 py-4 space-y-3 overflow-y-auto max-h-96">
                       {candidatesInSlot.length === 0 ? (
                         <div className="py-10 text-center text-xs text-white/40 italic">
-                          Ainda sem confirmações para este turno.
+                          {t("No confirmations for this slot yet.", "Ainda sem confirmações para este turno.")}
                         </div>
                       ) : (
                         candidatesInSlot.map((c) => (
@@ -1372,7 +1545,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                                 </span>
                               </div>
                               <span className="capitalize px-1.5 py-0.5 rounded text-[0.62rem] bg-white/10 text-white/70">
-                                {c.sex}
+                                {c.sex === "female" ? t("Female", "Feminino") : t("Male", "Masculino")}
                               </span>
                             </div>
 
@@ -1392,7 +1565,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                                 onClick={() => setSelected(c)}
                                 className="text-white/60 hover:text-white underline cursor-pointer"
                               >
-                                Ver Perfil / CV
+                                {t("View Profile / CV", "Ver Perfil / CV")}
                               </button>
                             </div>
                           </div>
@@ -1409,7 +1582,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                         className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] py-2 text-[0.7rem] font-semibold text-white/80 hover:bg-white/[0.08] hover:text-white disabled:opacity-30 transition-colors cursor-pointer"
                       >
                         <Download size={12} />
-                        <span>Exportar Roster Deste Dia</span>
+                        <span>{t("Export Day Roster (CSV)", "Exportar Roster Deste Dia")}</span>
                       </button>
                     </div>
                   </div>
@@ -1423,11 +1596,11 @@ Equipa de Recrutamento Overwatch Moçambique`
                 <div className="flex items-center gap-2">
                   <Clock size={16} className="text-amber-400" />
                   <h3 className="text-sm font-bold text-white">
-                    Candidatos Convocados a Aguardar Escolha de Data
+                    {t("Invited Candidates Awaiting Slot Selection", "Candidatos Convocados a Aguardar Escolha de Data")}
                   </h3>
                 </div>
                 <span className="text-xs font-semibold text-amber-400">
-                  {applications.filter((a) => a.invitedAt && !a.testSlot).length} pendentes
+                  {applications.filter((a) => a.invitedAt && !a.testSlot).length} {t("pending", "pendentes")}
                 </span>
               </div>
 
@@ -1457,7 +1630,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                       <button
                         type="button"
                         onClick={() => copyBookingLink(c.id)}
-                        title="Copiar link de marcação para enviar via WhatsApp"
+                        title={t("Copy personal booking link to send via WhatsApp", "Copiar link de marcação para enviar via WhatsApp")}
                         className="rounded-lg bg-white/5 border border-white/10 p-1.5 text-white/70 hover:text-white"
                       >
                         {copiedLinkId === c.id ? (
@@ -1485,7 +1658,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                 />
                 <input
                   aria-label="Search candidates"
-                  placeholder="Search name, email, WhatsApp, profession, cover letter…"
+                  placeholder={t("Search name, email, WhatsApp, profession, cover letter…", "Pesquisar nome, email, WhatsApp, profissão, carta…")}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2 pl-9 pr-3 text-xs text-white placeholder:text-white/40 focus:border-white/40 focus:outline-none transition-colors"
@@ -1498,10 +1671,10 @@ Equipa de Recrutamento Overwatch Moçambique`
                 onChange={(e) => setRoleFilter(e.target.value)}
                 className="rounded-xl border border-white/10 bg-[#121827] px-3 py-2 text-xs text-white focus:border-white/40 focus:outline-none cursor-pointer"
               >
-                <option value="all">All roles</option>
+                <option value="all">{t("All roles", "Todas as vagas")}</option>
                 {roles.map((r) => (
                   <option key={r.id} value={r.id}>
-                    {r.en}
+                    {lang === "pt" ? r.pt : r.en}
                   </option>
                 ))}
               </select>
@@ -1512,10 +1685,10 @@ Equipa de Recrutamento Overwatch Moçambique`
                 onChange={(e) => setStageFilter(e.target.value)}
                 className="rounded-xl border border-white/10 bg-[#121827] px-3 py-2 text-xs text-white focus:border-white/40 focus:outline-none cursor-pointer"
               >
-                <option value="all">All stages</option>
+                <option value="all">{t("All stages", "Todas as fases")}</option>
                 {stages.map((s) => (
                   <option key={s} value={s}>
-                    {stageLabels[s]}
+                    {stageLabels[lang][s]}
                   </option>
                 ))}
               </select>
@@ -1527,21 +1700,21 @@ Equipa de Recrutamento Overwatch Moçambique`
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="border-b border-white/10 bg-white/[0.02] text-white/60 uppercase font-semibold text-[0.68rem] tracking-wider">
-                      <th className="px-4 py-3.5">Candidate</th>
-                      <th className="px-4 py-3.5">Role</th>
-                      <th className="px-4 py-3.5">Status</th>
-                      <th className="px-4 py-3.5">Convocatória / Turno</th>
-                      <th className="px-4 py-3.5">WhatsApp</th>
-                      <th className="px-4 py-3.5">Cover Letter</th>
-                      <th className="px-4 py-3.5">12th Grade</th>
-                      <th className="px-4 py-3.5">Sex</th>
-                      <th className="px-4 py-3.5">AI User</th>
-                      <th className="px-4 py-3.5">CCTV Exp.</th>
-                      <th className="px-4 py-3.5">Last Profession</th>
-                      <th className="px-4 py-3.5">2D/2N Shifts</th>
-                      <th className="px-4 py-3.5">Date</th>
-                      <th className="px-4 py-3.5">CV</th>
-                      <th className="px-4 py-3.5 text-right">Actions</th>
+                      <th className="px-4 py-3.5">{t("Candidate", "Candidato")}</th>
+                      <th className="px-4 py-3.5">{t("Role", "Vaga")}</th>
+                      <th className="px-4 py-3.5">{t("Status", "Estado")}</th>
+                      <th className="px-4 py-3.5">{t("Convocation / Slot", "Convocatória / Turno")}</th>
+                      <th className="px-4 py-3.5">{t("WhatsApp", "WhatsApp")}</th>
+                      <th className="px-4 py-3.5">{t("Cover Letter", "Carta")}</th>
+                      <th className="px-4 py-3.5">{t("12th Grade", "12.ª Classe")}</th>
+                      <th className="px-4 py-3.5">{t("Sex", "Sexo")}</th>
+                      <th className="px-4 py-3.5">{t("AI User", "Usa IA")}</th>
+                      <th className="px-4 py-3.5">{t("CCTV Exp.", "Exp. CCTV")}</th>
+                      <th className="px-4 py-3.5">{t("Last Profession", "Última Profissão")}</th>
+                      <th className="px-4 py-3.5">{t("2D/2N Shifts", "Turnos 2D/2N")}</th>
+                      <th className="px-4 py-3.5">{t("Date", "Data")}</th>
+                      <th className="px-4 py-3.5">{t("CV", "CV")}</th>
+                      <th className="px-4 py-3.5 text-right">{t("Actions", "Ações")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
@@ -1606,7 +1779,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                           >
                             {stages.map((s) => (
                               <option key={s} value={s}>
-                                {stageLabels[s]}
+                                {stageLabels[lang][s]}
                               </option>
                             ))}
                           </select>
@@ -1621,7 +1794,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                             </span>
                           ) : a.invitedAt ? (
                             <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-500/30 px-2.5 py-0.5 text-[0.68rem] font-medium text-amber-300">
-                              <Clock size={11} /> Convocado
+                              <Clock size={11} /> {t("Invited", "Convocado")}
                             </span>
                           ) : (
                             <span className="text-white/30 text-[0.68rem]">—</span>
@@ -1652,32 +1825,32 @@ Equipa de Recrutamento Overwatch Moçambique`
                               {a.coverLetter}
                             </button>
                           ) : (
-                            <span className="text-white/30 italic">None</span>
+                            <span className="text-white/30 italic">{t("None", "Nenhuma")}</span>
                           )}
                         </td>
 
                         {/* Grade 12 */}
                         <td className="px-4 py-3 whitespace-nowrap">
                           {a.grade12 === "yes" ? (
-                            <span className="text-emerald-400">Yes</span>
+                            <span className="text-emerald-400">{t("Yes", "Sim")}</span>
                           ) : (
-                            <span className="text-white/40">No</span>
+                            <span className="text-white/40">{t("No", "Não")}</span>
                           )}
                         </td>
 
                         {/* Sex */}
                         <td className="px-4 py-3 whitespace-nowrap capitalize text-white/70">
-                          {a.sex}
+                          {a.sex === "female" ? t("Female", "Feminino") : t("Male", "Masculino")}
                         </td>
 
                         {/* Uses AI */}
                         <td className="px-4 py-3 whitespace-nowrap">
                           {a.ai === "yes" ? (
                             <span className="text-emerald-400 font-medium">
-                              Yes
+                              {t("Yes", "Sim")}
                             </span>
                           ) : (
-                            <span className="text-white/40">No</span>
+                            <span className="text-white/40">{t("No", "Não")}</span>
                           )}
                         </td>
 
@@ -1685,10 +1858,10 @@ Equipa de Recrutamento Overwatch Moçambique`
                         <td className="px-4 py-3 whitespace-nowrap">
                           {a.experience === "yes" ? (
                             <span className="text-emerald-400 font-medium">
-                              Yes
+                              {t("Yes", "Sim")}
                             </span>
                           ) : (
-                            <span className="text-white/40">No</span>
+                            <span className="text-white/40">{t("No", "Não")}</span>
                           )}
                         </td>
 
@@ -1701,16 +1874,16 @@ Equipa de Recrutamento Overwatch Moçambique`
                         <td className="px-4 py-3 whitespace-nowrap">
                           {a.shifts === "yes" ? (
                             <span className="text-emerald-400 font-medium">
-                              Available
+                              {t("Available", "Disponível")}
                             </span>
                           ) : (
-                            <span className="text-red-400">No</span>
+                            <span className="text-red-400">{t("No", "Não")}</span>
                           )}
                         </td>
 
                         {/* Date */}
                         <td className="px-4 py-3 whitespace-nowrap text-white/50">
-                          {new Date(a.createdAt).toLocaleDateString("en-GB")}
+                          {new Date(a.createdAt).toLocaleDateString(lang === "pt" ? "pt-MZ" : "en-GB")}
                         </td>
 
                         {/* CV View & Download */}
@@ -1720,15 +1893,15 @@ Equipa de Recrutamento Overwatch Moçambique`
                               href={`/api/admin/cv?id=${a.id}&inline=1`}
                               target="_blank"
                               rel="noreferrer"
-                              title="View attached CV"
+                              title={t("View attached CV", "Ver CV anexo")}
                               className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/[0.05] px-2 py-1 text-[0.7rem] font-medium text-white hover:bg-white/[0.1] hover:border-white/30 transition-colors"
                             >
                               <Eye size={12} />
-                              <span>View</span>
+                              <span>{t("View", "Ver")}</span>
                             </a>
                             <a
                               href={`/api/admin/cv?id=${a.id}`}
-                              title="Download CV"
+                              title={t("Download CV", "Descarregar CV")}
                               className="inline-flex items-center rounded-lg border border-white/15 bg-white/[0.05] p-1 text-white/60 hover:text-white hover:bg-white/[0.1] transition-colors"
                             >
                               <Download size={12} />
@@ -1742,7 +1915,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                             onClick={() => setSelected(a)}
                             className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/[0.05] px-2.5 py-1 text-[0.7rem] font-semibold text-white hover:bg-white/15 transition-all cursor-pointer"
                           >
-                            <span>Profile</span>
+                            <span>{t("Profile", "Perfil")}</span>
                             <ArrowUpRight size={12} />
                           </button>
                         </td>
@@ -1758,13 +1931,13 @@ Equipa de Recrutamento Overwatch Moçambique`
                   <Users size={32} className="mx-auto text-white/30 mb-3" />
                   <h3 className="text-sm font-semibold text-white">
                     {applications.length
-                      ? "No matching candidates"
-                      : "No applications submitted yet"}
+                      ? t("No matching candidates", "Nenhum candidato encontrado")
+                      : t("No applications submitted yet", "Ainda não foram submetidas candidaturas")}
                   </h3>
                   <p className="mt-1 text-xs text-white/50">
                     {applications.length
-                      ? "Try adjusting your search query or filters."
-                      : "New candidate submissions from the careers page will appear here instantly."}
+                      ? t("Try adjusting your search query or filters.", "Tente ajustar o termo de pesquisa ou os filtros.")
+                      : t("New candidate submissions from the careers page will appear here instantly.", "Novas candidaturas submetidas na página de carreiras aparecerão aqui instantaneamente.")}
                   </p>
                 </div>
               )}
@@ -1772,10 +1945,10 @@ Equipa de Recrutamento Overwatch Moçambique`
               {/* Table Footer */}
               <div className="flex items-center justify-between border-t border-white/10 bg-white/[0.02] px-4 py-3 text-[0.7rem] text-white/50">
                 <span>
-                  Showing {filtered.length} of {applications.length} applications
+                  {t("Showing", "A mostrar")} {filtered.length} {t("of", "de")} {applications.length} {t("applications", "candidaturas")}
                 </span>
                 <span className="hidden sm:inline">
-                  Scroll table horizontally for full candidate answers →
+                  {t("Scroll table horizontally for full candidate answers →", "Desloque a tabela horizontalmente para ver todas as respostas →")}
                 </span>
               </div>
             </div>
@@ -1797,7 +1970,7 @@ Equipa de Recrutamento Overwatch Moçambique`
             <div className="flex items-start justify-between border-b border-white/10 pb-5">
               <div>
                 <span className="text-[0.68rem] font-bold uppercase tracking-wider text-white/60">
-                  Candidate Profile
+                  {t("Candidate Profile", "Perfil do Candidato")}
                 </span>
                 <h2 className="mt-1 text-2xl font-bold text-white">
                   {current.name}
@@ -1817,7 +1990,7 @@ Equipa de Recrutamento Overwatch Moçambique`
             {/* Stage Selector */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-white/70">
-                Recruitment Stage:
+                {t("Recruitment Stage:", "Fase do Recrutamento:")}
               </label>
               <select
                 value={current.status}
@@ -1833,7 +2006,7 @@ Equipa de Recrutamento Overwatch Moçambique`
               >
                 {stages.map((s) => (
                   <option key={s} value={s}>
-                    {stageLabels[s]}
+                    {stageLabels[lang][s]}
                   </option>
                 ))}
               </select>
@@ -1844,19 +2017,19 @@ Equipa de Recrutamento Overwatch Moçambique`
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
                   <CalendarCheck size={14} />
-                  <span>Convocatória & Teste Presencial</span>
+                  <span>{t("Convocation & Selection Test", "Convocatória & Teste Presencial")}</span>
                 </span>
                 {current.testSlot ? (
                   <span className="text-[0.65rem] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">
-                    Confirmado
+                    {t("Confirmed", "Confirmado")}
                   </span>
                 ) : current.invitedAt ? (
                   <span className="text-[0.65rem] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">
-                    Convocado
+                    {t("Invited", "Convocado")}
                   </span>
                 ) : (
                   <span className="text-[0.65rem] text-white/40">
-                    Pendente
+                    {t("Pending", "Pendente")}
                   </span>
                 )}
               </div>
@@ -1864,30 +2037,30 @@ Equipa de Recrutamento Overwatch Moçambique`
               {current.testSlot ? (
                 <div className="rounded-xl bg-[#090d16]/80 p-3 border border-white/10 text-xs space-y-1">
                   <span className="text-white/50 text-[0.68rem] block">
-                    Data Confirmada:
+                    {t("Confirmed Date & Time:", "Data e Hora Confirmada:")}
                   </span>
                   <div className="text-white font-bold text-sm">
                     {current.testSlot}
                   </div>
                   {current.testBookedAt && (
                     <span className="text-[0.65rem] text-white/40 block">
-                      Marcado em: {new Date(current.testBookedAt).toLocaleString()}
+                      {t("Booked on:", "Marcado em:")} {new Date(current.testBookedAt).toLocaleString(lang === "pt" ? "pt-MZ" : "en-GB")}
                     </span>
                   )}
                 </div>
               ) : current.invitedAt ? (
                 <div className="rounded-xl bg-[#090d16]/80 p-3 border border-white/10 text-xs">
                   <span className="text-amber-300 font-medium block">
-                    Convocatória enviada por e-mail em{" "}
-                    {new Date(current.invitedAt).toLocaleDateString()}.
+                    {t("Invitation email sent on", "Convocatória enviada por e-mail em")}{" "}
+                    {new Date(current.invitedAt).toLocaleDateString(lang === "pt" ? "pt-MZ" : "en-GB")}.
                   </span>
                   <span className="text-[0.68rem] text-white/50 block mt-0.5">
-                    A aguardar que a candidata confirme a sua data de teste.
+                    {t("Awaiting candidate to select their preferred test date.", "A aguardar que a candidata confirme a sua data de teste.")}
                   </span>
                 </div>
               ) : (
                 <div className="text-xs text-white/60">
-                  Esta candidata ainda não recebeu a convocatória para o teste de selecção presencial.
+                  {t("This candidate has not yet received a selection test convocation.", "Esta candidata ainda não recebeu a convocatória para o teste de selecção presencial.")}
                 </div>
               )}
 
@@ -1901,12 +2074,12 @@ Equipa de Recrutamento Overwatch Moçambique`
                   {copiedLinkId === current.id ? (
                     <>
                       <Check size={13} className="text-emerald-400" />
-                      <span>Link Copiado!</span>
+                      <span>{t("Link Copied!", "Link Copiado!")}</span>
                     </>
                   ) : (
                     <>
                       <Copy size={13} />
-                      <span>Copiar Link</span>
+                      <span>{t("Copy Booking Link", "Copiar Link")}</span>
                     </>
                   )}
                 </button>
@@ -1918,7 +2091,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                   className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500 py-2 text-xs font-bold text-[#090d16] hover:bg-emerald-400 transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <Send size={13} />
-                  <span>{current.invitedAt ? "Reenviar E-mail" : "Enviar E-mail"}</span>
+                  <span>{current.invitedAt ? t("Resend Email", "Reenviar E-mail") : t("Send Email", "Enviar E-mail")}</span>
                 </button>
               </div>
             </div>
@@ -1927,12 +2100,12 @@ Equipa de Recrutamento Overwatch Moçambique`
             <div className="rounded-2xl border border-white/15 bg-white/[0.04] p-5 space-y-2">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white/90">
                 <FileText size={15} />
-                <span>Cover Letter / Carta de Apresentação</span>
+                <span>{t("Cover Letter", "Carta de Apresentação")}</span>
               </div>
               <p className="text-xs leading-relaxed text-white/80 whitespace-pre-wrap">
                 {current.coverLetter || (
                   <span className="italic text-white/40">
-                    No cover letter was submitted with this application.
+                    {t("No cover letter was submitted with this application.", "Nenhuma carta de apresentação foi submetida com esta candidatura.")}
                   </span>
                 )}
               </p>
@@ -1941,7 +2114,7 @@ Equipa de Recrutamento Overwatch Moçambique`
             {/* Candidate Answers Grid */}
             <div className="space-y-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-white/50">
-                Application Answers
+                {t("Application Answers", "Respostas da Candidatura")}
               </h3>
 
               <div className="grid grid-cols-2 gap-3 text-xs">
@@ -1969,58 +2142,58 @@ Equipa de Recrutamento Overwatch Moçambique`
                 </div>
 
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                  <span className="text-white/40 block text-[0.68rem]">12th Grade</span>
+                  <span className="text-white/40 block text-[0.68rem]">{t("12th Grade", "12.ª Classe")}</span>
                   <strong className="mt-1 block text-white capitalize">
-                    {current.grade12 === "yes" ? "Completed" : "Not completed"}
+                    {current.grade12 === "yes" ? t("Completed", "Concluída") : t("Not completed", "Não concluída")}
                   </strong>
                 </div>
 
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                  <span className="text-white/40 block text-[0.68rem]">Sex</span>
+                  <span className="text-white/40 block text-[0.68rem]">{t("Gender", "Sexo")}</span>
                   <strong className="mt-1 block text-white capitalize">
-                    {current.sex}
+                    {current.sex === "female" ? t("Female", "Feminino") : t("Male", "Masculino")}
                   </strong>
                 </div>
 
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                  <span className="text-white/40 block text-[0.68rem]">Uses Artificial Intelligence</span>
+                  <span className="text-white/40 block text-[0.68rem]">{t("Uses Artificial Intelligence", "Usa Inteligência Artificial")}</span>
                   <strong className="mt-1 block text-white capitalize">
-                    {current.ai === "yes" ? "Yes" : "No"}
+                    {current.ai === "yes" ? t("Yes", "Sim") : t("No", "Não")}
                   </strong>
                 </div>
 
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                  <span className="text-white/40 block text-[0.68rem]">CCTV / Security Experience</span>
+                  <span className="text-white/40 block text-[0.68rem]">{t("CCTV / Security Experience", "Experiência CCTV / Segurança")}</span>
                   <strong className="mt-1 block text-white capitalize">
-                    {current.experience === "yes" ? "Yes" : "No"}
+                    {current.experience === "yes" ? t("Yes", "Sim") : t("No", "Não")}
                   </strong>
                 </div>
 
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 col-span-2">
-                  <span className="text-white/40 block text-[0.68rem]">Last Profession</span>
+                  <span className="text-white/40 block text-[0.68rem]">{t("Last Profession", "Última Profissão")}</span>
                   <strong className="mt-1 block text-white">
                     {current.lastProfession}
                   </strong>
                 </div>
 
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 col-span-2">
-                  <span className="text-white/40 block text-[0.68rem]">Shift Rotation (2D / 2N / 2 Off)</span>
+                  <span className="text-white/40 block text-[0.68rem]">{t("Shift Rotation (2D / 2N / 2 Off)", "Regime de Turnos (2D / 2N / 2 Folgas)")}</span>
                   <strong className="mt-1 block text-white">
                     {current.shifts === "yes"
-                      ? "Available for 2 days, 2 nights, 2 off"
-                      : "Not available"}
+                      ? t("Available for 2 days, 2 nights, 2 off", "Disponível para escala 2 dias, 2 noites, 2 folgas")
+                      : t("Not available", "Não disponível")}
                   </strong>
                 </div>
 
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                  <span className="text-white/40 block text-[0.68rem]">Submitted Date</span>
+                  <span className="text-white/40 block text-[0.68rem]">{t("Submitted Date", "Data de Submissão")}</span>
                   <span className="mt-1 block text-white/70">
-                    {new Date(current.createdAt).toLocaleString()}
+                    {new Date(current.createdAt).toLocaleString(lang === "pt" ? "pt-MZ" : "en-GB")}
                   </span>
                 </div>
 
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                  <span className="text-white/40 block text-[0.68rem]">Language</span>
+                  <span className="text-white/40 block text-[0.68rem]">{t("Language", "Idioma")}</span>
                   <span className="mt-1 block text-white/70 uppercase">
                     {current.locale}
                   </span>
@@ -2033,7 +2206,7 @@ Equipa de Recrutamento Overwatch Moçambique`
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-white/70 flex items-center gap-2">
                   <FileText size={15} className="text-emerald-400" />
-                  <span>Curriculum Vitae (CV) Anexo</span>
+                  <span>{t("Curriculum Vitae (CV) Attached", "Curriculum Vitae (CV) Anexo")}</span>
                 </h3>
                 <span className="text-[0.68rem] text-white/50">
                   {Math.round(current.cvSize / 1024)} KB · {current.cvType.includes("pdf") ? "PDF" : "Document"}
@@ -2052,7 +2225,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                       rel="noreferrer"
                       className="inline-flex items-center gap-1 text-[0.7rem] font-semibold text-white bg-white/10 hover:bg-white/20 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
                     >
-                      <span>Full screen</span>
+                      <span>{t("Full screen", "Ecrã inteiro")}</span>
                       <ExternalLink size={12} />
                     </a>
                   </div>
@@ -2087,7 +2260,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                   className="flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/[0.06] px-4 py-3 text-xs font-semibold text-white hover:bg-white/10 transition-colors cursor-pointer"
                 >
                   <Eye size={14} />
-                  <span>Open in Tab</span>
+                  <span>{t("Open in Tab", "Abrir no Separador")}</span>
                   <ExternalLink size={12} className="opacity-60" />
                 </a>
 
@@ -2096,7 +2269,7 @@ Equipa de Recrutamento Overwatch Moçambique`
                   className="flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-xs font-bold text-[#090d16] shadow-md hover:bg-white/90 transition-all cursor-pointer"
                 >
                   <Download size={14} />
-                  <span>Download CV</span>
+                  <span>{t("Download CV", "Descarregar CV")}</span>
                 </a>
               </div>
             </div>

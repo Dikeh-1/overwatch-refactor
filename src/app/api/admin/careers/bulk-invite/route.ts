@@ -36,7 +36,8 @@ Por favor, escolha uma das seguintes opções de data e confirme a sua presença
 Após a sua selecção, a sua vaga fica automaticamente confirmada no nosso sistema.
 
 Atenciosamente,
-Equipa de Recrutamento Overwatch Moçambique`;
+Equipa de Recrutamento
+Overwatch Moçambique`;
 
     const slots: string[] =
       Array.isArray(body.slots) && body.slots.length > 0
