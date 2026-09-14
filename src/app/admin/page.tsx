@@ -37,6 +37,9 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Save,
+  RotateCcw,
+  Columns,
 } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 import TechGrid from "@/components/ui/TechGrid";
@@ -152,7 +155,7 @@ export default function AdminPage() {
     EMAIL_TEMPLATES.en.subject,
   );
   const [broadcastMessage, setBroadcastMessage] = useState(
-    EMAIL_TEMPLATES.pt.message,
+    EMAIL_TEMPLATES.en.message,
   );
   const [broadcastSlots] = useState<string[]>([...DEFAULT_TEST_SLOTS]);
   const [sendingBroadcast, setSendingBroadcast] = useState(false);
@@ -163,9 +166,10 @@ export default function AdminPage() {
     failed: number;
   } | null>(null);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
-  const [emailPreviewTab, setEmailPreviewTab] = useState<"edit" | "preview">(
-    "edit",
+  const [emailPreviewTab, setEmailPreviewTab] = useState<"edit" | "preview" | "split">(
+    "split",
   );
+  const [templateSavedFeedback, setTemplateSavedFeedback] = useState(false);
 
   // ─── Live Admin Presence Tracking ─────────────────────────────────
   const [onlineCount, setOnlineCount] = useState<number>(1);
@@ -178,24 +182,56 @@ export default function AdminPage() {
     "all" | "review" | "shortlisted" | "booked" | "archived"
   >("all");
 
-  // Load language preference
+  // Load language preference and persisted template customizations
   useEffect(() => {
-    const saved = localStorage.getItem("overwatch_admin_lang");
-    if (saved === "pt" || saved === "en") {
-      setLang(saved);
-      setBroadcastSubject(EMAIL_TEMPLATES[saved].subject);
+    const savedLang = (localStorage.getItem("overwatch_admin_lang") as "en" | "pt") || "en";
+    if (savedLang === "pt" || savedLang === "en") {
+      setLang(savedLang);
     }
+    const savedSub =
+      localStorage.getItem(`overwatch_template_subject_${savedLang}`) ||
+      EMAIL_TEMPLATES[savedLang].subject;
+    const savedMsg =
+      localStorage.getItem(`overwatch_template_message_${savedLang}`) ||
+      EMAIL_TEMPLATES[savedLang].message;
+    setBroadcastSubject(savedSub);
+    setBroadcastMessage(savedMsg);
   }, []);
 
   const handleSetLang = (l: "en" | "pt") => {
     setLang(l);
     localStorage.setItem("overwatch_admin_lang", l);
-    if (
-      broadcastSubject === EMAIL_TEMPLATES.pt.subject ||
-      broadcastSubject === EMAIL_TEMPLATES.en.subject
-    ) {
-      setBroadcastSubject(EMAIL_TEMPLATES[l].subject);
-    }
+    const savedSub =
+      localStorage.getItem(`overwatch_template_subject_${l}`) ||
+      EMAIL_TEMPLATES[l].subject;
+    const savedMsg =
+      localStorage.getItem(`overwatch_template_message_${l}`) ||
+      EMAIL_TEMPLATES[l].message;
+    setBroadcastSubject(savedSub);
+    setBroadcastMessage(savedMsg);
+  };
+
+  const handleSaveTemplate = () => {
+    localStorage.setItem(`overwatch_template_subject_${lang}`, broadcastSubject);
+    localStorage.setItem(`overwatch_template_message_${lang}`, broadcastMessage);
+    localStorage.setItem("overwatch_template_subject", broadcastSubject);
+    localStorage.setItem("overwatch_template_message", broadcastMessage);
+    setTemplateSavedFeedback(true);
+    setTimeout(() => setTemplateSavedFeedback(false), 3000);
+  };
+
+  const handleResetTemplate = (targetLang?: "en" | "pt") => {
+    const l = targetLang || lang;
+    const defaultSubject = EMAIL_TEMPLATES[l].subject;
+    const defaultMessage = EMAIL_TEMPLATES[l].message;
+    setBroadcastSubject(defaultSubject);
+    setBroadcastMessage(defaultMessage);
+    localStorage.setItem(`overwatch_template_subject_${l}`, defaultSubject);
+    localStorage.setItem(`overwatch_template_message_${l}`, defaultMessage);
+    localStorage.setItem("overwatch_template_subject", defaultSubject);
+    localStorage.setItem("overwatch_template_message", defaultMessage);
+    setTemplateSavedFeedback(true);
+    setTimeout(() => setTemplateSavedFeedback(false), 3000);
   };
 
   const t = (enStr: string, ptStr: string) => (lang === "en" ? enStr : ptStr);
@@ -1822,247 +1858,353 @@ export default function AdminPage() {
             </div>
 
             {/* Email Template & Preview */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Editor */}
-              <div className="rounded-2xl border border-white/10 bg-[#121827]/95 p-6 shadow-sm space-y-4">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <FileText size={17} className="text-white" />
-                    <span>{t("Convocation Template (Email)", "Modelo da Convocatória (E-mail)")}</span>
-                  </h3>
-                  <div className="flex items-center gap-1.5">
-                    <div className="flex items-center gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/10 text-xs mr-1">
-                      <button
-                        type="button"
-                        onClick={() => setEmailPreviewTab("edit")}
-                        className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
-                          emailPreviewTab === "edit"
-                            ? "bg-white/20 text-white font-semibold"
-                            : "text-white/60 hover:text-white"
-                        }`}
-                      >
-                        {t("Edit", "Editar")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEmailPreviewTab("preview")}
-                        className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
-                          emailPreviewTab === "preview"
-                            ? "bg-white/20 text-white font-semibold"
-                            : "text-white/60 hover:text-white"
-                        }`}
-                      >
-                        {t("Preview", "Pré-visualizar")}
-                      </button>
-                    </div>
-
-                    <div className="flex items-center gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/10 text-xs">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setBroadcastSubject(EMAIL_TEMPLATES.en.subject);
-                          setBroadcastMessage(EMAIL_TEMPLATES.en.message);
-                        }}
-                        title={t("Load English email copy", "Carregar texto em inglês")}
-                        className="px-2 py-1 rounded-lg hover:bg-white/10 text-[0.68rem] text-white/70 hover:text-white transition-colors cursor-pointer font-semibold"
-                      >
-                        EN
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setBroadcastSubject(EMAIL_TEMPLATES.pt.subject);
-                          setBroadcastMessage(EMAIL_TEMPLATES.pt.message);
-                        }}
-                        title={t("Load Portuguese email copy", "Carregar texto em português")}
-                        className="px-2 py-1 rounded-lg hover:bg-white/10 text-[0.68rem] text-white/70 hover:text-white transition-colors cursor-pointer font-semibold"
-                      >
-                        PT
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-white/70">
-                    {t("Email Subject:", "Assunto do E-mail:")}
-                  </label>
-                  <input
-                    type="text"
-                    value={broadcastSubject}
-                    onChange={(e) => setBroadcastSubject(e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs text-white focus:border-white/40 focus:outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-semibold text-white/70">
-                      {t("Message Body (Text):", "Corpo da Mensagem (Texto):")}
-                    </label>
-                    <span className="text-[0.68rem] text-white/40">
-                      {t("Dynamic tags: {{name}}, {{booking_link}}", "Tags dinâmicas: {{name}}, {{booking_link}}")}
-                    </span>
-                  </div>
-                  <textarea
-                    rows={11}
-                    value={broadcastMessage}
-                    onChange={(e) => setBroadcastMessage(e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] p-4 text-xs font-mono text-white leading-relaxed focus:border-white/40 focus:outline-none"
-                  />
-                  <p className="text-[0.68rem] text-white/40 italic">
-                    {t(
-                      "Note: Candidate message can be sent in English or Portuguese (default for Maputo candidates).",
-                      "Nota: A mensagem aos candidatos pode ser enviada em inglês ou português.",
-                    )}
-                  </p>
-                </div>
-
-                {/* Slots info */}
-                <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 space-y-2 text-xs">
-                  <span className="font-semibold text-white/80 block">
-                    {t("Test Slots Included in Email & Candidate Portal:", "Opções de Turnos Incluídas no E-mail e Portal:")}
+            <div className="space-y-4">
+              {/* Template Control Bar & View Mode Switcher */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-[#121827] border border-white/10 p-3.5 rounded-2xl">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-white/60">
+                    {t("View Mode:", "Modo de Exibição:")}
                   </span>
-                  <div className="space-y-1">
-                    {broadcastSlots.map((s, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center gap-2 text-sky-300 font-medium"
-                      >
-                        <Calendar size={13} />
-                        <span>{formatSlotDisplay(s, lang)}</span>
-                      </div>
-                    ))}
+                  <div className="flex items-center bg-white/[0.04] p-1 rounded-xl border border-white/10 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setEmailPreviewTab("edit")}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                        emailPreviewTab === "edit"
+                          ? "bg-white text-[#090d16] font-bold shadow-sm"
+                          : "text-white/60 hover:text-white"
+                      }`}
+                    >
+                      <FileText size={13} />
+                      <span>{t("Edit", "Editar")}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEmailPreviewTab("preview")}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                        emailPreviewTab === "preview"
+                          ? "bg-white text-[#090d16] font-bold shadow-sm"
+                          : "text-white/60 hover:text-white"
+                      }`}
+                    >
+                      <Eye size={13} />
+                      <span>{t("Preview", "Pré-visualizar")}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEmailPreviewTab("split")}
+                      className={`hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                        emailPreviewTab === "split"
+                          ? "bg-white text-[#090d16] font-bold shadow-sm"
+                          : "text-white/60 hover:text-white"
+                      }`}
+                    >
+                      <Columns size={13} />
+                      <span>{t("Split View", "Lado a Lado")}</span>
+                    </button>
                   </div>
+                </div>
+
+                {/* Action Buttons: Save Template, Load EN/PT, Reset */}
+                <div className="flex items-center flex-wrap gap-2">
+                  <div className="flex items-center gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/10 text-xs">
+                    <span className="text-[0.68rem] text-white/40 px-1 font-semibold">{t("Load:", "Carregar:")}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleResetTemplate("en")}
+                      title={t("Load English official template", "Carregar modelo oficial em inglês")}
+                      className="px-2 py-1 rounded-lg hover:bg-white/10 text-[0.68rem] text-white/70 hover:text-white transition-colors cursor-pointer font-semibold"
+                    >
+                      EN
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleResetTemplate("pt")}
+                      title={t("Load Portuguese official template", "Carregar modelo oficial em português")}
+                      className="px-2 py-1 rounded-lg hover:bg-white/10 text-[0.68rem] text-white/70 hover:text-white transition-colors cursor-pointer font-semibold"
+                    >
+                      PT
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleResetTemplate()}
+                    title={t("Reset current language to default copy", "Restaurar texto padrão deste idioma")}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/15 bg-white/[0.05] text-xs font-semibold text-white/70 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    <RotateCcw size={13} />
+                    <span>{t("Reset", "Restaurar")}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveTemplate}
+                    className={`flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md ${
+                      templateSavedFeedback
+                        ? "bg-sky-500 text-[#090d16]"
+                        : "bg-white text-[#090d16] hover:bg-white/90"
+                    }`}
+                  >
+                    {templateSavedFeedback ? <Check size={14} /> : <Save size={14} />}
+                    <span>{templateSavedFeedback ? t("✓ Saved & Applied!", "✓ Salvo & Aplicado!") : t("Save Template", "Salvar Modelo")}</span>
+                  </button>
                 </div>
               </div>
 
-              {/* Live Preview Panel */}
-              <div className="rounded-2xl border border-white/10 bg-[#0e1320] p-6 shadow-sm flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
-                    <span className="text-xs font-bold uppercase tracking-wider text-white/50">
-                      {t("Candidate Email Preview", "Pré-visualização do E-mail para Candidato")}
-                    </span>
-                    <span className="text-[0.68rem] text-slate-300 bg-white/[0.06] border border-white/10 px-2.5 py-0.5 rounded-md font-mono">
-                      {t("Executive Letterhead", "Formato Oficial")}
-                    </span>
-                  </div>
+              {/* Panels Container */}
+              <div
+                className={
+                  emailPreviewTab === "split"
+                    ? "grid grid-cols-1 lg:grid-cols-2 gap-6"
+                    : "w-full"
+                }
+              >
+                {/* Editor */}
+                {(emailPreviewTab === "edit" || emailPreviewTab === "split") && (
+                  <div className="rounded-2xl border border-white/10 bg-[#121827]/95 p-6 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        <FileText size={17} className="text-white" />
+                        <span>{t("Convocation Template (Email)", "Modelo da Convocatória (E-mail)")}</span>
+                      </h3>
+                      {templateSavedFeedback && (
+                        <span className="text-[0.68rem] text-sky-300 bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 rounded-md font-semibold">
+                          {t("✓ Template Applied & Active", "✓ Modelo Activo & Aplicado")}
+                        </span>
+                      )}
+                    </div>
 
-                  {/* Document Card Mirroring Actual Email */}
-                  <div className="rounded-xl border border-slate-200 bg-white text-slate-800 shadow-xl overflow-hidden text-xs">
-                    {/* Official Letterhead Header */}
-                    <div className="bg-[#0b1329] px-5 py-4 border-b-2 border-white/20 text-white">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-white/70">
+                        {t("Email Subject:", "Assunto do E-mail:")}
+                      </label>
+                      <input
+                        type="text"
+                        value={broadcastSubject}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setBroadcastSubject(val);
+                          localStorage.setItem(`overwatch_template_subject_${lang}`, val);
+                          localStorage.setItem("overwatch_template_subject", val);
+                        }}
+                        className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs text-white focus:border-white/40 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <Logo size="sm" variant="light" />
-                        <div className="text-right">
-                          <span className="inline-block bg-white/10 text-white font-mono text-[0.6rem] px-2 py-0.5 rounded border border-white/10 font-bold">
-                            REF: CCO-2026/MAPUTO
+                        <label className="text-xs font-semibold text-white/70">
+                          {t("Message Body (Text):", "Corpo da Mensagem (Texto):")}
+                        </label>
+                        <span className="text-[0.68rem] text-white/40">
+                          {t("Dynamic tags: {{name}}, {{booking_link}}", "Tags dinâmicas: {{name}}, {{booking_link}}")}
+                        </span>
+                      </div>
+                      <textarea
+                        rows={emailPreviewTab === "edit" ? 14 : 11}
+                        value={broadcastMessage}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setBroadcastMessage(val);
+                          localStorage.setItem(`overwatch_template_message_${lang}`, val);
+                          localStorage.setItem("overwatch_template_message", val);
+                        }}
+                        className="w-full rounded-xl border border-white/10 bg-white/[0.04] p-4 text-xs font-mono text-white leading-relaxed focus:border-white/40 focus:outline-none"
+                      />
+                      <p className="text-[0.68rem] text-white/40 italic">
+                        {t(
+                          "Note: Candidate message can be sent in English or Portuguese (default for Maputo candidates).",
+                          "Nota: A mensagem aos candidatos pode ser enviada em inglês ou português.",
+                        )}
+                      </p>
+                    </div>
+
+                    {/* Slots info */}
+                    <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 space-y-2 text-xs">
+                      <span className="font-semibold text-white/80 block">
+                        {t("Test Slots Included in Email & Candidate Portal:", "Opções de Turnos Incluídas no E-mail e Portal:")}
+                      </span>
+                      <div className="space-y-1">
+                        {broadcastSlots.map((s, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center gap-2 text-sky-300 font-medium"
+                          >
+                            <Calendar size={13} />
+                            <span>{formatSlotDisplay(s, lang)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* If in edit mode, show action bar to preview or send */}
+                    {emailPreviewTab === "edit" && (
+                      <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setEmailPreviewTab("preview")}
+                          className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/[0.05] px-4 py-3 text-xs font-semibold text-white hover:bg-white/10 transition-colors cursor-pointer"
+                        >
+                          <Eye size={14} />
+                          <span>{t("Preview Letterhead →", "Pré-visualizar Formato Oficial →")}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setConfirmModalOpen(true)}
+                          disabled={selectedCandidateIds.length === 0 || sendingBroadcast}
+                          className="flex items-center gap-2 rounded-xl bg-white hover:bg-white/90 px-5 py-3 text-xs font-bold text-[#090d16] shadow-md transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          <Send size={14} />
+                          <span>{t(`Send to ${selectedCandidateIds.length} Candidates`, `Enviar a ${selectedCandidateIds.length} Candidatos`)}</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Live Preview Panel */}
+                {(emailPreviewTab === "preview" || emailPreviewTab === "split") && (
+                  <div className="rounded-2xl border border-white/10 bg-[#0e1320] p-6 shadow-sm flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+                        <span className="text-xs font-bold uppercase tracking-wider text-white/50">
+                          {t("Candidate Email Preview", "Pré-visualização do E-mail para Candidato")}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {emailPreviewTab === "preview" && (
+                            <button
+                              type="button"
+                              onClick={() => setEmailPreviewTab("edit")}
+                              className="flex items-center gap-1 text-[0.68rem] text-sky-400 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/20 px-2.5 py-1 rounded-md font-semibold transition-colors cursor-pointer"
+                            >
+                              <FileText size={11} />
+                              <span>{t("← Back to Editor", "← Voltar ao Editor")}</span>
+                            </button>
+                          )}
+                          <span className="text-[0.68rem] text-slate-300 bg-white/[0.06] border border-white/10 px-2.5 py-0.5 rounded-md font-mono">
+                            {t("Executive Letterhead", "Formato Oficial")}
                           </span>
-                          <div className="text-[0.65rem] text-slate-300 mt-0.5 font-medium">
-                            {t("Human Resources Department", "Departamento de Recursos Humanos")}
+                        </div>
+                      </div>
+
+                      {/* Document Card Mirroring Actual Email */}
+                      <div className="rounded-xl border border-slate-200 bg-white text-slate-800 shadow-xl overflow-hidden text-xs">
+                        {/* Official Letterhead Header */}
+                        <div className="bg-[#0b1329] px-5 py-4 border-b-2 border-white/20 text-white">
+                          <div className="flex items-center justify-between">
+                            <Logo size="sm" variant="light" />
+                            <div className="text-right">
+                              <span className="inline-block bg-white/10 text-white font-mono text-[0.6rem] px-2 py-0.5 rounded border border-white/10 font-bold">
+                                REF: CCO-2026/MAPUTO
+                              </span>
+                              <div className="text-[0.65rem] text-slate-300 mt-0.5 font-medium">
+                                {t("Human Resources Department", "Departamento de Recursos Humanos")}
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
 
-                    {/* Official Document Subheading */}
-                    <div className="bg-slate-50 px-5 py-2.5 border-b border-slate-200 flex items-center justify-between text-[0.68rem]">
-                      <span className="font-semibold text-slate-700 uppercase tracking-wide">
-                        {t("Official Selection Test Convocation", "Convocatória Oficial · Teste de Selecção Presencial")}
-                      </span>
-                      <span className="text-slate-500">
-                        {t("Maputo, Mozambique", "Maputo, Moçambique")}
-                      </span>
-                    </div>
-
-                    {/* Letter Body */}
-                    <div className="p-5 space-y-4">
-                      <div className="text-slate-800 whitespace-pre-wrap font-sans text-xs leading-relaxed">
-                        {broadcastMessage.replace(
-                          /\{\{name\}\}/g,
-                          broadcastAudience[0]?.name || "Maria João",
-                        )}
-                      </div>
-
-                      {/* Test Slots Clean Table */}
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 overflow-hidden">
-                        <div className="bg-slate-100 px-3.5 py-2 border-b border-slate-200 text-[0.68rem] font-bold text-slate-700 uppercase tracking-wider">
-                          {t("Available Slots (10:00 – 11:30):", "Turnos Disponíveis (10h00 – 11h30):")}
+                        {/* Official Document Subheading */}
+                        <div className="bg-slate-50 px-5 py-2.5 border-b border-slate-200 flex items-center justify-between text-[0.68rem]">
+                          <span className="font-semibold text-slate-700 uppercase tracking-wide">
+                            {t("Official Selection Test Convocation", "Convocatória Oficial · Teste de Selecção Presencial")}
+                          </span>
+                          <span className="text-slate-500">
+                            {t("Maputo, Mozambique", "Maputo, Moçambique")}
+                          </span>
                         </div>
-                        <div className="divide-y divide-slate-200">
-                          {broadcastSlots.map((s, idx) => (
-                            <div
-                              key={idx}
-                              className="px-3.5 py-2 text-slate-800 font-medium text-[0.72rem] flex items-center justify-between"
-                            >
-                              <span>{formatSlotDisplay(s, lang)}</span>
-                              <span className="text-[0.65rem] font-mono text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
-                                {t("Option 0", "Opção 0")}{idx + 1}
-                              </span>
+
+                        {/* Letter Body */}
+                        <div className="p-5 space-y-4">
+                          <div className="text-slate-800 whitespace-pre-wrap font-sans text-xs leading-relaxed">
+                            {broadcastMessage.replace(
+                              /\{\{name\}\}/g,
+                              broadcastAudience[0]?.name || "Maria João",
+                            )}
+                          </div>
+
+                          {/* Test Slots Clean Table */}
+                          <div className="rounded-lg border border-slate-200 bg-slate-50 overflow-hidden">
+                            <div className="bg-slate-100 px-3.5 py-2 border-b border-slate-200 text-[0.68rem] font-bold text-slate-700 uppercase tracking-wider">
+                              {t("Available Slots (10:00 – 11:30):", "Turnos Disponíveis (10h00 – 11h30):")}
                             </div>
-                          ))}
-                        </div>
-                      </div>
+                            <div className="divide-y divide-slate-200">
+                              {broadcastSlots.map((s, idx) => (
+                                <div
+                                  key={idx}
+                                  className="px-3.5 py-2 text-slate-800 font-medium text-[0.72rem] flex items-center justify-between"
+                                >
+                                  <span>{formatSlotDisplay(s, lang)}</span>
+                                  <span className="text-[0.65rem] font-mono text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
+                                    {t("Option 0", "Opção 0")}{idx + 1}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
 
-                      {/* Solid Executive CTA Button */}
-                      <div className="pt-2 text-center">
-                        <div className="inline-block bg-[#0b1329] text-white font-bold text-xs px-6 py-3 rounded-lg shadow-sm border border-[#0b1329]">
-                          {t("Confirm My Test Attendance →", "Confirmar Minha Presença no Teste →")}
-                        </div>
-                        <p className="text-[0.65rem] text-slate-500 mt-2">
-                          {t(
-                            "Personal link with instant attendance confirmation.",
-                            "Link individual com confirmação instantânea de vaga.",
-                          )}
-                        </p>
-                      </div>
+                          {/* Solid Executive CTA Button */}
+                          <div className="pt-2 text-center">
+                            <div className="inline-block bg-[#0b1329] text-white font-bold text-xs px-6 py-3 rounded-lg shadow-sm border border-[#0b1329]">
+                              {t("Confirm My Test Attendance →", "Confirmar Minha Presença no Teste →")}
+                            </div>
+                            <p className="text-[0.65rem] text-slate-500 mt-2">
+                              {t(
+                                "Personal link with instant attendance confirmation.",
+                                "Link individual com confirmação instantânea de vaga.",
+                              )}
+                            </p>
+                          </div>
 
-                      {/* Security Protocol Note */}
-                      <div className="p-3 rounded-lg bg-amber-50 border border-amber-200/80 text-[0.68rem] text-amber-900 leading-snug">
-                        <strong className="font-semibold block mb-0.5">{t("Security Notice:", "Nota de Segurança:")}</strong>
-                        {t(
-                          "Present original valid ID (ID Card/Passport) at the Overwatch security gate for authorized entry.",
-                          "Apresente documento de identificação original (BI/Passaporte) na portaria da Overwatch para entrada autorizada.",
-                        )}
+                          {/* Security Protocol Note */}
+                          <div className="p-3 rounded-lg bg-amber-50 border border-amber-200/80 text-[0.68rem] text-amber-900 leading-snug">
+                            <strong className="font-semibold block mb-0.5">{t("Security Notice:", "Nota de Segurança:")}</strong>
+                            {t(
+                              "Present original valid ID (ID Card/Passport) at the Overwatch security gate for authorized entry.",
+                              "Apresente documento de identificação original (BI/Passaporte) na portaria da Overwatch para entrada autorizada.",
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Sign-Off & Official Footer */}
+                        <div className="bg-slate-50 px-5 py-3 border-t border-slate-200 text-[0.68rem] text-slate-600 flex items-center justify-between">
+                          <div>
+                            <strong>Equipa de Recrutamento</strong> · Overwatch Moçambique
+                          </div>
+                          <span className="font-mono text-[0.62rem] text-slate-400">
+                            Maputo, MZ
+                          </span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Sign-Off & Official Footer */}
-                    <div className="bg-slate-50 px-5 py-3 border-t border-slate-200 text-[0.68rem] text-slate-600 flex items-center justify-between">
-                      <div>
-                        <strong>Equipa de Recrutamento</strong> · Overwatch Moçambique
-                      </div>
-                      <span className="font-mono text-[0.62rem] text-slate-400">
-                        Maputo, MZ
-                      </span>
+                    {/* Send Button */}
+                    <div className="mt-6 pt-4 border-t border-white/10">
+                      <button
+                        type="button"
+                        onClick={() => setConfirmModalOpen(true)}
+                        disabled={selectedCandidateIds.length === 0 || sendingBroadcast}
+                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-white hover:bg-white/90 px-6 py-4 text-sm font-bold text-[#090d16] shadow-xl transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        <Send size={16} />
+                        <span>
+                          {t(
+                            `Send Convocations to ${selectedCandidateIds.length} Candidates`,
+                            `Enviar Convocatórias para ${selectedCandidateIds.length} Candidatos`,
+                          )}
+                        </span>
+                      </button>
+                      <p className="text-center text-[0.68rem] text-white/40 mt-2">
+                        {t(
+                          "Each candidate will receive a unique personalized link to choose their test date with 1 click.",
+                          "Cada candidato receberá um link individual e exclusivo para escolher o seu dia com 1 clique.",
+                        )}
+                      </p>
                     </div>
                   </div>
-                </div>
-
-                {/* Send Button */}
-                <div className="mt-6 pt-4 border-t border-white/10">
-                  <button
-                    type="button"
-                    onClick={() => setConfirmModalOpen(true)}
-                    disabled={selectedCandidateIds.length === 0 || sendingBroadcast}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-white hover:bg-white/90 px-6 py-4 text-sm font-bold text-[#090d16] shadow-xl transition-all cursor-pointer disabled:opacity-40"
-                  >
-                    <Send size={16} />
-                    <span>
-                      {t(
-                        `Send Convocations to ${selectedCandidateIds.length} Candidates`,
-                        `Enviar Convocatórias para ${selectedCandidateIds.length} Candidatos`,
-                      )}
-                    </span>
-                  </button>
-                  <p className="text-center text-[0.68rem] text-white/40 mt-2">
-                    {t(
-                      "Each candidate will receive a unique personalized link to choose their test date with 1 click.",
-                      "Cada candidato receberá um link individual e exclusivo para escolher o seu dia com 1 clique.",
-                    )}
-                  </p>
-                </div>
+                )}
               </div>
             </div>
 
