@@ -1741,28 +1741,16 @@ export default function AdminPage() {
         {view === "roles" && (
           <section className="space-y-4">
             <div className="rounded-2xl border border-white/10 bg-[#121827]/95 p-6 shadow-sm">
-              <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-bold text-white">
-                    {t("Public Role Availability", "Disponibilidade Pública das Vagas")}
-                  </h2>
-                  <p className="mt-1 text-xs text-white/60">
-                    {t(
-                      "Toggle roles open or closed. Locked roles will show a padlock icon on the careers page and prevent submissions.",
-                      "Abra ou tranque vagas. Vagas trancadas mostrarão um cadeado na página de carreiras e impedirão candidaturas.",
-                    )}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void load(true)}
-                  disabled={isRefreshing}
-                  title={t("Refresh", "Atualizar")}
-                  className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-3.5 py-2 text-xs font-semibold text-white/80 hover:bg-white/[0.08] hover:text-white transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  <RefreshCw size={13} className={isRefreshing ? "animate-spin text-white" : "text-white/70"} />
-                  <span>{isRefreshing ? t("Refreshing...", "A atualizar...") : t("Refresh", "Atualizar")}</span>
-                </button>
+              <div className="mb-6">
+                <h2 className="text-lg font-bold text-white">
+                  {t("Public Role Availability", "Disponibilidade Pública das Vagas")}
+                </h2>
+                <p className="mt-1 text-xs text-white/60">
+                  {t(
+                    "Toggle roles open or closed. Locked roles will show a padlock icon on the careers page and prevent submissions.",
+                    "Abra ou tranque vagas. Vagas trancadas mostrarão um cadeado na página de carreiras e impedirão candidaturas.",
+                  )}
+                </p>
               </div>
 
               <div className="space-y-3">
@@ -3411,29 +3399,6 @@ export default function AdminPage() {
                   )}
                 </p>
               </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => void load(true)}
-                  disabled={isRefreshing}
-                  title={t("Refresh", "Atualizar")}
-                  className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-3.5 py-2.5 text-xs font-semibold text-white/80 hover:bg-white/[0.08] hover:text-white transition-all cursor-pointer disabled:opacity-50"
-                >
-                  <RefreshCw size={13} className={isRefreshing ? "animate-spin text-white" : "text-white/70"} />
-                  <span>{isRefreshing ? t("Refreshing...", "A atualizar...") : t("Refresh", "Atualizar")}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => exportAttendanceCSV()}
-                  disabled={!confirmedCount}
-                  className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-[#090d16] hover:bg-white/90 disabled:opacity-40 transition-transform hover:-translate-y-0.5 cursor-pointer"
-                >
-                  <Download size={14} />
-                  <span>{t("Export Complete Attendance Sheet (CSV)", "Exportar Lista Completa para Teste (CSV)")}</span>
-                </button>
-              </div>
             </div>
 
             {/* Grid of Slots */}
@@ -3680,18 +3645,6 @@ export default function AdminPage() {
                     <option value={9999}>{t("All", "Todos")}</option>
                   </select>
                 </div>
-
-                {/* Refresh Button */}
-                <button
-                  type="button"
-                  onClick={() => void load(true)}
-                  disabled={isRefreshing}
-                  title={t("Refresh", "Atualizar")}
-                  className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/[0.08] hover:text-white transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  <RefreshCw size={13} className={isRefreshing ? "animate-spin text-white" : "text-white/70"} />
-                  <span>{isRefreshing ? t("Refreshing...", "A atualizar...") : t("Refresh", "Atualizar")}</span>
-                </button>
               </div>
 
               {/* Quick Filter Pills Bar */}
