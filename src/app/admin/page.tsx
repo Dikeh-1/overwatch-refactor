@@ -1613,102 +1613,39 @@ export default function AdminPage() {
         {/* Top Header Bar */}
         <header className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-white/10">
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-white/50">
-              <span>Overwatch</span>
-              <span>/</span>
-              <span className="text-white/90 capitalize">
-                {view === "roles"
-                  ? t("Manage Roles", "Gestão de Vagas")
-                  : view === "broadcast"
-                    ? t("Test Convocations", "Convocatórias de Teste")
-                    : view === "schedule"
-                      ? t("Selection Test Schedule", "Agenda de Testes Presenciais")
-                      : t("Applications Pipeline", "Pipeline de Candidaturas")}
-              </span>
-            </div>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
               {view === "roles"
                 ? t("Role Availability", "Disponibilidade de Vagas")
                 : view === "broadcast"
-                  ? t("Bulk Test Convocations", "Envio de Convocatórias em Massa")
+                  ? t("Test Convocations", "Convocatórias de Teste")
                   : view === "schedule"
-                    ? t("Selection Test Attendance Roster", "Agenda de Testes Presenciais")
-                    : t("Candidate Recruitment Pipeline", "Pipeline de Recrutamento")}
+                    ? t("Selection Test Schedule", "Agenda de Testes Presenciais")
+                    : t("Applications", "Candidaturas")}
             </h1>
+            <p className="mt-0.5 text-xs text-white/50">
+              {view === "roles"
+                ? t("Manage public careers page role availability", "Gerir disponibilidade de vagas na página pública")
+                : view === "broadcast"
+                  ? t("Dispatch and track candidate test invitations", "Envio e controlo de convites para testes presenciais")
+                  : view === "schedule"
+                    ? t("Confirmed candidate attendance by session", "Presenças confirmadas de candidatos por turno")
+                    : t("Review and manage candidate applications", "Rever e gerir candidaturas recebidas")}
+            </p>
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Language Switcher in Header */}
-            <div className="flex items-center rounded-xl bg-white/[0.04] border border-white/10 p-0.5 text-xs">
-              <button
-                type="button"
-                onClick={() => handleSetLang("en")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  lang === "en"
-                    ? "bg-white text-[#090d16] font-bold shadow-sm"
-                    : "text-white/60 hover:text-white"
-                }`}
-              >
-                EN
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSetLang("pt")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  lang === "pt"
-                    ? "bg-white text-[#090d16] font-bold shadow-sm"
-                    : "text-white/60 hover:text-white"
-                }`}
-              >
-                PT
-              </button>
-            </div>
-
-            {/* Real-time DB Sync Indicator */}
-            <div className="hidden md:flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 text-xs text-emerald-300">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
-              </span>
-              <span className="font-semibold text-[0.72rem] font-mono">
-                {t("Live BD Sync (3.5s)", "Live BD (3.5s)")}
-              </span>
-            </div>
-
-            {/* Live Admin Count Pill */}
-            <div className="hidden sm:flex items-center gap-2 rounded-xl bg-white/[0.04] border border-white/10 px-3 py-1.5 text-xs">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-400"></span>
-              </span>
-              <span className="font-semibold text-white/90 text-[0.72rem]">
-                {lang === "pt"
-                  ? `${onlineCount} Admin${onlineCount > 1 ? "s" : ""} Online`
-                  : `${onlineCount} Admin${onlineCount > 1 ? "s" : ""} Live`}
-              </span>
-            </div>
-
-            {/* Live Database Refresh Button */}
             <button
               onClick={() => void load(true)}
               disabled={isRefreshing}
-              aria-label="Refresh database"
-              title={t(
-                "Refresh data directly from database without reloading page",
-                "Atualizar dados da base de dados sem recarregar a página",
-              )}
-              className="flex items-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3.5 py-2 text-xs font-semibold text-sky-200 hover:bg-sky-500/20 hover:text-white transition-all cursor-pointer shadow-sm disabled:opacity-50"
+              aria-label="Refresh"
+              className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white/90 hover:bg-white/[0.08] hover:text-white transition-colors cursor-pointer disabled:opacity-50"
             >
               <RefreshCw
                 size={14}
-                className={isRefreshing ? "animate-spin text-sky-400" : "text-sky-400"}
+                className={isRefreshing ? "animate-spin text-white" : "text-white/70"}
               />
               <span>
-                {isRefreshing
-                  ? t("Syncing BD…", "A sincronizar BD…")
-                  : updated
-                    ? `${t("Sync BD", "Atualizar BD")} (${updated})`
-                    : t("Sync BD", "Atualizar BD")}
+                {isRefreshing ? t("Refreshing...", "A atualizar...") : t("Refresh", "Atualizar")}
               </span>
             </button>
 
@@ -1820,11 +1757,11 @@ export default function AdminPage() {
                   type="button"
                   onClick={() => void load(true)}
                   disabled={isRefreshing}
-                  title={t("Refresh roles status from database", "Atualizar estado das vagas a partir da base de dados")}
+                  title={t("Refresh", "Atualizar")}
                   className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-3.5 py-2 text-xs font-semibold text-white/80 hover:bg-white/[0.08] hover:text-white transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  <RefreshCw size={13} className={isRefreshing ? "animate-spin text-sky-400" : "text-sky-400"} />
-                  <span>{isRefreshing ? t("Updating…", "A atualizar…") : t("Refresh Roles BD", "Atualizar Vagas BD")}</span>
+                  <RefreshCw size={13} className={isRefreshing ? "animate-spin text-white" : "text-white/70"} />
+                  <span>{isRefreshing ? t("Refreshing...", "A atualizar...") : t("Refresh", "Atualizar")}</span>
                 </button>
               </div>
 
@@ -1931,33 +1868,6 @@ export default function AdminPage() {
                 </button>
               </div>
             )}
-
-            {/* Header with Live DB Refresh */}
-            <div className="flex flex-wrap items-center justify-between gap-3 bg-[#121827]/95 border border-white/10 p-4 rounded-2xl">
-              <div>
-                <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Send size={15} className="text-sky-400" />
-                  <span>{t("Convocations Dispatch Hub", "Central de Convocatórias de Teste")}</span>
-                </h2>
-                <p className="text-[0.68rem] text-white/50 mt-0.5">
-                  {t(
-                    "Real-time pipeline of shortlisted candidates awaiting dispatch and confirmed bookings.",
-                    "Fluxo em tempo real de candidatos pré-selecionados para envio e presenças confirmadas.",
-                  )}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => void load(true)}
-                disabled={isRefreshing}
-                title={t("Refresh convocations data from database", "Atualizar dados de convocatórias a partir da base de dados")}
-                className="flex items-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3.5 py-2 text-xs font-semibold text-sky-200 hover:bg-sky-500/20 hover:text-white transition-all cursor-pointer disabled:opacity-50"
-              >
-                <RefreshCw size={13} className={isRefreshing ? "animate-spin text-sky-400" : "text-sky-400"} />
-                <span>{isRefreshing ? t("Updating…", "A atualizar…") : t("Refresh Convocations BD", "Atualizar Convocatórias BD")}</span>
-              </button>
-            </div>
 
             {/* ─── Convocations Workflow Sections (Tabs) ─── */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -3507,11 +3417,11 @@ export default function AdminPage() {
                   type="button"
                   onClick={() => void load(true)}
                   disabled={isRefreshing}
-                  title={t("Refresh confirmed bookings from database", "Atualizar presenças agendadas a partir da base de dados")}
-                  className="flex items-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-3.5 py-2.5 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20 hover:text-white transition-all cursor-pointer disabled:opacity-50"
+                  title={t("Refresh", "Atualizar")}
+                  className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-3.5 py-2.5 text-xs font-semibold text-white/80 hover:bg-white/[0.08] hover:text-white transition-all cursor-pointer disabled:opacity-50"
                 >
-                  <RefreshCw size={13} className={isRefreshing ? "animate-spin text-cyan-400" : "text-cyan-400"} />
-                  <span>{isRefreshing ? t("Updating…", "A atualizar…") : t("Refresh Schedule BD", "Atualizar Agenda BD")}</span>
+                  <RefreshCw size={13} className={isRefreshing ? "animate-spin text-white" : "text-white/70"} />
+                  <span>{isRefreshing ? t("Refreshing...", "A atualizar...") : t("Refresh", "Atualizar")}</span>
                 </button>
 
                 <button
@@ -3771,16 +3681,16 @@ export default function AdminPage() {
                   </select>
                 </div>
 
-                {/* Live Database Refresh Button */}
+                {/* Refresh Button */}
                 <button
                   type="button"
                   onClick={() => void load(true)}
                   disabled={isRefreshing}
-                  title={t("Refresh candidates directly from database", "Atualizar candidaturas a partir da base de dados")}
-                  className="flex items-center gap-1.5 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs font-semibold text-sky-200 hover:bg-sky-500/20 hover:text-white transition-all cursor-pointer disabled:opacity-50"
+                  title={t("Refresh", "Atualizar")}
+                  className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/[0.08] hover:text-white transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  <RefreshCw size={13} className={isRefreshing ? "animate-spin text-sky-400" : "text-sky-400"} />
-                  <span>{isRefreshing ? t("Updating…", "A atualizar…") : t("Refresh DB", "Atualizar BD")}</span>
+                  <RefreshCw size={13} className={isRefreshing ? "animate-spin text-white" : "text-white/70"} />
+                  <span>{isRefreshing ? t("Refreshing...", "A atualizar...") : t("Refresh", "Atualizar")}</span>
                 </button>
               </div>
 
