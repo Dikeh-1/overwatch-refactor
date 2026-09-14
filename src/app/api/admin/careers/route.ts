@@ -41,6 +41,18 @@ export async function PATCH(request: Request) {
       /^[\da-f-]{36}$/.test(data.id)
     )
       await setStatus(data.id, data.status);
+    else if (
+      data.kind === "bulk_status" &&
+      stages.includes(data.status) &&
+      Array.isArray(data.ids) &&
+      data.ids.length > 0
+    ) {
+      for (const id of data.ids) {
+        if (/^[\da-f-]{36}$/.test(id)) {
+          await setStatus(id, data.status);
+        }
+      }
+    }
     else return new Response(null, { status: 400 });
     return Response.json({ success: true });
   } catch {

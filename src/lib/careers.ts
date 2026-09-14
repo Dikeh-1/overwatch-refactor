@@ -27,6 +27,7 @@ export const stages = [
   "interview",
   "hired",
   "rejected",
+  "archived",
 ] as const;
 export type Application = {
   id: string;

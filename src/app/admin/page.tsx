@@ -30,6 +30,8 @@ import {
   CalendarCheck,
   Clock,
   UserCheck,
+  Archive,
+  Filter,
   Globe,
 } from "lucide-react";
 import Logo from "@/components/ui/Logo";
@@ -54,6 +56,7 @@ const stageLabels: Record<"en" | "pt", Record<string, string>> = {
     interview: "Interview",
     hired: "Hired",
     rejected: "Not selected",
+    archived: "Archived",
   },
   pt: {
     new: "Novo",
@@ -62,6 +65,52 @@ const stageLabels: Record<"en" | "pt", Record<string, string>> = {
     interview: "Entrevista",
     hired: "Contratado",
     rejected: "Não selecionado",
+    archived: "Arquivado",
+  },
+};
+
+export function formatSlotDisplay(slot: string, l: "en" | "pt") {
+  if (l === "pt") return slot;
+  return slot
+    .replace("Quarta-feira", "Wednesday")
+    .replace("Quinta-feira", "Thursday")
+    .replace("Sexta-feira", "Friday")
+    .replace("de Setembro", "September")
+    .replace("10h00", "10:00 AM");
+}
+
+const EMAIL_TEMPLATES = {
+  pt: {
+    subject: "Convocatória: Teste de Selecção Presencial — Overwatch Moçambique",
+    message: `Boa tarde {{name}},
+
+Agradecemos a sua candidatura à vaga de Operadora de CCO da Overwatch.
+
+Após análise da sua candidatura, foi seleccionada para avançar para a próxima fase do processo de recrutamento: teste de selecção presencial.
+
+Por favor, escolha uma das seguintes opções de data e confirme a sua presença através do link pessoal no botão abaixo.
+
+Após a sua selecção, a sua vaga fica automaticamente confirmada no nosso sistema.
+
+Com os melhores cumprimentos,
+Equipa de Recrutamento
+Overwatch Moçambique`,
+  },
+  en: {
+    subject: "Convocation: In-Person Selection Test — Overwatch Mozambique",
+    message: `Good afternoon {{name}},
+
+Thank you for your application for the CCTV Operator position at Overwatch.
+
+Following the review of your application, you have been shortlisted to advance to the next stage of our recruitment process: an in-person selection test.
+
+Please select one of the available date options below to confirm your attendance using your personalized link.
+
+Upon selection, your slot is automatically confirmed in our system.
+
+Com os melhores cumprimentos,
+Equipa de Recrutamento
+Overwatch Moçambique`,
   },
 };
 
@@ -81,43 +130,25 @@ export default function AdminPage() {
   const [busy, setBusy] = useState(false);
   const [updated, setUpdated] = useState("");
 
-  // Load language preference
-  useEffect(() => {
-    const saved = localStorage.getItem("overwatch_admin_lang");
-    if (saved === "pt" || saved === "en") {
-      setLang(saved);
-    }
-  }, []);
-
-  const handleSetLang = (l: "en" | "pt") => {
-    setLang(l);
-    localStorage.setItem("overwatch_admin_lang", l);
-  };
-
-  const t = (enStr: string, ptStr: string) => (lang === "en" ? enStr : ptStr);
-
-  // ─── Convocatórias (Broadcast) State ──────────────────────────────
-  const [presetFilter, setPresetFilter] = useState<
-    "target" | "women" | "men_exp" | "cctv" | "all"
-  >("target");
+  // Convocatórias & Criteria Filtering State
+  const [filterRule, setFilterRule] = useState<"target" | "custom">("target");
+  const [filterSex, setFilterSex] = useState<"all" | "female" | "male">("all");
+  const [filterExp, setFilterExp] = useState<"all" | "yes" | "no">("all");
+  const [filterShifts, setFilterShifts] = useState<"all" | "yes" | "no">("all");
+  const [filterGrade12, setFilterGrade12] = useState<"all" | "yes" | "no">("all");
+  const [filterStage, setFilterStage] = useState<string>("all");
+  const [filterInvited, setFilterInvited] = useState<"all" | "uninvited" | "invited">("all");
+  const [filterSearch, setFilterSearch] = useState<string>("");
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
+  const [bulkActionBusy, setBulkActionBusy] = useState(false);
+  const [archiveModalOpen, setArchiveModalOpen] = useState(false);
+  const [bulkSuccessMsg, setBulkSuccessMsg] = useState<string | null>(null);
+
   const [broadcastSubject, setBroadcastSubject] = useState(
-    "Convocatória: Teste de Selecção Presencial — Overwatch Moçambique",
+    EMAIL_TEMPLATES.en.subject,
   );
   const [broadcastMessage, setBroadcastMessage] = useState(
-`Boa tarde {{name}},
-
-Agradecemos a sua candidatura à vaga de Operadora de CCO da Overwatch.
-
-Após análise da sua candidatura, foi seleccionada para avançar para a próxima fase do processo de recrutamento: teste de selecção presencial.
-
-Por favor, escolha uma das seguintes opções de data e confirme a sua presença através do link pessoal no botão abaixo.
-
-Após a sua selecção, a sua vaga fica automaticamente confirmada no nosso sistema.
-
-Atenciosamente,
-Equipa de Recrutamento
-Overwatch Moçambique`
+    EMAIL_TEMPLATES.pt.message,
   );
   const [broadcastSlots] = useState<string[]>([...DEFAULT_TEST_SLOTS]);
   const [sendingBroadcast, setSendingBroadcast] = useState(false);
@@ -131,6 +162,28 @@ Overwatch Moçambique`
   const [emailPreviewTab, setEmailPreviewTab] = useState<"edit" | "preview">(
     "edit",
   );
+
+  // Load language preference
+  useEffect(() => {
+    const saved = localStorage.getItem("overwatch_admin_lang");
+    if (saved === "pt" || saved === "en") {
+      setLang(saved);
+      setBroadcastSubject(EMAIL_TEMPLATES[saved].subject);
+    }
+  }, []);
+
+  const handleSetLang = (l: "en" | "pt") => {
+    setLang(l);
+    localStorage.setItem("overwatch_admin_lang", l);
+    if (
+      broadcastSubject === EMAIL_TEMPLATES.pt.subject ||
+      broadcastSubject === EMAIL_TEMPLATES.en.subject
+    ) {
+      setBroadcastSubject(EMAIL_TEMPLATES[l].subject);
+    }
+  };
+
+  const t = (enStr: string, ptStr: string) => (lang === "en" ? enStr : ptStr);
 
   const load = useCallback(async () => {
     try {
@@ -245,24 +298,58 @@ Overwatch Moçambique`
         .includes(query.toLowerCase()),
   );
 
-  // ─── Filtered Audience for Convocatórias ───────────────────────────
+  // ─── Filtered Audience for Convocatórias (Manual Criteria + Presets) ─
   const broadcastAudience = useMemo(() => {
     return applications.filter((a) => {
-      if (presetFilter === "target") {
-        return (
+      // Exclude archived by default unless specifically filtering for archived
+      if (filterStage !== "archived" && a.status === "archived") return false;
+
+      if (filterRule === "target") {
+        const matchesTarget =
           a.sex === "female" ||
-          (a.sex === "male" && a.experience === "yes")
-        );
+          (a.sex === "male" && a.experience === "yes");
+        if (!matchesTarget) return false;
+      } else {
+        if (filterSex !== "all" && a.sex !== filterSex) return false;
+        if (filterExp !== "all" && a.experience !== filterExp) return false;
+        if (filterShifts !== "all" && a.shifts !== filterShifts) return false;
+        if (filterGrade12 !== "all" && a.grade12 !== filterGrade12) return false;
+        if (filterStage !== "all" && a.status !== filterStage) return false;
       }
-      if (presetFilter === "women") return a.sex === "female";
-      if (presetFilter === "men_exp")
-        return a.sex === "male" && a.experience === "yes";
-      if (presetFilter === "cctv") return a.role === "cctv";
+
+      if (filterInvited === "uninvited" && Boolean(a.invitedAt)) return false;
+      if (filterInvited === "invited" && !a.invitedAt) return false;
+
+      if (filterSearch.trim()) {
+        const q = filterSearch.toLowerCase();
+        const matchesSearch =
+          a.name.toLowerCase().includes(q) ||
+          a.email.toLowerCase().includes(q) ||
+          a.whatsapp.toLowerCase().includes(q);
+        if (!matchesSearch) return false;
+      }
+
       return true;
     });
-  }, [applications, presetFilter]);
+  }, [
+    applications,
+    filterRule,
+    filterSex,
+    filterExp,
+    filterShifts,
+    filterGrade12,
+    filterStage,
+    filterInvited,
+    filterSearch,
+  ]);
 
-  // Sync selected candidates when switching presets or when applications load
+  const unselectedCandidates = useMemo(() => {
+    return applications.filter(
+      (a) => !selectedCandidateIds.includes(a.id) && a.status !== "archived",
+    );
+  }, [applications, selectedCandidateIds]);
+
+  // Sync selected candidates when audience changes
   useEffect(() => {
     const defaultSelected = broadcastAudience.map((a) => a.id);
     setSelectedCandidateIds(defaultSelected);
@@ -280,6 +367,82 @@ Overwatch Moçambique`
     setSelectedCandidateIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
     );
+  }
+
+  async function handleMassShortlist() {
+    if (selectedCandidateIds.length === 0) return;
+    setBulkActionBusy(true);
+    setBulkSuccessMsg(null);
+    try {
+      const res = await fetch("/api/admin/careers", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "bulk_status",
+          ids: selectedCandidateIds,
+          status: "shortlisted",
+        }),
+      });
+      if (res.ok) {
+        setApplications((prev) =>
+          prev.map((a) =>
+            selectedCandidateIds.includes(a.id)
+              ? { ...a, status: "shortlisted" }
+              : a,
+          ),
+        );
+        setBulkSuccessMsg(
+          t(
+            `Successfully set ${selectedCandidateIds.length} candidate(s) to Shortlisted.`,
+            `${selectedCandidateIds.length} candidato(s) marcado(s) como Pré-selecionado(s) com sucesso.`,
+          ),
+        );
+      } else {
+        setError(t("Failed to update status", "Falha ao atualizar estado"));
+      }
+    } catch {
+      setError(t("Failed to update status", "Falha ao atualizar estado"));
+    } finally {
+      setBulkActionBusy(false);
+    }
+  }
+
+  async function handleMassArchive() {
+    if (unselectedCandidates.length === 0) return;
+    setBulkActionBusy(true);
+    setBulkSuccessMsg(null);
+    try {
+      const idsToArchive = unselectedCandidates.map((a) => a.id);
+      const res = await fetch("/api/admin/careers", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "bulk_status",
+          ids: idsToArchive,
+          status: "archived",
+        }),
+      });
+      if (res.ok) {
+        setApplications((prev) =>
+          prev.map((a) =>
+            idsToArchive.includes(a.id) ? { ...a, status: "archived" } : a,
+          ),
+        );
+        setArchiveModalOpen(false);
+        setBulkSuccessMsg(
+          t(
+            `Archived ${idsToArchive.length} non-selected candidate(s).`,
+            `${idsToArchive.length} candidato(s) não selecionado(s) arquivado(s).`,
+          ),
+        );
+      } else {
+        setError(t("Failed to archive candidates", "Falha ao arquivar candidatos"));
+      }
+    } catch {
+      setError(t("Failed to archive candidates", "Falha ao arquivar candidatos"));
+    } finally {
+      setBulkActionBusy(false);
+    }
   }
 
   async function handleSendBroadcast() {
@@ -574,11 +737,11 @@ Overwatch Moçambique`
   ).length;
 
   return (
-    <div className="min-h-screen bg-[#090d16] text-white flex flex-col lg:flex-row relative isolate overflow-x-hidden">
+    <div className="min-h-screen bg-[#090d16] text-white flex flex-col lg:flex-row relative isolate">
       <TechGrid className="fixed inset-0 opacity-25 pointer-events-none" />
 
       {/* ─── SIDEBAR ──────────────────────────────────────────────── */}
-      <aside className="w-full lg:w-64 shrink-0 border-b lg:border-b-0 lg:border-r border-white/10 bg-[#0e1320]/95 p-5 lg:p-6 flex flex-col z-20 backdrop-blur-md lg:sticky lg:top-0 lg:h-screen">
+      <aside className="w-full lg:w-64 shrink-0 border-b lg:border-b-0 lg:border-r border-white/10 bg-[#0e1320] p-5 lg:p-6 flex flex-col z-30 backdrop-blur-md lg:fixed lg:inset-y-0 lg:left-0 lg:overflow-y-auto">
         <div className="pb-5 border-b border-white/10">
           <div className="flex items-center justify-between">
             <Link href="/admin" className="block">
@@ -743,7 +906,7 @@ Overwatch Moçambique`
       </aside>
 
       {/* ─── MAIN CONTENT AREA ──────────────────────────────────────── */}
-      <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 space-y-6">
+      <main className="flex-1 min-w-0 lg:ml-64 p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Top Header Bar */}
         <header className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-white/10">
           <div>
@@ -1015,88 +1178,329 @@ Overwatch Moçambique`
               </div>
             )}
 
-            {/* Audience Presets & Controls */}
+            {/* Audience Criteria & Queue Controls */}
             <div className="rounded-2xl border border-white/10 bg-[#121827]/95 p-6 shadow-sm space-y-5">
               <div>
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <h2 className="text-lg font-bold text-white flex items-center gap-2">
                     <Users size={18} className="text-emerald-400" />
-                    <span>{t("Target Audience Selection", "Selecção do Público-Alvo")}</span>
+                    <span>{t("Audience Criteria & Emailing Queue", "Critérios de Selecção e Fila de Envio")}</span>
                   </h2>
-                  <span className="text-xs text-white/50">
-                    {broadcastAudience.length} {t("eligible candidates", "candidatos elegíveis")} · {selectedCandidateIds.length} {t("selected", "selecionados")}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 text-xs font-bold">
+                      {broadcastAudience.length} {t("matching criteria", "cumprem critérios")}
+                    </span>
+                    <span className="rounded-full bg-white/10 text-white px-2.5 py-0.5 text-xs font-bold">
+                      {selectedCandidateIds.length} {t("in emailing queue", "na fila de envio")}
+                    </span>
+                  </div>
                 </div>
                 <p className="mt-1 text-xs text-white/60">
                   {t(
-                    "Filter candidates based on criteria: All Women + Men with prior CCTV experience.",
-                    "Filtre os candidatos com base nos critérios acordados (Mulheres + Homens com experiência CCTV prévia).",
+                    "Filter applicants by manual criteria to build your emailing queue, mass-shortlist matching candidates, and archive remaining applicants.",
+                    "Filtre os candidatos por critérios manuais para criar a sua fila de envio, pré-selecionar os escolhidos e arquivar os restantes.",
                   )}
                 </p>
               </div>
 
-              {/* Filter Preset Chips */}
-              <div className="flex flex-wrap gap-2">
+              {/* Quick Presets Bar */}
+              <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-white/5">
+                <span className="text-[0.7rem] font-semibold text-white/40 mr-1 flex items-center gap-1">
+                  <Filter size={11} />
+                  <span>{t("Presets:", "Atalhos:")}</span>
+                </span>
+
                 <button
                   type="button"
-                  onClick={() => setPresetFilter("target")}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                    presetFilter === "target"
-                      ? "bg-emerald-500 text-[#090d16] font-bold shadow-lg shadow-emerald-500/20"
+                  onClick={() => {
+                    setFilterRule("target");
+                    setFilterSex("all");
+                    setFilterExp("all");
+                    setFilterShifts("all");
+                    setFilterGrade12("all");
+                    setFilterStage("all");
+                    setFilterInvited("all");
+                    setFilterSearch("");
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    filterRule === "target"
+                      ? "bg-emerald-500 text-[#090d16] font-bold shadow-md shadow-emerald-500/20"
                       : "bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white border border-white/10"
                   }`}
                 >
-                  {t("Target Criteria: Women + Men w/ CCTV Exp.", "Critério Alvo: Mulheres + Homens c/ Exp. CCTV")}
+                  {t("Target: Women + Men w/ CCTV Exp", "Alvo: Mulheres + Homens c/ Exp CCTV")}
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setPresetFilter("women")}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                    presetFilter === "women"
-                      ? "bg-emerald-500 text-[#090d16] font-bold shadow-lg shadow-emerald-500/20"
+                  onClick={() => {
+                    setFilterRule("custom");
+                    setFilterStage("shortlisted");
+                    setFilterSex("all");
+                    setFilterExp("all");
+                    setFilterShifts("all");
+                    setFilterGrade12("all");
+                    setFilterInvited("all");
+                    setFilterSearch("");
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    filterRule === "custom" && filterStage === "shortlisted"
+                      ? "bg-emerald-500 text-[#090d16] font-bold shadow-md"
                       : "bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white border border-white/10"
                   }`}
                 >
-                  {t("All Women", "Todas as Mulheres")} ({applications.filter((a) => a.sex === "female").length})
+                  {t("Shortlisted Only", "Apenas Pré-selecionados")} ({applications.filter((a) => a.status === "shortlisted").length})
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setPresetFilter("men_exp")}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                    presetFilter === "men_exp"
-                      ? "bg-emerald-500 text-[#090d16] font-bold shadow-lg shadow-emerald-500/20"
+                  onClick={() => {
+                    setFilterRule("custom");
+                    setFilterSex("female");
+                    setFilterExp("all");
+                    setFilterShifts("all");
+                    setFilterGrade12("all");
+                    setFilterStage("all");
+                    setFilterInvited("all");
+                    setFilterSearch("");
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    filterRule === "custom" && filterSex === "female" && filterExp === "all"
+                      ? "bg-emerald-500 text-[#090d16] font-bold shadow-md"
                       : "bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white border border-white/10"
                   }`}
                 >
-                  {t("Men w/ CCTV Experience", "Homens c/ Exp. CCTV")} ({applications.filter((a) => a.sex === "male" && a.experience === "yes").length})
+                  {t("All Women", "Todas Mulheres")} ({applications.filter((a) => a.sex === "female").length})
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setPresetFilter("cctv")}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                    presetFilter === "cctv"
-                      ? "bg-emerald-500 text-[#090d16] font-bold shadow-lg shadow-emerald-500/20"
+                  onClick={() => {
+                    setFilterRule("custom");
+                    setFilterSex("male");
+                    setFilterExp("yes");
+                    setFilterShifts("all");
+                    setFilterGrade12("all");
+                    setFilterStage("all");
+                    setFilterInvited("all");
+                    setFilterSearch("");
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    filterRule === "custom" && filterSex === "male" && filterExp === "yes"
+                      ? "bg-emerald-500 text-[#090d16] font-bold shadow-md"
                       : "bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white border border-white/10"
                   }`}
                 >
-                  {t("All CCTV Role Applicants", "Todas Candidaturas CCO")} ({applications.filter((a) => a.role === "cctv").length})
+                  {t("Men w/ CCTV Exp", "Homens c/ Exp CCTV")} ({applications.filter((a) => a.sex === "male" && a.experience === "yes").length})
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setPresetFilter("all")}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                    presetFilter === "all"
-                      ? "bg-emerald-500 text-[#090d16] font-bold shadow-lg shadow-emerald-500/20"
-                      : "bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white border border-white/10"
+                  onClick={() => {
+                    setFilterRule("custom");
+                    setFilterSex("all");
+                    setFilterExp("all");
+                    setFilterShifts("all");
+                    setFilterGrade12("all");
+                    setFilterStage("all");
+                    setFilterInvited("all");
+                    setFilterSearch("");
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    filterRule === "custom" && filterSex === "all" && filterExp === "all" && filterStage === "all" && !filterSearch
+                      ? "bg-white/20 text-white font-bold"
+                      : "bg-white/[0.04] text-white/60 hover:text-white border border-white/10"
                   }`}
                 >
-                  {t("All Candidates", "Todos")} ({applications.length})
+                  {t("Reset All", "Limpar Todos")}
                 </button>
               </div>
+
+              {/* Manual Filter Criteria Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 pt-2">
+                <div>
+                  <label className="text-[0.68rem] font-semibold text-white/60 block mb-1">
+                    {t("Gender:", "Sexo:")}
+                  </label>
+                  <select
+                    value={filterSex}
+                    onChange={(e) => {
+                      setFilterRule("custom");
+                      setFilterSex(e.target.value as "all" | "female" | "male");
+                    }}
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.05] px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                  >
+                    <option value="all" className="bg-[#121827]">{t("All Genders", "Todos")}</option>
+                    <option value="female" className="bg-[#121827]">{t("Female Only", "Mulheres")}</option>
+                    <option value="male" className="bg-[#121827]">{t("Male Only", "Homens")}</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[0.68rem] font-semibold text-white/60 block mb-1">
+                    {t("CCTV Experience:", "Exp. CCTV:")}
+                  </label>
+                  <select
+                    value={filterExp}
+                    onChange={(e) => {
+                      setFilterRule("custom");
+                      setFilterExp(e.target.value as "all" | "yes" | "no");
+                    }}
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.05] px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                  >
+                    <option value="all" className="bg-[#121827]">{t("Any Experience", "Qualquer")}</option>
+                    <option value="yes" className="bg-[#121827]">{t("Yes (With Exp)", "Sim (Com Exp)")}</option>
+                    <option value="no" className="bg-[#121827]">{t("No (Without Exp)", "Não (Sem Exp)")}</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[0.68rem] font-semibold text-white/60 block mb-1">
+                    {t("12h Shifts:", "Turnos 12h:")}
+                  </label>
+                  <select
+                    value={filterShifts}
+                    onChange={(e) => {
+                      setFilterRule("custom");
+                      setFilterShifts(e.target.value as "all" | "yes" | "no");
+                    }}
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.05] px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                  >
+                    <option value="all" className="bg-[#121827]">{t("Any Availability", "Qualquer")}</option>
+                    <option value="yes" className="bg-[#121827]">{t("Yes (Available)", "Sim (Disponível)")}</option>
+                    <option value="no" className="bg-[#121827]">{t("No", "Não")}</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[0.68rem] font-semibold text-white/60 block mb-1">
+                    {t("Grade 12:", "12ª Classe:")}
+                  </label>
+                  <select
+                    value={filterGrade12}
+                    onChange={(e) => {
+                      setFilterRule("custom");
+                      setFilterGrade12(e.target.value as "all" | "yes" | "no");
+                    }}
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.05] px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                  >
+                    <option value="all" className="bg-[#121827]">{t("Any Education", "Qualquer")}</option>
+                    <option value="yes" className="bg-[#121827]">{t("Completed", "Concluída")}</option>
+                    <option value="no" className="bg-[#121827]">{t("Not completed", "Incompleta")}</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[0.68rem] font-semibold text-white/60 block mb-1">
+                    {t("Current Status:", "Estado Atual:")}
+                  </label>
+                  <select
+                    value={filterStage}
+                    onChange={(e) => {
+                      setFilterRule("custom");
+                      setFilterStage(e.target.value);
+                    }}
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.05] px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                  >
+                    <option value="all" className="bg-[#121827]">{t("All (Excl. Archived)", "Todos (Excl. Arquivados)")}</option>
+                    {stages.map((s) => (
+                      <option key={s} value={s} className="bg-[#121827]">
+                        {stageLabels[lang][s]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[0.68rem] font-semibold text-white/60 block mb-1">
+                    {t("Invitation:", "Convocatória:")}
+                  </label>
+                  <select
+                    value={filterInvited}
+                    onChange={(e) => {
+                      setFilterRule("custom");
+                      setFilterInvited(e.target.value as "all" | "uninvited" | "invited");
+                    }}
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.05] px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                  >
+                    <option value="all" className="bg-[#121827]">{t("All Candidates", "Todos")}</option>
+                    <option value="uninvited" className="bg-[#121827]">{t("Not Yet Invited", "Ainda Não Convocados")}</option>
+                    <option value="invited" className="bg-[#121827]">{t("Already Invited", "Já Convocados")}</option>
+                  </select>
+                </div>
+
+                <div className="col-span-2 sm:col-span-3 lg:col-span-1">
+                  <label className="text-[0.68rem] font-semibold text-white/60 block mb-1">
+                    {t("Search Applicant:", "Pesquisar:")}
+                  </label>
+                  <input
+                    type="text"
+                    value={filterSearch}
+                    onChange={(e) => {
+                      setFilterRule("custom");
+                      setFilterSearch(e.target.value);
+                    }}
+                    placeholder={t("Name, email, tel...", "Nome, e-mail...")}
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.05] px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Mass Action Toolbar */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/10 bg-white/[0.02] p-4 rounded-xl">
+                <div>
+                  <span className="text-xs font-semibold text-white block">
+                    {t("Mass Actions on Candidates:", "Ações em Massa nos Candidatos:")}
+                  </span>
+                  <span className="text-[0.68rem] text-white/50">
+                    {t(
+                      "Queue shortlisted candidates for test invitations, and move the rest to Archived.",
+                      "Adicione candidatos pré-selecionados à fila de envio e mova os restantes para o arquivo.",
+                    )}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={handleMassShortlist}
+                    disabled={selectedCandidateIds.length === 0 || bulkActionBusy}
+                    className="flex items-center gap-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-3.5 py-2 text-xs font-bold text-[#090d16] disabled:opacity-40 shadow-sm transition-all cursor-pointer"
+                  >
+                    <UserCheck size={14} />
+                    <span>
+                      {t(
+                        `Shortlist & Queue Selected (${selectedCandidateIds.length})`,
+                        `Pré-selecionar e Enfileirar (${selectedCandidateIds.length})`,
+                      )}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setArchiveModalOpen(true)}
+                    disabled={unselectedCandidates.length === 0 || bulkActionBusy}
+                    className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.05] hover:bg-white/[0.1] px-3.5 py-2 text-xs font-semibold text-white/80 hover:text-white disabled:opacity-40 transition-all cursor-pointer"
+                  >
+                    <Archive size={14} />
+                    <span>
+                      {t(
+                        `Archive Unselected (${unselectedCandidates.length})`,
+                        `Arquivar Não Selecionados (${unselectedCandidates.length})`,
+                      )}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {bulkSuccessMsg && (
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300 flex items-center justify-between">
+                  <span>{bulkSuccessMsg}</span>
+                  <button onClick={() => setBulkSuccessMsg(null)} className="text-white/60 hover:text-white cursor-pointer">
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
 
               {/* Table of Candidates to Select */}
               <div className="border border-white/10 rounded-xl overflow-hidden bg-black/20">
@@ -1111,88 +1515,108 @@ Overwatch Moçambique`
                       onChange={toggleSelectAllBroadcast}
                       className="rounded border-white/20 bg-white/10 text-emerald-500 focus:ring-0 cursor-pointer h-4 w-4"
                     />
-                    <span>{t("Select All", "Selecionar Todos")} ({broadcastAudience.length})</span>
+                    <span>{t("Select All Matching", "Selecionar Todos Correspondentes")} ({broadcastAudience.length})</span>
                   </label>
 
                   <span className="text-white/40 text-[0.7rem]">
-                    {t("Check or uncheck boxes to select recipients", "Clique nas caixas para incluir ou desmarcar candidatos")}
+                    {selectedCandidateIds.length} {t("candidates selected for convocation", "candidatos selecionados para convocatória")}
                   </span>
                 </div>
 
-                <div className="max-h-72 overflow-y-auto divide-y divide-white/5">
-                  {broadcastAudience.map((a) => {
-                    const isChecked = selectedCandidateIds.includes(a.id);
-                    const isAlreadyInvited = Boolean(a.invitedAt);
-                    const hasBooked = Boolean(a.testSlot);
+                <div className="max-h-80 overflow-y-auto divide-y divide-white/5">
+                  {broadcastAudience.length === 0 ? (
+                    <div className="py-8 text-center text-xs text-white/40 italic">
+                      {t("No candidates match the specified criteria.", "Nenhum candidato corresponde aos critérios especificados.")}
+                    </div>
+                  ) : (
+                    broadcastAudience.map((a) => {
+                      const isChecked = selectedCandidateIds.includes(a.id);
+                      const isAlreadyInvited = Boolean(a.invitedAt);
+                      const hasBooked = Boolean(a.testSlot);
 
-                    return (
-                      <div
-                        key={a.id}
-                        className={`flex items-center justify-between px-4 py-3 text-xs transition-colors hover:bg-white/[0.02] ${
-                          isChecked ? "bg-white/[0.01]" : "opacity-60"
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => toggleSelectCandidate(a.id)}
-                            className="rounded border-white/20 bg-white/10 text-emerald-500 focus:ring-0 cursor-pointer h-4 w-4"
-                          />
-                          <div>
-                            <span className="font-semibold text-white block">
-                              {a.name}
+                      return (
+                        <div
+                          key={a.id}
+                          className={`flex items-center justify-between px-4 py-3 text-xs transition-colors hover:bg-white/[0.02] ${
+                            isChecked ? "bg-white/[0.02]" : "opacity-60"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => toggleSelectCandidate(a.id)}
+                              className="rounded border-white/20 bg-white/10 text-emerald-500 focus:ring-0 cursor-pointer h-4 w-4"
+                            />
+                            <div>
+                              <span className="font-semibold text-white block">
+                                {a.name}
+                              </span>
+                              <span className="text-white/40 block text-[0.68rem]">
+                                {a.email} · {a.whatsapp}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2.5">
+                            {/* Current Stage Badge */}
+                            <span
+                              className={`px-2 py-0.5 rounded text-[0.65rem] font-semibold uppercase tracking-wider ${
+                                a.status === "shortlisted"
+                                  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                                  : a.status === "archived"
+                                    ? "bg-slate-500/20 text-slate-400 border border-slate-500/30"
+                                    : "bg-white/10 text-white/70"
+                              }`}
+                            >
+                              {stageLabels[lang][a.status] || a.status}
                             </span>
-                            <span className="text-white/40 block text-[0.68rem]">
-                              {a.email} · {a.whatsapp}
+
+                            <span className="capitalize px-2 py-0.5 rounded text-[0.68rem] bg-white/5 text-white/70">
+                              {a.sex === "female" ? t("Female", "Feminino") : t("Male", "Masculino")}
                             </span>
+
+                            <span
+                              className={`px-2 py-0.5 rounded text-[0.68rem] font-medium ${
+                                a.experience === "yes"
+                                  ? "bg-emerald-500/20 text-emerald-400"
+                                  : "bg-white/5 text-white/50"
+                              }`}
+                            >
+                              {t("Exp: ", "Exp: ")}{a.experience === "yes" ? t("Yes", "Sim") : t("No", "Não")}
+                            </span>
+
+                            {hasBooked ? (
+                              <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                                {t("Booked:", "Agendado:")} {formatSlotDisplay(a.testSlot?.split("–")[0].trim() || "", lang)}
+                              </span>
+                            ) : isAlreadyInvited ? (
+                              <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                {t("Invited", "Convocado")}
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] text-white/40 bg-white/5">
+                                {t("Not Invited", "Não Convocado")}
+                              </span>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => copyBookingLink(a.id)}
+                              title={t("Copy candidate personal booking link", "Copiar link pessoal do candidato")}
+                              className="p-1 text-white/50 hover:text-white transition-colors cursor-pointer"
+                            >
+                              {copiedLinkId === a.id ? (
+                                <Check size={14} className="text-emerald-400" />
+                              ) : (
+                                <Copy size={14} />
+                              )}
+                            </button>
                           </div>
                         </div>
-
-                        <div className="flex items-center gap-3">
-                          <span className="capitalize px-2 py-0.5 rounded text-[0.68rem] bg-white/5 text-white/70">
-                            {a.sex === "female" ? t("Female", "Feminino") : t("Male", "Masculino")}
-                          </span>
-                          <span
-                            className={`px-2 py-0.5 rounded text-[0.68rem] font-medium ${
-                              a.experience === "yes"
-                                ? "bg-emerald-500/20 text-emerald-400"
-                                : "bg-white/5 text-white/50"
-                            }`}
-                          >
-                            {t("Exp: ", "Exp: ")}{a.experience === "yes" ? t("Yes", "Sim") : t("No", "Não")}
-                          </span>
-
-                          {hasBooked ? (
-                            <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                              {t("Booked:", "Agendado:")} {a.testSlot?.split("–")[0]}
-                            </span>
-                          ) : isAlreadyInvited ? (
-                            <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                              {t("Invited", "Convocado")}
-                            </span>
-                          ) : (
-                            <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] text-white/40 bg-white/5">
-                              {t("Not Invited", "Não Convocado")}
-                            </span>
-                          )}
-
-                          <button
-                            type="button"
-                            onClick={() => copyBookingLink(a.id)}
-                            title={t("Copy candidate personal booking link", "Copiar link pessoal do candidato")}
-                            className="p-1 text-white/50 hover:text-white transition-colors"
-                          >
-                            {copiedLinkId === a.id ? (
-                              <Check size={14} className="text-emerald-400" />
-                            ) : (
-                              <Copy size={14} />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  )}
                 </div>
               </div>
             </div>
@@ -1201,34 +1625,61 @@ Overwatch Moçambique`
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Editor */}
               <div className="rounded-2xl border border-white/10 bg-[#121827]/95 p-6 shadow-sm space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <h3 className="text-base font-bold text-white flex items-center gap-2">
                     <FileText size={17} className="text-emerald-400" />
                     <span>{t("Convocation Template (Email)", "Modelo da Convocatória (E-mail)")}</span>
                   </h3>
-                  <div className="flex items-center gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/10 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setEmailPreviewTab("edit")}
-                      className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
-                        emailPreviewTab === "edit"
-                          ? "bg-white/20 text-white font-semibold"
-                          : "text-white/60 hover:text-white"
-                      }`}
-                    >
-                      {t("Edit", "Editar")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEmailPreviewTab("preview")}
-                      className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
-                        emailPreviewTab === "preview"
-                          ? "bg-white/20 text-white font-semibold"
-                          : "text-white/60 hover:text-white"
-                      }`}
-                    >
-                      {t("Preview", "Pré-visualizar")}
-                    </button>
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/10 text-xs mr-1">
+                      <button
+                        type="button"
+                        onClick={() => setEmailPreviewTab("edit")}
+                        className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
+                          emailPreviewTab === "edit"
+                            ? "bg-white/20 text-white font-semibold"
+                            : "text-white/60 hover:text-white"
+                        }`}
+                      >
+                        {t("Edit", "Editar")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEmailPreviewTab("preview")}
+                        className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
+                          emailPreviewTab === "preview"
+                            ? "bg-white/20 text-white font-semibold"
+                            : "text-white/60 hover:text-white"
+                        }`}
+                      >
+                        {t("Preview", "Pré-visualizar")}
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/10 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBroadcastSubject(EMAIL_TEMPLATES.en.subject);
+                          setBroadcastMessage(EMAIL_TEMPLATES.en.message);
+                        }}
+                        title={t("Load English email copy", "Carregar texto em inglês")}
+                        className="px-2 py-1 rounded-lg hover:bg-white/10 text-[0.68rem] text-white/70 hover:text-white transition-colors cursor-pointer font-semibold"
+                      >
+                        EN
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBroadcastSubject(EMAIL_TEMPLATES.pt.subject);
+                          setBroadcastMessage(EMAIL_TEMPLATES.pt.message);
+                        }}
+                        title={t("Load Portuguese email copy", "Carregar texto em português")}
+                        className="px-2 py-1 rounded-lg hover:bg-white/10 text-[0.68rem] text-white/70 hover:text-white transition-colors cursor-pointer font-semibold"
+                      >
+                        PT
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -1261,8 +1712,8 @@ Overwatch Moçambique`
                   />
                   <p className="text-[0.68rem] text-white/40 italic">
                     {t(
-                      "Note: Candidate message is in Portuguese as the job is in Maputo, Mozambique.",
-                      "Nota: A mensagem aos candidatos é em português pois a vaga é sediada em Maputo.",
+                      "Note: Candidate message can be sent in English or Portuguese (default for Maputo candidates).",
+                      "Nota: A mensagem aos candidatos pode ser enviada em inglês ou português.",
                     )}
                   </p>
                 </div>
@@ -1279,7 +1730,7 @@ Overwatch Moçambique`
                         className="flex items-center gap-2 text-emerald-400 font-medium"
                       >
                         <Calendar size={13} />
-                        <span>{s}</span>
+                        <span>{formatSlotDisplay(s, lang)}</span>
                       </div>
                     ))}
                   </div>
@@ -1309,7 +1760,7 @@ Overwatch Moçambique`
                             REF: CCO-2026/MAPUTO
                           </span>
                           <div className="text-[0.65rem] text-slate-300 mt-0.5 font-medium">
-                            Departamento de Recursos Humanos
+                            {t("Human Resources Department", "Departamento de Recursos Humanos")}
                           </div>
                         </div>
                       </div>
@@ -1318,10 +1769,10 @@ Overwatch Moçambique`
                     {/* Official Document Subheading */}
                     <div className="bg-slate-50 px-5 py-2.5 border-b border-slate-200 flex items-center justify-between text-[0.68rem]">
                       <span className="font-semibold text-slate-700 uppercase tracking-wide">
-                        Convocatória Oficial · Teste de Selecção Presencial
+                        {t("Official Selection Test Convocation", "Convocatória Oficial · Teste de Selecção Presencial")}
                       </span>
                       <span className="text-slate-500">
-                        Maputo, Moçambique
+                        {t("Maputo, Mozambique", "Maputo, Moçambique")}
                       </span>
                     </div>
 
@@ -1337,7 +1788,7 @@ Overwatch Moçambique`
                       {/* Test Slots Clean Table */}
                       <div className="rounded-lg border border-slate-200 bg-slate-50 overflow-hidden">
                         <div className="bg-slate-100 px-3.5 py-2 border-b border-slate-200 text-[0.68rem] font-bold text-slate-700 uppercase tracking-wider">
-                          {t("Turnos Disponíveis (10h00 – 11h30):", "Turnos Disponíveis (10h00 – 11h30):")}
+                          {t("Available Slots (10:00 – 11:30):", "Turnos Disponíveis (10h00 – 11h30):")}
                         </div>
                         <div className="divide-y divide-slate-200">
                           {broadcastSlots.map((s, idx) => (
@@ -1345,9 +1796,9 @@ Overwatch Moçambique`
                               key={idx}
                               className="px-3.5 py-2 text-slate-800 font-medium text-[0.72rem] flex items-center justify-between"
                             >
-                              <span>{s}</span>
+                              <span>{formatSlotDisplay(s, lang)}</span>
                               <span className="text-[0.65rem] font-mono text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
-                                Opção 0{idx + 1}
+                                {t("Option 0", "Opção 0")}{idx + 1}
                               </span>
                             </div>
                           ))}
@@ -1357,11 +1808,11 @@ Overwatch Moçambique`
                       {/* Solid Executive CTA Button */}
                       <div className="pt-2 text-center">
                         <div className="inline-block bg-[#0b1329] text-white font-bold text-xs px-6 py-3 rounded-lg shadow-sm border border-[#0b1329]">
-                          Confirmar Minha Presença no Teste →
+                          {t("Confirm My Test Attendance →", "Confirmar Minha Presença no Teste →")}
                         </div>
                         <p className="text-[0.65rem] text-slate-500 mt-2">
                           {t(
-                            "Link individual com confirmação instantânea de vaga.",
+                            "Personal link with instant attendance confirmation.",
                             "Link individual com confirmação instantânea de vaga.",
                           )}
                         </p>
@@ -1369,8 +1820,11 @@ Overwatch Moçambique`
 
                       {/* Security Protocol Note */}
                       <div className="p-3 rounded-lg bg-amber-50 border border-amber-200/80 text-[0.68rem] text-amber-900 leading-snug">
-                        <strong className="font-semibold block mb-0.5">Nota de Segurança:</strong>
-                        Apresente documento de identificação original (BI/Passaporte) na portaria da Overwatch para entrada autorizada.
+                        <strong className="font-semibold block mb-0.5">{t("Security Notice:", "Nota de Segurança:")}</strong>
+                        {t(
+                          "Present original valid ID (ID Card/Passport) at the Overwatch security gate for authorized entry.",
+                          "Apresente documento de identificação original (BI/Passaporte) na portaria da Overwatch para entrada autorizada.",
+                        )}
                       </div>
                     </div>
 
@@ -1496,6 +1950,81 @@ Overwatch Moçambique`
                 </div>
               </div>
             )}
+
+            {/* Archive Confirmation Modal */}
+            {archiveModalOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+                <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#121827] p-6 shadow-2xl space-y-5">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-xl bg-slate-500/20 text-slate-300">
+                        <Archive size={20} />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-white">
+                          {t("Archive Non-Selected Candidates", "Arquivar Candidatos Não Selecionados")}
+                        </h3>
+                        <p className="text-xs text-white/50">
+                          {t(
+                            `Move ${unselectedCandidates.length} candidate(s) to Archived status`,
+                            `Mover ${unselectedCandidates.length} candidato(s) para o estado Arquivado`,
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setArchiveModalOpen(false)}
+                      className="text-white/50 hover:text-white cursor-pointer"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 text-xs text-white/70 space-y-2">
+                    <p>
+                      {t(
+                        "You are about to archive all applicants who are not in the current test emailing queue.",
+                        "Está prestes a arquivar todos os candidatos que não estão selecionados para convocatória.",
+                      )}
+                    </p>
+                    <p className="text-[0.68rem] text-white/50">
+                      {t(
+                        "Archived candidates will be hidden from the active convocation list but remain accessible in the Applications pipeline under the 'Archived' filter.",
+                        "Os candidatos arquivados ficarão ocultos da lista ativa de convocatórias, mas permanecerão acessíveis no pipeline de candidaturas sob o filtro 'Arquivado'.",
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setArchiveModalOpen(false)}
+                      disabled={bulkActionBusy}
+                      className="flex-1 rounded-xl border border-white/10 bg-white/[0.05] py-2.5 text-xs font-semibold text-white hover:bg-white/[0.1] transition-colors cursor-pointer"
+                    >
+                      {t("Cancel", "Cancelar")}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleMassArchive}
+                      disabled={bulkActionBusy}
+                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-slate-700 hover:bg-slate-600 py-2.5 text-xs font-bold text-white shadow-lg transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      {bulkActionBusy ? (
+                        <>
+                          <RefreshCw className="animate-spin" size={14} />
+                          <span>{t("Archiving...", "A arquivar...")}</span>
+                        </>
+                      ) : (
+                        <span>{t("Confirm Archive", "Confirmar Arquivamento")}</span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </section>
         )}
 
@@ -1546,7 +2075,7 @@ Overwatch Moçambique`
                           {t("Test Slot", "Turno de Teste")}
                         </span>
                         <h3 className="text-sm font-bold text-white mt-0.5">
-                          {slot}
+                          {formatSlotDisplay(slot, lang)}
                         </h3>
                         <span className="text-[0.68rem] text-white/40 flex items-center gap-1 mt-1">
                           <Clock size={11} /> {t("10:00 to 11:30 (Arrival 09:45)", "10h00 às 11h30 (Chegada 09h45)")}
@@ -1806,10 +2335,12 @@ Overwatch Moçambique`
                                 ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/10"
                                 : a.status === "shortlisted" ||
                                     a.status === "interview"
-                                  ? "border-white/30 text-white bg-white/10"
-                                  : a.status === "rejected"
-                                    ? "border-red-500/30 text-red-400 bg-red-500/10"
-                                    : "border-amber-500/30 text-amber-400 bg-amber-500/10"
+                                  ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10"
+                                  : a.status === "archived"
+                                    ? "border-slate-500/30 text-slate-400 bg-slate-500/10"
+                                    : a.status === "rejected"
+                                      ? "border-red-500/30 text-red-400 bg-red-500/10"
+                                      : "border-amber-500/30 text-amber-400 bg-amber-500/10"
                             }`}
                           >
                             {stages.map((s) => (
@@ -1825,7 +2356,7 @@ Overwatch Moçambique`
                           {a.testSlot ? (
                             <span className="inline-flex items-center gap-1 rounded-full bg-cyan-500/20 border border-cyan-500/30 px-2.5 py-0.5 text-[0.68rem] font-semibold text-cyan-300">
                               <CalendarCheck size={11} />
-                              {a.testSlot.split("–")[0].trim()}
+                              {formatSlotDisplay(a.testSlot.split("–")[0].trim(), lang)}
                             </span>
                           ) : a.invitedAt ? (
                             <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-500/30 px-2.5 py-0.5 text-[0.68rem] font-medium text-amber-300">
@@ -2075,7 +2606,7 @@ Overwatch Moçambique`
                     {t("Confirmed Date & Time:", "Data e Hora Confirmada:")}
                   </span>
                   <div className="text-white font-bold text-sm">
-                    {current.testSlot}
+                    {formatSlotDisplay(current.testSlot, lang)}
                   </div>
                   {current.testBookedAt && (
                     <span className="text-[0.65rem] text-white/40 block">

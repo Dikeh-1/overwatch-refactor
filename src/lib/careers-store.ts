@@ -143,11 +143,17 @@ export async function saveApplication(application: Application, cv: Buffer) {
 }
 export async function setStatus(id: string, status: Application["status"]) {
   if (isRemote()) {
-    await api("/rest/v1/rpc/update_career_status", {
-      method: "POST",
-      body: JSON.stringify({ application_id: id, new_status: status }),
-    });
-    return;
+    try {
+      await api("/rest/v1/rpc/update_career_status", {
+        method: "POST",
+        body: JSON.stringify({ application_id: id, new_status: status }),
+      });
+      return;
+    } catch {
+      // Fallback to direct PATCH on career_applications (e.g., for newly added stages like 'archived')
+      await updateApplication(id, { status });
+      return;
+    }
   }
   await exclusive(async () =>
     write(
