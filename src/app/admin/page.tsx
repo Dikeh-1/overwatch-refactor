@@ -29,7 +29,7 @@ import {
   Check,
   CalendarCheck,
   Clock,
-  Sparkles,
+  UserCheck,
   Globe,
 } from "lucide-react";
 import Logo from "@/components/ui/Logo";
@@ -469,24 +469,24 @@ Overwatch Moçambique`
               <button
                 type="button"
                 onClick={() => handleSetLang("en")}
-                className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
                   lang === "en"
                     ? "bg-white text-[#090d16] shadow-sm font-bold"
                     : "text-white/60 hover:text-white"
                 }`}
               >
-                🇬🇧 English
+                EN
               </button>
               <button
                 type="button"
                 onClick={() => handleSetLang("pt")}
-                className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
                   lang === "pt"
                     ? "bg-white text-[#090d16] shadow-sm font-bold"
                     : "text-white/60 hover:text-white"
                 }`}
               >
-                🇲🇿 Português
+                PT
               </button>
             </div>
           </div>
@@ -613,7 +613,7 @@ Overwatch Moçambique`
                     : "text-white/60 hover:text-white"
                 }`}
               >
-                🇬🇧 EN
+                EN
               </button>
               <button
                 type="button"
@@ -624,7 +624,7 @@ Overwatch Moçambique`
                     : "text-white/60 hover:text-white"
                 }`}
               >
-                🇲🇿 PT
+                PT
               </button>
             </div>
           </div>
@@ -773,30 +773,28 @@ Overwatch Moçambique`
 
           <div className="flex items-center gap-3">
             {/* Language Switcher in Header */}
-            <div className="flex items-center rounded-xl bg-white/[0.04] border border-white/10 p-1 text-xs">
+            <div className="flex items-center rounded-xl bg-white/[0.04] border border-white/10 p-0.5 text-xs">
               <button
                 type="button"
                 onClick={() => handleSetLang("en")}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   lang === "en"
                     ? "bg-white text-[#090d16] font-bold shadow-sm"
                     : "text-white/60 hover:text-white"
                 }`}
               >
-                <span>🇬🇧</span>
-                <span>English</span>
+                EN
               </button>
               <button
                 type="button"
                 onClick={() => handleSetLang("pt")}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   lang === "pt"
                     ? "bg-white text-[#090d16] font-bold shadow-sm"
                     : "text-white/60 hover:text-white"
                 }`}
               >
-                <span>🇲🇿</span>
-                <span>Português</span>
+                PT
               </button>
             </div>
 
@@ -860,7 +858,7 @@ Overwatch Moçambique`
           <div className="rounded-2xl border border-white/10 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between text-xs font-semibold text-white/60">
               <span>{t("Eligible for Selection Test", "Elegíveis para Teste")}</span>
-              <Sparkles size={16} className="text-emerald-400" />
+              <UserCheck size={16} className="text-emerald-400" />
             </div>
             <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-emerald-400">
               {targetCount}
@@ -1022,7 +1020,7 @@ Overwatch Moçambique`
               <div>
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                    <Sparkles size={18} className="text-emerald-400" />
+                    <Users size={18} className="text-emerald-400" />
                     <span>{t("Target Audience Selection", "Selecção do Público-Alvo")}</span>
                   </h2>
                   <span className="text-xs text-white/50">
@@ -1048,7 +1046,7 @@ Overwatch Moçambique`
                       : "bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white border border-white/10"
                   }`}
                 >
-                  🎯 {t("Main Criterion: Women + Men w/ CCTV Exp.", "Critério Principal: Mulheres + Homens c/ Exp. CCTV")}
+                  {t("Target Criteria: Women + Men w/ CCTV Exp.", "Critério Alvo: Mulheres + Homens c/ Exp. CCTV")}
                 </button>
 
                 <button
@@ -1295,55 +1293,92 @@ Overwatch Moçambique`
                     <span className="text-xs font-bold uppercase tracking-wider text-white/50">
                       {t("Candidate Email Preview", "Pré-visualização do E-mail para Candidato")}
                     </span>
-                    <span className="text-[0.68rem] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                      {t("Overwatch Design System", "Design Overwatch Dark")}
+                    <span className="text-[0.68rem] text-slate-300 bg-white/[0.06] border border-white/10 px-2.5 py-0.5 rounded-md font-mono">
+                      {t("Executive Letterhead", "Formato Oficial")}
                     </span>
                   </div>
 
-                  <div className="rounded-xl border border-white/15 bg-[#121827] p-5 space-y-4 text-xs">
-                    {/* Branded Logo Pill */}
-                    <div className="text-center pb-3 border-b border-white/10">
-                      <div className="inline-block bg-white p-2 rounded-xl mb-2">
-                        <Logo size="sm" variant="dark" />
-                      </div>
-                      <div>
-                        <span className="text-[0.65rem] uppercase font-bold text-emerald-400 tracking-wider">
-                          Convocatória Oficial · Teste Presencial
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="text-white/80 whitespace-pre-wrap font-sans text-xs leading-relaxed">
-                      {broadcastMessage.replace(
-                        /\{\{name\}\}/g,
-                        broadcastAudience[0]?.name || "Maria João",
-                      )}
-                    </div>
-
-                    <div className="rounded-xl bg-[#090d16] border border-white/10 p-3 space-y-2">
-                      <span className="text-[0.68rem] font-bold text-white/50 uppercase">
-                        {t("Available Date & Time Options:", "Opções de Data e Hora Disponíveis:")}
-                      </span>
-                      {broadcastSlots.map((s, idx) => (
-                        <div
-                          key={idx}
-                          className="bg-[#0f1422] p-2 rounded-lg border-l-2 border-emerald-500 text-white font-medium text-[0.7rem]"
-                        >
-                          {s}
+                  {/* Document Card Mirroring Actual Email */}
+                  <div className="rounded-xl border border-slate-200 bg-white text-slate-800 shadow-xl overflow-hidden text-xs">
+                    {/* Official Letterhead Header */}
+                    <div className="bg-[#0b1329] px-5 py-4 border-b-2 border-emerald-500 text-white">
+                      <div className="flex items-center justify-between">
+                        <Logo size="sm" variant="light" />
+                        <div className="text-right">
+                          <span className="inline-block bg-white/10 text-emerald-300 font-mono text-[0.6rem] px-2 py-0.5 rounded border border-white/10 font-bold">
+                            REF: CCO-2026/MAPUTO
+                          </span>
+                          <div className="text-[0.65rem] text-slate-300 mt-0.5 font-medium">
+                            Departamento de Recursos Humanos
+                          </div>
                         </div>
-                      ))}
-                    </div>
-
-                    <div className="text-center pt-2">
-                      <div className="inline-block bg-white text-[#090d16] font-bold text-xs px-5 py-2.5 rounded-xl shadow-lg">
-                        Escolher Data do Teste Presencial →
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t border-white/10 text-center text-[0.65rem] text-white/50 space-y-1">
-                      <div className="font-semibold text-white/70">Overwatch Moçambique</div>
+                    {/* Official Document Subheading */}
+                    <div className="bg-slate-50 px-5 py-2.5 border-b border-slate-200 flex items-center justify-between text-[0.68rem]">
+                      <span className="font-semibold text-slate-700 uppercase tracking-wide">
+                        Convocatória Oficial · Teste de Selecção Presencial
+                      </span>
+                      <span className="text-slate-500">
+                        Maputo, Moçambique
+                      </span>
+                    </div>
+
+                    {/* Letter Body */}
+                    <div className="p-5 space-y-4">
+                      <div className="text-slate-800 whitespace-pre-wrap font-sans text-xs leading-relaxed">
+                        {broadcastMessage.replace(
+                          /\{\{name\}\}/g,
+                          broadcastAudience[0]?.name || "Maria João",
+                        )}
+                      </div>
+
+                      {/* Test Slots Clean Table */}
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 overflow-hidden">
+                        <div className="bg-slate-100 px-3.5 py-2 border-b border-slate-200 text-[0.68rem] font-bold text-slate-700 uppercase tracking-wider">
+                          {t("Turnos Disponíveis (10h00 – 11h30):", "Turnos Disponíveis (10h00 – 11h30):")}
+                        </div>
+                        <div className="divide-y divide-slate-200">
+                          {broadcastSlots.map((s, idx) => (
+                            <div
+                              key={idx}
+                              className="px-3.5 py-2 text-slate-800 font-medium text-[0.72rem] flex items-center justify-between"
+                            >
+                              <span>{s}</span>
+                              <span className="text-[0.65rem] font-mono text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
+                                Opção 0{idx + 1}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Solid Executive CTA Button */}
+                      <div className="pt-2 text-center">
+                        <div className="inline-block bg-[#0b1329] text-white font-bold text-xs px-6 py-3 rounded-lg shadow-sm border border-[#0b1329]">
+                          Confirmar Minha Presença no Teste →
+                        </div>
+                        <p className="text-[0.65rem] text-slate-500 mt-2">
+                          {t(
+                            "Link individual com confirmação instantânea de vaga.",
+                            "Link individual com confirmação instantânea de vaga.",
+                          )}
+                        </p>
+                      </div>
+
+                      {/* Security Protocol Note */}
+                      <div className="p-3 rounded-lg bg-amber-50 border border-amber-200/80 text-[0.68rem] text-amber-900 leading-snug">
+                        <strong className="font-semibold block mb-0.5">Nota de Segurança:</strong>
+                        Apresente documento de identificação original (BI/Passaporte) na portaria da Overwatch para entrada autorizada.
+                      </div>
+                    </div>
+
+                    {/* Document Footer */}
+                    <div className="bg-slate-50 px-5 py-3 border-t border-slate-200 text-center text-[0.65rem] text-slate-500 space-y-0.5">
+                      <div className="font-semibold text-slate-700">Overwatch Moçambique, Lda.</div>
                       <div>{siteContact.address.pt}</div>
-                      <div>WhatsApp: +258 84 287 0793 · Email: info@overwatchmoz.com</div>
+                      <div>WhatsApp: +258 84 287 0793 · info@overwatchmoz.com</div>
                     </div>
                   </div>
                 </div>

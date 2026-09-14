@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   Eye,
   ShieldCheck,
-  Sparkles,
 } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
@@ -57,7 +56,7 @@ export default async function SolutionsPage({ params }: Props) {
         <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:gap-16 lg:px-8">
           <div className="max-w-2xl">
             <span className={darkEyebrowClassName}>
-              <Sparkles size={14} className="shrink-0" aria-hidden="true" />
+              <ShieldCheck size={14} className="shrink-0" aria-hidden="true" />
               {t("hero.eyebrow")}
             </span>
             <h1 className="mt-6 text-balance text-[clamp(2.4rem,8vw,4.75rem)] font-bold leading-[1.01] tracking-[-0.045em] text-white">
