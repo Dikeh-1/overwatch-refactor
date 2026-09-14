@@ -287,3 +287,227 @@ export async function notifyApplication(application: Application, cv: Buffer) {
     }),
   );
 }
+
+export async function sendTestInvitation({
+  application,
+  subject,
+  messageText,
+  slots,
+  baseUrl,
+}: {
+  application: Application;
+  subject: string;
+  messageText: string;
+  slots: string[];
+  baseUrl?: string;
+}) {
+  if (
+    !process.env.BREVO_API_KEY ||
+    application.email.endsWith(".invalid") ||
+    process.env.CAREERS_TEST_MODE === "true"
+  ) {
+    return { success: true, mocked: true };
+  }
+
+  const origin = (
+    baseUrl ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "https://www.overwatchmoz.com"
+  ).replace(/\/+$/, "");
+  const bookingUrl = `${origin}/pt/careers/test-invite/${application.id}`;
+
+  const sender = {
+    name: "Overwatch Recrutamento",
+    email: "noreply@overwatchmoz.com",
+  };
+
+  const formattedSlotsHtml = slots
+    .map(
+      (s) =>
+        `<li style="margin-bottom: 8px; padding: 10px 14px; background: #0f1422; border-radius: 8px; border-left: 3px solid #10b981; font-weight: 600; color: #f8fafc; font-size: 14px;">${s}</li>`,
+    )
+    .join("");
+
+  const processedMessage = messageText
+    .replace(/\{\{name\}\}/gi, application.name)
+    .replace(/\{\{booking_link\}\}/gi, bookingUrl);
+
+  const htmlContent = `
+    <div style="background-color: #090d16; padding: 40px 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #e2e8f0; line-height: 1.6;">
+      <div style="max-width: 600px; margin: 0 auto; background-color: #121827; border-radius: 16px; border: 1px solid rgba(255,255,255,0.12); overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.6);">
+        <div style="height: 4px; background: linear-gradient(90deg, #10b981, #06b6d4, #3b82f6);"></div>
+        <div style="padding: 32px 28px;">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <img src="https://www.overwatchmoz.com/logo.png" alt="Overwatch" height="34" style="height: 34px; width: auto; margin: 0 auto; display: block;" />
+            <div style="display: inline-block; margin-top: 14px; padding: 4px 12px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 9999px; font-size: 11px; font-weight: 700; color: #34d399; text-transform: uppercase; letter-spacing: 0.05em;">
+              Convocatória Oficial · Teste Presencial
+            </div>
+          </div>
+          <div style="color: #cbd5e1; font-size: 15px; line-height: 1.6; white-space: pre-line; margin-bottom: 24px;">
+${processedMessage}
+          </div>
+          <div style="background: #090d16; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 18px 20px; margin: 24px 0;">
+            <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 12px;">
+              Opções de Data e Hora Disponíveis:
+            </div>
+            <ul style="list-style: none; padding: 0; margin: 0;">
+              ${formattedSlotsHtml}
+            </ul>
+          </div>
+          <div style="text-align: center; margin: 32px 0 24px 0;">
+            <a href="${bookingUrl}" target="_blank" style="display: inline-block; background-color: #ffffff; color: #090d16; font-size: 15px; font-weight: 700; padding: 15px 32px; border-radius: 12px; text-decoration: none; box-shadow: 0 4px 14px rgba(255,255,255,0.2);">
+              Escolher Data do Teste Presencial &rarr;
+            </a>
+          </div>
+          <p style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 12px;">
+            Clique no botão acima para selecionar a sua data. A sua vaga será confirmada imediatamente.
+          </p>
+          <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 11px; color: #64748b; word-break: break-all;">
+            Se o botão não funcionar, aceda através deste link direto:<br />
+            <a href="${bookingUrl}" style="color: #38bdf8; text-decoration: underline;">${bookingUrl}</a>
+          </div>
+        </div>
+        <div style="background-color: #090d16; padding: 20px 28px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 12px; color: #64748b; text-align: center;">
+          <strong style="color: #94a3b8;">Overwatch Moçambique</strong><br />
+          ${siteContact.address.pt}<br />
+          WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #34d399; text-decoration: none;">+258 84 287 0793</a>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const payload = {
+    sender,
+    to: [{ email: application.email, name: application.name }],
+    subject,
+    htmlContent,
+    textContent: `${processedMessage}\n\nEscolha a data do teste no seguinte link:\n${bookingUrl}\n\nOverwatch Moçambique`,
+  };
+
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "api-key": process.env.BREVO_API_KEY!,
+    },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(10000),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text().catch(() => "");
+    throw new Error(`Brevo delivery failed (${res.status}): ${errorText}`);
+  }
+
+  return { success: true };
+}
+
+export async function sendBookingConfirmation({
+  application,
+  slot,
+  baseUrl,
+}: {
+  application: Application;
+  slot: string;
+  baseUrl?: string;
+}) {
+  if (
+    !process.env.BREVO_API_KEY ||
+    application.email.endsWith(".invalid") ||
+    process.env.CAREERS_TEST_MODE === "true"
+  ) {
+    return { success: true, mocked: true };
+  }
+
+  const origin = (
+    baseUrl ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "https://www.overwatchmoz.com"
+  ).replace(/\/+$/, "");
+  const bookingUrl = `${origin}/pt/careers/test-invite/${application.id}`;
+
+  const sender = {
+    name: "Overwatch Recrutamento",
+    email: "noreply@overwatchmoz.com",
+  };
+
+  const htmlContent = `
+    <div style="background-color: #090d16; padding: 40px 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #e2e8f0; line-height: 1.6;">
+      <div style="max-width: 600px; margin: 0 auto; background-color: #121827; border-radius: 16px; border: 1px solid rgba(255,255,255,0.12); overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.6);">
+        <div style="height: 4px; background: #10b981;"></div>
+        <div style="padding: 32px 28px;">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <img src="https://www.overwatchmoz.com/logo.png" alt="Overwatch" height="34" style="height: 34px; width: auto; margin: 0 auto; display: block;" />
+            <div style="display: inline-block; margin-top: 14px; padding: 5px 14px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 9999px; font-size: 12px; font-weight: 700; color: #10b981; text-transform: uppercase;">
+              ✓ Presença Confirmada no Teste
+            </div>
+          </div>
+          <h2 style="font-size: 20px; font-weight: 700; color: #ffffff; text-align: center; margin-bottom: 8px;">
+            Olá, ${application.name}
+          </h2>
+          <p style="font-size: 14px; color: #94a3b8; text-align: center; margin-bottom: 28px;">
+            A sua presença no teste presencial de selecção para <strong>Operadora de CCO</strong> está confirmada.
+          </p>
+          <div style="background: #090d16; border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 22px; margin-bottom: 24px;">
+            <div style="margin-bottom: 16px;">
+              <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #10b981; letter-spacing: 0.05em;">Data e Hora Confirmada:</span>
+              <div style="font-size: 17px; font-weight: 700; color: #ffffff; margin-top: 2px;">
+                ${slot}
+              </div>
+            </div>
+            <div style="margin-bottom: 16px;">
+              <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.05em;">Local do Teste:</span>
+              <div style="font-size: 14px; font-weight: 600; color: #e2e8f0; margin-top: 2px;">
+                ${siteContact.address.pt}
+              </div>
+              <a href="https://maps.google.com/?q=${encodeURIComponent(siteContact.address.pt)}" target="_blank" style="display: inline-block; margin-top: 6px; font-size: 12px; color: #38bdf8; text-decoration: underline;">
+                Abrir localização no Google Maps &rarr;
+              </a>
+            </div>
+            <div>
+              <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.05em;">Requisitos para o Teste:</span>
+              <ul style="margin: 6px 0 0 0; padding-left: 20px; font-size: 13px; color: #cbd5e1;">
+                <li>Trazer documento de identificação original e válido (BI / Passaporte / DIRE).</li>
+                <li>Trazer caneta esferográfica de tinta azul ou preta.</li>
+                <li>Chegar com <strong>15 minutos de antecedência</strong>.</li>
+              </ul>
+            </div>
+          </div>
+          <p style="font-size: 12px; color: #64748b; text-align: center; margin-top: 20px;">
+            Caso necessite de alterar a sua data, utilize o link:<br />
+            <a href="${bookingUrl}" style="color: #38bdf8; text-decoration: underline;">${bookingUrl}</a>
+          </p>
+        </div>
+        <div style="background-color: #090d16; padding: 20px 28px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 12px; color: #64748b; text-align: center;">
+          <strong style="color: #94a3b8;">Overwatch Moçambique</strong><br />
+          Dúvidas? Contacte-nos pelo WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #34d399; text-decoration: none;">+258 84 287 0793</a>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const payload = {
+    sender,
+    to: [{ email: application.email, name: application.name }],
+    subject: "Presença Confirmada: Teste de Selecção Overwatch",
+    htmlContent,
+    textContent: `Olá, ${application.name}.\n\nA sua presença no teste presencial de Operadora de CCO está confirmada para:\n${slot}\n\nLocal:\n${siteContact.address.pt}\n\nRequisitos:\n- Trazer BI ou Passaporte\n- Trazer caneta esferográfica\n- Chegar 15 minutos antes\n\nOverwatch Moçambique`,
+  };
+
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "api-key": process.env.BREVO_API_KEY!,
+    },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(10000),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text().catch(() => "");
+    console.error("Booking confirmation delivery failed", res.status, errorText);
+  }
+
+  return { success: true };
+}

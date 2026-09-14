@@ -47,5 +47,14 @@ export type Application = {
   cvType: string;
   cvSize: number;
   status: (typeof stages)[number];
+  invitedAt?: string;
+  testSlot?: string;
+  testBookedAt?: string;
 };
 export const MAX_CV = 3 * 1024 * 1024;
+
+export const DEFAULT_TEST_SLOTS = [
+  "Quarta-feira, 16 de Setembro – 10h00",
+  "Quinta-feira, 17 de Setembro – 10h00",
+  "Sexta-feira, 18 de Setembro – 10h00",
+] as const;

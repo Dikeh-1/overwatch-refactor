@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useCallback, type FormEvent } from "react";
+import { useEffect, useState, useCallback, useMemo, type FormEvent } from "react";
 import {
   ArrowUpRight,
   LayoutDashboard,
@@ -20,13 +20,30 @@ import {
   Phone,
   ExternalLink,
   Eye,
+  Mail,
+  Send,
+  Calendar,
+  CheckCircle2,
+  AlertCircle,
+  Copy,
+  Check,
+  CalendarCheck,
+  Clock,
+  Sparkles,
+  MapPin,
 } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 import TechGrid from "@/components/ui/TechGrid";
 import LazyVideo from "@/components/ui/LazyVideo";
 import DocxViewer from "@/components/admin/DocxViewer";
 import { IMAGES } from "@/lib/constants";
-import { type Application, type Role, stages } from "@/lib/careers";
+import {
+  type Application,
+  type Role,
+  stages,
+  DEFAULT_TEST_SLOTS,
+} from "@/lib/careers";
+import { siteContact } from "@/lib/site-config";
 import "./admin.css";
 
 const stageLabels: Record<string, string> = {
@@ -42,7 +59,9 @@ export default function AdminPage() {
   const [auth, setAuth] = useState<boolean | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
-  const [view, setView] = useState<"applications" | "roles">("applications");
+  const [view, setView] = useState<
+    "applications" | "roles" | "broadcast" | "schedule"
+  >("applications");
   const [query, setQuery] = useState("");
   const [stageFilter, setStageFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
@@ -50,6 +69,41 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [updated, setUpdated] = useState("");
+
+  // ─── Convocatórias (Broadcast) State ──────────────────────────────
+  const [presetFilter, setPresetFilter] = useState<
+    "target" | "women" | "men_exp" | "cctv" | "all"
+  >("target");
+  const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
+  const [broadcastSubject, setBroadcastSubject] = useState(
+    "Convocatória: Teste de Selecção Presencial — Overwatch Moçambique",
+  );
+  const [broadcastMessage, setBroadcastMessage] = useState(
+`Boa tarde {{name}},
+
+Agradecemos a sua candidatura à vaga de Operadora de CCO da Overwatch.
+
+Após análise da sua candidatura, foi seleccionada para avançar para a próxima fase do processo de recrutamento: teste de selecção presencial.
+
+Por favor, escolha uma das seguintes opções de data e confirme a sua presença através do link pessoal no botão abaixo.
+
+Após a sua selecção, a sua vaga fica automaticamente confirmada no nosso sistema.
+
+Atenciosamente,
+Equipa de Recrutamento Overwatch Moçambique`
+  );
+  const [broadcastSlots] = useState<string[]>([...DEFAULT_TEST_SLOTS]);
+  const [sendingBroadcast, setSendingBroadcast] = useState(false);
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [broadcastResult, setBroadcastResult] = useState<{
+    success: boolean;
+    count: number;
+    failed: number;
+  } | null>(null);
+  const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
+  const [emailPreviewTab, setEmailPreviewTab] = useState<"edit" | "preview">(
+    "edit",
+  );
 
   const load = useCallback(async () => {
     try {
@@ -61,7 +115,9 @@ export default function AdminPage() {
       if (!r.ok) {
         const d = await r.json().catch(() => ({}));
         throw new Error(
-          d.details || d.error || "Could not load applications. Please check connection.",
+          d.details ||
+            d.error ||
+            "Could not load applications. Please check connection.",
         );
       }
       const d = await r.json();
@@ -161,6 +217,109 @@ export default function AdminPage() {
         .includes(query.toLowerCase()),
   );
 
+  // ─── Filtered Audience for Convocatórias ───────────────────────────
+  const broadcastAudience = useMemo(() => {
+    return applications.filter((a) => {
+      if (presetFilter === "target") {
+        return (
+          a.sex === "female" ||
+          (a.sex === "male" && a.experience === "yes")
+        );
+      }
+      if (presetFilter === "women") return a.sex === "female";
+      if (presetFilter === "men_exp")
+        return a.sex === "male" && a.experience === "yes";
+      if (presetFilter === "cctv") return a.role === "cctv";
+      return true;
+    });
+  }, [applications, presetFilter]);
+
+  // Sync selected candidates when switching presets or when applications load
+  useEffect(() => {
+    const defaultSelected = broadcastAudience.map((a) => a.id);
+    setSelectedCandidateIds(defaultSelected);
+  }, [broadcastAudience]);
+
+  function toggleSelectAllBroadcast() {
+    if (selectedCandidateIds.length === broadcastAudience.length) {
+      setSelectedCandidateIds([]);
+    } else {
+      setSelectedCandidateIds(broadcastAudience.map((a) => a.id));
+    }
+  }
+
+  function toggleSelectCandidate(id: string) {
+    setSelectedCandidateIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  }
+
+  async function handleSendBroadcast() {
+    if (selectedCandidateIds.length === 0) return;
+    setSendingBroadcast(true);
+    setBroadcastResult(null);
+    try {
+      const res = await fetch("/api/admin/careers/bulk-invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          candidateIds: selectedCandidateIds,
+          subject: broadcastSubject,
+          messageText: broadcastMessage,
+          slots: broadcastSlots,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Falha ao enviar convocatórias.");
+      }
+
+      setBroadcastResult({
+        success: true,
+        count: data.count || 0,
+        failed: data.failed || 0,
+      });
+      setConfirmModalOpen(false);
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSendingBroadcast(false);
+    }
+  }
+
+  async function sendSingleInvite(candidateId: string) {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/admin/careers/bulk-invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          candidateIds: [candidateId],
+          subject: broadcastSubject,
+          messageText: broadcastMessage,
+          slots: broadcastSlots,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Falha ao enviar convocatória.");
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function copyBookingLink(id: string) {
+    const origin = window.location.origin;
+    const link = `${origin}/pt/careers/test-invite/${id}`;
+    navigator.clipboard.writeText(link);
+    setCopiedLinkId(id);
+    setTimeout(() => setCopiedLinkId(null), 2500);
+  }
+
   function exportCSV() {
     if (!applications.length) return;
     const keys: (keyof Application)[] = [
@@ -202,6 +361,51 @@ export default function AdminPage() {
     URL.revokeObjectURL(url);
   }
 
+  function exportAttendanceCSV(slotFilter?: string) {
+    const targetApps = applications.filter((a) =>
+      slotFilter ? a.testSlot === slotFilter : Boolean(a.testSlot),
+    );
+    if (!targetApps.length) {
+      alert("Nenhum candidato com teste confirmado para este filtro.");
+      return;
+    }
+
+    const headers = [
+      "Turno / Data do Teste",
+      "Nome Completo",
+      "WhatsApp",
+      "Email",
+      "Genero",
+      "Experiencia CCTV",
+      "12a Classe Concluida",
+      "Data de Confirmacao",
+      "Assinatura de Presenca",
+    ];
+
+    const rows = targetApps.map((a) => [
+      `"${(a.testSlot || "").replace(/"/g, '""')}"`,
+      `"${a.name.replace(/"/g, '""')}"`,
+      `"${a.whatsapp}"`,
+      `"${a.email}"`,
+      `"${a.sex === "female" ? "Feminino" : "Masculino"}"`,
+      `"${a.experience === "yes" ? "Sim" : "Nao"}"`,
+      `"${a.grade12 === "yes" ? "Sim" : "Nao"}"`,
+      `"${a.testBookedAt ? new Date(a.testBookedAt).toLocaleString("pt-MZ") : ""}"`,
+      `""`, // Blank signature cell for print-out sheet
+    ]);
+
+    const csvContent =
+      "\uFEFF" +
+      [headers.join(","), ...rows.map((r) => r.join(","))].join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `overwatch-lista-presencas-teste-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   // Loading State
   if (auth === null) {
     return (
@@ -218,7 +422,6 @@ export default function AdminPage() {
   if (!auth) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-[#090d16] text-white relative isolate overflow-hidden px-4 py-12">
-        {/* Soft Background Video */}
         <div className="absolute inset-0 z-0 opacity-30 pointer-events-none">
           <LazyVideo
             className="h-full w-full object-cover mix-blend-luminosity"
@@ -227,7 +430,6 @@ export default function AdminPage() {
             src={IMAGES.videoSrc}
           />
         </div>
-        {/* Soft dark dimming overlay to keep it soft, not too bright, matching Overwatch theme */}
         <div className="absolute inset-0 bg-[#090d16]/80 z-0 pointer-events-none" />
         <TechGrid className="absolute inset-0 opacity-35 pointer-events-none z-0" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.06),transparent_40%),radial-gradient(circle_at_80%_80%,rgba(255,255,255,0.03),transparent_40%)] pointer-events-none z-0" />
@@ -235,7 +437,6 @@ export default function AdminPage() {
         <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-[#121827]/95 p-8 shadow-[0_32px_80px_rgba(0,0,0,0.6)] backdrop-blur-md">
           <div className="text-center pb-6 border-b border-white/10">
             <div className="flex justify-center mb-4">
-              {/* Crisp Light Logo */}
               <Logo size="md" variant="light" />
             </div>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.06] px-3 py-1 text-[0.68rem] font-bold uppercase tracking-wider text-white/80">
@@ -308,13 +509,17 @@ export default function AdminPage() {
     ? applications.find((a) => a.id === selected.id) || selected
     : null;
 
+  const confirmedCount = applications.filter((a) => Boolean(a.testSlot)).length;
+  const targetCount = applications.filter(
+    (a) => a.sex === "female" || (a.sex === "male" && a.experience === "yes"),
+  ).length;
+
   return (
     <div className="min-h-screen bg-[#090d16] text-white flex flex-col lg:flex-row relative isolate overflow-x-hidden">
       <TechGrid className="fixed inset-0 opacity-25 pointer-events-none" />
 
-      {/* ─── SIDEBAR (STICKY NAVIGATION WITH CRISP LIGHT LOGO) ────── */}
+      {/* ─── SIDEBAR ──────────────────────────────────────────────── */}
       <aside className="w-full lg:w-64 shrink-0 border-b lg:border-b-0 lg:border-r border-white/10 bg-[#0e1320]/95 p-5 lg:p-6 flex flex-col z-20 backdrop-blur-md lg:sticky lg:top-0 lg:h-screen">
-        {/* Brand Header with Light Logo */}
         <div className="pb-6 border-b border-white/10">
           <Link href="/admin" className="block">
             <Logo size="sm" variant="light" />
@@ -329,6 +534,7 @@ export default function AdminPage() {
 
         {/* Navigation Tabs */}
         <nav className="mt-6 space-y-1.5">
+          {/* Applications Tab */}
           <button
             onClick={() => setView("applications")}
             className={`w-full flex items-center justify-between gap-3 rounded-xl px-3.5 py-3 text-xs font-semibold transition-all cursor-pointer ${
@@ -352,6 +558,43 @@ export default function AdminPage() {
             </span>
           </button>
 
+          {/* Convocatórias (Bulk Invite) Tab */}
+          <button
+            onClick={() => setView("broadcast")}
+            className={`w-full flex items-center justify-between gap-3 rounded-xl px-3.5 py-3 text-xs font-semibold transition-all cursor-pointer ${
+              view === "broadcast"
+                ? "bg-emerald-500/20 text-white border border-emerald-500/40 shadow-sm"
+                : "text-white/70 hover:bg-white/[0.05] hover:text-white border border-transparent"
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <Mail size={17} className="text-emerald-400" />
+              <span>Convocatórias</span>
+            </div>
+            <span className="rounded-full bg-emerald-500/30 text-emerald-300 px-2 py-0.5 text-[0.65rem] font-bold">
+              {targetCount} Alvo
+            </span>
+          </button>
+
+          {/* Agenda de Testes Tab */}
+          <button
+            onClick={() => setView("schedule")}
+            className={`w-full flex items-center justify-between gap-3 rounded-xl px-3.5 py-3 text-xs font-semibold transition-all cursor-pointer ${
+              view === "schedule"
+                ? "bg-white/[0.1] text-white border border-white/20 shadow-sm"
+                : "text-white/70 hover:bg-white/[0.05] hover:text-white border border-transparent"
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <Calendar size={17} className="text-cyan-400" />
+              <span>Agenda de Testes</span>
+            </div>
+            <span className="rounded-full bg-cyan-500/20 text-cyan-300 px-2 py-0.5 text-[0.65rem] font-bold">
+              {confirmedCount} Confirmados
+            </span>
+          </button>
+
+          {/* Roles Tab */}
           <button
             onClick={() => setView("roles")}
             className={`w-full flex items-center justify-between gap-3 rounded-xl px-3.5 py-3 text-xs font-semibold transition-all cursor-pointer ${
@@ -410,13 +653,23 @@ export default function AdminPage() {
               <span>Overwatch</span>
               <span>/</span>
               <span className="text-white/90 capitalize">
-                {view === "roles" ? "Manage Roles" : "Candidate Applications"}
+                {view === "roles"
+                  ? "Manage Roles"
+                  : view === "broadcast"
+                    ? "Convocatórias de Teste"
+                    : view === "schedule"
+                      ? "Agenda de Testes Presenciais"
+                      : "Candidate Applications"}
               </span>
             </div>
             <h1 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
               {view === "roles"
                 ? "Role Availability"
-                : "Recruitment Pipeline"}
+                : view === "broadcast"
+                  ? "Envio de Convocatórias em Massa"
+                  : view === "schedule"
+                    ? "Agenda de Testes Presenciais"
+                    : "Recruitment Pipeline"}
             </h1>
           </div>
 
@@ -438,6 +691,17 @@ export default function AdminPage() {
               >
                 <Download size={14} />
                 <span>Export CSV</span>
+              </button>
+            )}
+
+            {view === "schedule" && (
+              <button
+                onClick={() => exportAttendanceCSV()}
+                disabled={!confirmedCount}
+                className="flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-[#090d16] shadow-sm hover:bg-emerald-400 disabled:opacity-50 cursor-pointer transition-transform hover:-translate-y-0.5"
+              >
+                <Download size={14} />
+                <span>Exportar Lista de Presenças (CSV)</span>
               </button>
             )}
           </div>
@@ -462,33 +726,35 @@ export default function AdminPage() {
             <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-white">
               {applications.length}
             </strong>
-            <span className="text-[0.7rem] text-white/40">All registered candidates</span>
+            <span className="text-[0.7rem] text-white/40">
+              All registered candidates
+            </span>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between text-xs font-semibold text-white/60">
-              <span>Pending Review</span>
-              <LayoutDashboard size={16} className="text-amber-400" />
-            </div>
-            <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-amber-400">
-              {applications.filter((a) => a.status === "new").length}
-            </strong>
-            <span className="text-[0.7rem] text-white/40">Requires initial screening</span>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
-            <div className="flex items-center justify-between text-xs font-semibold text-white/60">
-              <span>Shortlisted</span>
-              <ShieldCheck size={16} className="text-emerald-400" />
+              <span>Elegíveis para Teste</span>
+              <Sparkles size={16} className="text-emerald-400" />
             </div>
             <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-emerald-400">
-              {
-                applications.filter((a) =>
-                  ["shortlisted", "interview"].includes(a.status),
-                ).length
-              }
+              {targetCount}
             </strong>
-            <span className="text-[0.7rem] text-white/40">Moving to interviews</span>
+            <span className="text-[0.7rem] text-white/40">
+              Mulheres + Homens c/ Exp.
+            </span>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
+            <div className="flex items-center justify-between text-xs font-semibold text-white/60">
+              <span>Testes Confirmados</span>
+              <CalendarCheck size={16} className="text-cyan-400" />
+            </div>
+            <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-cyan-400">
+              {confirmedCount}
+            </strong>
+            <span className="text-[0.7rem] text-white/40">
+              Presença marcada pelo candidato
+            </span>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
@@ -499,12 +765,14 @@ export default function AdminPage() {
             <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-white">
               {roles.filter((r) => r.open).length}
             </strong>
-            <span className="text-[0.7rem] text-white/40">Of {roles.length} total roles</span>
+            <span className="text-[0.7rem] text-white/40">
+              Of {roles.length} total roles
+            </span>
           </div>
         </div>
 
         {/* ─── TAB 1: MANAGE ROLES VIEW ─────────────────────────────── */}
-        {view === "roles" ? (
+        {view === "roles" && (
           <section className="space-y-4">
             <div className="rounded-2xl border border-white/10 bg-[#121827]/95 p-6 shadow-sm">
               <div className="mb-6">
@@ -553,7 +821,6 @@ export default function AdminPage() {
                         {r.open ? "Accepting applications" : "Locked / Closed"}
                       </span>
 
-                      {/* Toggle Switch */}
                       <button
                         role="switch"
                         aria-checked={r.open}
@@ -586,8 +853,628 @@ export default function AdminPage() {
               </div>
             </div>
           </section>
-        ) : (
-          /* ─── TAB 2: APPLICATIONS PIPELINE VIEW ──────────────────── */
+        )}
+
+        {/* ─── TAB 2: CONVOCATÓRIAS (BULK INVITE) VIEW ─────────────────── */}
+        {view === "broadcast" && (
+          <section className="space-y-6">
+            {broadcastResult && (
+              <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-5 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 size={24} className="text-emerald-400 shrink-0" />
+                  <div>
+                    <h4 className="text-sm font-bold text-white">
+                      Convocatórias enviadas com sucesso!
+                    </h4>
+                    <p className="text-xs text-emerald-300 mt-0.5">
+                      {broadcastResult.count} e-mails enviados. {broadcastResult.failed > 0 ? `(${broadcastResult.failed} falharam)` : "Todos os candidatos foram notificados."}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setBroadcastResult(null)}
+                  className="text-white/60 hover:text-white p-1 rounded-lg"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
+
+            {/* Audience Presets & Controls */}
+            <div className="rounded-2xl border border-white/10 bg-[#121827]/95 p-6 shadow-sm space-y-5">
+              <div>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                    <Sparkles size={18} className="text-emerald-400" />
+                    <span>Selecção do Público-Alvo</span>
+                  </h2>
+                  <span className="text-xs text-white/50">
+                    {broadcastAudience.length} candidatos elegíveis · {selectedCandidateIds.length} selecionados
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-white/60">
+                  Filtre os candidatos com base nos critérios acordados (Mulheres + Homens com experiência CCTV prévia).
+                </p>
+              </div>
+
+              {/* Filter Preset Chips */}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPresetFilter("target")}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    presetFilter === "target"
+                      ? "bg-emerald-500 text-[#090d16] font-bold shadow-lg shadow-emerald-500/20"
+                      : "bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white border border-white/10"
+                  }`}
+                >
+                  🎯 Mulheres + Homens c/ Exp. CCTV (Critério Principal)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPresetFilter("women")}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    presetFilter === "women"
+                      ? "bg-emerald-500 text-[#090d16] font-bold shadow-lg shadow-emerald-500/20"
+                      : "bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white border border-white/10"
+                  }`}
+                >
+                  Todas as Mulheres ({applications.filter((a) => a.sex === "female").length})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPresetFilter("men_exp")}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    presetFilter === "men_exp"
+                      ? "bg-emerald-500 text-[#090d16] font-bold shadow-lg shadow-emerald-500/20"
+                      : "bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white border border-white/10"
+                  }`}
+                >
+                  Homens c/ Experiência CCTV ({applications.filter((a) => a.sex === "male" && a.experience === "yes").length})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPresetFilter("cctv")}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    presetFilter === "cctv"
+                      ? "bg-emerald-500 text-[#090d16] font-bold shadow-lg shadow-emerald-500/20"
+                      : "bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white border border-white/10"
+                  }`}
+                >
+                  Todas Candidaturas CCO ({applications.filter((a) => a.role === "cctv").length})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPresetFilter("all")}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    presetFilter === "all"
+                      ? "bg-emerald-500 text-[#090d16] font-bold shadow-lg shadow-emerald-500/20"
+                      : "bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white border border-white/10"
+                  }`}
+                >
+                  Todos ({applications.length})
+                </button>
+              </div>
+
+              {/* Table of Candidates to Select */}
+              <div className="border border-white/10 rounded-xl overflow-hidden bg-black/20">
+                <div className="flex items-center justify-between px-4 py-3 bg-white/[0.03] border-b border-white/10 text-xs">
+                  <label className="flex items-center gap-2 cursor-pointer font-semibold text-white">
+                    <input
+                      type="checkbox"
+                      checked={
+                        broadcastAudience.length > 0 &&
+                        selectedCandidateIds.length === broadcastAudience.length
+                      }
+                      onChange={toggleSelectAllBroadcast}
+                      className="rounded border-white/20 bg-white/10 text-emerald-500 focus:ring-0 cursor-pointer h-4 w-4"
+                    />
+                    <span>Selecionar Todos ({broadcastAudience.length})</span>
+                  </label>
+
+                  <span className="text-white/40">
+                    Clique nas caixas para incluir ou desmarcar candidatos
+                  </span>
+                </div>
+
+                <div className="max-h-72 overflow-y-auto divide-y divide-white/5">
+                  {broadcastAudience.map((a) => {
+                    const isChecked = selectedCandidateIds.includes(a.id);
+                    const isAlreadyInvited = Boolean(a.invitedAt);
+                    const hasBooked = Boolean(a.testSlot);
+
+                    return (
+                      <div
+                        key={a.id}
+                        className={`flex items-center justify-between px-4 py-3 text-xs transition-colors hover:bg-white/[0.02] ${
+                          isChecked ? "bg-white/[0.01]" : "opacity-60"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleSelectCandidate(a.id)}
+                            className="rounded border-white/20 bg-white/10 text-emerald-500 focus:ring-0 cursor-pointer h-4 w-4"
+                          />
+                          <div>
+                            <span className="font-semibold text-white block">
+                              {a.name}
+                            </span>
+                            <span className="text-white/40 block text-[0.68rem]">
+                              {a.email} · {a.whatsapp}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <span className="capitalize px-2 py-0.5 rounded text-[0.68rem] bg-white/5 text-white/70">
+                            {a.sex}
+                          </span>
+                          <span
+                            className={`px-2 py-0.5 rounded text-[0.68rem] font-medium ${
+                              a.experience === "yes"
+                                ? "bg-emerald-500/20 text-emerald-400"
+                                : "bg-white/5 text-white/50"
+                            }`}
+                          >
+                            Exp: {a.experience === "yes" ? "Sim" : "Não"}
+                          </span>
+
+                          {hasBooked ? (
+                            <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                              Agendado: {a.testSlot?.split("–")[0]}
+                            </span>
+                          ) : isAlreadyInvited ? (
+                            <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                              Convocado
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] text-white/40 bg-white/5">
+                              Não Convocado
+                            </span>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => copyBookingLink(a.id)}
+                            title="Copiar link pessoal do candidato"
+                            className="p-1 text-white/50 hover:text-white transition-colors"
+                          >
+                            {copiedLinkId === a.id ? (
+                              <Check size={14} className="text-emerald-400" />
+                            ) : (
+                              <Copy size={14} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Email Template & Preview */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Editor */}
+              <div className="rounded-2xl border border-white/10 bg-[#121827]/95 p-6 shadow-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <FileText size={17} className="text-emerald-400" />
+                    <span>Modelo da Convocatória (E-mail)</span>
+                  </h3>
+                  <div className="flex items-center gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/10 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setEmailPreviewTab("edit")}
+                      className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
+                        emailPreviewTab === "edit"
+                          ? "bg-white/20 text-white font-semibold"
+                          : "text-white/60 hover:text-white"
+                      }`}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEmailPreviewTab("preview")}
+                      className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
+                        emailPreviewTab === "preview"
+                          ? "bg-white/20 text-white font-semibold"
+                          : "text-white/60 hover:text-white"
+                      }`}
+                    >
+                      Pré-visualizar
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-white/70">
+                    Assunto do E-mail:
+                  </label>
+                  <input
+                    type="text"
+                    value={broadcastSubject}
+                    onChange={(e) => setBroadcastSubject(e.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs text-white focus:border-white/40 focus:outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-white/70">
+                      Corpo da Mensagem (Texto):
+                    </label>
+                    <span className="text-[0.68rem] text-white/40">
+                      Tags dinâmicas: {"{{name}}"}, {"{{booking_link}}"}
+                    </span>
+                  </div>
+                  <textarea
+                    rows={10}
+                    value={broadcastMessage}
+                    onChange={(e) => setBroadcastMessage(e.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] p-4 text-xs font-mono text-white leading-relaxed focus:border-white/40 focus:outline-none"
+                  />
+                </div>
+
+                {/* Slots info */}
+                <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 space-y-2 text-xs">
+                  <span className="font-semibold text-white/80 block">
+                    Opções de Turnos Incluídas no E-mail e Portal:
+                  </span>
+                  <div className="space-y-1">
+                    {broadcastSlots.map((s, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-2 text-emerald-400 font-medium"
+                      >
+                        <Calendar size={13} />
+                        <span>{s}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Live Preview Panel */}
+              <div className="rounded-2xl border border-white/10 bg-[#0e1320] p-6 shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+                    <span className="text-xs font-bold uppercase tracking-wider text-white/50">
+                      Pré-visualização do E-mail para Candidato
+                    </span>
+                    <span className="text-[0.68rem] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                      Design Overwatch Dark
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl border border-white/15 bg-[#121827] p-5 space-y-4 text-xs">
+                    <div className="text-center pb-3 border-b border-white/10">
+                      <div className="flex justify-center mb-2">
+                        <Logo size="sm" variant="light" />
+                      </div>
+                      <span className="text-[0.65rem] uppercase font-bold text-emerald-400 tracking-wider">
+                        Convocatória Oficial · Teste Presencial
+                      </span>
+                    </div>
+
+                    <div className="text-white/80 whitespace-pre-wrap font-sans text-xs leading-relaxed">
+                      {broadcastMessage.replace(
+                        /\{\{name\}\}/g,
+                        broadcastAudience[0]?.name || "Maria João",
+                      )}
+                    </div>
+
+                    <div className="rounded-xl bg-[#090d16] border border-white/10 p-3 space-y-2">
+                      <span className="text-[0.68rem] font-bold text-white/50 uppercase">
+                        Opções de Data e Hora Disponíveis:
+                      </span>
+                      {broadcastSlots.map((s, idx) => (
+                        <div
+                          key={idx}
+                          className="bg-[#0f1422] p-2 rounded-lg border-l-2 border-emerald-500 text-white font-medium text-[0.7rem]"
+                        >
+                          {s}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="text-center pt-2">
+                      <div className="inline-block bg-white text-[#090d16] font-bold text-xs px-5 py-2.5 rounded-xl shadow-lg">
+                        Escolher Data do Teste Presencial →
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-white/10 text-center text-[0.65rem] text-white/50">
+                      {siteContact.address.pt} · WhatsApp: +258 84 287 0793
+                    </div>
+                  </div>
+                </div>
+
+                {/* Send Button */}
+                <div className="mt-6 pt-4 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmModalOpen(true)}
+                    disabled={selectedCandidateIds.length === 0 || sendingBroadcast}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-6 py-4 text-sm font-bold text-[#090d16] shadow-xl transition-all cursor-pointer disabled:opacity-40"
+                  >
+                    <Send size={16} />
+                    <span>
+                      Enviar Convocatórias para {selectedCandidateIds.length} Candidatos
+                    </span>
+                  </button>
+                  <p className="text-center text-[0.68rem] text-white/40 mt-2">
+                    Cada candidato receberá um link individual e exclusivo para escolher o seu dia com 1 clique.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Confirmation Modal */}
+            {confirmModalOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+                <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#121827] p-6 shadow-2xl space-y-5">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400">
+                        <Send size={20} />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-white">
+                          Confirmar Envio em Massa
+                        </h3>
+                        <p className="text-xs text-white/60">
+                          Operação de recrutamento Overwatch
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setConfirmModalOpen(false)}
+                      className="p-1 text-white/50 hover:text-white"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+
+                  <div className="space-y-3 text-xs text-white/80 bg-white/[0.03] p-4 rounded-xl border border-white/10">
+                    <p>
+                      Está prestes a enviar e-mails de convocatória oficial para:
+                    </p>
+                    <div className="text-2xl font-bold text-emerald-400">
+                      {selectedCandidateIds.length} candidatos
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1 text-white/70">
+                      <li>Cada candidato terá um link personalizado.</li>
+                      <li>
+                        A sua fase passará automaticamente para{" "}
+                        <strong className="text-white">Shortlisted</strong>.
+                      </li>
+                      <li>
+                        Ao escolherem o turno, a vaga fica registada na Agenda.
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="flex items-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmModalOpen(false)}
+                      disabled={sendingBroadcast}
+                      className="flex-1 rounded-xl border border-white/10 bg-white/[0.05] py-3 text-xs font-semibold text-white hover:bg-white/[0.1] transition-colors cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleSendBroadcast}
+                      disabled={sendingBroadcast}
+                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 py-3 text-xs font-bold text-[#090d16] shadow-lg transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      {sendingBroadcast ? (
+                        <>
+                          <RefreshCw className="animate-spin" size={14} />
+                          <span>A enviar...</span>
+                        </>
+                      ) : (
+                        <span>Sim, Enviar Agora</span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* ─── TAB 3: AGENDA DE TESTES (SCHEDULE ROSTER) ────────────────── */}
+        {view === "schedule" && (
+          <section className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Calendar size={20} className="text-cyan-400" />
+                  <span>Escala de Presenças por Turno</span>
+                </h2>
+                <p className="mt-1 text-xs text-white/60">
+                  Acompanhe em tempo real os candidatos que confirmaram presença em cada dia do teste.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => exportAttendanceCSV()}
+                disabled={!confirmedCount}
+                className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-[#090d16] hover:bg-white/90 disabled:opacity-40 transition-transform hover:-translate-y-0.5 cursor-pointer"
+              >
+                <Download size={14} />
+                <span>Exportar Lista Completa para Teste (CSV)</span>
+              </button>
+            </div>
+
+            {/* Grid of Slots */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {DEFAULT_TEST_SLOTS.map((slot) => {
+                const candidatesInSlot = applications.filter(
+                  (a) => a.testSlot === slot,
+                );
+
+                return (
+                  <div
+                    key={slot}
+                    className="rounded-2xl border border-white/10 bg-[#121827]/95 p-5 flex flex-col shadow-sm"
+                  >
+                    {/* Slot Header */}
+                    <div className="pb-4 border-b border-white/10 flex items-start justify-between">
+                      <div>
+                        <span className="text-[0.65rem] font-bold uppercase tracking-wider text-cyan-400">
+                          Turno de Teste
+                        </span>
+                        <h3 className="text-sm font-bold text-white mt-0.5">
+                          {slot}
+                        </h3>
+                        <span className="text-[0.68rem] text-white/40 flex items-center gap-1 mt-1">
+                          <Clock size={11} /> 10h00 às 11h30 (Chegada 09h45)
+                        </span>
+                      </div>
+
+                      <span className="rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-2.5 py-0.5 text-xs font-bold">
+                        {candidatesInSlot.length}
+                      </span>
+                    </div>
+
+                    {/* Candidates in this slot */}
+                    <div className="flex-1 py-4 space-y-3 overflow-y-auto max-h-96">
+                      {candidatesInSlot.length === 0 ? (
+                        <div className="py-10 text-center text-xs text-white/40 italic">
+                          Ainda sem confirmações para este turno.
+                        </div>
+                      ) : (
+                        candidatesInSlot.map((c) => (
+                          <div
+                            key={c.id}
+                            className="rounded-xl border border-white/10 bg-white/[0.02] p-3 hover:bg-white/[0.04] transition-colors space-y-2"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <strong className="text-white text-xs block">
+                                  {c.name}
+                                </strong>
+                                <span className="text-[0.65rem] text-white/40">
+                                  {c.email}
+                                </span>
+                              </div>
+                              <span className="capitalize px-1.5 py-0.5 rounded text-[0.62rem] bg-white/10 text-white/70">
+                                {c.sex}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between text-[0.68rem] text-white/60 pt-1 border-t border-white/5">
+                              <a
+                                href={`https://wa.me/${c.whatsapp.replace(/\D/g, "")}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-emerald-400 hover:underline"
+                              >
+                                <Phone size={11} />
+                                <span>{c.whatsapp}</span>
+                              </a>
+
+                              <button
+                                type="button"
+                                onClick={() => setSelected(c)}
+                                className="text-white/60 hover:text-white underline cursor-pointer"
+                              >
+                                Ver Perfil / CV
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Footer action */}
+                    <div className="pt-3 border-t border-white/10">
+                      <button
+                        type="button"
+                        onClick={() => exportAttendanceCSV(slot)}
+                        disabled={candidatesInSlot.length === 0}
+                        className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] py-2 text-[0.7rem] font-semibold text-white/80 hover:bg-white/[0.08] hover:text-white disabled:opacity-30 transition-colors cursor-pointer"
+                      >
+                        <Download size={12} />
+                        <span>Exportar Roster Deste Dia</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Pending Candidates (Invited but not yet booked) */}
+            <div className="rounded-2xl border border-amber-500/20 bg-[#121827]/80 p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Clock size={16} className="text-amber-400" />
+                  <h3 className="text-sm font-bold text-white">
+                    Candidatos Convocados a Aguardar Escolha de Data
+                  </h3>
+                </div>
+                <span className="text-xs font-semibold text-amber-400">
+                  {applications.filter((a) => a.invitedAt && !a.testSlot).length} pendentes
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+                {applications
+                  .filter((a) => a.invitedAt && !a.testSlot)
+                  .map((c) => (
+                    <div
+                      key={c.id}
+                      className="rounded-xl border border-white/10 bg-white/[0.02] p-3 text-xs flex items-center justify-between"
+                    >
+                      <div>
+                        <strong className="text-white block truncate max-w-[130px]">
+                          {c.name}
+                        </strong>
+                        <a
+                          href={`https://wa.me/${c.whatsapp.replace(/\D/g, "")}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[0.68rem] text-emerald-400 hover:underline flex items-center gap-1 mt-0.5"
+                        >
+                          <Phone size={10} />
+                          <span>{c.whatsapp}</span>
+                        </a>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => copyBookingLink(c.id)}
+                        title="Copiar link de marcação para enviar via WhatsApp"
+                        className="rounded-lg bg-white/5 border border-white/10 p-1.5 text-white/70 hover:text-white"
+                      >
+                        {copiedLinkId === c.id ? (
+                          <Check size={13} className="text-emerald-400" />
+                        ) : (
+                          <Copy size={13} />
+                        )}
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ─── TAB 4: APPLICATIONS PIPELINE VIEW ──────────────────── */}
+        {view === "applications" && (
           <section className="space-y-4">
             {/* Filters Bar */}
             <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-[#121827]/95 p-4 shadow-sm">
@@ -643,6 +1530,7 @@ export default function AdminPage() {
                       <th className="px-4 py-3.5">Candidate</th>
                       <th className="px-4 py-3.5">Role</th>
                       <th className="px-4 py-3.5">Status</th>
+                      <th className="px-4 py-3.5">Convocatória / Turno</th>
                       <th className="px-4 py-3.5">WhatsApp</th>
                       <th className="px-4 py-3.5">Cover Letter</th>
                       <th className="px-4 py-3.5">12th Grade</th>
@@ -724,6 +1612,22 @@ export default function AdminPage() {
                           </select>
                         </td>
 
+                        {/* Test Slot / Convocatória Status */}
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          {a.testSlot ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-cyan-500/20 border border-cyan-500/30 px-2.5 py-0.5 text-[0.68rem] font-semibold text-cyan-300">
+                              <CalendarCheck size={11} />
+                              {a.testSlot.split("–")[0].trim()}
+                            </span>
+                          ) : a.invitedAt ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-500/30 px-2.5 py-0.5 text-[0.68rem] font-medium text-amber-300">
+                              <Clock size={11} /> Convocado
+                            </span>
+                          ) : (
+                            <span className="text-white/30 text-[0.68rem]">—</span>
+                          )}
+                        </td>
+
                         {/* WhatsApp */}
                         <td className="px-4 py-3 whitespace-nowrap">
                           <a
@@ -769,7 +1673,9 @@ export default function AdminPage() {
                         {/* Uses AI */}
                         <td className="px-4 py-3 whitespace-nowrap">
                           {a.ai === "yes" ? (
-                            <span className="text-emerald-400 font-medium">Yes</span>
+                            <span className="text-emerald-400 font-medium">
+                              Yes
+                            </span>
                           ) : (
                             <span className="text-white/40">No</span>
                           )}
@@ -778,7 +1684,9 @@ export default function AdminPage() {
                         {/* CCTV Experience */}
                         <td className="px-4 py-3 whitespace-nowrap">
                           {a.experience === "yes" ? (
-                            <span className="text-emerald-400 font-medium">Yes</span>
+                            <span className="text-emerald-400 font-medium">
+                              Yes
+                            </span>
                           ) : (
                             <span className="text-white/40">No</span>
                           )}
@@ -792,7 +1700,9 @@ export default function AdminPage() {
                         {/* Shifts */}
                         <td className="px-4 py-3 whitespace-nowrap">
                           {a.shifts === "yes" ? (
-                            <span className="text-emerald-400 font-medium">Available</span>
+                            <span className="text-emerald-400 font-medium">
+                              Available
+                            </span>
                           ) : (
                             <span className="text-red-400">No</span>
                           )}
@@ -929,7 +1839,91 @@ export default function AdminPage() {
               </select>
             </div>
 
-            {/* Cover Letter Section (Highlighted Card) */}
+            {/* ─── CONVOCATÓRIA & TESTE PRESENCIAL CARD ─── */}
+            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.06] p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                  <CalendarCheck size={14} />
+                  <span>Convocatória & Teste Presencial</span>
+                </span>
+                {current.testSlot ? (
+                  <span className="text-[0.65rem] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">
+                    Confirmado
+                  </span>
+                ) : current.invitedAt ? (
+                  <span className="text-[0.65rem] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">
+                    Convocado
+                  </span>
+                ) : (
+                  <span className="text-[0.65rem] text-white/40">
+                    Pendente
+                  </span>
+                )}
+              </div>
+
+              {current.testSlot ? (
+                <div className="rounded-xl bg-[#090d16]/80 p-3 border border-white/10 text-xs space-y-1">
+                  <span className="text-white/50 text-[0.68rem] block">
+                    Data Confirmada:
+                  </span>
+                  <div className="text-white font-bold text-sm">
+                    {current.testSlot}
+                  </div>
+                  {current.testBookedAt && (
+                    <span className="text-[0.65rem] text-white/40 block">
+                      Marcado em: {new Date(current.testBookedAt).toLocaleString()}
+                    </span>
+                  )}
+                </div>
+              ) : current.invitedAt ? (
+                <div className="rounded-xl bg-[#090d16]/80 p-3 border border-white/10 text-xs">
+                  <span className="text-amber-300 font-medium block">
+                    Convocatória enviada por e-mail em{" "}
+                    {new Date(current.invitedAt).toLocaleDateString()}.
+                  </span>
+                  <span className="text-[0.68rem] text-white/50 block mt-0.5">
+                    A aguardar que a candidata confirme a sua data de teste.
+                  </span>
+                </div>
+              ) : (
+                <div className="text-xs text-white/60">
+                  Esta candidata ainda não recebeu a convocatória para o teste de selecção presencial.
+                </div>
+              )}
+
+              {/* Quick Actions: Copy Link / Send Invite */}
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => copyBookingLink(current.id)}
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.05] py-2 text-xs font-semibold text-white hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  {copiedLinkId === current.id ? (
+                    <>
+                      <Check size={13} className="text-emerald-400" />
+                      <span>Link Copiado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={13} />
+                      <span>Copiar Link</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => sendSingleInvite(current.id)}
+                  disabled={busy}
+                  className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500 py-2 text-xs font-bold text-[#090d16] hover:bg-emerald-400 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <Send size={13} />
+                  <span>{current.invitedAt ? "Reenviar E-mail" : "Enviar E-mail"}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Cover Letter Section */}
             <div className="rounded-2xl border border-white/15 bg-white/[0.04] p-5 space-y-2">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white/90">
                 <FileText size={15} />
@@ -1046,7 +2040,6 @@ export default function AdminPage() {
                 </span>
               </div>
 
-              {/* Embedded Document Frame (for PDFs and Word documents) */}
               {current.cvType === "application/pdf" || current.cvName.toLowerCase().endsWith(".pdf") ? (
                 <div className="rounded-2xl border border-white/15 bg-black/60 overflow-hidden shadow-inner">
                   <div className="flex items-center justify-between px-3.5 py-2.5 bg-white/[0.04] border-b border-white/10 text-xs">
@@ -1085,7 +2078,7 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* Action Buttons: View in New Tab & Download */}
+              {/* Action Buttons */}
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <a
                   href={`/api/admin/cv?id=${current.id}&inline=1`}

@@ -166,3 +166,41 @@ export async function getCV(id: string) {
   localOnly();
   return readFile(path.join(directory, id));
 }
+
+export async function getApplication(id: string): Promise<Application | null> {
+  if (isRemote()) {
+    const rows = await (
+      await api(`/rest/v1/career_applications?id=eq.${id}&select=data`)
+    ).json();
+    return rows?.[0]?.data || null;
+  }
+  const list = await getApplications();
+  return list.find((a) => a.id === id) || null;
+}
+
+export async function updateApplication(
+  id: string,
+  updates: Partial<Application>,
+): Promise<Application> {
+  if (isRemote()) {
+    const current = await getApplication(id);
+    if (!current) throw new Error("Application not found");
+    const merged = { ...current, ...updates };
+    await api(`/rest/v1/career_applications?id=eq.${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ data: merged }),
+    });
+    return merged;
+  }
+  return await exclusive(async () => {
+    const list = await getApplications();
+    const target = list.find((a) => a.id === id);
+    if (!target) throw new Error("Application not found");
+    const merged = { ...target, ...updates };
+    await write(
+      "applications.json",
+      list.map((a) => (a.id === id ? merged : a)),
+    );
+    return merged;
+  });
+}

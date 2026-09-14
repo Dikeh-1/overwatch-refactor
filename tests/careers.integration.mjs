@@ -156,6 +156,49 @@ test("Recruitment flow: authorization, locked roles, validation, persistence, CV
         .status,
       409,
     );
+
+    // ─── Test Bulk Invite Endpoint ──────────────────────────────
+    assert.equal(
+      (
+        await fetch(base + "/api/admin/careers/bulk-invite", {
+          method: "POST",
+          headers: headers(),
+          body: JSON.stringify({
+            candidateIds: [id],
+          }),
+        })
+      ).status,
+      200,
+    );
+
+    // Verify candidate marked as invited
+    const afterInvite = (await get()).applications.find((a) => a.id === id);
+    assert.ok(afterInvite.invitedAt);
+    assert.equal(afterInvite.status, "shortlisted");
+
+    // ─── Test Candidate Booking GET & POST ──────────────────────
+    const bookingGet = await fetch(base + "/api/careers/test-booking?id=" + id);
+    assert.equal(bookingGet.status, 200);
+    const bookingData = await bookingGet.json();
+    assert.equal(bookingData.name, "Recruitment QA Fixture");
+    assert.ok(Array.isArray(bookingData.slots));
+
+    const selectedSlot = bookingData.slots[0];
+    const bookingPost = await fetch(base + "/api/careers/test-booking", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, slot: selectedSlot }),
+    });
+    assert.equal(bookingPost.status, 200);
+    const postRes = await bookingPost.json();
+    assert.equal(postRes.testSlot, selectedSlot);
+    assert.ok(postRes.testBookedAt);
+
+    // Verify application state in admin store
+    const afterBooking = (await get()).applications.find((a) => a.id === id);
+    assert.equal(afterBooking.testSlot, selectedSlot);
+    assert.ok(afterBooking.testBookedAt);
+    assert.equal(afterBooking.status, "interview");
   } finally {
     await fetch(base + "/api/admin/careers", {
       method: "PATCH",
