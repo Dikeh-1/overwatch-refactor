@@ -2485,16 +2485,32 @@ export default function AdminPage() {
                             </div>
                           </div>
 
-                          {/* Solid Executive CTA Button */}
+                          {/* Solid Executive CTA Button - Clickable to test booking experience */}
                           <div className="pt-2 text-center">
-                            <div className="inline-block bg-[#0b1329] text-white font-bold text-xs px-6 py-3 rounded-lg shadow-sm border border-[#0b1329]">
-                              {t("Confirm My Test Attendance →", "Confirmar Minha Presença no Teste →")}
-                            </div>
-                            <p className="text-[0.65rem] text-slate-500 mt-2">
-                              {t(
-                                "Personal link with instant attendance confirmation.",
-                                "Link individual com confirmação instantânea de vaga.",
-                              )}
+                            {(broadcastAudience[0]?.id || applications[0]?.id) ? (
+                              <a
+                                href={`/${previewLang}/careers/test-invite/${broadcastAudience[0]?.id || applications[0]?.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title={t("Preview candidate booking page in a new tab", "Pré-visualizar portal de agendamento numa nova aba")}
+                                className="inline-flex items-center gap-2 bg-[#0b1329] hover:bg-[#182342] text-white font-bold text-xs px-6 py-3 rounded-lg shadow-md border border-[#0b1329] transition-all hover:scale-[1.02] cursor-pointer"
+                              >
+                                <span>{t("Confirm My Test Attendance →", "Confirmar Minha Presença no Teste →")}</span>
+                                <ExternalLink size={13} className="text-white/70" />
+                              </a>
+                            ) : (
+                              <div className="inline-flex items-center gap-2 bg-[#0b1329] text-white font-bold text-xs px-6 py-3 rounded-lg shadow-sm border border-[#0b1329]">
+                                <span>{t("Confirm My Test Attendance →", "Confirmar Minha Presença no Teste →")}</span>
+                              </div>
+                            )}
+                            <p className="text-[0.65rem] text-slate-500 mt-2 flex items-center justify-center gap-1">
+                              <ExternalLink size={10} className="text-slate-400" />
+                              <span>
+                                {t(
+                                  "Click button to test candidate booking portal in a new tab.",
+                                  "Clique no botão para testar o portal de agendamento numa nova aba.",
+                                )}
+                              </span>
                             </p>
                           </div>
 
