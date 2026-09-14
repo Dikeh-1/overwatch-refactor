@@ -44,6 +44,8 @@ import {
   Trash2,
   Bell,
   Radio,
+  Briefcase,
+  ChevronDown,
 } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 import TechGrid from "@/components/ui/TechGrid";
@@ -132,6 +134,11 @@ export default function AdminPage() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [view, setView] = useState<
     "applications" | "roles" | "broadcast" | "schedule"
+  >("applications");
+  // ─── Per-Role Campaign Workspace ──────────────────────────────────
+  const [activeCampaignRole, setActiveCampaignRole] = useState<string | null>(null);
+  const [activeCampaignView, setActiveCampaignView] = useState<
+    "applications" | "broadcast" | "schedule"
   >("applications");
   const [query, setQuery] = useState("");
   const [stageFilter, setStageFilter] = useState("all");
@@ -633,6 +640,17 @@ export default function AdminPage() {
     };
   }, [auth, load]);
 
+  // Auto-select first open campaign role when roles first load
+  useEffect(() => {
+    if (roles.length > 0 && activeCampaignRole === null) {
+      const firstOpen = roles.find((r) => r.open);
+      if (firstOpen) {
+        setActiveCampaignRole(firstOpen.id);
+        setView("applications");
+      }
+    }
+  }, [roles, activeCampaignRole]);
+
   // Auto-dismiss live arrival notification toast after 6 seconds
   useEffect(() => {
     if (!liveNotification) return;
@@ -757,6 +775,9 @@ export default function AdminPage() {
 
   const filtered = useMemo(() => {
     return applications.filter((a) => {
+      // Scope to active campaign role workspace
+      if (activeCampaignRole && a.role !== activeCampaignRole) return false;
+
       // Quick filter tabs
       if (appQuickFilter === "archived" && a.status !== "archived") return false;
       if (appQuickFilter === "booked" && !a.testSlot) return false;
@@ -777,7 +798,7 @@ export default function AdminPage() {
 
       return true;
     });
-  }, [applications, appQuickFilter, stageFilter, roleFilter, query]);
+  }, [applications, activeCampaignRole, appQuickFilter, stageFilter, roleFilter, query]);
 
   // Pagination calculation
   const totalCandidates = filtered.length;
@@ -876,6 +897,8 @@ export default function AdminPage() {
   // ─── Filtered Audience for Convocatórias (Manual Criteria + Presets) ─
   const broadcastAudience = useMemo(() => {
     return applications.filter((a) => {
+      // Scope to active campaign role
+      if (activeCampaignRole && a.role !== activeCampaignRole) return false;
       // Exclude archived by default unless specifically filtering for archived
       if (filterStage !== "archived" && a.status === "archived") return false;
 
@@ -908,6 +931,7 @@ export default function AdminPage() {
     });
   }, [
     applications,
+    activeCampaignRole,
     filterRule,
     filterSex,
     filterExp,
@@ -1397,17 +1421,22 @@ export default function AdminPage() {
     ? applications.find((a) => a.id === selected.id) || selected
     : null;
 
-  const confirmedCount = applications.filter((a) => Boolean(a.testSlot)).length;
-  const targetCount = applications.filter(
+  // ─── Role-scoped apps (for stats + campaign workspace) ────────────
+  const campaignApps = activeCampaignRole
+    ? applications.filter((a) => a.role === activeCampaignRole)
+    : applications;
+
+  const confirmedCount = campaignApps.filter((a) => Boolean(a.testSlot)).length;
+  const targetCount = campaignApps.filter(
     (a) => a.sex === "female" || (a.sex === "male" && a.experience === "yes"),
   ).length;
-  const pendingConvocationsCount = applications.filter(
+  const pendingConvocationsCount = campaignApps.filter(
     (a) =>
       (a.sex === "female" || (a.sex === "male" && a.experience === "yes")) &&
       !a.invitedAt &&
       a.status !== "archived",
   ).length;
-  const dispatchedConvocationsCount = applications.filter(
+  const dispatchedConvocationsCount = campaignApps.filter(
     (a) => Boolean(a.invitedAt) && a.status !== "archived",
   ).length;
 
@@ -1489,92 +1518,177 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <nav className="mt-5 space-y-1.5">
-          {/* Applications Tab */}
-          <button
-            onClick={() => setView("applications")}
-            className={`w-full flex items-center justify-between gap-3 rounded-xl px-3.5 py-3 text-xs font-semibold transition-all cursor-pointer ${
-              view === "applications"
-                ? "bg-white/[0.1] text-white border border-white/20 shadow-sm"
-                : "text-white/70 hover:bg-white/[0.05] hover:text-white border border-transparent"
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <LayoutDashboard size={17} />
-              <span>{t("Applications", "Candidaturas")}</span>
+        {/* Navigation */}
+        <nav className="mt-5 space-y-4">
+
+          {/* ── ACTIVE CAMPAIGN WORKSPACES ─────────────────────────── */}
+          {roles.filter((r) => r.open).length > 0 && (
+            <div>
+              <p className="mb-2 px-1 text-[0.62rem] font-bold uppercase tracking-widest text-white/35">
+                {t("Active Campaigns", "Campanhas Activas")}
+              </p>
+              <div className="space-y-1">
+                {roles.filter((r) => r.open).map((role) => {
+                  const isActiveCampaign = activeCampaignRole === role.id;
+                  const roleAppsCount = applications.filter((a) => a.role === role.id).length;
+                  const rolePending = applications.filter(
+                    (a) =>
+                      a.role === role.id &&
+                      (a.sex === "female" || (a.sex === "male" && a.experience === "yes")) &&
+                      !a.invitedAt &&
+                      a.status !== "archived",
+                  ).length;
+                  const roleConfirmed = applications.filter(
+                    (a) => a.role === role.id && Boolean(a.testSlot),
+                  ).length;
+
+                  return (
+                    <div key={role.id}>
+                      {/* Role Campaign Header Button */}
+                      <button
+                        onClick={() => {
+                          setActiveCampaignRole(role.id);
+                          setView("applications");
+                        }}
+                        className={`w-full flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all cursor-pointer ${
+                          isActiveCampaign
+                            ? "bg-sky-500/15 text-white border border-sky-500/30 shadow-sm"
+                            : "text-white/70 hover:bg-white/[0.05] hover:text-white border border-transparent"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${
+                            isActiveCampaign ? "bg-sky-500/20 text-sky-400" : "bg-white/[0.06] text-white/50"
+                          }`}>
+                            <Briefcase size={13} />
+                          </div>
+                          <span className="truncate text-[0.72rem]">
+                            {lang === "pt" ? role.pt : role.en}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {rolePending > 0 && (
+                            <span className="rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 text-[0.6rem] font-bold">
+                              {rolePending}
+                            </span>
+                          )}
+                          <span className={`rounded-full px-1.5 py-0.5 text-[0.6rem] font-bold ${
+                            isActiveCampaign ? "bg-sky-500/20 text-sky-300" : "bg-white/10 text-white/60"
+                          }`}>
+                            {roleAppsCount}
+                          </span>
+                          <ChevronDown size={12} className={`transition-transform ${isActiveCampaign ? "rotate-180 text-sky-400" : "text-white/40"}`} />
+                        </div>
+                      </button>
+
+                      {/* Sub-navigation (only visible when this campaign is active) */}
+                      {isActiveCampaign && (
+                        <div className="mt-1 ml-3 pl-3 border-l border-sky-500/20 space-y-0.5">
+                          {/* Applications sub-tab */}
+                          <button
+                            onClick={() => setView("applications")}
+                            className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[0.72rem] font-semibold transition-all cursor-pointer ${
+                              view === "applications"
+                                ? "bg-white/[0.1] text-white border border-white/15"
+                                : "text-white/60 hover:bg-white/[0.05] hover:text-white border border-transparent"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <LayoutDashboard size={13} />
+                              <span>{t("Applications", "Candidaturas")}</span>
+                            </div>
+                            <span className={`rounded-full px-1.5 py-0.5 text-[0.6rem] font-bold ${
+                              view === "applications" ? "bg-white/20 text-white" : "bg-white/10 text-white/60"
+                            }`}>
+                              {roleAppsCount}
+                            </span>
+                          </button>
+
+                          {/* Convocations sub-tab */}
+                          <button
+                            onClick={() => setView("broadcast")}
+                            className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[0.72rem] font-semibold transition-all cursor-pointer ${
+                              view === "broadcast"
+                                ? "bg-white/[0.1] text-white border border-white/15"
+                                : "text-white/60 hover:bg-white/[0.05] hover:text-white border border-transparent"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Mail size={13} />
+                              <span>{t("Convocations", "Convocatórias")}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {rolePending > 0 && (
+                                <span className="rounded-full bg-emerald-500 text-[#090d16] px-1.5 py-0.5 text-[0.58rem] font-bold animate-pulse">
+                                  {rolePending}
+                                </span>
+                              )}
+                            </div>
+                          </button>
+
+                          {/* Test Schedule sub-tab */}
+                          <button
+                            onClick={() => setView("schedule")}
+                            className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[0.72rem] font-semibold transition-all cursor-pointer ${
+                              view === "schedule"
+                                ? "bg-white/[0.1] text-white border border-white/15"
+                                : "text-white/60 hover:bg-white/[0.05] hover:text-white border border-transparent"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Calendar size={13} className="text-cyan-400" />
+                              <span>{t("Test Schedule", "Agenda de Testes")}</span>
+                            </div>
+                            {roleConfirmed > 0 && (
+                              <span className="rounded-full bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 text-[0.6rem] font-bold">
+                                {roleConfirmed}
+                              </span>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-            <span
-              className={`rounded-full px-2 py-0.5 text-[0.65rem] font-bold ${
-                view === "applications"
-                  ? "bg-white/25 text-white"
-                  : "bg-white/10 text-white/70"
+          )}
+
+          {/* ── NO OPEN CAMPAIGNS PLACEHOLDER ─────────────────────── */}
+          {roles.filter((r) => r.open).length === 0 && roles.length > 0 && (
+            <div className="rounded-xl border border-white/10 bg-white/[0.02] px-3.5 py-4 text-center">
+              <LockKeyhole size={18} className="mx-auto text-white/25 mb-2" />
+              <p className="text-[0.68rem] text-white/40 leading-relaxed">
+                {t("No roles are currently open.", "Nenhuma vaga está actualmente aberta.")}
+              </p>
+              <p className="text-[0.65rem] text-white/30 mt-1">
+                {t("Toggle a role open below.", "Abra uma vaga em baixo.")}
+              </p>
+            </div>
+          )}
+
+          {/* ── SYSTEM SECTION ─────────────────────────────────────── */}
+          <div>
+            <p className="mb-2 px-1 text-[0.62rem] font-bold uppercase tracking-widest text-white/35">
+              {t("System", "Sistema")}
+            </p>
+            <button
+              onClick={() => setView("roles")}
+              className={`w-full flex items-center justify-between gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all cursor-pointer ${
+                view === "roles"
+                  ? "bg-white/[0.1] text-white border border-white/20 shadow-sm"
+                  : "text-white/70 hover:bg-white/[0.05] hover:text-white border border-transparent"
               }`}
             >
-              {applications.length}
-            </span>
-          </button>
-
-          {/* Convocatórias Tab */}
-          <button
-            onClick={() => setView("broadcast")}
-            className={`w-full flex items-center justify-between gap-3 rounded-xl px-3.5 py-3 text-xs font-semibold transition-all cursor-pointer ${
-              view === "broadcast"
-                ? "bg-white/[0.1] text-white border border-white/20 shadow-sm"
-                : "text-white/70 hover:bg-white/[0.05] hover:text-white border border-transparent"
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <Mail size={17} className="text-white" />
-              <span>{t("Convocations", "Convocatórias")}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              {pendingConvocationsCount > 0 && (
-                <span className="rounded-full bg-emerald-500 text-[#090d16] px-2 py-0.5 text-[0.62rem] font-bold animate-pulse">
-                  {pendingConvocationsCount} {t("new", "novos")}
-                </span>
-              )}
-              <span className="rounded-full bg-white/10 text-white border border-white/20 px-2 py-0.5 text-[0.65rem] font-bold">
-                {targetCount} {t("Target", "Alvo")}
+              <div className="flex items-center gap-2.5">
+                <SlidersHorizontal size={15} />
+                <span>{t("Manage Roles", "Gestão de Vagas")}</span>
+              </div>
+              <span className="text-[0.65rem] font-mono text-white/60">
+                {roles.filter((r) => r.open).length} {t("open", "abertas")}
               </span>
-            </div>
-          </button>
-
-          {/* Agenda de Testes Tab */}
-          <button
-            onClick={() => setView("schedule")}
-            className={`w-full flex items-center justify-between gap-3 rounded-xl px-3.5 py-3 text-xs font-semibold transition-all cursor-pointer ${
-              view === "schedule"
-                ? "bg-white/[0.1] text-white border border-white/20 shadow-sm"
-                : "text-white/70 hover:bg-white/[0.05] hover:text-white border border-transparent"
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <Calendar size={17} className="text-cyan-400" />
-              <span>{t("Test Schedule", "Agenda de Testes")}</span>
-            </div>
-            <span className="rounded-full bg-cyan-500/20 text-cyan-300 px-2 py-0.5 text-[0.65rem] font-bold">
-              {confirmedCount} {t("Booked", "Confirmados")}
-            </span>
-          </button>
-
-          {/* Roles Tab */}
-          <button
-            onClick={() => setView("roles")}
-            className={`w-full flex items-center justify-between gap-3 rounded-xl px-3.5 py-3 text-xs font-semibold transition-all cursor-pointer ${
-              view === "roles"
-                ? "bg-white/[0.1] text-white border border-white/20 shadow-sm"
-                : "text-white/70 hover:bg-white/[0.05] hover:text-white border border-transparent"
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <SlidersHorizontal size={17} />
-              <span>{t("Manage Roles", "Gestão de Vagas")}</span>
-            </div>
-            <span className="text-[0.65rem] font-mono text-white/60">
-              {roles.filter((r) => r.open).length} {t("open", "abertas")}
-            </span>
-          </button>
+            </button>
+          </div>
         </nav>
 
         {/* Sidebar Footer */}
@@ -1613,6 +1727,23 @@ export default function AdminPage() {
         {/* Top Header Bar */}
         <header className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-white/10">
           <div>
+            {/* Campaign workspace context */}
+            {view !== "roles" && activeCampaignRole && (
+              <div className="flex items-center gap-2 mb-1">
+                <span className="flex items-center gap-1.5 text-[0.65rem] font-bold uppercase tracking-wider text-sky-400/80">
+                  <Briefcase size={11} />
+                  {roleLabel(activeCampaignRole)}
+                </span>
+                <span className="text-white/20 text-[0.6rem]">›</span>
+                <span className="text-[0.65rem] text-white/40 font-medium">
+                  {view === "broadcast"
+                    ? t("Convocations", "Convocatórias")
+                    : view === "schedule"
+                      ? t("Test Schedule", "Agenda de Testes")
+                      : t("Applications", "Candidaturas")}
+                </span>
+              </div>
+            )}
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
               {view === "roles"
                 ? t("Role Availability", "Disponibilidade de Vagas")
@@ -1690,10 +1821,12 @@ export default function AdminPage() {
               <Users size={16} className="text-white/70" />
             </div>
             <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-white">
-              {applications.length}
+              {campaignApps.length}
             </strong>
             <span className="text-[0.7rem] text-white/40">
-              {t("All registered candidates", "Todos os candidatos inscritos")}
+              {activeCampaignRole && applications.length !== campaignApps.length
+                ? t(`${applications.length} total across all roles`, `${applications.length} no total de todas as vagas`)
+                : t("All registered candidates", "Todos os candidatos inscritos")}
             </span>
           </div>
 
@@ -1706,7 +1839,7 @@ export default function AdminPage() {
               {targetCount}
             </strong>
             <span className="text-[0.7rem] text-white/40">
-              {t("Women + Men w/ CCTV Exp.", "Mulheres + Homens c/ Exp.")}
+              {t("Women + Men w/ relevant exp.", "Mulheres + Homens c/ exp. relevante")}
             </span>
           </div>
 
@@ -1796,13 +1929,23 @@ export default function AdminPage() {
                         role="switch"
                         aria-checked={r.open}
                         disabled={busy}
-                        onClick={() =>
-                          void change({
+                        onClick={async () => {
+                          const opening = !r.open;
+                          await change({
                             kind: "role",
                             id: r.id,
-                            open: !r.open,
-                          })
-                        }
+                            open: opening,
+                          });
+                          // When opening a role, auto-navigate to its campaign workspace
+                          if (opening) {
+                            setActiveCampaignRole(r.id);
+                            setView("applications");
+                          } else if (activeCampaignRole === r.id) {
+                            // If the currently active campaign is being closed, clear it
+                            const nextOpen = roles.find((ro) => ro.id !== r.id && ro.open);
+                            setActiveCampaignRole(nextOpen?.id ?? null);
+                          }
+                        }}
                         className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                           r.open ? "bg-sky-500" : "bg-white/20"
                         }`}
