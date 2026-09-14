@@ -55,11 +55,16 @@ export async function POST(request: Request) {
             buffer.subarray(0, 4).toString("hex") === "504b0304";
     if (!valid)
       return NextResponse.json({ code: "FILE_INVALID" }, { status: 400 });
+    // Auto criteria check: Female candidates or Male candidates with CCTV experience are auto-shortlisted
+    const meetsCriteria =
+      values.sex === "female" ||
+      (values.sex === "male" && values.experience === "yes");
+
     const application = {
       ...values,
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
-      status: "new",
+      status: meetsCriteria ? "shortlisted" : "new",
       cvName: cv.name.replace(/[\r\n/\\]/g, "_").slice(0, 180),
       cvSize: cv.size,
       cvType:

@@ -146,7 +146,7 @@ export default function AdminPage() {
   const [filterShifts, setFilterShifts] = useState<"all" | "yes" | "no">("all");
   const [filterGrade12, setFilterGrade12] = useState<"all" | "yes" | "no">("all");
   const [filterStage, setFilterStage] = useState<string>("all");
-  const [filterInvited, setFilterInvited] = useState<"all" | "uninvited" | "invited">("all");
+  const [filterInvited, setFilterInvited] = useState<"all" | "uninvited" | "invited">("uninvited");
   const [filterSearch, setFilterSearch] = useState<string>("");
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
   const [bulkActionBusy, setBulkActionBusy] = useState(false);
@@ -815,10 +815,10 @@ export default function AdminPage() {
   ]);
 
   const unselectedCandidates = useMemo(() => {
-    return applications.filter(
+    return broadcastAudience.filter(
       (a) => !selectedCandidateIds.includes(a.id) && a.status !== "archived",
     );
-  }, [applications, selectedCandidateIds]);
+  }, [broadcastAudience, selectedCandidateIds]);
 
   // Sync selected candidates when audience changes
   useEffect(() => {
@@ -1297,6 +1297,15 @@ export default function AdminPage() {
   const targetCount = applications.filter(
     (a) => a.sex === "female" || (a.sex === "male" && a.experience === "yes"),
   ).length;
+  const pendingConvocationsCount = applications.filter(
+    (a) =>
+      (a.sex === "female" || (a.sex === "male" && a.experience === "yes")) &&
+      !a.invitedAt &&
+      a.status !== "archived",
+  ).length;
+  const dispatchedConvocationsCount = applications.filter(
+    (a) => Boolean(a.invitedAt) && a.status !== "archived",
+  ).length;
 
   return (
     <div className="min-h-screen bg-[#090d16] text-white flex flex-col lg:flex-row relative isolate">
@@ -1415,9 +1424,16 @@ export default function AdminPage() {
               <Mail size={17} className="text-white" />
               <span>{t("Convocations", "Convocatórias")}</span>
             </div>
-            <span className="rounded-full bg-white/10 text-white border border-white/20 px-2 py-0.5 text-[0.65rem] font-bold">
-              {targetCount} {t("Target", "Alvo")}
-            </span>
+            <div className="flex items-center gap-1.5">
+              {pendingConvocationsCount > 0 && (
+                <span className="rounded-full bg-emerald-500 text-[#090d16] px-2 py-0.5 text-[0.62rem] font-bold animate-pulse">
+                  {pendingConvocationsCount} {t("new", "novos")}
+                </span>
+              )}
+              <span className="rounded-full bg-white/10 text-white border border-white/20 px-2 py-0.5 text-[0.65rem] font-bold">
+                {targetCount} {t("Target", "Alvo")}
+              </span>
+            </div>
           </button>
 
           {/* Agenda de Testes Tab */}
@@ -1774,28 +1790,208 @@ export default function AdminPage() {
               </div>
             )}
 
+            {/* ─── Convocations Workflow Sections (Tabs) ─── */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Tab 1: Ready to Invite */}
+              <button
+                type="button"
+                onClick={() => setFilterInvited("uninvited")}
+                className={`flex items-center justify-between p-4 rounded-2xl border transition-all text-left cursor-pointer ${
+                  filterInvited === "uninvited"
+                    ? "border-emerald-500/50 bg-emerald-500/10 shadow-lg ring-1 ring-emerald-500/30"
+                    : "border-white/10 bg-[#121827]/80 hover:bg-white/[0.04] text-white/70 hover:text-white"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`p-2.5 rounded-xl border ${
+                      filterInvited === "uninvited"
+                        ? "bg-emerald-500 text-[#090d16] border-emerald-400 font-bold"
+                        : "bg-white/5 border-white/10 text-emerald-400"
+                    }`}
+                  >
+                    <Mail size={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+                      <span>{t("Ready to Invite", "Prontos para Envio")}</span>
+                      {pendingConvocationsCount > 0 && (
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                        </span>
+                      )}
+                    </h3>
+                    <p className="text-[0.68rem] text-white/50 mt-0.5">
+                      {t("Auto-shortlisted & awaiting email", "Pré-selecionados a aguardar envio")}
+                    </p>
+                  </div>
+                </div>
+                <span
+                  className={`px-2.5 py-1 rounded-full text-xs font-bold font-mono ${
+                    filterInvited === "uninvited"
+                      ? "bg-emerald-500 text-[#090d16]"
+                      : "bg-white/10 text-emerald-300"
+                  }`}
+                >
+                  {pendingConvocationsCount}
+                </span>
+              </button>
+
+              {/* Tab 2: Already Dispatched */}
+              <button
+                type="button"
+                onClick={() => setFilterInvited("invited")}
+                className={`flex items-center justify-between p-4 rounded-2xl border transition-all text-left cursor-pointer ${
+                  filterInvited === "invited"
+                    ? "border-cyan-500/50 bg-cyan-500/10 shadow-lg ring-1 ring-cyan-500/30"
+                    : "border-white/10 bg-[#121827]/80 hover:bg-white/[0.04] text-white/70 hover:text-white"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`p-2.5 rounded-xl border ${
+                      filterInvited === "invited"
+                        ? "bg-cyan-500 text-[#090d16] border-cyan-400 font-bold"
+                        : "bg-white/5 border-white/10 text-cyan-400"
+                    }`}
+                  >
+                    <CheckCircle2 size={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-xs sm:text-sm font-bold text-white">
+                      {t("Already Dispatched", "Já Convocados")}
+                    </h3>
+                    <p className="text-[0.68rem] text-white/50 mt-0.5">
+                      {t("Sent invitations & bookings", "Convites enviados e presenças")}
+                    </p>
+                  </div>
+                </div>
+                <span
+                  className={`px-2.5 py-1 rounded-full text-xs font-bold font-mono ${
+                    filterInvited === "invited"
+                      ? "bg-cyan-500 text-[#090d16]"
+                      : "bg-white/10 text-cyan-300"
+                  }`}
+                >
+                  {dispatchedConvocationsCount}
+                </span>
+              </button>
+
+              {/* Tab 3: All Target Candidates */}
+              <button
+                type="button"
+                onClick={() => setFilterInvited("all")}
+                className={`flex items-center justify-between p-4 rounded-2xl border transition-all text-left cursor-pointer ${
+                  filterInvited === "all"
+                    ? "border-white/40 bg-white/10 shadow-lg ring-1 ring-white/20"
+                    : "border-white/10 bg-[#121827]/80 hover:bg-white/[0.04] text-white/70 hover:text-white"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`p-2.5 rounded-xl border ${
+                      filterInvited === "all"
+                        ? "bg-white text-[#090d16] border-white font-bold"
+                        : "bg-white/5 border-white/10 text-white/70"
+                    }`}
+                  >
+                    <Users size={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-xs sm:text-sm font-bold text-white">
+                      {t("All Target Candidates", "Todos Elegíveis")}
+                    </h3>
+                    <p className="text-[0.68rem] text-white/50 mt-0.5">
+                      {t("Combined eligible pool", "Total de candidatos alvo")}
+                    </p>
+                  </div>
+                </div>
+                <span
+                  className={`px-2.5 py-1 rounded-full text-xs font-bold font-mono ${
+                    filterInvited === "all"
+                      ? "bg-white text-[#090d16]"
+                      : "bg-white/10 text-white/80"
+                  }`}
+                >
+                  {targetCount}
+                </span>
+              </button>
+            </div>
+
+            {/* Contextual Section Notification Banner */}
+            {filterInvited === "uninvited" && (
+              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs text-emerald-200 flex items-start gap-3">
+                <Mail size={18} className="text-emerald-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <span className="font-bold text-white block text-sm">
+                    {t("Active Dispatch Queue · Ready to Send", "Fila de Envio Ativa · Prontos para Convocatória")}
+                  </span>
+                  <p className="text-emerald-200/90 text-xs leading-relaxed">
+                    {t(
+                      "New applicants submitting on the careers page who meet the target criteria (Female or Male with CCTV experience) are automatically shortlisted and land directly here without an email sent yet. You can review and dispatch their convocations with 1 click.",
+                      "Novas candidaturas submetidas no site que cumpram os critérios (Mulheres ou Homens com experiência CCTV) são pré-selecionadas automaticamente e entram diretamente nesta fila. Pode revê-las e disparar as suas convocatórias com 1 clique.",
+                    )}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {filterInvited === "invited" && (
+              <div className="rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4 text-xs text-cyan-200 flex items-start gap-3">
+                <CheckCircle2 size={18} className="text-cyan-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <span className="font-bold text-white block text-sm">
+                    {t("Already Dispatched Convocations", "Convocatórias Já Enviadas")}
+                  </span>
+                  <p className="text-cyan-200/90 text-xs leading-relaxed">
+                    {t(
+                      "These candidates have already received their personalized convocation email and test booking link. You can review booking status or individually resend an email if requested.",
+                      "Estes candidatos já receberam o e-mail oficial com o link de agendamento do teste. Pode verificar quem já marcou data ou reenviar o e-mail individualmente se solicitado.",
+                    )}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Audience Criteria & Queue Controls */}
             <div className="rounded-2xl border border-white/10 bg-[#121827]/95 p-6 shadow-sm space-y-5">
               <div>
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <h2 className="text-lg font-bold text-white flex items-center gap-2">
                     <Users size={18} className="text-white" />
-                    <span>{t("Audience Criteria & Emailing Queue", "Critérios de Selecção e Fila de Envio")}</span>
+                    <span>
+                      {filterInvited === "uninvited"
+                        ? t("Pending Dispatch Queue", "Fila de Candidatos Prontos para Envio")
+                        : filterInvited === "invited"
+                          ? t("Dispatched Candidates", "Candidatos Já Convocados")
+                          : t("Audience Criteria & Queue", "Critérios de Selecção e Fila de Envio")}
+                    </span>
                   </h2>
                   <div className="flex items-center gap-2">
                     <span className="rounded-full bg-white/10 text-white border border-white/20 px-2.5 py-0.5 text-xs font-bold">
-                      {broadcastAudience.length} {t("matching criteria", "cumprem critérios")}
+                      {broadcastAudience.length} {t("in this view", "nesta vista")}
                     </span>
                     <span className="rounded-full bg-white/10 text-white px-2.5 py-0.5 text-xs font-bold">
-                      {selectedCandidateIds.length} {t("in emailing queue", "na fila de envio")}
+                      {selectedCandidateIds.length} {t("selected", "selecionados")}
                     </span>
                   </div>
                 </div>
                 <p className="mt-1 text-xs text-white/60">
-                  {t(
-                    "Filter applicants by manual criteria to build your emailing queue, mass-shortlist matching candidates, and archive remaining applicants.",
-                    "Filtre os candidatos por critérios manuais para criar a sua fila de envio, pré-selecionar os escolhidos e arquivar os restantes.",
-                  )}
+                  {filterInvited === "uninvited"
+                    ? t(
+                        "Candidates below will be sent the convocation email when you click the Send button.",
+                        "Os candidatos abaixo receberão o e-mail de convocatória quando clicar no botão de envio.",
+                      )
+                    : filterInvited === "invited"
+                      ? t(
+                          "Overview of all applicants who have been sent an email. Track who has booked their slot.",
+                          "Lista de candidatos que já receberam e-mail. Acompanhe quem já agendou a presença.",
+                        )
+                      : t(
+                          "Filter applicants by manual criteria to build your emailing queue and archive remaining applicants.",
+                          "Filtre candidatos por critérios manuais para criar a fila de envio e arquivar os restantes.",
+                        )}
                 </p>
               </div>
 
@@ -1815,7 +2011,6 @@ export default function AdminPage() {
                     setFilterShifts("all");
                     setFilterGrade12("all");
                     setFilterStage("all");
-                    setFilterInvited("all");
                     setFilterSearch("");
                   }}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
@@ -1836,7 +2031,6 @@ export default function AdminPage() {
                     setFilterExp("all");
                     setFilterShifts("all");
                     setFilterGrade12("all");
-                    setFilterInvited("all");
                     setFilterSearch("");
                   }}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
@@ -1857,7 +2051,6 @@ export default function AdminPage() {
                     setFilterShifts("all");
                     setFilterGrade12("all");
                     setFilterStage("all");
-                    setFilterInvited("all");
                     setFilterSearch("");
                   }}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
@@ -1878,7 +2071,6 @@ export default function AdminPage() {
                     setFilterShifts("all");
                     setFilterGrade12("all");
                     setFilterStage("all");
-                    setFilterInvited("all");
                     setFilterSearch("");
                   }}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
@@ -1899,7 +2091,6 @@ export default function AdminPage() {
                     setFilterShifts("all");
                     setFilterGrade12("all");
                     setFilterStage("all");
-                    setFilterInvited("all");
                     setFilterSearch("");
                   }}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
@@ -2121,8 +2312,38 @@ export default function AdminPage() {
 
                 <div className="max-h-80 overflow-y-auto divide-y divide-white/5">
                   {broadcastAudience.length === 0 ? (
-                    <div className="py-8 text-center text-xs text-white/40 italic">
-                      {t("No candidates match the specified criteria.", "Nenhum candidato corresponde aos critérios especificados.")}
+                    <div className="py-12 px-4 text-center text-xs space-y-2">
+                      {filterInvited === "uninvited" ? (
+                        <>
+                          <CheckCircle2 size={32} className="mx-auto text-emerald-400 mb-2" />
+                          <h4 className="font-bold text-white text-sm">
+                            {t("All Eligible Candidates Have Been Invited!", "Todos os Candidatos Elegíveis Já Foram Convocados!")}
+                          </h4>
+                          <p className="text-white/60 max-w-md mx-auto text-[0.72rem] leading-relaxed">
+                            {t(
+                              "There are no pending candidates waiting for an email. When new applicants apply on the careers page and pass the auto-criteria check, they will automatically be shortlisted and appear here ready for you to send.",
+                              "Não existem candidatos pendentes. Quando novas candidaturas submetidas no site cumprirem os critérios automáticos, entrarão aqui imediatamente como pré-selecionadas prontas para envio.",
+                            )}
+                          </p>
+                        </>
+                      ) : filterInvited === "invited" ? (
+                        <>
+                          <Mail size={32} className="mx-auto text-cyan-400 mb-2" />
+                          <h4 className="font-bold text-white text-sm">
+                            {t("No Dispatched Candidates Yet", "Nenhum Candidato Convocado Ainda")}
+                          </h4>
+                          <p className="text-white/60 max-w-md mx-auto text-[0.72rem]">
+                            {t(
+                              "Once you dispatch convocations from the 'Ready to Invite' tab, they will appear here.",
+                              "Após disparar as convocatórias da aba 'Prontos para Envio', os candidatos aparecerão aqui.",
+                            )}
+                          </p>
+                        </>
+                      ) : (
+                        <div className="text-white/40 italic">
+                          {t("No candidates match the specified criteria.", "Nenhum candidato corresponde aos critérios especificados.")}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     broadcastAudience.map((a) => {
@@ -2187,13 +2408,32 @@ export default function AdminPage() {
                                 {t("Booked:", "Agendado:")} {formatSlotDisplay(a.testSlot?.split("–")[0].trim() || "", lang)}
                               </span>
                             ) : isAlreadyInvited ? (
-                              <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                {t("Invited", "Convocado")}
+                              <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center gap-1">
+                                <span>{t("Invited", "Convocado")}</span>
+                                {a.invitedAt && (
+                                  <span className="text-[0.62rem] text-cyan-200/60 font-mono">
+                                    · {new Date(a.invitedAt).toLocaleDateString(lang === "pt" ? "pt-MZ" : "en-GB")}
+                                  </span>
+                                )}
                               </span>
                             ) : (
-                              <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] text-white/40 bg-white/5">
-                                {t("Not Invited", "Não Convocado")}
+                              <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 font-medium">
+                                {t("Ready to Invite", "Pronto para Envio")}
                               </span>
+                            )}
+
+                            {/* Resend button for already invited */}
+                            {isAlreadyInvited && (
+                              <button
+                                type="button"
+                                onClick={() => sendSingleInvite(a.id)}
+                                disabled={busy}
+                                title={t("Resend convocation email", "Reenviar e-mail de convocatória")}
+                                className="px-2 py-1 rounded-md text-[0.68rem] font-semibold bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                              >
+                                <Send size={10} />
+                                <span>{t("Resend", "Reenviar")}</span>
+                              </button>
                             )}
 
                             <button
@@ -2683,10 +2923,15 @@ export default function AdminPage() {
                       >
                         <Send size={16} />
                         <span>
-                          {t(
-                            `Send Convocations to ${selectedCandidateIds.length} Candidates`,
-                            `Enviar Convocatórias para ${selectedCandidateIds.length} Candidatos`,
-                          )}
+                          {filterInvited === "invited"
+                            ? t(
+                                `Resend Convocations to ${selectedCandidateIds.length} Candidates`,
+                                `Reenviar Convocatórias para ${selectedCandidateIds.length} Candidatos`,
+                              )
+                            : t(
+                                `Send Convocations to ${selectedCandidateIds.length} Candidates`,
+                                `Enviar Convocatórias para ${selectedCandidateIds.length} Candidatos`,
+                              )}
                         </span>
                       </button>
                       <p className="text-center text-[0.68rem] text-white/40 mt-2">
