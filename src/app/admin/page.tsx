@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useCallback, useMemo, type FormEvent } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef, type FormEvent } from "react";
 import {
   ArrowUpRight,
   LayoutDashboard,
@@ -42,6 +42,8 @@ import {
   Columns,
   Loader2,
   Trash2,
+  Bell,
+  Radio,
 } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 import TechGrid from "@/components/ui/TechGrid";
@@ -217,6 +219,19 @@ export default function AdminPage() {
     candidateNames?: string[];
   }>({ open: false, ids: [] });
   const [deleteBusy, setDeleteBusy] = useState(false);
+
+  // ─── Real-time Live Polling & Database Refresh State ──────────────
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [liveNotification, setLiveNotification] = useState<{
+    id: string;
+    title: string;
+    subtitle: string;
+    type: "new_app" | "new_booking";
+    timestamp: string;
+    candidateId?: string;
+  } | null>(null);
+  const prevAppIds = useRef<Set<string> | null>(null);
+  const prevBookedMap = useRef<Map<string, string> | null>(null);
 
   // Load language preference and persisted template customizations
   useEffect(() => {
@@ -488,9 +503,15 @@ export default function AdminPage() {
 
   const t = (enStr: string, ptStr: string) => (lang === "en" ? enStr : ptStr);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (isManual = false) => {
+    if (isManual) {
+      setIsRefreshing(true);
+    }
     try {
-      const r = await fetch("/api/admin/careers", { cache: "no-store" });
+      const r = await fetch(`/api/admin/careers?t=${Date.now()}`, {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" },
+      });
       if (r.status === 401) {
         setAuth(false);
         return;
@@ -504,19 +525,72 @@ export default function AdminPage() {
         );
       }
       const d = await r.json();
-      setApplications(d.applications || []);
-      setRoles(d.roles || []);
+      const newApps: Application[] = d.applications || [];
+      const newRoles: Role[] = d.roles || [];
+
+      // Detect real-time updates if we already have a previous baseline
+      if (prevAppIds.current !== null) {
+        // 1. Check for brand-new incoming job applications
+        const brandNew = newApps.filter((a) => !prevAppIds.current!.has(a.id));
+        if (brandNew.length > 0) {
+          const newest = brandNew[0];
+          const roleObj = newRoles.find((ro) => ro.id === newest.role);
+          const roleName = lang === "pt" ? (roleObj?.pt || newest.role) : (roleObj?.en || newest.role);
+          setLiveNotification({
+            id: `app_${Date.now()}_${newest.id}`,
+            title: lang === "pt" ? "🔔 Nova Candidatura Recebida!" : "🔔 New Application Received!",
+            subtitle: `${newest.name} — ${roleName}`,
+            type: "new_app",
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+            candidateId: newest.id,
+          });
+        }
+
+        // 2. Check for candidate test bookings
+        if (prevBookedMap.current !== null) {
+          const newlyBooked = newApps.find(
+            (a) => a.testSlot && prevBookedMap.current!.get(a.id) !== a.testSlot,
+          );
+          if (newlyBooked && (!brandNew.length || newlyBooked.id !== brandNew[0].id)) {
+            const slotShort = formatSlotDisplay(newlyBooked.testSlot?.split("–")[0]?.trim() || "", lang);
+            setLiveNotification({
+              id: `book_${Date.now()}_${newlyBooked.id}`,
+              title: lang === "pt" ? "📅 Novo Agendamento Confirmado!" : "📅 Test Booking Confirmed!",
+              subtitle: `${newlyBooked.name} (${slotShort})`,
+              type: "new_booking",
+              timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+              candidateId: newlyBooked.id,
+            });
+          }
+        }
+      }
+
+      // Update baseline tracking refs
+      prevAppIds.current = new Set(newApps.map((a) => a.id));
+      const nextBookedMap = new Map<string, string>();
+      newApps.forEach((a) => {
+        if (a.testSlot) nextBookedMap.set(a.id, a.testSlot);
+      });
+      prevBookedMap.current = nextBookedMap;
+
+      setApplications(newApps);
+      setRoles(newRoles);
       setUpdated(
         new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
+          second: "2-digit",
         }),
       );
       setError("");
     } catch (e) {
       setError((e as Error).message);
+    } finally {
+      if (isManual) {
+        setTimeout(() => setIsRefreshing(false), 350);
+      }
     }
-  }, []);
+  }, [lang]);
 
   useEffect(() => {
     fetch("/api/admin/session")
@@ -528,15 +602,45 @@ export default function AdminPage() {
       });
   }, []);
 
+  // ─── Real-time 3.5s Live Polling + Window Focus / Visibility Sync ────
   useEffect(() => {
     if (!auth) return;
-    const initial = setTimeout(load, 0);
-    const timer = setInterval(load, 15000);
+
+    // Immediate initial sync
+    load(false);
+
+    // Instant refresh when user switches back to this browser tab or window gains focus
+    const handleSyncOnVisible = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        load(false);
+      }
+    };
+
+    window.addEventListener("focus", handleSyncOnVisible);
+    document.addEventListener("visibilitychange", handleSyncOnVisible);
+
+    // Continuous 3.5 second live database polling
+    const timer = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        load(false);
+      }
+    }, 3500);
+
     return () => {
-      clearTimeout(initial);
+      window.removeEventListener("focus", handleSyncOnVisible);
+      document.removeEventListener("visibilitychange", handleSyncOnVisible);
       clearInterval(timer);
     };
   }, [auth, load]);
+
+  // Auto-dismiss live arrival notification toast after 6 seconds
+  useEffect(() => {
+    if (!liveNotification) return;
+    const timer = setTimeout(() => {
+      setLiveNotification(null);
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, [liveNotification]);
 
   useEffect(() => {
     if (!selected) return;
@@ -1560,11 +1664,22 @@ export default function AdminPage() {
               </button>
             </div>
 
-            {/* Live Admin Count Pill */}
-            <div className="hidden sm:flex items-center gap-2 rounded-xl bg-white/[0.04] border border-white/10 px-3 py-1.5 text-xs">
+            {/* Real-time DB Sync Indicator */}
+            <div className="hidden md:flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 text-xs text-emerald-300">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+              </span>
+              <span className="font-semibold text-[0.72rem] font-mono">
+                {t("Live BD Sync (3.5s)", "Live BD (3.5s)")}
+              </span>
+            </div>
+
+            {/* Live Admin Count Pill */}
+            <div className="hidden sm:flex items-center gap-2 rounded-xl bg-white/[0.04] border border-white/10 px-3 py-1.5 text-xs">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-400"></span>
               </span>
               <span className="font-semibold text-white/90 text-[0.72rem]">
                 {lang === "pt"
@@ -1573,13 +1688,28 @@ export default function AdminPage() {
               </span>
             </div>
 
+            {/* Live Database Refresh Button */}
             <button
-              onClick={() => void load()}
-              aria-label="Refresh data"
-              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2 text-xs font-semibold text-white/80 hover:bg-white/[0.08] hover:text-white transition-colors cursor-pointer"
+              onClick={() => void load(true)}
+              disabled={isRefreshing}
+              aria-label="Refresh database"
+              title={t(
+                "Refresh data directly from database without reloading page",
+                "Atualizar dados da base de dados sem recarregar a página",
+              )}
+              className="flex items-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3.5 py-2 text-xs font-semibold text-sky-200 hover:bg-sky-500/20 hover:text-white transition-all cursor-pointer shadow-sm disabled:opacity-50"
             >
-              <RefreshCw size={14} className={busy ? "animate-spin" : ""} />
-              <span>{updated ? `${t("Updated", "Atualizado às")} ${updated}` : t("Refresh", "Atualizar")}</span>
+              <RefreshCw
+                size={14}
+                className={isRefreshing ? "animate-spin text-sky-400" : "text-sky-400"}
+              />
+              <span>
+                {isRefreshing
+                  ? t("Syncing BD…", "A sincronizar BD…")
+                  : updated
+                    ? `${t("Sync BD", "Atualizar BD")} (${updated})`
+                    : t("Sync BD", "Atualizar BD")}
+              </span>
             </button>
 
             {view === "applications" && (
@@ -1674,16 +1804,28 @@ export default function AdminPage() {
         {view === "roles" && (
           <section className="space-y-4">
             <div className="rounded-2xl border border-white/10 bg-[#121827]/95 p-6 shadow-sm">
-              <div className="mb-6">
-                <h2 className="text-lg font-bold text-white">
-                  {t("Public Role Availability", "Disponibilidade Pública das Vagas")}
-                </h2>
-                <p className="mt-1 text-xs text-white/60">
-                  {t(
-                    "Toggle roles open or closed. Locked roles will show a padlock icon on the careers page and prevent submissions.",
-                    "Abra ou tranque vagas. Vagas trancadas mostrarão um cadeado na página de carreiras e impedirão candidaturas.",
-                  )}
-                </p>
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-bold text-white">
+                    {t("Public Role Availability", "Disponibilidade Pública das Vagas")}
+                  </h2>
+                  <p className="mt-1 text-xs text-white/60">
+                    {t(
+                      "Toggle roles open or closed. Locked roles will show a padlock icon on the careers page and prevent submissions.",
+                      "Abra ou tranque vagas. Vagas trancadas mostrarão um cadeado na página de carreiras e impedirão candidaturas.",
+                    )}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void load(true)}
+                  disabled={isRefreshing}
+                  title={t("Refresh roles status from database", "Atualizar estado das vagas a partir da base de dados")}
+                  className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-3.5 py-2 text-xs font-semibold text-white/80 hover:bg-white/[0.08] hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw size={13} className={isRefreshing ? "animate-spin text-sky-400" : "text-sky-400"} />
+                  <span>{isRefreshing ? t("Updating…", "A atualizar…") : t("Refresh Roles BD", "Atualizar Vagas BD")}</span>
+                </button>
               </div>
 
               <div className="space-y-3">
@@ -1789,6 +1931,33 @@ export default function AdminPage() {
                 </button>
               </div>
             )}
+
+            {/* Header with Live DB Refresh */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-[#121827]/95 border border-white/10 p-4 rounded-2xl">
+              <div>
+                <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Send size={15} className="text-sky-400" />
+                  <span>{t("Convocations Dispatch Hub", "Central de Convocatórias de Teste")}</span>
+                </h2>
+                <p className="text-[0.68rem] text-white/50 mt-0.5">
+                  {t(
+                    "Real-time pipeline of shortlisted candidates awaiting dispatch and confirmed bookings.",
+                    "Fluxo em tempo real de candidatos pré-selecionados para envio e presenças confirmadas.",
+                  )}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => void load(true)}
+                disabled={isRefreshing}
+                title={t("Refresh convocations data from database", "Atualizar dados de convocatórias a partir da base de dados")}
+                className="flex items-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3.5 py-2 text-xs font-semibold text-sky-200 hover:bg-sky-500/20 hover:text-white transition-all cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw size={13} className={isRefreshing ? "animate-spin text-sky-400" : "text-sky-400"} />
+                <span>{isRefreshing ? t("Updating…", "A atualizar…") : t("Refresh Convocations BD", "Atualizar Convocatórias BD")}</span>
+              </button>
+            </div>
 
             {/* ─── Convocations Workflow Sections (Tabs) ─── */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -3333,15 +3502,28 @@ export default function AdminPage() {
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => exportAttendanceCSV()}
-                disabled={!confirmedCount}
-                className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-[#090d16] hover:bg-white/90 disabled:opacity-40 transition-transform hover:-translate-y-0.5 cursor-pointer"
-              >
-                <Download size={14} />
-                <span>{t("Export Complete Attendance Sheet (CSV)", "Exportar Lista Completa para Teste (CSV)")}</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void load(true)}
+                  disabled={isRefreshing}
+                  title={t("Refresh confirmed bookings from database", "Atualizar presenças agendadas a partir da base de dados")}
+                  className="flex items-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-3.5 py-2.5 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20 hover:text-white transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw size={13} className={isRefreshing ? "animate-spin text-cyan-400" : "text-cyan-400"} />
+                  <span>{isRefreshing ? t("Updating…", "A atualizar…") : t("Refresh Schedule BD", "Atualizar Agenda BD")}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => exportAttendanceCSV()}
+                  disabled={!confirmedCount}
+                  className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-[#090d16] hover:bg-white/90 disabled:opacity-40 transition-transform hover:-translate-y-0.5 cursor-pointer"
+                >
+                  <Download size={14} />
+                  <span>{t("Export Complete Attendance Sheet (CSV)", "Exportar Lista Completa para Teste (CSV)")}</span>
+                </button>
+              </div>
             </div>
 
             {/* Grid of Slots */}
@@ -3588,6 +3770,18 @@ export default function AdminPage() {
                     <option value={9999}>{t("All", "Todos")}</option>
                   </select>
                 </div>
+
+                {/* Live Database Refresh Button */}
+                <button
+                  type="button"
+                  onClick={() => void load(true)}
+                  disabled={isRefreshing}
+                  title={t("Refresh candidates directly from database", "Atualizar candidaturas a partir da base de dados")}
+                  className="flex items-center gap-1.5 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs font-semibold text-sky-200 hover:bg-sky-500/20 hover:text-white transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw size={13} className={isRefreshing ? "animate-spin text-sky-400" : "text-sky-400"} />
+                  <span>{isRefreshing ? t("Updating…", "A atualizar…") : t("Refresh DB", "Atualizar BD")}</span>
+                </button>
               </div>
 
               {/* Quick Filter Pills Bar */}
@@ -4637,6 +4831,79 @@ export default function AdminPage() {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Real-time Live Arrival Toast Notification ─────────────── */}
+      {liveNotification && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-md w-full animate-in slide-in-from-bottom-5 fade-in duration-300 p-2">
+          <div
+            className={`rounded-2xl border p-4 shadow-[0_20px_50px_rgba(0,0,0,0.6)] backdrop-blur-xl flex items-start justify-between gap-3 ${
+              liveNotification.type === "new_app"
+                ? "border-emerald-500/40 bg-[#0e1726]/95 text-white"
+                : "border-cyan-500/40 bg-[#0a192f]/95 text-white"
+            }`}
+          >
+            <div className="flex items-start gap-3 min-w-0">
+              <div
+                className={`p-2.5 rounded-xl shrink-0 ${
+                  liveNotification.type === "new_app"
+                    ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                    : "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                }`}
+              >
+                {liveNotification.type === "new_app" ? (
+                  <Users size={18} />
+                ) : (
+                  <CalendarCheck size={18} />
+                )}
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h4
+                    className={`text-xs font-bold uppercase tracking-wider ${
+                      liveNotification.type === "new_app"
+                        ? "text-emerald-400"
+                        : "text-cyan-400"
+                    }`}
+                  >
+                    {liveNotification.title}
+                  </h4>
+                  <span className="text-[0.62rem] font-mono text-white/50">
+                    {liveNotification.timestamp}
+                  </span>
+                </div>
+                <p className="text-xs font-semibold text-white mt-1 truncate">
+                  {liveNotification.subtitle}
+                </p>
+                {liveNotification.candidateId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const found = applications.find(
+                        (a) => a.id === liveNotification.candidateId,
+                      );
+                      if (found) {
+                        setSelected(found);
+                        setView("applications");
+                      }
+                      setLiveNotification(null);
+                    }}
+                    className="mt-2 text-xs text-sky-400 hover:text-sky-300 font-semibold underline underline-offset-2 flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>{t("Open candidate details →", "Ver ficha do candidato →")}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setLiveNotification(null)}
+              className="text-white/40 hover:text-white p-1 rounded-lg cursor-pointer shrink-0"
+            >
+              <X size={16} />
+            </button>
           </div>
         </div>
       )}
