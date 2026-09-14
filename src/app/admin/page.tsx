@@ -2506,130 +2506,135 @@ export default function AdminPage() {
                           )}
                           <span className="text-[0.68rem] text-slate-300 bg-white/[0.06] border border-white/10 px-2.5 py-0.5 rounded-md font-mono">
                             {previewLang === "pt"
-                              ? t("Maputo Delivery Version", "Versão Oficial Maputo")
-                              : t("Draft View", "Visualização de Rascunho")}
+                              ? "Versão Oficial Maputo (PT)"
+                              : "Draft View (EN)"}
                           </span>
                         </div>
                       </div>
 
                       {/* Document Card Mirroring Actual Email */}
-                      <div className="rounded-xl border border-slate-200 bg-white text-slate-800 shadow-xl overflow-hidden text-xs">
-                        {/* Official Letterhead Header */}
-                        <div className="bg-[#0b1329] px-5 py-4 border-b-2 border-white/20 text-white">
-                          <div className="flex items-center justify-between">
-                            <Logo size="sm" variant="light" />
-                            <div className="text-right">
-                              <span className="inline-block bg-white/10 text-white font-mono text-[0.6rem] px-2 py-0.5 rounded border border-white/10 font-bold">
-                                REF: CCO-2026/MAPUTO
-                              </span>
-                              <div className="text-[0.65rem] text-slate-300 mt-0.5 font-medium">
-                                {t("Human Resources Department", "Departamento de Recursos Humanos")}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Subject Bar */}
-                        <div className="bg-slate-100/90 px-5 py-2.5 border-b border-slate-200 text-[0.72rem] flex items-center gap-2 text-slate-700">
-                          <span className="font-bold text-slate-500 text-[0.65rem] uppercase tracking-wider">{t("Subject:", "Assunto:")}</span>
-                          <span className="font-semibold text-slate-900 truncate">
-                            {previewLang === "pt"
-                              ? (templatePT.subject || EMAIL_TEMPLATES.pt.subject)
-                              : broadcastSubject}
-                          </span>
-                        </div>
-
-                        {/* Official Document Subheading */}
-                        <div className="bg-slate-50 px-5 py-2.5 border-b border-slate-200 flex items-center justify-between text-[0.68rem]">
-                          <span className="font-semibold text-slate-700 uppercase tracking-wide">
-                            {t("Official Selection Test Convocation", "Convocatória Oficial · Teste de Selecção Presencial")}
-                          </span>
-                          <span className="text-slate-500">
-                            {t("Maputo, Mozambique", "Maputo, Moçambique")}
-                          </span>
-                        </div>
-
-                        {/* Letter Body */}
-                        <div className="p-5 space-y-4">
-                          <div className="text-slate-800 whitespace-pre-wrap font-sans text-xs leading-relaxed">
-                            {(previewLang === "pt"
-                              ? (templatePT.message || EMAIL_TEMPLATES.pt.message)
-                              : broadcastMessage
-                            ).replace(
-                              /\{\{name\}\}/g,
-                              broadcastAudience[0]?.name || "Maria João",
-                            )}
-                          </div>
-
-                          {/* Test Slots Clean Table */}
-                          <div className="rounded-lg border border-slate-200 bg-slate-50 overflow-hidden">
-                            <div className="bg-slate-100 px-3.5 py-2 border-b border-slate-200 text-[0.68rem] font-bold text-slate-700 uppercase tracking-wider">
-                              {t("Available Slots (10:00 – 11:30):", "Turnos Disponíveis (10h00 – 11h30):")}
-                            </div>
-                            <div className="divide-y divide-slate-200">
-                              {broadcastSlots.map((s, idx) => (
-                                <div
-                                  key={idx}
-                                  className="px-3.5 py-2 text-slate-800 font-medium text-[0.72rem] flex items-center justify-between"
-                                >
-                                  <span>{formatSlotDisplay(s, previewLang)}</span>
-                                  <span className="text-[0.65rem] font-mono text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
-                                    {t("Option 0", "Opção 0")}{idx + 1}
+                      {(() => {
+                        const tp = (enStr: string, ptStr: string) => (previewLang === "en" ? enStr : ptStr);
+                        return (
+                          <div className="rounded-xl border border-slate-200 bg-white text-slate-800 shadow-xl overflow-hidden text-xs">
+                            {/* Official Letterhead Header */}
+                            <div className="bg-[#0b1329] px-5 py-4 border-b-2 border-white/20 text-white">
+                              <div className="flex items-center justify-between">
+                                <Logo size="sm" variant="light" />
+                                <div className="text-right">
+                                  <span className="inline-block bg-white/10 text-white font-mono text-[0.6rem] px-2 py-0.5 rounded border border-white/10 font-bold">
+                                    REF: CCO-2026/MAPUTO
                                   </span>
+                                  <div className="text-[0.65rem] text-slate-300 mt-0.5 font-medium">
+                                    {tp("Human Resources Department", "Departamento de Recursos Humanos")}
+                                  </div>
                                 </div>
-                              ))}
+                              </div>
+                            </div>
+
+                            {/* Subject Bar */}
+                            <div className="bg-slate-100/90 px-5 py-2.5 border-b border-slate-200 text-[0.72rem] flex items-center gap-2 text-slate-700">
+                              <span className="font-bold text-slate-500 text-[0.65rem] uppercase tracking-wider">{tp("Subject:", "Assunto:")}</span>
+                              <span className="font-semibold text-slate-900 truncate">
+                                {previewLang === "pt"
+                                  ? (templatePT.subject || EMAIL_TEMPLATES.pt.subject)
+                                  : broadcastSubject}
+                              </span>
+                            </div>
+
+                            {/* Official Document Subheading */}
+                            <div className="bg-slate-50 px-5 py-2.5 border-b border-slate-200 flex items-center justify-between text-[0.68rem]">
+                              <span className="font-semibold text-slate-700 uppercase tracking-wide">
+                                {tp("Official Selection Test Convocation", "Convocatória Oficial · Teste de Selecção Presencial")}
+                              </span>
+                              <span className="text-slate-500">
+                                {tp("Maputo, Mozambique", "Maputo, Moçambique")}
+                              </span>
+                            </div>
+
+                            {/* Letter Body */}
+                            <div className="p-5 space-y-4">
+                              <div className="text-slate-800 whitespace-pre-wrap font-sans text-xs leading-relaxed">
+                                {(previewLang === "pt"
+                                  ? (templatePT.message || EMAIL_TEMPLATES.pt.message)
+                                  : broadcastMessage
+                                ).replace(
+                                  /\{\{name\}\}/g,
+                                  broadcastAudience[0]?.name || "Maria João",
+                                )}
+                              </div>
+
+                              {/* Test Slots Clean Table */}
+                              <div className="rounded-lg border border-slate-200 bg-slate-50 overflow-hidden">
+                                <div className="bg-slate-100 px-3.5 py-2 border-b border-slate-200 text-[0.68rem] font-bold text-slate-700 uppercase tracking-wider">
+                                  {tp("Available Slots (10:00 – 11:30):", "Turnos Disponíveis (10h00 – 11h30):")}
+                                </div>
+                                <div className="divide-y divide-slate-200">
+                                  {broadcastSlots.map((s, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="px-3.5 py-2 text-slate-800 font-medium text-[0.72rem] flex items-center justify-between"
+                                    >
+                                      <span>{formatSlotDisplay(s, previewLang)}</span>
+                                      <span className="text-[0.65rem] font-mono text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
+                                        {tp("Option 0", "Opção 0")}{idx + 1}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Solid Executive CTA Button - Clickable to test booking experience */}
+                              <div className="pt-2 text-center">
+                                {(broadcastAudience[0]?.id || applications[0]?.id) ? (
+                                  <a
+                                    href={`/${previewLang}/careers/test-invite/${broadcastAudience[0]?.id || applications[0]?.id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title={tp("Preview candidate booking page in a new tab", "Pré-visualizar portal de agendamento numa nova aba")}
+                                    className="inline-flex items-center gap-2 bg-[#0b1329] hover:bg-[#182342] text-white font-bold text-xs px-6 py-3 rounded-lg shadow-md border border-[#0b1329] transition-all hover:scale-[1.02] cursor-pointer"
+                                  >
+                                    <span>{tp("Confirm My Test Attendance →", "Confirmar Minha Presença no Teste →")}</span>
+                                    <ExternalLink size={13} className="text-white/70" />
+                                  </a>
+                                ) : (
+                                  <div className="inline-flex items-center gap-2 bg-[#0b1329] text-white font-bold text-xs px-6 py-3 rounded-lg shadow-sm border border-[#0b1329]">
+                                    <span>{tp("Confirm My Test Attendance →", "Confirmar Minha Presença no Teste →")}</span>
+                                  </div>
+                                )}
+                                <p className="text-[0.65rem] text-slate-500 mt-2 flex items-center justify-center gap-1">
+                                  <ExternalLink size={10} className="text-slate-400" />
+                                  <span>
+                                    {tp(
+                                      "Click button to test candidate booking portal in a new tab.",
+                                      "Clique no botão para testar o portal de agendamento numa nova aba.",
+                                    )}
+                                  </span>
+                                </p>
+                              </div>
+
+                              {/* Security Protocol Note */}
+                              <div className="p-3 rounded-lg bg-amber-50 border border-amber-200/80 text-[0.68rem] text-amber-900 leading-snug">
+                                <strong className="font-semibold block mb-0.5">{tp("Security Notice:", "Nota de Segurança:")}</strong>
+                                {tp(
+                                  "Present original valid ID (ID Card/Passport) at the Overwatch security gate for authorized entry.",
+                                  "Apresente documento de identificação original (BI/Passaporte) na portaria da Overwatch para entrada autorizada.",
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Sign-Off & Official Footer */}
+                            <div className="bg-slate-50 px-5 py-3 border-t border-slate-200 text-[0.68rem] text-slate-600 flex items-center justify-between">
+                              <div>
+                                <strong>{tp("Recruitment Team", "Equipa de Recrutamento")}</strong> · Overwatch Moçambique
+                              </div>
+                              <span className="font-mono text-[0.62rem] text-slate-400">
+                                Maputo, MZ
+                              </span>
                             </div>
                           </div>
-
-                          {/* Solid Executive CTA Button - Clickable to test booking experience */}
-                          <div className="pt-2 text-center">
-                            {(broadcastAudience[0]?.id || applications[0]?.id) ? (
-                              <a
-                                href={`/${previewLang}/careers/test-invite/${broadcastAudience[0]?.id || applications[0]?.id}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                title={t("Preview candidate booking page in a new tab", "Pré-visualizar portal de agendamento numa nova aba")}
-                                className="inline-flex items-center gap-2 bg-[#0b1329] hover:bg-[#182342] text-white font-bold text-xs px-6 py-3 rounded-lg shadow-md border border-[#0b1329] transition-all hover:scale-[1.02] cursor-pointer"
-                              >
-                                <span>{t("Confirm My Test Attendance →", "Confirmar Minha Presença no Teste →")}</span>
-                                <ExternalLink size={13} className="text-white/70" />
-                              </a>
-                            ) : (
-                              <div className="inline-flex items-center gap-2 bg-[#0b1329] text-white font-bold text-xs px-6 py-3 rounded-lg shadow-sm border border-[#0b1329]">
-                                <span>{t("Confirm My Test Attendance →", "Confirmar Minha Presença no Teste →")}</span>
-                              </div>
-                            )}
-                            <p className="text-[0.65rem] text-slate-500 mt-2 flex items-center justify-center gap-1">
-                              <ExternalLink size={10} className="text-slate-400" />
-                              <span>
-                                {t(
-                                  "Click button to test candidate booking portal in a new tab.",
-                                  "Clique no botão para testar o portal de agendamento numa nova aba.",
-                                )}
-                              </span>
-                            </p>
-                          </div>
-
-                          {/* Security Protocol Note */}
-                          <div className="p-3 rounded-lg bg-amber-50 border border-amber-200/80 text-[0.68rem] text-amber-900 leading-snug">
-                            <strong className="font-semibold block mb-0.5">{t("Security Notice:", "Nota de Segurança:")}</strong>
-                            {t(
-                              "Present original valid ID (ID Card/Passport) at the Overwatch security gate for authorized entry.",
-                              "Apresente documento de identificação original (BI/Passaporte) na portaria da Overwatch para entrada autorizada.",
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Sign-Off & Official Footer */}
-                        <div className="bg-slate-50 px-5 py-3 border-t border-slate-200 text-[0.68rem] text-slate-600 flex items-center justify-between">
-                          <div>
-                            <strong>Equipa de Recrutamento</strong> · Overwatch Moçambique
-                          </div>
-                          <span className="font-mono text-[0.62rem] text-slate-400">
-                            Maputo, MZ
-                          </span>
-                        </div>
-                      </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Send Button */}
