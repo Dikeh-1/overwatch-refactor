@@ -5472,6 +5472,70 @@ Overwatch`;
               </div>
             )}
 
+            {/* Disqualification Audit Operational Banner */}
+            {appQuickFilter === "disqualified" && (
+              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/[0.08] p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-start gap-3.5 max-w-xl">
+                  <div className="h-9 w-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0 text-amber-400">
+                    <UserX size={18} />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center gap-2">
+                      <span>{t("Filipa Recruitment Compliance Filter", "Filtro de Critérios Eliminatórios (Filipa)")}</span>
+                      <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 text-[0.65rem] font-mono">
+                        {disqualifiedCandidates.length} {t("non-compliant", "não conformes")}
+                      </span>
+                    </div>
+                    <p className="text-xs text-amber-100/80 leading-relaxed">
+                      {t(
+                        "Identifies candidates without a cover letter (all candidates) and male candidates without verified CCTV/CCO experience. Only women can do the test without previous experience.",
+                        "Identifica candidatos sem carta de apresentação (todos) e candidatos do sexo masculino sem comprovação curricular de experiência em CCTV/CCO. Apenas mulheres podem realizar o teste sem experiência prévia.",
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {disqualifiedCandidates.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const ids = disqualifiedCandidates.map((a) => a.id);
+                        setSelectedAppIds(ids);
+                      }}
+                      className="px-3 py-2 rounded-xl border border-white/15 bg-white/[0.05] hover:bg-white/10 text-xs font-semibold text-white transition-colors cursor-pointer"
+                    >
+                      {t("Select All Flagged", "Selecionar Todos os Não Conformes")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const ids = disqualifiedCandidates.map((a) => a.id);
+                        const names = disqualifiedCandidates.map((a) => a.name);
+                        const bookedCount = disqualifiedCandidates.filter((a) => Boolean(a.testSlot)).length;
+                        setDisqualifyModalState({
+                          open: true,
+                          ids,
+                          candidateNames: names,
+                          bookedCount,
+                        });
+                      }}
+                      disabled={disqualifyBusy}
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#090d16] text-xs font-bold shadow-md transition-all cursor-pointer"
+                    >
+                      <UserX size={14} />
+                      <span>
+                        {t(
+                          `Disqualify All Flagged (${disqualifiedCandidates.length})`,
+                          `Desqualificar Todos os ${disqualifiedCandidates.length} Não Conformes`,
+                        )}
+                      </span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Candidate Table */}
             <div className="rounded-2xl border border-white/10 bg-[#121827]/95 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
