@@ -2004,15 +2004,16 @@ Overwatch`;
   ).length;
 
   return (
-    <div className="min-h-screen bg-[#090d16] text-white flex flex-col lg:flex-row relative isolate">
-      <TechGrid className="fixed inset-0 opacity-25 pointer-events-none" />
+    <div className="min-h-screen text-white flex flex-col lg:flex-row relative isolate" style={{ background: "var(--bg-base)" }}>
+      <TechGrid className="fixed inset-0 opacity-20 pointer-events-none" />
 
       {/* ─── MOBILE TOP BAR (STICKY DOCKED NAVBAR) ──────────────────── */}
-      <header className="lg:hidden sticky top-0 z-40 flex items-center justify-between px-3.5 py-2.5 bg-[#090d16]/95 border-b border-white/10 backdrop-blur-md shadow-md">
+      <header className="lg:hidden sticky top-0 z-40 flex items-center justify-between px-3.5 py-2.5 backdrop-blur-md shadow-lg" style={{ background: "rgba(7,8,15,0.95)", borderBottom: "1px solid var(--border-subtle)" }}>
         <div className="flex items-center gap-2.5 min-w-0">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="flex items-center justify-center h-8 w-8 rounded-lg border border-white/15 bg-white/[0.06] text-white/80 hover:text-white hover:bg-white/[0.1] transition-colors cursor-pointer shrink-0"
+            className="flex items-center justify-center h-8 w-8 rounded-lg text-white/80 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer shrink-0"
+            style={{ border: "1px solid var(--border-default)" }}
             aria-label="Open menu"
           >
             <Menu size={16} />
@@ -2033,7 +2034,8 @@ Overwatch`;
           <button
             onClick={() => void load(true)}
             disabled={isRefreshing}
-            className="flex items-center justify-center h-8 w-8 rounded-lg border border-white/15 bg-white/[0.06] text-white/80 hover:text-white transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+            className="flex items-center justify-center h-8 w-8 rounded-lg text-white/80 hover:text-white transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+            style={{ border: "1px solid var(--border-default)" }}
             aria-label="Refresh"
           >
             <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
@@ -2051,7 +2053,7 @@ Overwatch`;
 
       {/* ─── SIDEBAR ──────────────────────────────────────────────── */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-72 bg-[#0e1320] flex flex-col backdrop-blur-md border-r border-white/10 overflow-y-auto
+        admin-sidebar fixed inset-y-0 left-0 z-50 w-72 flex flex-col overflow-y-auto
         transition-transform duration-300 ease-in-out
         ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0 lg:w-64 lg:z-30 p-5 lg:p-6
@@ -2066,7 +2068,7 @@ Overwatch`;
           </button>
         </div>
 
-        <div className="pb-5 border-b border-white/10">
+        <div className="pb-5" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <div className="flex items-center justify-between">
             <Link href="/admin" className="block">
               <Logo size="sm" variant="light" />
@@ -2075,24 +2077,24 @@ Overwatch`;
 
           <div className="mt-2.5 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-white/40"></span>
-              <span className="text-[0.68rem] font-bold uppercase tracking-widest text-white/60">
+              <span className="h-1.5 w-1.5 rounded-full bg-white/20"></span>
+              <span className="text-[0.62rem] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
                 {t("Talent Operations", "Operações de Recrutamento")}
               </span>
             </div>
           </div>
 
           {/* Live Admin Presence Indicator */}
-          <div className="mt-3 flex items-center justify-between rounded-xl bg-white/[0.03] border border-white/10 px-3 py-2 text-[0.68rem]">
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-400"></span>
-              <span className="font-medium text-white/85">
+          <div className="mt-3 flex items-center justify-between rounded-xl px-3 py-2 text-[0.68rem]" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--border-subtle)" }}>
+            <div className="flex items-center gap-2.5">
+              <span className="live-dot"></span>
+              <span className="font-medium" style={{ color: "var(--text-secondary)" }}>
                 {lang === "pt"
                   ? `${onlineCount} Admin${onlineCount > 1 ? "s" : ""} Online`
                   : `${onlineCount} Admin${onlineCount > 1 ? "s" : ""} Live`}
               </span>
             </div>
-            <span className="text-[0.62rem] font-mono text-white/60 bg-white/[0.06] border border-white/10 px-1.5 py-0.5 rounded">
+            <span className="text-[0.62rem] font-semibold monospace" style={{ color: "var(--accent-green)", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 6, padding: "2px 6px" }}>
               {t("Active", "Activo")}
             </span>
           </div>
@@ -2495,68 +2497,82 @@ Overwatch`;
         {error && (
           <div
             role="alert"
-            className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-xs font-semibold text-red-400"
+            className="alert-banner alert-red"
           >
-            {error}
+            <AlertCircle size={16} className="shrink-0 mt-0.5" />
+            <span>{error}</span>
           </div>
         )}
 
+
+
         {/* ─── STATS CARDS ──────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="rounded-2xl border border-white/10 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
-            <div className="flex items-center justify-between text-xs font-semibold text-white/60">
-              <span>{t("Total Applicants", "Total de Candidatos")}</span>
-              <Users size={16} className="text-white/70" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          {/* Total Applicants */}
+          <div className="kpi-card kpi-card-accent-blue">
+            <div className="flex items-start justify-between gap-2 mb-3">
+              <p className="admin-label">{t("Total Applicants", "Total de Candidatos")}</p>
+              <div className="kpi-icon kpi-icon-blue shrink-0">
+                <Users size={15} />
+              </div>
             </div>
-            <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-white">
-              {campaignApps.length}
-            </strong>
-            <span className="text-[0.7rem] text-white/40">
+            <strong className="admin-metric">{campaignApps.length}</strong>
+            <p className="mt-1.5 text-[0.7rem] text-white/40">
               {activeCampaignRole && applications.length !== campaignApps.length
                 ? t(`${applications.length} total across all roles`, `${applications.length} no total de todas as vagas`)
                 : t("All registered candidates", "Todos os candidatos inscritos")}
-            </span>
+            </p>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
-            <div className="flex items-center justify-between text-xs font-semibold text-white/60">
-              <span>{t("Eligible for Selection Test", "Elegíveis para Teste")}</span>
-              <UserCheck size={16} className="text-sky-400" />
+          {/* Eligible for Test */}
+          <div className="kpi-card kpi-card-accent-green">
+            <div className="flex items-start justify-between gap-2 mb-3">
+              <p className="admin-label">{t("Eligible for Test", "Elegíveis para Teste")}</p>
+              <div className="kpi-icon kpi-icon-green shrink-0">
+                <UserCheck size={15} />
+              </div>
             </div>
-            <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-white">
+            <strong className="admin-metric" style={{ color: "var(--accent-green)" }}>
               {targetCount}
             </strong>
-            <span className="text-[0.7rem] text-white/40">
+            <p className="mt-1.5 text-[0.7rem] text-white/40">
               {t("Women + Men w/ relevant exp.", "Mulheres + Homens c/ exp. relevante")}
-            </span>
+            </p>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
-            <div className="flex items-center justify-between text-xs font-semibold text-white/60">
-              <span>{t("Confirmed Tests", "Testes Confirmados")}</span>
-              <CalendarCheck size={16} className="text-cyan-400" />
+          {/* Confirmed Tests */}
+          <div className="kpi-card kpi-card-accent-blue">
+            <div className="flex items-start justify-between gap-2 mb-3">
+              <p className="admin-label">{t("Confirmed Tests", "Testes Confirmados")}</p>
+              <div className="kpi-icon kpi-icon-blue shrink-0">
+                <CalendarCheck size={15} />
+              </div>
             </div>
-            <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-cyan-400">
+            <strong className="admin-metric" style={{ color: "var(--accent-blue)" }}>
               {confirmedCount}
             </strong>
-            <span className="text-[0.7rem] text-white/40">
+            <p className="mt-1.5 text-[0.7rem] text-white/40">
               {t("Date selected by candidate", "Presença marcada pelo candidato")}
-            </span>
+            </p>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
-            <div className="flex items-center justify-between text-xs font-semibold text-white/60">
-              <span>{t("Open Roles", "Vagas Abertas")}</span>
-              <UnlockKeyhole size={16} className="text-white/70" />
+          {/* Open Roles */}
+          <div className="kpi-card kpi-card-accent-amber">
+            <div className="flex items-start justify-between gap-2 mb-3">
+              <p className="admin-label">{t("Open Roles", "Vagas Abertas")}</p>
+              <div className="kpi-icon kpi-icon-amber shrink-0">
+                <UnlockKeyhole size={15} />
+              </div>
             </div>
-            <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-white">
+            <strong className="admin-metric" style={{ color: "var(--accent-amber)" }}>
               {roles.filter((r) => r.open).length}
             </strong>
-            <span className="text-[0.7rem] text-white/40">
+            <p className="mt-1.5 text-[0.7rem] text-white/40">
               {t(`Of ${roles.length} total roles`, `De ${roles.length} vagas no total`)}
-            </span>
+            </p>
           </div>
         </div>
+
 
         {/* ─── TAB 1: MANAGE ROLES VIEW ─────────────────────────────── */}
         {view === "roles" && (
@@ -4570,30 +4586,29 @@ Overwatch`;
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+                <div className="flex items-center gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
                   {rosterSlots.map((slot) => {
                     const count = applications.filter((a) => a.testSlot === slot).length;
                     const isSelected = activeRosterSlot === slot;
+                    const isFull = count >= 10;
 
                     return (
                       <button
                         key={slot}
                         type="button"
                         onClick={() => setSelectedRosterSlot(slot)}
-                        className={`flex items-center gap-2.5 px-3.5 py-2 rounded-xl border text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                          isSelected
-                            ? "border-sky-500/50 bg-sky-500/15 text-white shadow-sm ring-1 ring-sky-500/30 font-bold"
-                            : "border-white/10 bg-white/[0.03] text-white/70 hover:bg-white/[0.07] hover:text-white"
-                        }`}
+                        className={`slot-pill ${isSelected ? "active" : ""}`}
                       >
                         <span>{formatSlotDisplay(slot.split("–")[0].trim(), lang)}</span>
                         <span
-                          className={`px-2 py-0.5 rounded-full text-[0.65rem] font-bold ${
-                            count > 0
-                              ? isSelected
-                                ? "bg-sky-400 text-[#090d16]"
-                                : "bg-white/15 text-white"
-                              : "bg-white/5 text-white/40"
+                          className={`slot-pill-count rounded-full ${
+                            isFull
+                              ? "bg-red-500/20 text-red-300 border border-red-500/30"
+                              : count > 0
+                                ? isSelected
+                                  ? "bg-[var(--accent-blue)] text-white"
+                                  : "bg-white/15 text-white"
+                                : "bg-white/5 text-white/30"
                           }`}
                         >
                           {count}
@@ -4718,18 +4733,18 @@ Overwatch`;
                       </div>
                     ) : (
                       <div className="overflow-x-auto rounded-xl border border-white/10 bg-black/20">
-                        <table className="w-full text-left text-xs border-collapse">
+                        <table className="admin-table">
                           <thead>
-                            <tr className="border-b border-white/10 bg-white/[0.02] text-white/50 uppercase font-semibold text-[0.68rem] tracking-wider">
-                              <th className="px-4 py-3 w-12 text-center">#</th>
-                              <th className="px-4 py-3">{t("Candidate", "Candidato(a)")}</th>
-                              <th className="px-4 py-3">{t("WhatsApp Contact", "Contacto WhatsApp")}</th>
-                              <th className="px-4 py-3">{t("Gender", "Género")}</th>
-                              <th className="px-4 py-3">{t("Confirmation Time", "Horário da Marcação")}</th>
-                              <th className="px-4 py-3 text-right">{t("Actions", "Ações")}</th>
+                            <tr>
+                              <th className="w-12 text-center">#</th>
+                              <th>{t("Candidate", "Candidato(a)")}</th>
+                              <th>{t("WhatsApp Contact", "Contacto WhatsApp")}</th>
+                              <th>{t("Gender", "Género")}</th>
+                              <th>{t("Confirmation Time", "Horário da Marcação")}</th>
+                              <th className="text-right">{t("Actions", "Ações")}</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-white/5">
+                          <tbody>
                             {candidatesInSlot.map((c, idx) => {
                               const screening = screenCandidate(c);
                               return (

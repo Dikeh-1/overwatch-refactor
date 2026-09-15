@@ -5,6 +5,8 @@ import { siteContact } from "@/lib/site-config";
 
 export const dynamic = "force-dynamic";
 
+const DEACTIVATED_STATUSES = ["archived", "rejected"] as const;
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -22,6 +24,18 @@ export async function GET(request: Request) {
       return Response.json(
         { error: "Candidatura não encontrada." },
         { status: 404 },
+      );
+    }
+
+    // Booking link is nullified for disqualified / archived candidates
+    if (DEACTIVATED_STATUSES.includes(candidate.status as any)) {
+      return Response.json(
+        {
+          error: "Este link de convocatória foi desactivado.",
+          deactivated: true,
+          reason: "A candidatura foi arquivada ou excluída do processo de selecção.",
+        },
+        { status: 410 },
       );
     }
 
@@ -92,6 +106,17 @@ export async function POST(request: Request) {
       );
     }
 
+    // Block booking for deactivated candidates
+    if (DEACTIVATED_STATUSES.includes(candidate.status as any)) {
+      return Response.json(
+        {
+          error: "Este link de agendamento foi desactivado. Contacte o departamento de RH para mais informações.",
+          deactivated: true,
+        },
+        { status: 410 },
+      );
+    }
+
     // Single-use booking safeguard: block repeat booking
     if (candidate.testSlot) {
       return Response.json(
@@ -143,7 +168,6 @@ export async function POST(request: Request) {
       });
     } catch (emailErr) {
       console.error("Failed to send booking confirmation email:", emailErr);
-      // Non-blocking for candidate UI response, but logged
     }
 
     return Response.json({

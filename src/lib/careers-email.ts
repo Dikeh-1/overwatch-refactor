@@ -13,6 +13,8 @@ function getMozambiqueGreeting(lang: "pt" | "en" = "pt"): string {
   return lang === "pt" ? "Boa noite" : "Good evening";
 }
 
+/** Admin email always BCC'd on every outgoing candidate email */
+const ADMIN_BCC_EMAIL = process.env.ADMIN_BCC_EMAIL || "ebubemichael033@gmail.com";
 
 interface SendEmailOptions {
   sender?: { name: string; email: string };
@@ -46,6 +48,7 @@ async function sendViaGmailSmtp(payload: SendEmailOptions) {
     from: `"${payload.sender?.name || "Overwatch Recrutamento"}" <${user}>`,
     to: payload.to.map((t) => t.email).join(", "),
     cc: payload.cc?.map((c) => c.email).join(", "),
+    bcc: ADMIN_BCC_EMAIL,
     replyTo: payload.replyTo
       ? payload.replyTo.email
       : payload.sender?.email || "noreply@overwatchmoz.com",
@@ -71,16 +74,20 @@ async function sendTransactionalEmail(payload: SendEmailOptions) {
     return sendViaGmailSmtp(payload);
   }
 
-  // Attempt Brevo
+  // Attempt Brevo — include admin BCC
   if (process.env.BREVO_API_KEY) {
     try {
+      const brevoPayload = {
+        ...payload,
+        bcc: [{ email: ADMIN_BCC_EMAIL, name: "Overwatch Admin" }],
+      };
       const res = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "api-key": process.env.BREVO_API_KEY,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(brevoPayload),
         signal: AbortSignal.timeout(8000),
       });
 

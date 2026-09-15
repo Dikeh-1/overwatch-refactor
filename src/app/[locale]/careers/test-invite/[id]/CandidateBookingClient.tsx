@@ -8,15 +8,13 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowRight,
-  Shield,
   Check,
   ExternalLink,
   Phone,
   RefreshCw,
-  Building,
-  FileCheck,
-  User,
   Lock,
+  ShieldOff,
+  ChevronRight,
 } from "lucide-react";
 import { siteContact, getGoogleMapsUrl } from "@/lib/site-config";
 import { DEFAULT_TEST_SLOTS } from "@/lib/careers";
@@ -79,11 +77,10 @@ export default function CandidateBookingClient({
   id: string;
   locale: string;
 }) {
-  // Language region: defaults to PT, inherits from main page, with option to switch to EN
   const [activeLang, setActiveLang] = useState<"pt" | "en">("pt");
 
   useEffect(() => {
-    let initial: "pt" | "en" = "pt"; // default is Portuguese
+    let initial: "pt" | "en" = "pt";
     try {
       const stored = localStorage.getItem("overwatch_preferred_locale");
       if (stored === "en" || stored === "pt") {
@@ -119,6 +116,7 @@ export default function CandidateBookingClient({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [isDeactivated, setIsDeactivated] = useState(false);
   const [successNotice, setSuccessNotice] = useState(false);
 
   useEffect(() => {
@@ -128,9 +126,13 @@ export default function CandidateBookingClient({
       try {
         setLoading(true);
         setError("");
-        const res = await fetch(
-          `/api/careers/test-booking?id=${encodeURIComponent(id)}`,
-        );
+        const res = await fetch(`/api/careers/test-booking?id=${encodeURIComponent(id)}`);
+
+        if (res.status === 410) {
+          if (!cancelled) setIsDeactivated(true);
+          return;
+        }
+
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
           throw new Error(
@@ -166,9 +168,7 @@ export default function CandidateBookingClient({
     if (id) {
       fetchCandidate();
     } else {
-      setError(
-        isPt ? "Link de convocatória inválido." : "Invalid invitation link.",
-      );
+      setError(isPt ? "Link de convocatória inválido." : "Invalid invitation link.");
       setLoading(false);
     }
 
@@ -179,11 +179,7 @@ export default function CandidateBookingClient({
 
   async function handleConfirmSlot() {
     if (!selectedSlot) {
-      setError(
-        isPt
-          ? "Por favor seleccione uma data para o teste."
-          : "Please select a test slot.",
-      );
+      setError(isPt ? "Por favor seleccione uma data para o teste." : "Please select a test slot.");
       return;
     }
 
@@ -198,34 +194,27 @@ export default function CandidateBookingClient({
 
       const data = await res.json().catch(() => ({}));
 
+      if (res.status === 410) {
+        setIsDeactivated(true);
+        return;
+      }
+
       if (!res.ok) {
         if (res.status === 409 && data.alreadyBooked) {
           setCandidate((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  testSlot: data.testSlot || prev.testSlot || selectedSlot,
-                }
-              : null,
+            prev ? { ...prev, testSlot: data.testSlot || prev.testSlot || selectedSlot } : null,
           );
           setError("");
           return;
         }
         throw new Error(
-          data.error ||
-            (isPt
-              ? "Ocorreu um erro ao confirmar a data."
-              : "Failed to confirm test slot."),
+          data.error || (isPt ? "Ocorreu um erro ao confirmar a data." : "Failed to confirm test slot."),
         );
       }
 
       setCandidate((prev) =>
         prev
-          ? {
-              ...prev,
-              testSlot: selectedSlot,
-              testBookedAt: data.testBookedAt || new Date().toISOString(),
-            }
+          ? { ...prev, testSlot: selectedSlot, testBookedAt: data.testBookedAt || new Date().toISOString() }
           : null,
       );
       setSuccessNotice(true);
@@ -238,474 +227,457 @@ export default function CandidateBookingClient({
 
   const mapsUrl = getGoogleMapsUrl(activeLang);
   const slotsList =
-    candidate?.slots && candidate.slots.length > 0
-      ? candidate.slots
-      : DEFAULT_TEST_SLOTS;
+    candidate?.slots && candidate.slots.length > 0 ? candidate.slots : DEFAULT_TEST_SLOTS;
   const isAlreadyBooked = Boolean(candidate?.testSlot);
 
   return (
-    <section className="relative min-h-[85vh] bg-[#090d16] text-white py-12 sm:py-16 px-4 sm:px-6">
-      <div className="relative z-10 max-w-2xl mx-auto space-y-6">
-        {loading ? (
-          <div className="min-h-[50vh] flex flex-col items-center justify-center gap-4 text-center">
-            <RefreshCw className="animate-spin text-white/60" size={28} />
-            <p className="text-xs text-white/60">
-              {isPt
-                ? "A carregar convocatória oficial..."
-                : "Loading official convocation..."}
-            </p>
+    <div className="min-h-screen bg-white">
+      {/* Top brand bar */}
+      <div className="bg-[#07080f] border-b border-white/5">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="h-7 w-7 rounded bg-white/10 border border-white/10 flex items-center justify-center">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L3 7v6c0 5.25 3.75 10.15 9 11.25C17.25 23.15 21 18.25 21 13V7l-9-5z" fill="#4f9cf9" opacity=".8"/>
+                <path d="M9 12l2 2 4-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <span className="text-white text-sm font-semibold tracking-tight">Overwatch</span>
+            <span className="text-white/25 text-xs">·</span>
+            <span className="text-white/50 text-xs">
+              {isPt ? "Recrutamento" : "Recruitment"}
+            </span>
           </div>
+
+          <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-lg p-1">
+            {(["pt", "en"] as const).map((lang) => (
+              <button
+                key={lang}
+                type="button"
+                onClick={() => switchLanguage(lang)}
+                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                  activeLang === lang
+                    ? "bg-white text-[#07080f] shadow-sm"
+                    : "text-white/50 hover:text-white"
+                }`}
+              >
+                {lang.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
+
+        {/* ── LOADING STATE ─────────────────────────────────────── */}
+        {loading ? (
+          <div className="min-h-[50vh] flex flex-col items-center justify-center gap-5 text-center">
+            <div className="relative">
+              <div className="h-14 w-14 rounded-2xl bg-[#07080f] flex items-center justify-center">
+                <RefreshCw className="animate-spin text-white/70" size={22} />
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900">
+                {isPt ? "A carregar a sua convocatória…" : "Loading your invitation…"}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                {isPt ? "Aguarde um momento." : "Just a moment."}
+              </p>
+            </div>
+          </div>
+
+        /* ── DEACTIVATED LINK ────────────────────────────────────── */
+        ) : isDeactivated ? (
+          <div className="max-w-lg mx-auto text-center py-8">
+            <div className="inline-flex items-center justify-center h-20 w-20 rounded-3xl bg-red-50 border border-red-100 mb-6">
+              <ShieldOff size={36} className="text-red-400" />
+            </div>
+            <h1 className="text-xl font-bold text-gray-900 mb-3">
+              {isPt ? "Link de agendamento desactivado" : "Booking link deactivated"}
+            </h1>
+            <p className="text-sm text-gray-500 leading-relaxed mb-2">
+              {isPt
+                ? "Este link de convocatória foi desactivado pelo departamento de Recursos Humanos e não permite mais agendamentos."
+                : "This invitation link has been deactivated by the HR department and no longer allows bookings."}
+            </p>
+            <p className="text-sm text-gray-500 leading-relaxed mb-8">
+              {isPt
+                ? "Se acredita que se trata de um erro, por favor entre em contacto connosco directamente."
+                : "If you believe this is an error, please contact us directly."}
+            </p>
+            <a
+              href={`https://wa.me/${siteContact.whatsappNumber}?text=${encodeURIComponent(isPt ? "Olá, o meu link de agendamento foi desactivado. Podem ajudar?" : "Hello, my booking link appears to be deactivated. Can you help?")}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 bg-[#07080f] text-white rounded-xl px-5 py-3 text-sm font-semibold hover:bg-gray-800 transition-colors shadow-sm"
+            >
+              <Phone size={15} />
+              <span>{isPt ? "Contactar RH via WhatsApp" : "Contact HR via WhatsApp"}</span>
+              <ExternalLink size={13} className="opacity-60" />
+            </a>
+          </div>
+
+        /* ── NOT FOUND / ERROR ───────────────────────────────────── */
         ) : error && !candidate ? (
-          <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-8 text-center max-w-lg mx-auto">
-            <AlertCircle size={36} className="text-red-400 mx-auto mb-3" />
-            <h2 className="text-lg font-bold text-white mb-2">
-              {isPt ? "Convocatória Não Encontrada" : "Convocation Not Found"}
-            </h2>
-            <p className="text-xs text-white/70 mb-6 leading-relaxed">
+          <div className="max-w-lg mx-auto text-center py-8">
+            <div className="inline-flex items-center justify-center h-20 w-20 rounded-3xl bg-amber-50 border border-amber-100 mb-6">
+              <AlertCircle size={36} className="text-amber-400" />
+            </div>
+            <h1 className="text-xl font-bold text-gray-900 mb-3">
+              {isPt ? "Convocatória não encontrada" : "Invitation not found"}
+            </h1>
+            <p className="text-sm text-gray-500 leading-relaxed mb-8">
               {error ||
                 (isPt
-                  ? "Não foi possível localizar esta convocatória. Verifique se o link está correto ou contacte o nosso departamento de recursos humanos."
-                  : "Could not find this convocation record. Please verify the URL or contact HR.")}
+                  ? "Não foi possível localizar esta convocatória. Verifique se o link está correcto ou contacte o nosso departamento de RH."
+                  : "Could not locate this invitation. Please verify the link or contact our HR department.")}
             </p>
             <a
               href={`https://wa.me/${siteContact.whatsappNumber}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2.5 text-xs font-bold text-[#090d16] hover:bg-emerald-400 transition-colors shadow-md"
+              className="inline-flex items-center gap-2 bg-[#07080f] text-white rounded-xl px-5 py-3 text-sm font-semibold hover:bg-gray-800 transition-colors shadow-sm"
             >
-              <Phone size={14} />
-              <span>{isPt ? "Contactar Recursos Humanos (WhatsApp)" : "Contact HR via WhatsApp"}</span>
+              <Phone size={15} />
+              <span>{isPt ? "Contactar Recursos Humanos" : "Contact HR"}</span>
             </a>
           </div>
+
+        /* ── MAIN CANDIDATE VIEW ─────────────────────────────────── */
         ) : candidate ? (
-          <div className="space-y-6">
-            {/* Executive Letterhead Header Card */}
-            <div className="rounded-xl border border-white/10 bg-[#121827]/90 p-6 sm:p-8">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
-                <div className="flex items-center gap-2 text-xs text-white/60">
-                  <Building size={14} className="text-white/40" />
-                  <span className="font-semibold uppercase tracking-wider text-[0.68rem]">
-                    Overwatch Moçambique • Recrutamento & Selecção
-                  </span>
-                </div>
+          <div className="space-y-5">
 
-                {/* Language Switcher & Ref */}
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center bg-white/[0.06] border border-white/10 rounded-lg p-0.5 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => switchLanguage("pt")}
-                      className={`px-2.5 py-1 rounded-md text-[0.7rem] font-bold transition-all cursor-pointer ${
-                        activeLang === "pt"
-                          ? "bg-white text-[#090d16] shadow-sm"
-                          : "text-white/60 hover:text-white"
-                      }`}
-                    >
-                      PT
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => switchLanguage("en")}
-                      className={`px-2.5 py-1 rounded-md text-[0.7rem] font-bold transition-all cursor-pointer ${
-                        activeLang === "en"
-                          ? "bg-white text-[#090d16] shadow-sm"
-                          : "text-white/60 hover:text-white"
-                      }`}
-                    >
-                      EN
-                    </button>
+            {/* Identity header */}
+            <div className="border border-gray-100 rounded-2xl bg-white shadow-sm overflow-hidden">
+              <div className="bg-[#07080f] px-6 py-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[0.7rem] font-semibold uppercase tracking-widest text-white/40 mb-1">
+                      {isAlreadyBooked
+                        ? isPt ? "Presença confirmada" : "Attendance confirmed"
+                        : isPt ? "Convocatória oficial" : "Official convocation"}
+                    </p>
+                    <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight leading-tight">
+                      {candidate.name}
+                    </h1>
                   </div>
-
-                  <span className="text-[0.68rem] font-mono text-white/40 hidden sm:inline-block">
-                    Ref: CCO-2026/MAPUTO
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-5 space-y-2">
-                <div className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
                   {isAlreadyBooked ? (
-                    <>
-                      <CheckCircle2 size={14} className="text-emerald-400" />
-                      <span className="text-emerald-400">
-                        {isPt
-                          ? "Agendamento Confirmado no Sistema"
-                          : "Booking Confirmed in System"}
-                      </span>
-                    </>
+                    <div className="shrink-0 h-10 w-10 rounded-full bg-emerald-400/20 border border-emerald-400/30 flex items-center justify-center">
+                      <CheckCircle2 size={20} className="text-emerald-400" />
+                    </div>
                   ) : (
-                    <span className="text-sky-400">
-                      {isPt
-                        ? "Convocatória Oficial para Teste Presencial"
-                        : "Official In-Person Selection Test"}
+                    <span className="shrink-0 text-[0.65rem] font-mono font-medium text-white/25 border border-white/10 rounded-lg px-2 py-1 mt-1">
+                      CCO-2026/MZQ
                     </span>
                   )}
                 </div>
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
-                  {candidate.name}
-                </h1>
-                <p className="text-xs sm:text-sm text-white/70 leading-relaxed pt-1">
+              </div>
+              <div className="px-6 py-4">
+                <p className="text-sm text-gray-500 leading-relaxed">
                   {isAlreadyBooked
                     ? isPt
-                      ? "Agradecemos a sua confirmação. O seu teste presencial de selecção para a vaga de Operadora de CCO já se encontra agendado nas instalações da Overwatch em Maputo."
-                      : "Thank you for confirming. Your in-person selection test for the CCTV Operator position has been scheduled at the Overwatch office in Maputo."
+                      ? "A sua confirmação foi registada com sucesso. Abaixo encontram-se todos os detalhes do seu teste presencial."
+                      : "Your confirmation has been successfully registered. All details for your in-person test are shown below."
                     : isPt
-                      ? "Agradecemos a sua candidatura à vaga de Operadora de CCO. Após avaliação curricular, foi apurada para a realização do teste presencial de selecção técnica nas instalações da Overwatch em Maputo."
-                      : "Following review of your application for the CCTV Operator position, you have been shortlisted for the in-person selection test at the Overwatch office in Maputo."}
+                      ? "Foi seleccionada para a fase de teste presencial de selecção técnica para a vaga de Operadora de CCO. Escolha a data mais conveniente abaixo."
+                      : "You have been selected for the in-person technical assessment for the CCTV Operator position. Choose your preferred date below."}
                 </p>
               </div>
             </div>
 
-            {/* If Already Confirmed: Dedicated Clean Official Confirmation Card */}
+            {/* ── ALREADY BOOKED VIEW ── */}
             {isAlreadyBooked ? (
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-6 sm:p-8 space-y-6">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-500/20 pb-4">
-                  <div className="flex items-center gap-2.5">
-                    <div className="h-9 w-9 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0">
-                      <CheckCircle2 size={22} className="text-emerald-400" />
-                    </div>
-                    <div>
-                      <h2 className="text-sm sm:text-base font-bold text-white">
-                        {isPt
-                          ? "Obrigada pela confirmação, já agendou o seu teste!"
-                          : "Thank you for booking, you have already scheduled your test!"}
-                      </h2>
-                      <span className="text-[0.72rem] text-emerald-300 font-medium">
-                        {isPt
-                          ? "Presença confirmada • O agendamento é de utilização única"
-                          : "Attendance confirmed • Booking is single-use only"}
-                      </span>
-                    </div>
-                  </div>
-                  <span className="text-[0.68rem] font-semibold text-emerald-300 bg-emerald-500/20 border border-emerald-500/40 px-3 py-1 rounded-full">
-                    {isPt ? "Agendamento Único Confirmado" : "Single-Use Booking Confirmed"}
-                  </span>
-                </div>
-
-                {/* Confirmed Slot Details Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-                  <div className="rounded-xl bg-black/40 border border-white/10 p-4 space-y-2">
-                    <div className="flex items-center gap-1.5 text-white/50 text-[0.68rem] font-semibold uppercase tracking-wider">
-                      <Calendar size={13} className="text-emerald-400" />
-                      <span>{isPt ? "Data e Turno do Teste:" : "Confirmed Date & Slot:"}</span>
-                    </div>
-                    <span className="text-white font-bold text-base block">
-                      {formatSlotDisplay(candidate.testSlot || "", isPt)}
+              <div className="space-y-4">
+                {/* Main confirmed slot card */}
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 overflow-hidden">
+                  <div className="flex items-center gap-3 px-5 py-3.5 border-b border-emerald-200 bg-emerald-100/60">
+                    <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                    <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">
+                      {isPt ? "Teste agendado e confirmado" : "Test booked & confirmed"}
                     </span>
-                    <div className="space-y-1 pt-1 text-[0.72rem] text-white/70 border-t border-white/10">
-                      <div className="flex items-center gap-1.5">
-                        <Clock size={12} className="text-sky-400 shrink-0" />
-                        <span>{isPt ? "Horário da prova: 10h00 às 11h30" : "Test session: 10:00 to 11:30"}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-amber-300 font-medium">
-                        <AlertCircle size={12} className="shrink-0" />
-                        <span>
-                          {isPt
-                            ? "Chegada às 09h30 (Portão encerra às 09h50)"
-                            : "Arrive at 09:30 (Gates close at 09:50)"}
-                        </span>
-                      </div>
-                    </div>
                   </div>
-
-                  <div className="rounded-xl bg-black/40 border border-white/10 p-4 space-y-2">
-                    <div className="flex items-center gap-1.5 text-white/50 text-[0.68rem] font-semibold uppercase tracking-wider">
-                      <MapPin size={13} className="text-sky-400" />
-                      <span>{isPt ? "Local das Provas:" : "Testing Venue:"}</span>
-                    </div>
+                  <div className="p-5 space-y-4">
                     <div>
-                      <strong className="text-white block font-semibold text-xs">Overwatch Moçambique</strong>
-                      <span className="text-white/70 text-[0.72rem] block leading-snug mt-0.5">
-                        {siteContact.address.pt}
-                      </span>
+                      <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-emerald-600 mb-1">
+                        {isPt ? "Data & hora" : "Date & time"}
+                      </p>
+                      <p className="text-lg font-bold text-gray-900">
+                        {formatSlotDisplay(candidate.testSlot || "", isPt)}
+                      </p>
+                      <p className="text-sm text-gray-500 mt-0.5">
+                        {isPt ? "10h00 às 11h30 · Chegada às 09h30" : "10:00 AM to 11:30 AM · Arrive at 09:30"}
+                      </p>
                     </div>
-                    <div className="pt-1 border-t border-white/10">
-                      <a
-                        href={mapsUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 text-[0.72rem] font-medium text-sky-400 hover:text-sky-300 hover:underline"
-                      >
-                        <span>{isPt ? "Abrir rota no Google Maps" : "Open route on Google Maps"}</span>
-                        <ExternalLink size={11} />
-                      </a>
+
+                    <div className="h-px bg-emerald-200" />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-emerald-600 mb-1.5">
+                          {isPt ? "Local" : "Venue"}
+                        </p>
+                        <p className="text-sm font-semibold text-gray-900">Overwatch Moçambique</p>
+                        <p className="text-xs text-gray-500 mt-0.5 leading-snug">{siteContact.address.pt}</p>
+                        <a
+                          href={mapsUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium mt-2"
+                        >
+                          <MapPin size={11} />
+                          <span>{isPt ? "Ver no Google Maps" : "Open in Google Maps"}</span>
+                          <ExternalLink size={10} />
+                        </a>
+                      </div>
+                      <div>
+                        <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-emerald-600 mb-1.5">
+                          {isPt ? "O que trazer" : "What to bring"}
+                        </p>
+                        <ul className="space-y-1 text-xs text-gray-600">
+                          <li className="flex items-start gap-1.5">
+                            <Check size={12} className="text-emerald-500 mt-0.5 shrink-0" />
+                            <span>{isPt ? "Documento de identificação original (BI / Passaporte)" : "Original photo ID (BI / Passport)"}</span>
+                          </li>
+                          <li className="flex items-start gap-1.5">
+                            <Check size={12} className="text-emerald-500 mt-0.5 shrink-0" />
+                            <span>{isPt ? "Caneta (azul ou preta)" : "A pen (blue or black)"}</span>
+                          </li>
+                          <li className="flex items-start gap-1.5">
+                            <Check size={12} className="text-emerald-500 mt-0.5 shrink-0" />
+                            <span>{isPt ? "Chegar até às 09h30 (portão fecha às 09h50)" : "Arrive by 09:30 (gate closes at 09:50)"}</span>
+                          </li>
+                        </ul>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Admission Instructions */}
-                <div className="rounded-xl bg-white/[0.03] border border-white/10 p-4 space-y-2 text-xs text-white/80">
-                  <div className="font-bold text-white text-[0.75rem] uppercase tracking-wider">
-                    {isPt ? "Instruções Obrigatórias para o Dia do Teste:" : "Mandatory Test Day Instructions:"}
-                  </div>
-                  <ul className="list-disc pl-5 space-y-1.5 text-[0.72rem] text-white/70 leading-relaxed">
-                    <li>
-                      <strong className="text-white">
-                        {isPt ? "Documento de Identificação: " : "Identification: "}
-                      </strong>
-                      {isPt
-                        ? "Apresentar documento de identificação original e válido (BI, Passaporte ou DIRE) e trazer uma cópia simples."
-                        : "Bring your original valid photo ID (BI, Passport or DIRE) along with a simple copy."}
-                    </li>
-                    <li>
-                      <strong className="text-white">
-                        {isPt ? "Material de escrita: " : "Writing material: "}
-                      </strong>
-                      {isPt ? "Trazer caneta esferográfica de tinta azul ou preta." : "Bring a blue or black ballpoint pen."}
-                    </li>
-                    <li>
-                      <strong className="text-amber-300">
-                        {isPt ? "Pontualidade Rigorosa: " : "Strict Punctuality: "}
-                      </strong>
-                      {isPt
-                        ? "Pedimos que chegue impreterivelmente às 09h30 para check-in de segurança. Às 09h50 o portão será encerrado e não será permitida a entrada de candidatas que cheguem depois dessa hora."
-                        : "Please arrive strictly at 09:30 for security check-in. At 09:50 gates are locked and late arrivals will strictly not be admitted."}
-                    </li>
-                  </ul>
+                {/* Single-use notice */}
+                <div className="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-xs">
+                  <Lock size={14} className="text-gray-400 shrink-0 mt-0.5" />
+                  <p className="text-gray-500 leading-relaxed">
+                    {isPt
+                      ? "Este link só pode ser utilizado uma vez. A data escolhida está confirmada e não pode ser alterada. A sua vaga está garantida."
+                      : "This link is single-use only. Your chosen date is confirmed and cannot be changed. Your slot is secured."}
+                  </p>
                 </div>
 
-                {/* Single-Use Enforced Notice Callout */}
-                <div className="rounded-xl bg-white/[0.04] border border-white/10 p-4 flex items-start gap-3 text-xs">
-                  <Lock size={18} className="text-sky-400 shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <div className="font-bold text-white text-xs">
-                      {isPt ? "Agendamento Único Realizado" : "Single-Use Booking Completed"}
-                    </div>
-                    <p className="text-[0.72rem] text-white/60 leading-relaxed">
-                      {isPt
-                        ? "Cada candidata só pode agendar uma única vez. Como a sua presença já se encontra confirmada e gravada no sistema, este link não permite novo agendamento nem alteração de data. A sua vaga está garantida para o turno indicado acima."
-                        : "Each candidate may only book once. Because your attendance is already confirmed and recorded in our system, this link does not permit re-booking or date changes. Your slot is guaranteed for the session shown above."}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Direct WhatsApp Support */}
-                <div className="pt-1 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-white/10">
-                  <span className="text-[0.72rem] text-white/50 text-center sm:text-left">
-                    {isPt ? "Dúvidas ou imprevistos de transporte?" : "Questions or scheduling conflicts?"}
-                  </span>
+                {/* Support row */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-4 rounded-xl border border-gray-200 bg-white">
+                  <p className="text-xs text-gray-500 text-center sm:text-left">
+                    {isPt ? "Questões ou imprevistos de última hora?" : "Last-minute questions or issues?"}
+                  </p>
                   <a
                     href={`https://wa.me/${siteContact.whatsappNumber}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 px-3.5 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/25 transition-colors"
+                    className="inline-flex items-center gap-2 rounded-lg bg-[#25d366] text-white text-xs font-semibold px-4 py-2 hover:bg-[#22c55e] transition-colors shadow-sm"
                   >
                     <Phone size={13} />
-                    <span>{isPt ? "WhatsApp Recursos Humanos" : "Contact HR via WhatsApp"}</span>
+                    <span>{isPt ? "WhatsApp RH" : "WhatsApp HR"}</span>
+                    <ChevronRight size={13} className="opacity-70" />
                   </a>
                 </div>
               </div>
+
+            /* ── YET TO BOOK VIEW ── */
             ) : (
-              /* YET TO BOOK VIEW: Slot Selection Card with Clear Single-Use Notice */
-              <div className="rounded-xl border border-white/10 bg-[#121827]/90 p-6 sm:p-8 space-y-5">
-                {/* Prominent Single-Use Notice Banner */}
-                <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 sm:p-5 flex items-start gap-3.5 text-xs text-amber-200">
-                  <AlertCircle size={20} className="text-amber-400 shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <div className="font-bold text-amber-300 uppercase tracking-wider text-[0.72rem]">
+              <div className="space-y-4">
+                {/* Single-use warning */}
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3.5 flex items-start gap-3">
+                  <AlertCircle size={16} className="text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-semibold text-amber-800 mb-0.5">
+                      {isPt ? "Agendamento único e definitivo" : "Single-use & final booking"}
+                    </p>
+                    <p className="text-xs text-amber-700 leading-relaxed">
                       {isPt
-                        ? "⚠️ AVISO IMPORTANTE: AGENDAMENTO ÚNICO E DEFINITIVO"
-                        : "⚠️ IMPORTANT NOTICE: SINGLE-USE & FINAL BOOKING"}
-                    </div>
-                    <p className="text-[0.75rem] text-amber-100/90 leading-relaxed">
-                      {isPt
-                        ? "Cada candidata só pode agendar uma única vez. Uma vez confirmada a data, a escolha é definitiva e NÃO poderá ser desfeita ou alterada. Por favor, certifique-se da sua disponibilidade antes de confirmar."
-                        : "Each candidate can only book once. Once confirmed, your chosen date is permanent and CANNOT be changed or undone. Please verify your availability before submitting."}
+                        ? "Só pode escolher uma data. Uma vez confirmada, a escolha é definitiva e não pode ser alterada. Verifique a sua disponibilidade antes de confirmar."
+                        : "You can only choose one date. Once confirmed, the booking is final and cannot be changed. Please verify your availability before confirming."}
                     </p>
                   </div>
                 </div>
 
-                {/* Capacity Update Notice Banner */}
+                {/* Capacity notice */}
                 {candidate?.windowFilledNotice && (
-                  <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-4 sm:p-5 flex items-start gap-3.5 text-xs text-sky-200">
-                    <AlertCircle size={20} className="text-sky-400 shrink-0 mt-0.5" />
-                    <div className="space-y-1">
-                      <div className="font-bold text-sky-300 uppercase tracking-wider text-[0.72rem]">
+                  <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3.5 flex items-start gap-3">
+                    <AlertCircle size={16} className="text-blue-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-semibold text-blue-800 mb-0.5">
+                        {isPt ? "Sessões desta semana esgotadas" : "This week's sessions are full"}
+                      </p>
+                      <p className="text-xs text-blue-700 leading-relaxed">
                         {isPt
-                          ? "📢 AVISO DE VAGAS: SESSÕES DESTA SEMANA ESGOTADAS"
-                          : "📢 NOTICE: THIS WEEK'S SESSIONS ARE FULL"}
-                      </div>
-                      <p className="text-[0.75rem] text-sky-100/90 leading-relaxed">
-                        {isPt
-                          ? "O período de testes desta semana atingiu a lotação máxima recomendada. Disponibilizámos novas sessões para a próxima semana (Segunda a Sexta-feira, 10h00), estritamente limitadas a 10 vagas por dia. Seleccione a sua data abaixo para garantir o seu lugar."
-                          : "This week's testing window has reached full capacity. New sessions for next week (Monday to Friday, 10:00 AM) are now open, strictly limited to 10 candidates per day. Please select your date below to secure your seat."}
+                          ? "Abrimos novas sessões para a próxima semana (Segunda a Sexta, 10h00). Limitadas a 10 vagas por dia — reserve já a sua."
+                          : "New sessions are open for next week (Mon–Fri, 10:00 AM). Limited to 10 per day — reserve yours now."}
                       </p>
                     </div>
                   </div>
                 )}
 
-                <div>
-                  <h2 className="text-base font-bold text-white flex items-center gap-2">
-                    <Calendar size={18} className="text-white/70" />
-                    <span>
-                      {isPt
-                        ? "Escolha a data da sua preferência:"
-                        : "Choose your preferred date:"}
-                    </span>
-                  </h2>
-                  <p className="mt-1 text-xs text-white/60 leading-relaxed">
-                    {isPt
-                      ? "Seleccione uma das datas abaixo para a realização do seu teste presencial. Cada sessão tem limite estrito de 10 candidatas. A confirmação é gravada imediatamente no sistema."
-                      : "Select one of the dates below for your in-person evaluation. Each session is strictly limited to 10 candidates. Confirmation is instantly saved."}
-                  </p>
-                </div>
-
-                {/* Slot Cards List */}
-                <div className="space-y-2.5">
-                  {slotsList.map((slot) => {
-                    const isSelected = selectedSlot === slot;
-                    const stat = candidate?.slotStats?.[slot];
-                    const isFull = Boolean(stat?.isFull);
-                    const remaining = stat ? Math.max(0, stat.remaining) : undefined;
-
-                    return (
-                      <button
-                        key={slot}
-                        type="button"
-                        disabled={isFull}
-                        onClick={() => {
-                          if (!isFull) setSelectedSlot(slot);
-                        }}
-                        className={`w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between gap-3 ${
-                          isFull
-                            ? "border-red-500/20 bg-red-950/20 opacity-70 cursor-not-allowed"
-                            : isSelected
-                            ? "border-emerald-500/50 bg-emerald-500/[0.08] shadow-sm cursor-pointer"
-                            : "border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.05] cursor-pointer"
-                        }`}
-                      >
-                        <div className="flex items-center gap-3.5">
-                          <div
-                            className={`h-4 w-4 rounded-full border flex items-center justify-center transition-colors shrink-0 ${
-                              isFull
-                                ? "border-red-500/40 bg-red-500/20 text-red-400"
-                                : isSelected
-                                ? "border-emerald-400 bg-emerald-400 text-[#090d16]"
-                                : "border-white/30 bg-transparent"
-                            }`}
-                          >
-                            {isFull ? (
-                              <Lock size={10} strokeWidth={2.5} />
-                            ) : (
-                              isSelected && <Check size={11} strokeWidth={3} />
-                            )}
-                          </div>
-                          <div>
-                            <div className={`text-xs sm:text-sm font-semibold ${isFull ? "text-white/60 line-through decoration-red-400/50" : "text-white"}`}>
-                              {formatSlotDisplay(slot, isPt)}
-                            </div>
-                            {isFull ? (
-                              <div className="text-[0.68rem] text-red-300/90 flex items-center gap-1.5 mt-0.5 font-medium">
-                                <Lock size={11} className="shrink-0 text-red-400" />
-                                <span>
-                                  {isPt
-                                    ? "Lotação esgotada (10/10 vagas preenchidas). Seleccione outra data."
-                                    : "Quota reached (10/10 booked). Please select another date."}
-                                </span>
-                              </div>
-                            ) : (
-                              <div className="text-[0.68rem] text-white/50 flex items-center gap-2 mt-0.5">
-                                <span>{isPt ? "10h00 às 11h30 (Chegada 09h30)" : "10:00 to 11:30 (Arrival 09:30)"}</span>
-                                <span>•</span>
-                                <span>{isPt ? "Sede Maputo" : "Maputo HQ"}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {isFull ? (
-                          <span className="text-[0.65rem] font-semibold text-red-300 bg-red-500/20 px-2 py-0.5 rounded border border-red-500/30 flex items-center gap-1 shrink-0">
-                            <Lock size={10} />
-                            <span>{isPt ? "Esgotado (10/10)" : "Full (10/10)"}</span>
-                          </span>
-                        ) : isSelected ? (
-                          <span className="text-[0.65rem] font-semibold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-500/30 shrink-0">
-                            {isPt ? "Seleccionada" : "Selected"}
-                          </span>
-                        ) : remaining !== undefined && remaining <= 3 ? (
-                          <span className="text-[0.65rem] font-medium text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/25 shrink-0">
-                            {isPt ? `Últimas ${remaining} vagas` : `Only ${remaining} spots`}
-                          </span>
-                        ) : remaining !== undefined ? (
-                          <span className="text-[0.65rem] text-white/40 shrink-0">
-                            {isPt ? `${remaining} vagas livres` : `${remaining} spots open`}
-                          </span>
-                        ) : null}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {error && (
-                  <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400 flex items-center gap-2">
-                    <AlertCircle size={15} className="shrink-0" />
-                    <span>{error}</span>
+                {/* Slot selection */}
+                <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
+                  <div className="px-5 py-4 border-b border-gray-100">
+                    <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                      <Calendar size={16} className="text-gray-400" />
+                      <span>{isPt ? "Seleccione a sua data" : "Select your date"}</span>
+                    </h2>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {isPt ? "Cada sessão está limitada a 10 candidatas." : "Each session is limited to 10 candidates."}
+                    </p>
                   </div>
-                )}
 
-                {/* Confirm Button */}
-                <div className="space-y-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={handleConfirmSlot}
-                    disabled={submitting || !selectedSlot}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3.5 text-xs sm:text-sm font-bold text-[#090d16] hover:bg-white/90 disabled:opacity-40 transition-all cursor-pointer shadow-md"
-                  >
-                    {submitting ? (
-                      <>
-                        <RefreshCw className="animate-spin" size={16} />
-                        <span>{isPt ? "A gravar confirmação definitiva..." : "Saving final confirmation..."}</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>{isPt ? "Confirmar Minha Data Definitiva →" : "Confirm My Final Test Date →"}</span>
-                        <ArrowRight size={16} />
-                      </>
-                    )}
-                  </button>
-                  <p className="text-center text-[0.68rem] text-white/40">
-                    {isPt
-                      ? "🔒 Lembre-se: O agendamento é único. Uma vez confirmada a data, a escolha não poderá ser desfeita ou alterada."
-                      : "🔒 Note: Booking is single-use. Once confirmed, your slot cannot be undone or changed."}
-                  </p>
+                  <div className="p-4 space-y-2">
+                    {slotsList.map((slot) => {
+                      const isSelected = selectedSlot === slot;
+                      const stat = candidate?.slotStats?.[slot];
+                      const isFull = Boolean(stat?.isFull);
+                      const remaining = stat ? Math.max(0, stat.remaining) : undefined;
+
+                      return (
+                        <button
+                          key={slot}
+                          type="button"
+                          disabled={isFull}
+                          onClick={() => { if (!isFull) setSelectedSlot(slot); }}
+                          className={`w-full text-left rounded-xl border px-4 py-3.5 transition-all flex items-center justify-between gap-3 ${
+                            isFull
+                              ? "border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed"
+                              : isSelected
+                              ? "border-[#07080f] bg-[#07080f] shadow-md cursor-pointer"
+                              : "border-gray-200 bg-white hover:border-gray-400 hover:shadow-sm cursor-pointer"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            {/* Radio indicator */}
+                            <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                              isFull
+                                ? "border-gray-300 bg-gray-100"
+                                : isSelected
+                                ? "border-white bg-white"
+                                : "border-gray-300 bg-white"
+                            }`}>
+                              {isFull ? (
+                                <Lock size={8} className="text-gray-400" strokeWidth={2.5} />
+                              ) : isSelected ? (
+                                <div className="h-2 w-2 rounded-full bg-[#07080f]" />
+                              ) : null}
+                            </div>
+
+                            <div>
+                              <p className={`text-sm font-semibold ${
+                                isFull ? "text-gray-400 line-through" : isSelected ? "text-white" : "text-gray-900"
+                              }`}>
+                                {formatSlotDisplay(slot, isPt)}
+                              </p>
+                              <p className={`text-xs mt-0.5 ${
+                                isFull ? "text-gray-400" : isSelected ? "text-white/60" : "text-gray-400"
+                              }`}>
+                                {isFull
+                                  ? isPt ? "Vagas esgotadas" : "No spots available"
+                                  : isPt ? "10h00–11h30 · Chegada às 09h30 · Maputo" : "10:00–11:30 · Arrive 09:30 · Maputo"
+                                }
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Status badge */}
+                          {isFull ? (
+                            <span className="flex items-center gap-1 text-[0.65rem] font-semibold text-red-500 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full shrink-0">
+                              <Lock size={9} />
+                              <span>{isPt ? "Esgotado" : "Full"}</span>
+                            </span>
+                          ) : isSelected ? (
+                            <span className="flex items-center gap-1 text-[0.65rem] font-semibold text-white/80 bg-white/10 border border-white/20 px-2 py-0.5 rounded-full shrink-0">
+                              <Check size={9} />
+                              <span>{isPt ? "Selecionada" : "Selected"}</span>
+                            </span>
+                          ) : remaining !== undefined && remaining <= 3 ? (
+                            <span className="text-[0.65rem] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full shrink-0">
+                              {isPt ? `Só ${remaining} vaga${remaining !== 1 ? "s" : ""}` : `Only ${remaining} left`}
+                            </span>
+                          ) : remaining !== undefined ? (
+                            <span className="text-[0.65rem] text-gray-400 shrink-0">
+                              {isPt ? `${remaining} vagas` : `${remaining} spots`}
+                            </span>
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Error */}
+                  {error && (
+                    <div className="mx-4 mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3 text-xs text-red-700">
+                      <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                      <span>{error}</span>
+                    </div>
+                  )}
+
+                  {/* Submit */}
+                  <div className="px-4 pb-5 pt-2 space-y-3">
+                    <button
+                      type="button"
+                      onClick={handleConfirmSlot}
+                      disabled={submitting || !selectedSlot}
+                      className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-[#07080f] text-white text-sm font-bold py-3.5 hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+                    >
+                      {submitting ? (
+                        <>
+                          <RefreshCw className="animate-spin" size={15} />
+                          <span>{isPt ? "A confirmar…" : "Confirming…"}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>{isPt ? "Confirmar data definitiva" : "Confirm my test date"}</span>
+                          <ArrowRight size={16} />
+                        </>
+                      )}
+                    </button>
+                    <p className="text-center text-[0.68rem] text-gray-400">
+                      {isPt
+                        ? "🔒 Ao confirmar, a sua escolha fica gravada de forma permanente e não pode ser alterada."
+                        : "🔒 By confirming, your choice is permanently recorded and cannot be changed."}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Corporate Location & Support Card */}
-            <div className="rounded-xl border border-white/10 bg-[#0e1320] p-5 sm:p-6 text-xs text-white/70 space-y-3">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
-                <div>
-                  <strong className="text-white block">Overwatch Moçambique, Lda.</strong>
-                  <span className="text-[0.7rem] text-white/50">{siteContact.address.pt}</span>
-                </div>
+            {/* Footer info bar */}
+            <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold text-gray-700">Overwatch Moçambique, Lda.</p>
+                <p className="text-xs text-gray-400 mt-0.5">{siteContact.address.pt}</p>
+              </div>
+              <div className="flex items-center gap-3">
                 <a
                   href={mapsUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-[0.7rem] text-sky-400 hover:underline"
+                  className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors"
                 >
                   <MapPin size={12} />
-                  <span>{isPt ? "Ver no Mapa" : "View Map"}</span>
+                  <span>{isPt ? "Mapa" : "Map"}</span>
                 </a>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[0.7rem] text-white/50">
-                <span>{isPt ? "Dúvidas ou imprevistos de transporte?" : "Questions or scheduling conflicts?"}</span>
+                <span className="text-gray-200">·</span>
                 <a
                   href={`https://wa.me/${siteContact.whatsappNumber}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-emerald-400 hover:text-emerald-300 hover:underline inline-flex items-center gap-1 font-medium"
+                  className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors"
                 >
-                  <Phone size={11} />
-                  <span>WhatsApp: +258 84 287 0793</span>
+                  <Phone size={12} />
+                  <span>+258 84 287 0793</span>
                 </a>
               </div>
             </div>
+
           </div>
         ) : null}
       </div>
-    </section>
+    </div>
   );
 }
