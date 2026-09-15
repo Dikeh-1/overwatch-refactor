@@ -231,17 +231,16 @@ export default function AdminPage() {
     return list;
   }, [broadcastSlots, applications]);
 
-  const [selectedRosterSlot, setSelectedRosterSlot] = useState<string>("");
+  const [selectedRosterSlot, setSelectedRosterSlot] = useState<string>("all");
   const activeRosterSlot = useMemo(() => {
+    if (selectedRosterSlot === "all") {
+      return "all";
+    }
     if (selectedRosterSlot && rosterSlots.includes(selectedRosterSlot)) {
       return selectedRosterSlot;
     }
-    // Prefer the first slot with confirmed candidates, otherwise first available slot
-    const slotWithCandidates = rosterSlots.find((s) =>
-      applications.some((a) => a.testSlot === s)
-    );
-    return slotWithCandidates || rosterSlots[0] || "";
-  }, [selectedRosterSlot, rosterSlots, applications]);
+    return "all";
+  }, [selectedRosterSlot, rosterSlots]);
 
   useEffect(() => {
     async function loadTestSlots() {
@@ -4587,6 +4586,24 @@ Overwatch`;
                 </div>
 
                 <div className="flex items-center gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+                  {/* "All Confirmed Sessions" Pill */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRosterSlot("all")}
+                    className={`slot-pill ${activeRosterSlot === "all" ? "active" : ""}`}
+                  >
+                    <span>{t("All Confirmed Sessions", "Todos os Turnos")}</span>
+                    <span
+                      className={`slot-pill-count rounded-full ${
+                        activeRosterSlot === "all"
+                          ? "bg-[var(--accent-blue)] text-white font-bold"
+                          : "bg-white/15 text-white"
+                      }`}
+                    >
+                      {confirmedCount}
+                    </span>
+                  </button>
+
                   {rosterSlots.map((slot) => {
                     const count = applications.filter((a) => a.testSlot === slot).length;
                     const isSelected = activeRosterSlot === slot;
@@ -4621,11 +4638,11 @@ Overwatch`;
 
               {/* Active Day Console Header & Table */}
               {activeRosterSlot && (() => {
-                const candidatesInSlot = applications.filter(
-                  (a) => a.testSlot === activeRosterSlot,
-                );
-                const isFull = candidatesInSlot.length >= 10;
-                const remaining = Math.max(0, 10 - candidatesInSlot.length);
+                const candidatesInSlot = activeRosterSlot === "all"
+                  ? applications.filter((a) => Boolean(a.testSlot))
+                  : applications.filter((a) => a.testSlot === activeRosterSlot);
+                const isFull = activeRosterSlot !== "all" && candidatesInSlot.length >= 10;
+                const remaining = activeRosterSlot !== "all" ? Math.max(0, 10 - candidatesInSlot.length) : 0;
 
                 return (
                   <div className="p-5 sm:p-6 space-y-5">
@@ -4633,7 +4650,9 @@ Overwatch`;
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-xs font-bold uppercase tracking-wider text-sky-400">
-                            {t("Active Session Roster", "Escala do Turno Ativo")}
+                            {activeRosterSlot === "all"
+                              ? t("All Confirmed Sessions Roster", "Lista Consolidada de Todos os Turnos")
+                              : t("Active Session Roster", "Escala do Turno Ativo")}
                           </span>
                           <span
                             className={`px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold border ${
@@ -4645,12 +4664,14 @@ Overwatch`;
                             }`}
                           >
                             {candidatesInSlot.length} {t("candidates confirmed", "candidatas confirmadas")}
-                            {isFull ? ` · ${t("Full (10/10)", "Lotação Esgotada")}` : ` (${remaining} ${t("spots free", "vagas livres")})`}
+                            {activeRosterSlot !== "all" && (isFull ? ` · ${t("Full (10/10)", "Lotação Esgotada")}` : ` (${remaining} ${t("spots free", "vagas livres")})`)}
                           </span>
                         </div>
 
                         <h3 className="text-lg sm:text-xl font-bold text-white mt-1">
-                          {formatSlotDisplay(activeRosterSlot, lang)}
+                          {activeRosterSlot === "all"
+                            ? t("All Confirmed Candidates (All Sessions)", "Todas as Candidatas Confirmadas (Todos os Turnos)")
+                            : formatSlotDisplay(activeRosterSlot, lang)}
                         </h3>
 
                         <div className="flex flex-wrap items-center gap-3 text-xs text-white/50 mt-1">
@@ -4666,7 +4687,7 @@ Overwatch`;
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => exportAttendanceCSV(activeRosterSlot)}
+                          onClick={() => exportAttendanceCSV(activeRosterSlot === "all" ? undefined : activeRosterSlot)}
                           disabled={candidatesInSlot.length === 0}
                           className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.05] hover:bg-white/10 px-3.5 py-2 text-xs font-semibold text-white transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
                         >
@@ -4738,6 +4759,7 @@ Overwatch`;
                             <tr>
                               <th className="w-12 text-center">#</th>
                               <th>{t("Candidate", "Candidato(a)")}</th>
+                              {activeRosterSlot === "all" && <th>{t("Test Session", "Turno Marcado")}</th>}
                               <th>{t("WhatsApp Contact", "Contacto WhatsApp")}</th>
                               <th>{t("Gender", "Género")}</th>
                               <th>{t("Confirmation Time", "Horário da Marcação")}</th>
@@ -4775,6 +4797,13 @@ Overwatch`;
                                       </span>
                                     </button>
                                   </td>
+                                  {activeRosterSlot === "all" && (
+                                    <td className="px-4 py-3.5 whitespace-nowrap">
+                                      <span className="px-2.5 py-1 rounded-lg text-[0.68rem] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/25">
+                                        {formatSlotDisplay(c.testSlot?.split("–")[0].trim() || c.testSlot || "", lang)}
+                                      </span>
+                                    </td>
+                                  )}
                                   <td className="px-4 py-3.5 whitespace-nowrap">
                                     <a
                                       href={`https://wa.me/${c.whatsapp.replace(/\D/g, "")}`}

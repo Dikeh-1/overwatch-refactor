@@ -232,43 +232,7 @@ export default function CandidateBookingClient({
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Top brand bar */}
-      <div className="bg-[#07080f] border-b border-white/5">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="h-7 w-7 rounded bg-white/10 border border-white/10 flex items-center justify-center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L3 7v6c0 5.25 3.75 10.15 9 11.25C17.25 23.15 21 18.25 21 13V7l-9-5z" fill="#4f9cf9" opacity=".8"/>
-                <path d="M9 12l2 2 4-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <span className="text-white text-sm font-semibold tracking-tight">Overwatch</span>
-            <span className="text-white/25 text-xs">·</span>
-            <span className="text-white/50 text-xs">
-              {isPt ? "Recrutamento" : "Recruitment"}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-lg p-1">
-            {(["pt", "en"] as const).map((lang) => (
-              <button
-                key={lang}
-                type="button"
-                onClick={() => switchLanguage(lang)}
-                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                  activeLang === lang
-                    ? "bg-white text-[#07080f] shadow-sm"
-                    : "text-white/50 hover:text-white"
-                }`}
-              >
-                {lang.toUpperCase()}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-28 sm:pt-36 pb-12 sm:pb-16">
 
         {/* ── LOADING STATE ─────────────────────────────────────── */}
         {loading ? (

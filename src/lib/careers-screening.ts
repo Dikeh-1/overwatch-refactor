@@ -82,7 +82,7 @@ export const KNOWN_INEXPERIENCED_MALE_EMAILS = [
 export function screenCandidate(candidate: Application): CandidateScreeningResult {
   const isMale = candidate.sex === "male";
   const coverLetterText = (candidate.coverLetter || "").trim();
-  const hasCoverLetter = coverLetterText.length >= 15 || Boolean(candidate.cvName);
+  const hasCoverLetter = coverLetterText.length >= 15;
 
   // Female candidates: Filipa's instruction is explicit:
   // "dont forget to leave the inexperienced women"
