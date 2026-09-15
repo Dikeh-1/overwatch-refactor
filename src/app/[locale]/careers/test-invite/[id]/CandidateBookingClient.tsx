@@ -131,7 +131,7 @@ export default function CandidateBookingClient({
   useEffect(() => {
     if (candidate?.id && candidate.testSlot) {
       const origin = typeof window !== "undefined" ? window.location.origin : "https://www.overwatchmoz.com";
-      const checkInUrl = `${origin}/${activeLang}/careers/check-in?id=${candidate.id}`;
+      const checkInUrl = `${origin}/gate?id=${candidate.id}`;
       QRCode.toDataURL(checkInUrl, {
         width: 320,
         margin: 1.5,

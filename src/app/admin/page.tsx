@@ -61,7 +61,6 @@ import TechGrid from "@/components/ui/TechGrid";
 import LazyVideo from "@/components/ui/LazyVideo";
 import DocxViewer from "@/components/admin/DocxViewer";
 import GateCheckInModal from "@/components/admin/GateCheckInModal";
-import GatePosterModal from "@/components/admin/GatePosterModal";
 import { IMAGES } from "@/lib/constants";
 import {
   type Application,
@@ -5003,15 +5002,16 @@ Overwatch`;
                           <span>{t("Gate QR Scanner", "Leitor QR Portaria")}</span>
                         </button>
 
-                        <button
-                          type="button"
-                          onClick={() => setGatePosterOpen(true)}
+                        <a
+                          href="/gate"
+                          target="_blank"
+                          rel="noreferrer"
                           className="flex items-center gap-1.5 rounded-xl border border-sky-500/40 bg-sky-500/15 hover:bg-sky-500/25 px-3.5 py-2 text-xs font-bold text-sky-300 transition-colors cursor-pointer shadow"
-                          title={t("Generate printable A4 check-in QR poster for reception desk", "Gerar cartaz A4 com QR code para afixar na portaria")}
+                          title={t("Open dedicated Security Gatekeeper portal for guards at the door", "Abrir portal dedicado da Portaria para os guardas")}
                         >
-                          <QrCode size={13} />
-                          <span>{t("Gate Poster QR", "Cartaz QR Portão")}</span>
-                        </button>
+                          <ShieldCheck size={13} />
+                          <span>{t("Security Gate Portal", "Portal da Portaria")}</span>
+                        </a>
 
                         <button
                           type="button"
@@ -8346,13 +8346,6 @@ Overwatch`;
         isOpen={gateScannerOpen}
         onClose={() => setGateScannerOpen(false)}
         onCheckInSuccess={handleGateCheckInSuccess}
-        lang={lang}
-      />
-
-      {/* Gate Reception A4 QR Poster Modal */}
-      <GatePosterModal
-        isOpen={gatePosterOpen}
-        onClose={() => setGatePosterOpen(false)}
         lang={lang}
       />
     </div>
