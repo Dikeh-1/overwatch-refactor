@@ -1593,35 +1593,39 @@ Overwatch`;
     <div className="min-h-screen bg-[#090d16] text-white flex flex-col lg:flex-row relative isolate">
       <TechGrid className="fixed inset-0 opacity-25 pointer-events-none" />
 
-      {/* ─── MOBILE TOP BAR ─────────────────────────────────────────── */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 bg-[#0e1320] border-b border-white/10 backdrop-blur-md">
-        <div className="flex items-center gap-3">
+      {/* ─── MOBILE TOP BAR (STICKY DOCKED NAVBAR) ──────────────────── */}
+      <header className="lg:hidden sticky top-0 z-40 flex items-center justify-between px-3.5 py-2.5 bg-[#090d16]/95 border-b border-white/10 backdrop-blur-md shadow-md">
+        <div className="flex items-center gap-2.5 min-w-0">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="flex items-center justify-center h-9 w-9 rounded-xl border border-white/15 bg-white/[0.06] text-white/80 hover:text-white hover:bg-white/[0.1] transition-colors cursor-pointer"
+            className="flex items-center justify-center h-8 w-8 rounded-lg border border-white/15 bg-white/[0.06] text-white/80 hover:text-white hover:bg-white/[0.1] transition-colors cursor-pointer shrink-0"
             aria-label="Open menu"
           >
-            <Menu size={18} />
+            <Menu size={16} />
           </button>
-          <Logo size="sm" variant="light" />
+          <Link href="/admin" className="shrink-0 flex items-center">
+            <Logo size="xs" variant="light" />
+          </Link>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {activeCampaignRole && view !== "roles" && (
-            <span className="flex items-center gap-1 text-[0.65rem] font-bold text-sky-400 bg-sky-500/10 border border-sky-500/20 rounded-full px-2.5 py-1">
-              <Briefcase size={10} />
-              {roleLabel(activeCampaignRole)}
+            <span className="flex items-center gap-1 text-[0.62rem] font-bold text-sky-400 bg-sky-500/10 border border-sky-500/20 rounded-full px-2.5 py-1 whitespace-nowrap">
+              <Briefcase size={10} className="shrink-0" />
+              <span className="truncate max-w-[110px] sm:max-w-none">
+                {roleLabel(activeCampaignRole)}
+              </span>
             </span>
           )}
           <button
             onClick={() => void load(true)}
             disabled={isRefreshing}
-            className="flex items-center justify-center h-9 w-9 rounded-xl border border-white/15 bg-white/[0.06] text-white/80 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+            className="flex items-center justify-center h-8 w-8 rounded-lg border border-white/15 bg-white/[0.06] text-white/80 hover:text-white transition-colors cursor-pointer disabled:opacity-50 shrink-0"
             aria-label="Refresh"
           >
-            <RefreshCw size={15} className={isRefreshing ? "animate-spin" : ""} />
+            <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
           </button>
         </div>
-      </div>
+      </header>
 
       {/* ─── MOBILE SIDEBAR OVERLAY ──────────────────────────────────── */}
       {sidebarOpen && (
@@ -1949,7 +1953,7 @@ Overwatch`;
       </aside>
 
       {/* ─── MAIN CONTENT AREA ──────────────────────────────────────── */}
-      <main className="flex-1 min-w-0 lg:ml-64 pt-16 lg:pt-0 p-4 sm:p-6 lg:p-8 space-y-6">
+      <main className="flex-1 min-w-0 lg:ml-64 p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Top Header Bar */}
         <header className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-white/10">
           <div>

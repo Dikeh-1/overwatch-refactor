@@ -3,17 +3,19 @@ import Image from "next/image";
 type LogoProps = {
   className?: string;
   preload?: boolean;
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
   variant?: "light" | "dark" | "auto";
 };
 
 const sizes = {
+  xs: { width: 110, height: 16 },
   sm: { width: 187, height: 28 },
   md: { width: 241, height: 36 },
   lg: { width: 294, height: 44 },
 };
 
 const sizeClasses = {
+  xs: "w-[105px]",
   sm: "w-[187px]",
   md: "w-[241px]",
   lg: "w-[294px]",
