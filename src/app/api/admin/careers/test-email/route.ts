@@ -4,6 +4,7 @@ import {
   sendTestInvitation,
   sendCustomBookingConfirmation,
   sendDisqualificationEmail,
+  sendRetractionEmail,
 } from '@/lib/careers-email';
 
 export const dynamic = 'force-dynamic';
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const type: 'convocation' | 'confirmation' | 'disqualification' =
+    const type: 'convocation' | 'confirmation' | 'disqualification' | 'retraction' =
       body.type || 'confirmation';
     const toEmail: string =
       typeof body.toEmail === 'string' && body.toEmail.trim()
@@ -102,6 +103,11 @@ Overwatch Moçambique`;
       result = await sendDisqualificationEmail({
         application: mockApplication,
         reason,
+        baseUrl: origin,
+      });
+    } else if (type === 'retraction') {
+      result = await sendRetractionEmail({
+        application: mockApplication,
         baseUrl: origin,
       });
     } else {

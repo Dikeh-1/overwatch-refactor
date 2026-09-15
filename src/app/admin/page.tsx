@@ -444,6 +444,17 @@ Overwatch`;
   const [disqualifyBusy, setDisqualifyBusy] = useState(false);
   const [disqualifySendEmail, setDisqualifySendEmail] = useState(true);
 
+  // ─── Undo Disqualification / Restore & Rectification State ─────────
+  const [restoreModalState, setRestoreModalState] = useState<{
+    open: boolean;
+    ids: string[];
+    candidateNames: string[];
+    restoreAllWomen?: boolean;
+  }>({ open: false, ids: [], candidateNames: [] });
+  const [restoreBusy, setRestoreBusy] = useState(false);
+  const [restoreSendEmail, setRestoreSendEmail] = useState(true);
+  const [restoreSuccessToast, setRestoreSuccessToast] = useState<string | null>(null);
+
   // ─── Permanent Delete State (Single & Mass Delete) ─────────────────
   const [deleteModalState, setDeleteModalState] = useState<{
     open: boolean;
@@ -1194,6 +1205,63 @@ Overwatch`;
       setError((err as Error).message);
     } finally {
       setDisqualifyBusy(false);
+    }
+  };
+
+  // Restore & Apology executor (undoes accidental disqualification, moves to shortlisted, and sends retraction email)
+  const handleExecuteRestore = async (
+    targetIds: string[],
+    restoreAllWomen: boolean = false,
+    sendEmail: boolean = true
+  ) => {
+    setRestoreBusy(true);
+    try {
+      const res = await fetch("/api/admin/careers/restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ids: targetIds,
+          restoreAllArchivedWomen: restoreAllWomen,
+          sendApologyEmail: sendEmail,
+          targetStatus: "shortlisted",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Falha ao restaurar candidaturas.");
+
+      const restoredIdSet = new Set<string>(
+        (data.results || []).map((r: { id: string }) => r.id).concat(targetIds)
+      );
+
+      setApplications((prev) =>
+        prev.map((a) =>
+          restoredIdSet.has(a.id)
+            ? { ...a, status: "shortlisted" as any, testSlot: undefined, testBookedAt: undefined }
+            : a
+        )
+      );
+
+      if (selected && restoredIdSet.has(selected.id)) {
+        setSelected((prev) =>
+          prev
+            ? { ...prev, status: "shortlisted" as any, testSlot: undefined, testBookedAt: undefined }
+            : null
+        );
+      }
+
+      setSelectedAppIds((prev) => prev.filter((id) => !restoredIdSet.has(id)));
+      setRestoreModalState({ open: false, ids: [], candidateNames: [] });
+      setRestoreSuccessToast(
+        lang === "pt"
+          ? `${data.count} candidatura(s) restaurada(s) com sucesso para "Pré-seleccionadas"! ${sendEmail ? "E-mail de rectificação enviado." : ""}`
+          : `Successfully restored ${data.count} candidate(s) to "Shortlisted"! ${sendEmail ? "Rectification email sent." : ""}`
+      );
+      setTimeout(() => setRestoreSuccessToast(null), 7000);
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setRestoreBusy(false);
     }
   };
 
@@ -5478,6 +5546,10 @@ Overwatch`;
           const missingCoverLetter = nonCompliantList.filter(
             ({ screening }) => !screening.hasCoverLetter
           );
+          const archivedWomen = campaignApps.filter(
+            (a) => a.status === "archived" && a.sex !== "male"
+          );
+          const allArchived = campaignApps.filter((a) => a.status === "archived");
 
           const displayedList =
             disqualifyFilterTab === "booked" ? bookedNonCompliant : nonCompliantList;
@@ -5487,6 +5559,54 @@ Overwatch`;
 
           return (
             <section className="space-y-6">
+              {/* Emergency Restore Banner if any women or candidates are archived by accident */}
+              {archivedWomen.length > 0 && (
+                <div className="rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/50 via-[#121827] to-transparent p-5 shadow-lg flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="h-10 w-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                      <RotateCcw size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                        <span>{t("Mistakenly Disqualified Women Detected", "Candidatas Arquivadas por Engano")}</span>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[0.7rem] font-mono">
+                          {archivedWomen.length} {t("candidates", "candidatas")}
+                        </span>
+                      </h4>
+                      <p className="text-xs text-white/70 mt-1 max-w-2xl leading-relaxed">
+                        {t(
+                          "Filipa's explicit instruction: 'dont forget to leave the inexperienced women'. Female candidates do not require prior CCTV experience. Click to restore them to 'Shortlisted' and automatically dispatch the official apology/rectification email with booking links.",
+                          "Conforme orientação expressa da Direcção (Filipa): todas as mulheres realizam o teste de CCO sem exigência de experiência prévia. Clique para restaurá-las de imediato para 'Pré-seleccionadas' e enviar o e-mail de rectificação com o link de agendamento.",
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRestoreModalState({
+                          open: true,
+                          restoreAllWomen: true,
+                          ids: archivedWomen.map((w) => w.id),
+                          candidateNames: archivedWomen.map((w) => w.name),
+                        });
+                      }}
+                      disabled={restoreBusy}
+                      className="flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 text-xs font-bold shadow-md transition-all cursor-pointer"
+                    >
+                      <RotateCcw size={14} />
+                      <span>
+                        {t(
+                          `Restore All Archived Women (${archivedWomen.length}) & Rectify`,
+                          `Restaurar Todas as Mulheres Arquivadas (${archivedWomen.length}) & Rectificar`,
+                        )}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              )}
               {/* Top KPI Cards for Disqualification Compliance */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="rounded-2xl border border-red-500/20 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
@@ -6197,6 +6317,23 @@ Overwatch`;
                   >
                     <UserCheck size={13} />
                     <span>{t("Shortlist Selected", "Pré-selecionar Selecionados")}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const targets = applications.filter((a) => selectedAppIds.includes(a.id));
+                      setRestoreModalState({
+                        open: true,
+                        ids: selectedAppIds,
+                        candidateNames: targets.map((a) => a.name),
+                      });
+                    }}
+                    disabled={busy || deleteBusy || disqualifyBusy || restoreBusy}
+                    className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 text-xs font-bold transition-all cursor-pointer disabled:opacity-50 shadow-sm"
+                  >
+                    <RotateCcw size={13} />
+                    <span>{t("Restore & Rectify", "Restaurar & Rectificar")}</span>
                   </button>
 
                   <button
@@ -6954,6 +7091,24 @@ Overwatch`;
                       <span>{t("Disqualify & Archive Candidate", "Desqualificar e Arquivar Candidato")}</span>
                     </button>
                   )}
+
+                  {current.status === "archived" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRestoreModalState({
+                          open: true,
+                          ids: [current.id],
+                          candidateNames: [current.name],
+                        });
+                      }}
+                      disabled={restoreBusy}
+                      className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white py-2 text-xs font-bold transition-all cursor-pointer shadow-sm"
+                    >
+                      <RotateCcw size={13} />
+                      <span>{t("Restore to Shortlisted & Send Rectification", "Restaurar Candidatura & Enviar Rectificação")}</span>
+                    </button>
+                  )}
                 </div>
               );
             })()}
@@ -7526,6 +7681,161 @@ Overwatch`;
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── UNDO DISQUALIFICATION & RECTIFICATION MODAL ───────────── */}
+      {restoreModalState.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-emerald-500/40 bg-[#121827] p-6 shadow-2xl space-y-5">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  <RotateCcw size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">
+                    {restoreModalState.restoreAllWomen
+                      ? t("Restore All Archived Women", "Restaurar Todas as Mulheres Arquivadas")
+                      : restoreModalState.ids.length === 1
+                        ? t("Restore Candidate & Rectify", "Restaurar Candidatura & Rectificar")
+                        : t(
+                            `Restore ${restoreModalState.ids.length} Candidates & Rectify`,
+                            `Restaurar ${restoreModalState.ids.length} Candidatos & Rectificar`,
+                          )}
+                  </h3>
+                  <p className="text-xs text-emerald-400 font-semibold">
+                    {t("Undo System Error · Re-activate Candidates", "Desfazer Erro de Sistema · Reativar Candidaturas")}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRestoreModalState({ open: false, ids: [], candidateNames: [] })}
+                disabled={restoreBusy}
+                className="text-white/50 hover:text-white cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-4 text-xs text-white/80 space-y-3">
+              <p className="leading-relaxed">
+                {restoreModalState.restoreAllWomen ? (
+                  t(
+                    "All female candidates currently marked as archived will have their status restored to 'Shortlisted'. Their booking slot is reset so they can book next week's sessions (Mon–Fri 10:00).",
+                    "Todas as candidatas do sexo feminino atualmente arquivadas terão o seu estado restaurado para 'Pré-seleccionadas'. O link de agendamento é reactivado para poderem marcar o teste presencial para a próxima semana.",
+                  )
+                ) : restoreModalState.ids.length === 1 ? (
+                  <>
+                    {t("Are you sure you want to restore", "Tem a certeza que deseja restaurar e rectificar a candidatura de")}{" "}
+                    <strong className="text-white font-bold">{restoreModalState.candidateNames?.[0] || "this candidate"}</strong>
+                    {t(
+                      "? Their status will be moved back to 'Shortlisted'.",
+                      "? O estado será alterado de volta para 'Pré-seleccionadas' e a candidatura reactivada.",
+                    )}
+                  </>
+                ) : (
+                  t(
+                    `Are you sure you want to restore these ${restoreModalState.ids.length} selected candidates back to 'Shortlisted'?`,
+                    `Tem a certeza que deseja restaurar estes ${restoreModalState.ids.length} candidatos seleccionados de volta para 'Pré-seleccionadas'?`,
+                  )
+                )}
+              </p>
+
+              {restoreModalState.candidateNames && restoreModalState.candidateNames.length > 0 && !restoreModalState.restoreAllWomen && (
+                <div className="max-h-28 overflow-y-auto space-y-1 rounded-lg bg-black/30 p-2 border border-white/5 font-mono text-[0.68rem] text-white/70">
+                  {restoreModalState.candidateNames.slice(0, 10).map((name, idx) => (
+                    <div key={idx} className="truncate">• {name}</div>
+                  ))}
+                  {restoreModalState.candidateNames.length > 10 && (
+                    <div className="text-white/40 italic">
+                      + {restoreModalState.candidateNames.length - 10}{" "}
+                      {t("more candidates...", "outros candidatos...")}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Email Notification Option */}
+            <label className="flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-white/[0.02] cursor-pointer text-xs text-white/80 select-none">
+              <input
+                type="checkbox"
+                checked={restoreSendEmail}
+                onChange={(e) => setRestoreSendEmail(e.target.checked)}
+                className="h-4 w-4 rounded border-white/20 bg-[#121827] text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer"
+              />
+              <span>
+                {t(
+                  "Send official Rectification & Apology email (with direct booking link)",
+                  "Enviar e-mail formal de Rectificação e Desculpas (com link individual de agendamento)",
+                )}
+              </span>
+            </label>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setRestoreModalState({ open: false, ids: [], candidateNames: [] })}
+                disabled={restoreBusy}
+                className="flex-1 rounded-xl border border-white/10 bg-white/[0.05] py-2.5 text-xs font-semibold text-white hover:bg-white/[0.1] transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {t("Cancel", "Cancelar")}
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  handleExecuteRestore(
+                    restoreModalState.ids,
+                    Boolean(restoreModalState.restoreAllWomen),
+                    restoreSendEmail,
+                  )
+                }
+                disabled={restoreBusy}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 py-2.5 text-xs font-bold text-white shadow-lg transition-all cursor-pointer disabled:opacity-50"
+              >
+                {restoreBusy ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>{t("Restoring...", "A restaurar...")}</span>
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw size={14} />
+                    <span>{t("Confirm & Restore", "Confirmar e Restaurar")}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── RESTORE SUCCESS TOAST ──────────────────────────────────── */}
+      {restoreSuccessToast && (
+        <div className="fixed top-6 right-6 z-50 max-w-md animate-in slide-in-from-top-4 fade-in duration-300">
+          <div className="rounded-2xl border border-emerald-500/40 bg-[#0d1c16] text-emerald-200 p-4 shadow-2xl flex items-start gap-3">
+            <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+              <CheckCircle2 size={18} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <strong className="block text-xs font-bold text-white mb-0.5">
+                {lang === "pt" ? "Operação Concluída" : "Restore Completed"}
+              </strong>
+              <p className="text-xs text-emerald-200/90 leading-relaxed">
+                {restoreSuccessToast}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setRestoreSuccessToast(null)}
+              className="text-emerald-400/60 hover:text-emerald-300 cursor-pointer"
+            >
+              <X size={16} />
+            </button>
           </div>
         </div>
       )}

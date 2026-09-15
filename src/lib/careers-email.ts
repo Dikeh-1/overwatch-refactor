@@ -1074,3 +1074,147 @@ export async function sendDisqualificationEmail({
   return sendTransactionalEmail(payload);
 }
 
+export async function sendRetractionEmail({
+  application,
+  baseUrl,
+}: {
+  application: Application;
+  baseUrl?: string;
+}) {
+  if (
+    (!process.env.BREVO_API_KEY && !process.env.FALLBACK_SMTP_PASS) ||
+    application.email.endsWith(".invalid") ||
+    process.env.CAREERS_TEST_MODE === "true"
+  ) {
+    return { success: true, mocked: true };
+  }
+
+  const origin = (
+    baseUrl ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "https://www.overwatchmoz.com"
+  ).replace(/\/+$/, "");
+  const logoWhiteUrl = `${origin}/logo-white.png`;
+
+  const sender = {
+    name: "Overwatch Recrutamento",
+    email: "noreply@overwatchmoz.com",
+  };
+
+  const greeting = getMozambiqueGreeting("pt");
+  const bookingUrl = `${origin}/pt/careers/test-invite/${application.id}`;
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="pt">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Rectificação de Notificação — Overwatch Moçambique</title>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; -webkit-font-smoothing: antialiased;">
+      <div style="background-color: #f1f5f9; padding: 32px 16px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08); overflow: hidden;">
+          
+          <!-- Official Letterhead Header (Dark Navy) -->
+          <div style="background-color: #0b1329; padding: 18px 24px; border-bottom: 2px solid rgba(255, 255, 255, 0.15);">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="vertical-align: middle;">
+                  <img src="${logoWhiteUrl}" alt="Overwatch" height="22" width="147" style="height: 22px; width: auto; max-width: 145px; display: block; border: 0;" />
+                </td>
+                <td style="vertical-align: middle; text-align: right;">
+                  <span style="display: inline-block; background-color: rgba(255, 255, 255, 0.12); color: #ffffff; font-family: monospace; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.2); letter-spacing: 0.04em;">
+                    REF: CCO-2026/RECTIFICAÇÃO
+                  </span>
+                  <div style="font-size: 11px; color: #cbd5e1; margin-top: 4px; font-weight: 500;">
+                    Departamento de Recursos Humanos
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Subheading Bar -->
+          <div style="background-color: #f0fdf4; padding: 12px 24px; border-bottom: 1px solid #bbf7d0; font-size: 11px; color: #166534;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #15803d;">
+                  RECTIFICAÇÃO OFICIAL · CANDIDATURA ACTIVA
+                </td>
+                <td style="text-align: right; color: #166534; font-weight: 500;">
+                  Maputo, Moçambique
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Body Content -->
+          <div style="padding: 28px 24px; background-color: #ffffff;">
+            <h1 style="font-size: 18px; font-weight: 700; color: #090d16; margin: 0 0 14px 0;">
+              ${greeting} ${application.name},
+            </h1>
+            
+            <p style="font-size: 14px; color: #334155; margin: 0 0 16px 0; line-height: 1.6;">
+              Entramos em contacto para emitir uma <strong>rectificação formal e urgente</strong> referente à notificação de desqualificação recentemente transmitida pelo nosso sistema.
+            </p>
+
+            <!-- Explanation & Assurance Box -->
+            <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #16a34a; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+              <strong style="font-size: 13px; color: #15803d; display: block; margin-bottom: 6px;">
+                ✓ A sua candidatura encontra-se activa e válida
+              </strong>
+              <p style="font-size: 13px; color: #166534; margin: 0; line-height: 1.55;">
+                Devido a uma <strong>falha técnica temporária no nosso sistema automático de selecção</strong>, foi-lhe transmitida uma notificação errónea. Pedimos as nossas mais sinceras desculpas pelo transtorno. Confirmamos expressamente que a sua candidatura à vaga de Operadora de CCO da Overwatch Moçambique está em curso regular e seleccionada para realização de teste.
+              </p>
+            </div>
+
+            <p style="font-size: 14px; color: #334155; margin: 0 0 22px 0; line-height: 1.6;">
+              Se ainda não reservou a sua presença ou se o seu horário foi alterado, pode aceder ao seu link exclusivo de agendamento abaixo e escolher o dia mais conveniente para o seu teste presencial:
+            </p>
+
+            <!-- Action Button -->
+            <div style="text-align: center; margin: 28px 0;">
+              <a href="${bookingUrl}" style="display: inline-block; background-color: #0b1329; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; padding: 14px 28px; border-radius: 8px; box-shadow: 0 4px 12px rgba(11, 19, 41, 0.25); letter-spacing: 0.02em;">
+                Agendar / Confirmar a Minha Sessão de Teste &rarr;
+              </a>
+            </div>
+
+            <!-- Booking quota note -->
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; margin-bottom: 24px; font-size: 12px; color: #64748b; line-height: 1.55;">
+              <strong style="color: #334155;">Nota importante sobre as vagas:</strong> As sessões presenciais decorrem no nosso escritório em Maputo e dispõem de um limite máximo de 10 candidatas por dia para garantir as condições ideais de avaliação. Por favor, aceda ao link para garantir a sua vaga.
+            </div>
+
+            <!-- Formal Sign-Off -->
+            <div style="margin-top: 24px; font-size: 14px; color: #334155; line-height: 1.5;">
+              Agradecemos a sua compreensão e contamos com a sua presença.<br /><br />
+              Com os melhores cumprimentos,<br />
+              <strong style="color: #090d16;">Equipa de Recrutamento & Selecção</strong><br />
+              Overwatch Moçambique
+            </div>
+          </div>
+
+          <!-- Formal Legal & Contact Footer -->
+          <div style="background-color: #f8fafc; padding: 22px 32px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6;">
+            <strong style="color: #090d16;">Overwatch Moçambique, Lda.</strong><br />
+            ${siteContact.address.pt}<br />
+            Telefone / WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #0284c7; text-decoration: none; font-weight: 600;">+258 84 287 0793</a> · Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none;">${siteContact.email}</a> · Website: <a href="${origin}" style="color: #64748b; text-decoration: none;">www.overwatchmoz.com</a>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const payload = {
+    sender,
+    to: [{ email: application.email, name: application.name }],
+    subject: "Rectificação: A sua candidatura à Overwatch continua activa",
+    htmlContent,
+    textContent: `${greeting} ${application.name},\n\nEntramos em contacto para emitir uma rectificação formal referente à notificação anterior enviada pelo nosso sistema.\n\nDevido a uma falha técnica temporária no nosso sistema automático de selecção, foi-lhe transmitida uma notificação errónea. Lamentamos o transtorno.\n\nConfirmamos expressamente que a sua candidatura à vaga de Operadora de CCO da Overwatch Moçambique continua activa e seleccionada para realização de teste.\n\nPoderá agendar ou confirmar o seu teste acedendo ao link pessoal abaixo:\n${bookingUrl}\n\nNota: Cada dia dispõe de um limite de 10 vagas por dia.\n\nCom os melhores cumprimentos,\nEquipa de Recrutamento & Selecção\nOverwatch Moçambique`,
+  };
+
+  return sendTransactionalEmail(payload);
+}
+
+

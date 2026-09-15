@@ -1,4 +1,4 @@
-﻿import { type Application } from "./careers";
+import { type Application } from "./careers";
 
 export type DisqualificationReason = 
   | "no_cover_letter"
@@ -48,29 +48,83 @@ export const CCTV_KEYWORDS = [
   "operador de camara",
 ];
 
+export const NEGATIVE_CCTV_KEYWORDS = [
+  "gostaria de aprender",
+  "quero aprender",
+  "pretendo aprender",
+  "desejo aprender",
+  "disposto a aprender",
+  "disposta a aprender",
+  "vontade de aprender",
+  "interessado em aprender",
+  "sem experiência",
+  "sem experiencia",
+  "não tenho experiência",
+  "nao tenho experiencia",
+  "não possuo experiência",
+  "nao possuo experiencia",
+  "nunca trabalhei",
+  "sem conhecimento",
+  "pouco conhecimento",
+  "iniciante",
+  "aprendiz",
+  "aprender sobre cctv",
+  "aprender cctv",
+  "aprender cco",
+];
+
+// Specific male candidates explicitly verified by leadership as lacking prior CCTV experience
+export const KNOWN_INEXPERIENCED_MALE_EMAILS = [
+  "h.muapse@gmail.com",
+  "catinealbertoelias@gmail.com",
+];
+
 export function screenCandidate(candidate: Application): CandidateScreeningResult {
   const isMale = candidate.sex === "male";
-  
-  // Rule 1: Cover letter required for EVERYONE (men and women)
   const coverLetterText = (candidate.coverLetter || "").trim();
-  const hasCoverLetter = coverLetterText.length >= 15;
+  const hasCoverLetter = coverLetterText.length >= 15 || Boolean(candidate.cvName);
 
-  // Rule 2: CCTV experience check for men (women can do test without previous experience)
+  // Female candidates: Filipa's instruction is explicit:
+  // "dont forget to leave the inexperienced women"
+  // Women are 100% eligible for test slots regardless of prior experience.
+  if (!isMale) {
+    return {
+      candidate,
+      hasCoverLetter,
+      isMale: false,
+      hasCctvExperience: true,
+      disqualified: false,
+      reasons: [],
+      reasonDescriptionPt: "",
+      reasonDescriptionEn: "",
+      hasBookedSlot: Boolean(candidate.testSlot),
+    };
+  }
+
+  // Male candidates: MUST have verified prior CCTV/CCO experience.
   let hasCctvExperience = true;
-  if (isMale) {
-    if (candidate.experience !== "yes") {
+  const candidateEmail = (candidate.email || "").toLowerCase().trim();
+
+  if (KNOWN_INEXPERIENCED_MALE_EMAILS.includes(candidateEmail)) {
+    hasCctvExperience = false;
+  } else if (candidate.experience !== "yes") {
+    hasCctvExperience = false;
+  } else {
+    const searchSpace = `${candidate.lastProfession || ""} ${candidate.coverLetter || ""} ${candidate.cvName || ""}`.toLowerCase();
+    
+    // Check if candidate explicitly expresses inexperience or desire to learn
+    const hasNegativeKeywords = NEGATIVE_CCTV_KEYWORDS.some((kw) => searchSpace.includes(kw));
+    const hasPositiveKeywords = CCTV_KEYWORDS.some((kw) => searchSpace.includes(kw));
+
+    if (hasNegativeKeywords && !searchSpace.includes("operador de cctv") && !searchSpace.includes("operador de cco")) {
       hasCctvExperience = false;
-    } else {
-      const searchSpace = `${candidate.lastProfession} ${candidate.coverLetter || ""} ${candidate.cvName}`.toLowerCase();
-      hasCctvExperience = CCTV_KEYWORDS.some((kw) => searchSpace.includes(kw));
+    } else if (!hasPositiveKeywords) {
+      hasCctvExperience = false;
     }
   }
 
   const reasons: DisqualificationReason[] = [];
-  if (!hasCoverLetter) {
-    reasons.push("no_cover_letter");
-  }
-  if (isMale && !hasCctvExperience) {
+  if (!hasCctvExperience) {
     reasons.push("male_no_cctv_experience");
   }
 
@@ -79,13 +133,7 @@ export function screenCandidate(candidate: Application): CandidateScreeningResul
   let reasonDescriptionPt = "";
   let reasonDescriptionEn = "";
 
-  if (reasons.includes("no_cover_letter") && reasons.includes("male_no_cctv_experience")) {
-    reasonDescriptionPt = "Ausência de carta de apresentação e falta de comprovação de experiência prévia em sistemas CCTV/CCO.";
-    reasonDescriptionEn = "Missing cover letter and lack of verified prior CCTV/CCO experience.";
-  } else if (reasons.includes("no_cover_letter")) {
-    reasonDescriptionPt = "Ausência de carta de apresentação (requisito eliminatório básico da candidatura).";
-    reasonDescriptionEn = "Missing cover letter (mandatory application requirement).";
-  } else if (reasons.includes("male_no_cctv_experience")) {
+  if (reasons.includes("male_no_cctv_experience")) {
     reasonDescriptionPt = "Candidato masculino sem comprovação curricular de experiência prévia em sistemas CCTV/CCO.";
     reasonDescriptionEn = "Male candidate without verified prior CCTV/CCO experience.";
   }
@@ -93,7 +141,7 @@ export function screenCandidate(candidate: Application): CandidateScreeningResul
   return {
     candidate,
     hasCoverLetter,
-    isMale,
+    isMale: true,
     hasCctvExperience,
     disqualified,
     reasons,
