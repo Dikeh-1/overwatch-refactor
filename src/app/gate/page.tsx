@@ -89,7 +89,7 @@ const DICT = {
     rosterSubtitle: "Candidatas com teste confirmado para hoje às 10h00.",
     rosterEmpty: "Nenhuma candidata agendada para hoje na base de dados.",
     rosterPresent: "Presente",
-    rosterCheckIn: "Dar Entrada",
+    rosterAwaiting: "Aguardado",
     refreshTooltip: "Actualizar lista",
     connError: "Erro de ligação com a base de dados. Tente novamente.",
     flipCamera: "Mudar câmara",
@@ -135,7 +135,7 @@ const DICT = {
     rosterSubtitle: "Candidates confirmed for today's test at 10:00 AM.",
     rosterEmpty: "No candidates scheduled for today in database.",
     rosterPresent: "Present",
-    rosterCheckIn: "Check In",
+    rosterAwaiting: "Awaiting",
     refreshTooltip: "Refresh list",
     connError: "Database connection error. Please try again.",
     flipCamera: "Flip camera",
@@ -971,13 +971,9 @@ function GateSecurityContent() {
                           🟢 {t.rosterPresent} ({new Date(c.attendedAt).toLocaleTimeString(lang === "pt" ? "pt-MZ" : "en-US", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Maputo" })})
                         </span>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={() => executeCheckIn({ id: c.id })}
-                          className="px-2.5 py-1 rounded-lg bg-emerald-600/30 hover:bg-emerald-600 text-emerald-200 hover:text-white border border-emerald-500/40 font-bold text-[11px] transition-all cursor-pointer"
-                        >
-                          {t.rosterCheckIn}
-                        </button>
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-white/5 border border-white/10 text-slate-400">
+                          ⏳ {t.rosterAwaiting}
+                        </span>
                       )}
                     </div>
                   </div>

@@ -5195,21 +5195,10 @@ Overwatch`;
                                         </button>
                                       </div>
                                     ) : (
-                                      <div className="flex items-center gap-2">
-                                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[0.65rem] font-semibold bg-white/5 text-white/40 border border-white/10">
-                                          <Clock size={10} className="text-white/30" />
-                                          <span>{t("Awaiting", "Aguardado")}</span>
-                                        </span>
-                                        <button
-                                          type="button"
-                                          onClick={() => handleToggleAttendance(c.id, true)}
-                                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[0.65rem] font-bold bg-emerald-600/30 hover:bg-emerald-600 text-emerald-200 hover:text-white border border-emerald-500/40 transition-all cursor-pointer"
-                                          title={t("Manually record candidate presence at gate", "Registar presença manualmente")}
-                                        >
-                                          <CheckCircle2 size={11} />
-                                          <span>{t("Check-in", "Dar Entrada")}</span>
-                                        </button>
-                                      </div>
+                                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[0.65rem] font-semibold bg-white/5 text-white/40 border border-white/10">
+                                        <Clock size={10} className="text-white/30" />
+                                        <span>{t("Awaiting", "Aguardado")}</span>
+                                      </span>
                                     )}
                                   </td>
                                   <td className="px-4 py-3.5 text-right whitespace-nowrap space-x-2">
