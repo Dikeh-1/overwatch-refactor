@@ -409,6 +409,16 @@ function GateSecurityContent() {
     if (authed && urlId && !hasAutoChecked.current) {
       hasAutoChecked.current = true;
       executeCheckIn({ id: urlId });
+      // Immediately clean ?id= from the browser URL so page reloads do not re-scan the same candidate
+      if (typeof window !== "undefined") {
+        try {
+          const u = new URL(window.location.href);
+          if (u.searchParams.has("id")) {
+            u.searchParams.delete("id");
+            window.history.replaceState(null, "", u.pathname + (u.search ? u.search : ""));
+          }
+        } catch (_) {}
+      }
     }
   }, [authed, urlId, executeCheckIn]);
 
@@ -525,6 +535,15 @@ function GateSecurityContent() {
     if (scanCooldownRef.current) {
       clearTimeout(scanCooldownRef.current);
       scanCooldownRef.current = null;
+    }
+    if (typeof window !== "undefined") {
+      try {
+        const u = new URL(window.location.href);
+        if (u.searchParams.has("id")) {
+          u.searchParams.delete("id");
+          window.history.replaceState(null, "", u.pathname + (u.search ? u.search : ""));
+        }
+      } catch (_) {}
     }
   };
 
