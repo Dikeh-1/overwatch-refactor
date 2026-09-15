@@ -459,10 +459,10 @@ Overwatch`;
   const [confirmSelectedIds, setConfirmSelectedIds] = useState<string[]>([]);
   const [confirmSubTab, setConfirmSubTab] = useState<"unsent" | "sent">("unsent");
   const [resendingConfirmId, setResendingConfirmId] = useState<string | null>(null);
-  const [testConfirmEmail, setTestConfirmEmail] = useState("ebubemichael033@gmail.com");
+  const [testConfirmEmail, setTestConfirmEmail] = useState("");
   const [testConfirmSending, setTestConfirmSending] = useState(false);
   const [testConfirmStatus, setTestConfirmStatus] = useState<"idle" | "success" | "error">("idle");
-  const [testEmailAddress, setTestEmailAddress] = useState("ebubemichael033@gmail.com");
+  const [testEmailAddress, setTestEmailAddress] = useState("");
   const [testSendingType, setTestSendingType] = useState<"convocation" | "confirmation" | "disqualification" | null>(null);
   const [testEmailResult, setTestEmailResult] = useState<{
     type: "convocation" | "confirmation" | "disqualification";

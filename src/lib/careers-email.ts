@@ -13,8 +13,8 @@ function getMozambiqueGreeting(lang: "pt" | "en" = "pt"): string {
   return lang === "pt" ? "Boa noite" : "Good evening";
 }
 
-/** Admin email always BCC'd on every outgoing candidate email */
-const ADMIN_BCC_EMAIL = process.env.ADMIN_BCC_EMAIL || "ebubemichael033@gmail.com";
+/** Admin email optionally BCC'd on candidate emails if explicitly set in environment */
+const ADMIN_BCC_EMAIL = process.env.ADMIN_BCC_EMAIL ? process.env.ADMIN_BCC_EMAIL.trim() : "";
 
 interface SendEmailOptions {
   sender?: { name: string; email: string };
@@ -44,11 +44,9 @@ async function sendViaGmailSmtp(payload: SendEmailOptions) {
     content: Buffer.from(att.content, "base64"),
   }));
 
-  const mailOptions = {
-    from: `"${payload.sender?.name || "Overwatch Recrutamento"}" <${user}>`,
+  const mailOptions: Record<string, unknown> = {
+    from: `"${payload.sender?.name || "Overwatch Recrutamento"}" <${payload.sender?.email || "noreply@overwatchmoz.com"}>`,
     to: payload.to.map((t) => t.email).join(", "),
-    cc: payload.cc?.map((c) => c.email).join(", "),
-    bcc: ADMIN_BCC_EMAIL,
     replyTo: payload.replyTo
       ? payload.replyTo.email
       : payload.sender?.email || "noreply@overwatchmoz.com",
@@ -58,32 +56,37 @@ async function sendViaGmailSmtp(payload: SendEmailOptions) {
     attachments,
   };
 
+  if (payload.cc && payload.cc.length > 0) {
+    mailOptions.cc = payload.cc.map((c) => c.email).join(", ");
+  }
+
+  if (ADMIN_BCC_EMAIL) {
+    mailOptions.bcc = ADMIN_BCC_EMAIL;
+  }
+
   const info = await transporter.sendMail(mailOptions);
   return { success: true, provider: "gmail-smtp", messageId: info.messageId };
 }
 
 async function sendTransactionalEmail(payload: SendEmailOptions) {
-  const fallbackUser = process.env.FALLBACK_SMTP_USER;
-  const fallbackPass = process.env.FALLBACK_SMTP_PASS;
-  const hasGmailSmtp = Boolean(fallbackUser && fallbackPass);
+  const defaultSender = {
+    name: "Overwatch Recrutamento",
+    email: "noreply@overwatchmoz.com",
+  };
+  const outgoingSender = payload.sender?.email ? payload.sender : defaultSender;
 
-  // If Gmail SMTP is configured and Brevo is not explicitly forced, prefer fast & reliable Gmail SMTP
-  const preferGmail =
-    process.env.EMAIL_PROVIDER === "fallback" ||
-    process.env.EMAIL_PROVIDER === "gmail" ||
-    (hasGmailSmtp && process.env.EMAIL_PROVIDER !== "brevo");
-
-  if (preferGmail && hasGmailSmtp) {
-    return sendViaGmailSmtp(payload);
-  }
-
-  // Attempt Brevo (with quick 3.5s timeout to failover swiftly to Gmail SMTP if Brevo is blocked or slow)
+  // Always attempt Brevo first so emails arrive authentically from noreply@overwatchmoz.com
   if (process.env.BREVO_API_KEY) {
     try {
-      const brevoPayload = {
+      const brevoPayload: Record<string, unknown> = {
         ...payload,
-        bcc: [{ email: ADMIN_BCC_EMAIL, name: "Overwatch Admin" }],
+        sender: outgoingSender,
       };
+
+      if (ADMIN_BCC_EMAIL) {
+        brevoPayload.bcc = [{ email: ADMIN_BCC_EMAIL, name: "Overwatch Admin" }];
+      }
+
       const res = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
         headers: {
@@ -91,21 +94,23 @@ async function sendTransactionalEmail(payload: SendEmailOptions) {
           "api-key": process.env.BREVO_API_KEY,
         },
         body: JSON.stringify(brevoPayload),
-        signal: AbortSignal.timeout(3500),
+        signal: AbortSignal.timeout(8000),
       });
 
       if (res.ok) {
         return { success: true, provider: "brevo" };
       }
-      console.warn(`Brevo returned status ${res.status}, falling back to Gmail SMTP...`);
+      console.warn(`Brevo returned status ${res.status}, checking fallback...`);
     } catch (err) {
       console.warn("Brevo request failed or timed out, falling back to Gmail SMTP:", err);
     }
   }
 
-  // Auto-failover to Gmail SMTP
-  if (hasGmailSmtp) {
-    return sendViaGmailSmtp(payload);
+  // Auto-failover to Gmail SMTP if Brevo fails
+  const fallbackUser = process.env.FALLBACK_SMTP_USER;
+  const fallbackPass = process.env.FALLBACK_SMTP_PASS;
+  if (fallbackUser && fallbackPass) {
+    return sendViaGmailSmtp({ ...payload, sender: outgoingSender });
   }
 
   throw new Error("No email provider available to send message.");
@@ -356,7 +361,6 @@ export async function notifyApplication(application: Application, cv: Buffer) {
       cc: [
         { email: siteContact.email, name: "Overwatch Operations" },
         { email: "ebube.michael@overwatchmoz.com", name: "Ebube Michael" },
-        { email: "ebubemichael033@gmail.com", name: "Ebube Michael (Admin)" },
       ],
       replyTo: { name: application.name, email: application.email },
       subject: `[Candidatura] ${roleName} — ${application.name}`,
