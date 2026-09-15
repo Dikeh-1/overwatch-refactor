@@ -67,6 +67,8 @@ export async function GET(request: Request) {
       slots: candidateSlots,
       slotStats,
       windowFilledNotice: !candidate.testSlot,
+      attendedAt: candidate.attendedAt || null,
+      attendanceStatus: candidate.attendanceStatus || null,
       address: siteContact.address.pt,
       whatsapp: siteContact.whatsappNumber,
     });

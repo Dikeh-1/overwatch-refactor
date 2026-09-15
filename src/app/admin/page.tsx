@@ -53,11 +53,15 @@ import {
   CalendarDays,
   Edit3,
   UserX,
+  QrCode,
+  Camera,
 } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 import TechGrid from "@/components/ui/TechGrid";
 import LazyVideo from "@/components/ui/LazyVideo";
 import DocxViewer from "@/components/admin/DocxViewer";
+import GateCheckInModal from "@/components/admin/GateCheckInModal";
+import GatePosterModal from "@/components/admin/GatePosterModal";
 import { IMAGES } from "@/lib/constants";
 import {
   type Application,
@@ -242,6 +246,10 @@ export default function AdminPage() {
   const [newSlotTime, setNewSlotTime] = useState("10h00");
   const [newSlotCustom, setNewSlotCustom] = useState("");
   const [useCustomInput, setUseCustomInput] = useState(false);
+
+  // Gate Attendance & QR scanner modal states
+  const [gateScannerOpen, setGateScannerOpen] = useState(false);
+  const [gatePosterOpen, setGatePosterOpen] = useState(false);
 
   const rosterSlots = useMemo(() => {
     const list = [...broadcastSlots];
@@ -1881,6 +1889,7 @@ Overwatch`;
       t("CCTV Experience", "Experiência CCTV"),
       t("12th Grade Completed", "12.ª Classe Concluída"),
       t("Confirmation Date", "Data de Confirmação"),
+      t("Gate Attendance", "Presença no Portão"),
       t("Attendance Signature", "Assinatura de Presença"),
     ];
 
@@ -1893,6 +1902,7 @@ Overwatch`;
       `"${a.experience === "yes" ? t("Yes", "Sim") : t("No", "Não")}"`,
       `"${a.grade12 === "yes" ? t("Yes", "Sim") : t("No", "Não")}"`,
       `"${a.testBookedAt ? new Date(a.testBookedAt).toLocaleString(lang === "pt" ? "pt-MZ" : "en-GB") : ""}"`,
+      `"${a.attendedAt ? `${t("Present", "Presente")} (${new Date(a.attendedAt).toLocaleTimeString("pt-MZ", { hour: "2-digit", minute: "2-digit" })})` : t("Awaiting", "Aguardado")}"`,
       `""`, // Blank signature cell for physical sign-off sheet
     ]);
 
@@ -1915,6 +1925,58 @@ Overwatch`;
     a.click();
     URL.revokeObjectURL(url);
   }
+
+  // Toggle candidate gate attendance (1-click from admin or check-in)
+  const handleToggleAttendance = async (id: string, makePresent: boolean) => {
+    const nowIso = makePresent ? new Date().toISOString() : undefined;
+    setApplications((prev) =>
+      prev.map((a) =>
+        a.id === id
+          ? {
+              ...a,
+              attendedAt: nowIso,
+              attendanceStatus: makePresent ? "present" : undefined,
+            }
+          : a
+      )
+    );
+
+    try {
+      const res = await fetch("/api/careers/check-in", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id,
+          action: makePresent ? "check_in" : "mark_absent",
+          force: true,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || (lang === "pt" ? "Erro ao atualizar presença." : "Failed to update attendance."));
+        load();
+      }
+    } catch (err) {
+      console.error("Failed to toggle attendance:", err);
+      load();
+    }
+  };
+
+  // Callback when candidate is successfully checked in via Gate Scanner
+  const handleGateCheckInSuccess = (candidate: any) => {
+    setApplications((prev) =>
+      prev.map((a) =>
+        a.id === candidate.id
+          ? {
+              ...a,
+              attendedAt: candidate.attendedAt || new Date().toISOString(),
+              attendanceStatus: "present",
+            }
+          : a
+      )
+    );
+  };
 
   // Loading State
   if (auth === null) {
@@ -4858,6 +4920,7 @@ Overwatch`;
                     : activeRosterSlot === "all_next_week"
                       ? applications.filter((a) => Boolean(a.testSlot) && getSlotWeekCategory(a.testSlot!) === "next_week")
                       : applications.filter((a) => a.testSlot === activeRosterSlot);
+                const attendedCount = candidatesInSlot.filter((c) => Boolean(c.attendedAt)).length;
                 const isFull = !isConsolidated && candidatesInSlot.length >= 10;
                 const remaining = !isConsolidated ? Math.max(0, 10 - candidatesInSlot.length) : 0;
 
@@ -4878,9 +4941,9 @@ Overwatch`;
                             {activeRosterSlot === "all"
                               ? t("Consolidated Roster (All Sessions)", "Lista Consolidada de Todos os Turnos")
                               : activeRosterSlot === "all_this_week"
-                                ? t("This Week Roster (16 – 18 Sept)", "Escala Desta Semana (16 – 18 Set)")
+                                ? t("This Week Roster (16 - 18 Sept)", "Escala Desta Semana (16 - 18 Set)")
                                 : activeRosterSlot === "all_next_week"
-                                  ? t("Next Week Roster (21 – 25 Sept)", "Escala da Próxima Semana (21 – 25 Set)")
+                                  ? t("Next Week Roster (21 - 25 Sept)", "Escala da Próxima Semana (21 - 25 Set)")
                                   : t("Active Session Roster", "Escala do Turno Ativo")}
                           </span>
                           <span
@@ -4895,15 +4958,21 @@ Overwatch`;
                             {candidatesInSlot.length} {t("candidates confirmed", "candidatas confirmadas")}
                             {!isConsolidated && (isFull ? ` · ${t("Full (10/10)", "Lotação Esgotada")}` : ` (${remaining} ${t("spots free", "vagas livres")})`)}
                           </span>
+                          <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold border bg-emerald-500/15 border-emerald-500/30 text-emerald-300 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            <span>
+                              {t("Present at Gate:", "Presentes no Portão:")} {attendedCount} / {candidatesInSlot.length}
+                            </span>
+                          </span>
                         </div>
 
                         <h3 className="text-lg sm:text-xl font-bold text-white mt-1">
                           {activeRosterSlot === "all"
                             ? t("All Confirmed Candidates (All Sessions)", "Todas as Candidatas Confirmadas (Todos os Turnos)")
                             : activeRosterSlot === "all_this_week"
-                              ? t("All Confirmed Candidates — This Week (16 – 18 September)", "Todas as Candidatas Desta Semana (16 – 18 de Setembro)")
+                              ? t("All Confirmed Candidates - This Week (16 - 18 September)", "Todas as Candidatas Desta Semana (16 - 18 de Setembro)")
                               : activeRosterSlot === "all_next_week"
-                                ? t("All Confirmed Candidates — Next Week (21 – 25 September)", "Todas as Candidatas da Próxima Semana (21 – 25 de Setembro)")
+                                ? t("All Confirmed Candidates - Next Week (21 - 25 September)", "Todas as Candidatas da Próxima Semana (21 - 25 de Setembro)")
                                 : formatSlotDisplay(activeRosterSlot, lang)}
                         </h3>
 
@@ -4914,7 +4983,7 @@ Overwatch`;
                               {activeRosterSlot === "all_this_week"
                                 ? t("In-person test sessions: Wednesday 16, Thursday 17 & Friday 18 Sept (10:00 AM · Arrival 09:30)", "Sessões presenciais: Quarta 16, Quinta 17 e Sexta 18 de Setembro (10h00 · Chegada 09h30)")
                                 : activeRosterSlot === "all_next_week"
-                                  ? t("In-person test sessions: Monday 21 to Friday 25 Sept (10:00 AM · Arrival 09:30)", "Sessões presencias: Segunda 21 a Sexta 25 de Setembro (10h00 · Chegada 09h30)")
+                                  ? t("In-person test sessions: Monday 21 to Friday 25 Sept (10:00 AM · Arrival 09:30)", "Sessões presenciais: Segunda 21 a Sexta 25 de Setembro (10h00 · Chegada 09h30)")
                                   : t("10:00 to 11:30 (Arrival 09:30 · Gates lock at 09:50)", "10h00 às 11h30 (Chegada 09h30 · Portão fecha às 09h50)")}
                             </span>
                           </span>
@@ -4923,7 +4992,27 @@ Overwatch`;
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => setGateScannerOpen(true)}
+                          className="flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 hover:bg-emerald-500/25 px-3.5 py-2 text-xs font-bold text-emerald-300 transition-colors cursor-pointer shadow"
+                          title={t("Open camera QR scanner or search candidate at the gate", "Abrir leitor de câmara QR ou pesquisar candidata na portaria")}
+                        >
+                          <Camera size={13} />
+                          <span>{t("Gate QR Scanner", "Leitor QR Portaria")}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setGatePosterOpen(true)}
+                          className="flex items-center gap-1.5 rounded-xl border border-sky-500/40 bg-sky-500/15 hover:bg-sky-500/25 px-3.5 py-2 text-xs font-bold text-sky-300 transition-colors cursor-pointer shadow"
+                          title={t("Generate printable A4 check-in QR poster for reception desk", "Gerar cartaz A4 com QR code para afixar na portaria")}
+                        >
+                          <QrCode size={13} />
+                          <span>{t("Gate Poster QR", "Cartaz QR Portão")}</span>
+                        </button>
+
                         <button
                           type="button"
                           onClick={() => exportAttendanceCSV(isConsolidated ? activeRosterSlot : activeRosterSlot)}
@@ -5002,6 +5091,7 @@ Overwatch`;
                               <th>{t("WhatsApp Contact", "Contacto WhatsApp")}</th>
                               <th>{t("Gender", "Género")}</th>
                               <th>{t("Confirmation Time", "Horário da Marcação")}</th>
+                              <th>{t("Gate Attendance", "Presença no Portão")}</th>
                               <th className="text-right">{t("Actions", "Ações")}</th>
                             </tr>
                           </thead>
@@ -5080,6 +5170,47 @@ Overwatch`;
                                           minute: "2-digit",
                                         })
                                       : t("Pre-assigned", "Pré-atribuído")}
+                                  </td>
+                                  <td className="px-4 py-3.5 whitespace-nowrap">
+                                    {c.attendedAt ? (
+                                      <div className="flex items-center gap-2">
+                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[0.68rem] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/35">
+                                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                          <span>{t("Present", "Presente")}</span>
+                                        </span>
+                                        <span className="text-[0.65rem] text-white/50 font-mono">
+                                          {new Date(c.attendedAt).toLocaleTimeString("pt-MZ", {
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                            timeZone: "Africa/Maputo",
+                                          })}
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleToggleAttendance(c.id, false)}
+                                          title={t("Unmark attendance", "Desmarcar presença")}
+                                          className="text-[0.62rem] text-white/40 hover:text-red-300 ml-1 underline cursor-pointer"
+                                        >
+                                          {t("Undo", "Desfazer")}
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center gap-2">
+                                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[0.65rem] font-semibold bg-white/5 text-white/40 border border-white/10">
+                                          <Clock size={10} className="text-white/30" />
+                                          <span>{t("Awaiting", "Aguardado")}</span>
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleToggleAttendance(c.id, true)}
+                                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[0.65rem] font-bold bg-emerald-600/30 hover:bg-emerald-600 text-emerald-200 hover:text-white border border-emerald-500/40 transition-all cursor-pointer"
+                                          title={t("Manually record candidate presence at gate", "Registar presença manualmente")}
+                                        >
+                                          <CheckCircle2 size={11} />
+                                          <span>{t("Check-in", "Dar Entrada")}</span>
+                                        </button>
+                                      </div>
+                                    )}
                                   </td>
                                   <td className="px-4 py-3.5 text-right whitespace-nowrap space-x-2">
                                     {screening.disqualified ? (
@@ -8209,6 +8340,21 @@ Overwatch`;
           </div>
         );
       })()}
+
+      {/* Gate QR Live Scanner Modal */}
+      <GateCheckInModal
+        isOpen={gateScannerOpen}
+        onClose={() => setGateScannerOpen(false)}
+        onCheckInSuccess={handleGateCheckInSuccess}
+        lang={lang}
+      />
+
+      {/* Gate Reception A4 QR Poster Modal */}
+      <GatePosterModal
+        isOpen={gatePosterOpen}
+        onClose={() => setGatePosterOpen(false)}
+        lang={lang}
+      />
     </div>
   );
 }

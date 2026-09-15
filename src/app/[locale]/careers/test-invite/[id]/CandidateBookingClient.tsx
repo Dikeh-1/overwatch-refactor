@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import QRCode from "qrcode";
 import {
   Calendar,
   Clock,
@@ -15,6 +16,11 @@ import {
   Lock,
   ShieldOff,
   ChevronRight,
+  QrCode,
+  Download,
+  Printer,
+  ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 import { siteContact, getGoogleMapsUrl } from "@/lib/site-config";
 import { DEFAULT_TEST_SLOTS } from "@/lib/careers";
@@ -33,6 +39,8 @@ type CandidateData = {
   testSlot: string | null;
   testBookedAt: string | null;
   invitedAt: string | null;
+  attendedAt?: string | null;
+  attendanceStatus?: string | null;
   slots: string[];
   slotStats?: Record<string, SlotStat>;
   windowFilledNotice?: boolean;
@@ -118,6 +126,24 @@ export default function CandidateBookingClient({
   const [error, setError] = useState("");
   const [isDeactivated, setIsDeactivated] = useState(false);
   const [successNotice, setSuccessNotice] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
+
+  useEffect(() => {
+    if (candidate?.id && candidate.testSlot) {
+      const origin = typeof window !== "undefined" ? window.location.origin : "https://www.overwatchmoz.com";
+      const checkInUrl = `${origin}/${activeLang}/careers/check-in?id=${candidate.id}`;
+      QRCode.toDataURL(checkInUrl, {
+        width: 320,
+        margin: 1.5,
+        color: {
+          dark: "#07090e",
+          light: "#ffffff",
+        },
+      })
+        .then(setQrDataUrl)
+        .catch((e) => console.error("Error generating QR code:", e));
+    }
+  }, [candidate?.id, candidate?.testSlot, activeLang]);
 
   useEffect(() => {
     let cancelled = false;
@@ -354,6 +380,104 @@ export default function CandidateBookingClient({
             {/* ── ALREADY BOOKED VIEW ── */}
             {isAlreadyBooked ? (
               <div className="space-y-4">
+                {/* Security Pass Card with QR Code */}
+                <div className="rounded-2xl border-2 border-slate-900 bg-gradient-to-b from-[#0b1329] to-[#07090e] text-white p-6 shadow-xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+
+                  {/* Header Badge */}
+                  <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-4 mb-5">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                        <ShieldCheck size={18} />
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-mono uppercase tracking-widest text-emerald-400 font-bold">
+                          {isPt ? "Passe Digital de Entrada" : "Digital Entrance Pass"}
+                        </div>
+                        <div className="text-xs text-slate-300 font-semibold tracking-wide">
+                          Overwatch Moçambique
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-mono text-[10px] px-2.5 py-1 bg-white/10 border border-white/15 rounded-md text-white/80 font-bold uppercase">
+                        REF: {candidate.id ? candidate.id.slice(0, 8).toUpperCase() : "PASS"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Attendance Status Banner */}
+                  {candidate.attendedAt ? (
+                    <div className="mb-5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 p-3.5 flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 shrink-0">
+                        <CheckCircle2 size={20} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-emerald-300 uppercase tracking-wide">
+                          {isPt ? "Presença Confirmada no Portão" : "Gate Attendance Confirmed"}
+                        </p>
+                        <p className="text-[11px] text-emerald-200/80">
+                          {isPt ? "Entrada registada em:" : "Checked in at:"} {new Date(candidate.attendedAt).toLocaleTimeString("pt-MZ", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Maputo" })} (Maputo)
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mb-5 rounded-xl bg-white/5 border border-white/10 p-3 flex items-center gap-2.5 text-xs text-slate-300">
+                      <QrCode size={16} className="text-amber-400 shrink-0" />
+                      <span>
+                        {isPt
+                          ? "Apresente este código na portaria ao chegar para registar a sua presença."
+                          : "Present this QR code at the reception gate upon arrival to register attendance."}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* QR Code Graphic Box */}
+                  <div className="bg-white rounded-xl p-4 flex flex-col items-center justify-center text-center shadow-inner mx-auto max-w-[260px]">
+                    {qrDataUrl ? (
+                      <img
+                        src={qrDataUrl}
+                        alt="QR Code Check-in"
+                        className="w-48 h-48 object-contain"
+                      />
+                    ) : (
+                      <div className="w-48 h-48 flex items-center justify-center text-gray-400">
+                        <QrCode size={48} className="animate-pulse" />
+                      </div>
+                    )}
+                    <div className="mt-2 text-center">
+                      <p className="text-xs font-bold text-gray-900 leading-tight">
+                        {candidate.name}
+                      </p>
+                      <p className="text-[11px] font-mono text-emerald-700 font-bold mt-0.5">
+                        {candidate.testSlot}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Pass actions: Download & Print */}
+                  <div className="mt-5 flex items-center justify-center gap-3">
+                    {qrDataUrl && (
+                      <a
+                        href={qrDataUrl}
+                        download={`Overwatch-Passe-${candidate.name.replace(/\s+/g, "_")}.png`}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 text-xs font-semibold text-white transition-colors"
+                      >
+                        <Download size={13} />
+                        <span>{isPt ? "Guardar Imagem" : "Save Image"}</span>
+                      </a>
+                    )}
+                    <button
+                      onClick={() => window.print()}
+                      type="button"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-colors shadow"
+                    >
+                      <Printer size={13} />
+                      <span>{isPt ? "Imprimir Passe" : "Print Pass"}</span>
+                    </button>
+                  </div>
+                </div>
+
                 {/* Main confirmed slot card */}
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50 overflow-hidden">
                   <div className="flex items-center gap-3 px-5 py-3.5 border-b border-emerald-200 bg-emerald-100/60">
