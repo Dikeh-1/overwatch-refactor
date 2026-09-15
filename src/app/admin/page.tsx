@@ -4352,53 +4352,99 @@ Overwatch`;
                     </div>
                   ) : (
                     /* High-fidelity responsive preview matching official email */
-                    <div className="rounded-xl border border-slate-300 overflow-hidden bg-[#f1f5f9] max-w-xl mx-auto shadow-md">
-                      {/* Top Accent Bar */}
-                      <div className="h-1 bg-[#090d16]" />
-
-                      {/* Official Letterhead Header with Logo */}
-                      <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-white">
-                        <img
-                          src="/logo.png"
-                          alt="Overwatch"
-                          className="h-6 w-auto block"
-                        />
-                        <div className="text-right">
-                          <span className="text-[0.65rem] font-bold text-slate-700 uppercase tracking-wider block">
-                            Recrutamento &amp; Selecção
-                          </span>
-                          <span className="text-[0.62rem] text-slate-400 block">
-                            Maputo, Moçambique
-                          </span>
+                    <div className="rounded-xl border border-slate-200 bg-white text-slate-800 shadow-xl overflow-hidden text-xs max-w-xl mx-auto">
+                      {/* Official Letterhead Header (Dark Navy #0b1329 with White Logo) */}
+                      <div className="bg-[#0b1329] px-5 py-4 border-b-2 border-white/20 text-white">
+                        <div className="flex items-center justify-between">
+                          <Logo size="sm" variant="light" />
+                          <div className="text-right">
+                            <span className="inline-block bg-white/10 text-white font-mono text-[0.6rem] px-2 py-0.5 rounded border border-white/10 font-bold tracking-wider">
+                              REF: CCO-2026/MAPUTO
+                            </span>
+                            <div className="text-[0.65rem] text-slate-300 mt-0.5 font-medium">
+                              Departamento de Recursos Humanos
+                            </div>
+                          </div>
                         </div>
                       </div>
 
+                      {/* Subject Bar */}
+                      <div className="bg-slate-100/90 px-5 py-2.5 border-b border-slate-200 text-[0.72rem] flex items-center gap-2 text-slate-700">
+                        <span className="font-bold text-slate-500 text-[0.65rem] uppercase tracking-wider">
+                          ASSUNTO:
+                        </span>
+                        <span className="font-semibold text-slate-900 truncate">
+                          Confirmação de Presença: Teste de Selecção — Overwatch Moçambique
+                        </span>
+                      </div>
+
+                      {/* Official Document Subheading */}
+                      <div className="bg-slate-50 px-5 py-2.5 border-b border-slate-200 flex items-center justify-between text-[0.68rem]">
+                        <span className="font-semibold text-slate-700 uppercase tracking-wide">
+                          CONFIRMAÇÃO OFICIAL · TESTE DE SELECÇÃO PRESENCIAL
+                        </span>
+                        <span className="text-slate-500">
+                          Maputo, Moçambique
+                        </span>
+                      </div>
+
                       {/* Body Content */}
-                      <div className="bg-white px-6 py-5 text-[13px] text-slate-700 leading-relaxed font-sans">
+                      <div className="p-5 space-y-4">
                         <div
+                          className="text-slate-800 whitespace-pre-wrap font-sans text-xs leading-relaxed"
                           dangerouslySetInnerHTML={{
                             __html: `<p style='margin:0 0 12px 0;'>${previewHtml}</p>`,
                           }}
                         />
 
-                        {/* Location Callout Card */}
-                        <div className="mt-4 p-4 bg-slate-50 border border-slate-200 border-l-4 border-l-[#090d16] rounded-lg text-xs">
-                          <div className="font-bold text-slate-800">
-                            📍 Local do Teste Presencial
+                        {/* Confirmed Slot Card */}
+                        <div className="border border-slate-200 rounded-lg overflow-hidden my-3">
+                          <div className="bg-slate-100 px-3.5 py-2 border-b border-slate-200 text-[0.68rem] font-bold text-slate-700 uppercase tracking-wider">
+                            Turno Agendado:
                           </div>
-                          <div className="text-slate-600 mt-1">
-                            Av. Paulo Samuel Khankhomba nº 1948, antes da esquina com a Av. Filipe Samuel Magaia, Maputo
+                          <div className="bg-white px-3.5 py-2.5 flex items-center justify-between">
+                            <span className="font-bold text-slate-900 text-xs">
+                              📅 Quarta-feira, 16 de Setembro – 10h00
+                            </span>
+                            <span className="font-mono text-[0.6rem] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                              Confirmado
+                            </span>
                           </div>
-                          <div className="text-[0.7rem] text-sky-600 font-semibold mt-2">
-                            Ver localização no Google Maps &rarr;
+                        </div>
+
+                        {/* Security & Location Instructions Notice Box (Matching Image 3) */}
+                        <div className="bg-[#fefce8] border border-[#fef08a] rounded-lg p-3.5 text-[0.72rem] text-[#713f12] leading-relaxed">
+                          <strong className="block mb-1.5 text-[#854d0e] font-bold text-[0.75rem]">
+                            Instruções para o Dia do Teste:
+                          </strong>
+                          <div className="mb-1">
+                            • <strong>Local:</strong> Overwatch — Av. Paulo Samuel Khankhomba nº 1948, antes da esquina com a Av. Filipe Samuel Magaia, Maputo{" "}
+                            <a
+                              href="https://maps.google.com/?q=Av.+Paulo+Samuel+Khankhomba+1948+Maputo"
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-sky-600 underline font-semibold"
+                            >
+                              (Ver no Google Maps &rarr;)
+                            </a>
+                          </div>
+                          <div className="mb-1">
+                            • <strong>Horário &amp; Pontualidade:</strong> Estar no local às 09h30 (30 minutos antes). O portão encerra impreterivelmente às 09h50.
+                          </div>
+                          <div>
+                            • <strong>Documentos &amp; Material:</strong> Trazer caneta esferográfica e documento de identificação original e válido (BI/Passaporte/DIRE).
                           </div>
                         </div>
                       </div>
 
-                      {/* Footer */}
-                      <div className="bg-slate-50 border-t border-slate-200 px-6 py-3.5 text-[0.68rem] text-slate-500 leading-relaxed">
-                        <strong className="text-slate-700 block">Overwatch Moçambique, Lda.</strong>
-                        Av. Paulo Samuel Khankhomba nº 1948, Maputo · info@overwatchmoz.com
+                      {/* Sign-Off & Official Footer */}
+                      <div className="bg-slate-50 px-5 py-3 border-t border-slate-200 text-[0.68rem] text-slate-500 flex items-center justify-between">
+                        <span>
+                          <strong className="text-slate-900">Equipa de Recrutamento</strong> · Overwatch Moçambique
+                        </span>
+                        <span className="font-mono text-slate-400 text-[0.6rem]">
+                          Maputo, MZ
+                        </span>
                       </div>
                     </div>
                   )}

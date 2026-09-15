@@ -44,8 +44,7 @@ async function run() {
   const targetEmail = 'ebubemichael033@gmail.com';
   const targetName = 'Ebube Junior Michael';
   const slot = 'Quarta-feira, 16 de Setembro – 10h00';
-  const origin = 'https://www.overwatchmoz.com';
-  const logoUrl = `${origin}/logo.png`;
+  const logoWhiteUrl = 'https://raw.githubusercontent.com/horuswave/overwatch-refactor/main/public/logo-white.png';
   const addressPt = 'Av. Paulo Samuel Khankhomba nº 1948, antes da esquina com a Av. Filipe Samuel Magaia, Maputo';
   const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent('Av. Paulo Samuel Khankhomba nº 1948, Maputo')}`;
 
@@ -56,32 +55,11 @@ async function run() {
 
 Obrigada pela confirmação.
 
-O seu teste de selecção para a vaga de Operadora de CCO da Overwatch ficou agendado para:
-
-Data: {{slot}}
-Hora do teste: 10h00
-Local:
-Overwatch
-Av. Paulo Samuel Khankhomba nº 1948, antes da esquina com a Av. Filipe Samuel Magaia
-
-Pedimos que esteja no local 30 minutos antes, às 09h30.
-
-Por motivos de organização do processo, às 09h50 o portão será encerrado e não será permitida a entrada de candidatas que cheguem depois dessa hora.
-
-Pedimos também que traga:
-• Uma caneta
-• Uma cópia do seu documento de identificação
-
-Por favor, planeie a sua deslocação com antecedência.
-
-Com os melhores cumprimentos,
-Overwatch`;
+O seu teste de selecção para a vaga de Operadora de CCO da Overwatch ficou agendado para:`;
 
   let processedMessage = rawMessage
     .replace(/\{\{greeting\}\}/gi, greetingPt)
-    .replace(/\{\{name\}\}/gi, targetName)
-    .replace(/\{\{slot\}\}/gi, slot)
-    .replace(/\[inserir data\]/gi, slot);
+    .replace(/\{\{name\}\}/gi, targetName);
 
   processedMessage = processedMessage.replace(/^(Boa tarde|Bom dia|Boa noite)(,?)/i, `${greetingPt}$2`);
 
@@ -89,11 +67,11 @@ Overwatch`;
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/•/g, '&#8226;')
-    .replace(/\n\n/g, '</p><p style="margin: 0 0 14px 0; font-size: 15px; line-height: 1.65; color: #334155;">')
+    .replace(/\n\n/g, '</p><p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.65; color: #334155;">')
     .replace(/\n/g, '<br />');
 
-  const messageHtmlWrapped = `<p style="margin: 0 0 14px 0; font-size: 15px; line-height: 1.65; color: #334155;">${processedMessageHtml}</p>`;
+  const messageHtmlWrapped = `<p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.65; color: #334155;">${processedMessageHtml}</p>`;
+  const outgoingSubject = "Confirmação de Presença: Teste de Selecção — Overwatch Moçambique";
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -101,71 +79,106 @@ Overwatch`;
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Confirmação de Teste — Overwatch Moçambique</title>
+      <title>${outgoingSubject}</title>
     </head>
     <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; -webkit-font-smoothing: antialiased;">
-      <div style="background-color: #f1f5f9; padding: 36px 16px;">
-        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; border: 1px solid #cbd5e1; box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06); overflow: hidden;">
+      <div style="background-color: #f1f5f9; padding: 32px 16px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08); overflow: hidden;">
           
-          <!-- Top Accent Line -->
-          <div style="height: 4px; background-color: #090d16;"></div>
-
-          <!-- Letterhead Header with Real Logo -->
-          <div style="padding: 28px 32px 20px 32px; border-bottom: 1px solid #e2e8f0;">
+          <!-- Official Letterhead Header (Dark Navy) -->
+          <div style="background-color: #0b1329; padding: 18px 24px; border-bottom: 2px solid rgba(255, 255, 255, 0.15);">
             <table style="width: 100%; border-collapse: collapse;">
               <tr>
                 <td style="vertical-align: middle;">
-                  <img src="${logoUrl}" alt="Overwatch" height="26" style="height: 26px; width: auto; display: block; border: 0;" />
+                  <img src="${logoWhiteUrl}" alt="Overwatch" height="22" width="147" style="height: 22px; width: auto; max-width: 145px; display: block; border: 0;" />
                 </td>
                 <td style="vertical-align: middle; text-align: right;">
-                  <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #475569; display: block;">
-                    Confirmação de Agendamento
+                  <span style="display: inline-block; background-color: rgba(255, 255, 255, 0.12); color: #ffffff; font-family: monospace; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.2); letter-spacing: 0.04em;">
+                    REF: CCO-2026/MAPUTO
                   </span>
-                  <span style="font-size: 11px; color: #94a3b8; display: block; margin-top: 2px;">
-                    Maputo, Moçambique
-                  </span>
+                  <div style="font-size: 11px; color: #cbd5e1; margin-top: 4px; font-weight: 500;">
+                    Departamento de Recursos Humanos
+                  </div>
                 </td>
               </tr>
             </table>
           </div>
 
-          <!-- Body Content -->
-          <div style="padding: 32px 32px 28px 32px;">
-            <div style="margin-bottom: 24px;">
+          <!-- Subject Bar -->
+          <div style="background-color: #f1f5f9; padding: 10px 24px; border-bottom: 1px solid #e2e8f0; font-size: 12px; color: #334155;">
+            <span style="font-weight: 700; color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; margin-right: 8px;">ASSUNTO:</span>
+            <span style="font-weight: 600; color: #0f172a;">${outgoingSubject}</span>
+          </div>
+
+          <!-- Official Subheading Bar -->
+          <div style="background-color: #f8fafc; padding: 10px 24px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #334155;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #334155;">
+                  CONFIRMAÇÃO OFICIAL · TESTE DE SELECÇÃO PRESENCIAL
+                </td>
+                <td style="text-align: right; color: #64748b;">
+                  Maputo, Moçambique
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Body Content (Clean White) -->
+          <div style="padding: 28px 24px; background-color: #ffffff;">
+            <div style="margin-bottom: 20px;">
               ${messageHtmlWrapped}
             </div>
 
-            <!-- Location Callout -->
-            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #090d16; border-radius: 8px; padding: 16px 20px; margin-bottom: 24px;">
-              <table style="width: 100%; border-collapse: collapse;">
+            <!-- Confirmed Slot Card -->
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin: 20px 0;">
+              <div style="background-color: #f1f5f9; padding: 8px 14px; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #334155;">
+                Turno Agendado:
+              </div>
+              <table style="width: 100%; border-collapse: collapse; background-color: #ffffff;">
                 <tr>
-                  <td style="vertical-align: top; width: 24px; padding-top: 2px;">
-                    📍
+                  <td style="padding: 12px 14px; font-size: 13px; font-weight: 700; color: #0f172a;">
+                    📅 ${slot}
                   </td>
-                  <td>
-                    <div style="font-size: 13px; font-weight: 700; color: #0f172a;">
-                      Local do Teste Presencial
-                    </div>
-                    <div style="font-size: 13px; color: #334155; margin-top: 2px;">
-                      ${addressPt}
-                    </div>
-                    <div style="margin-top: 6px;">
-                      <a href="${mapsUrl}" target="_blank" style="color: #0284c7; font-size: 12px; font-weight: 600; text-decoration: underline;">
-                        Ver localização no Google Maps &rarr;
-                      </a>
-                    </div>
+                  <td style="padding: 12px 14px; text-align: right;">
+                    <span style="font-family: monospace; font-size: 10px; font-weight: 700; color: #047857; background-color: #ecfdf5; padding: 3px 8px; border-radius: 4px; border: 1px solid #a7f3d0;">
+                      Confirmado
+                    </span>
                   </td>
                 </tr>
               </table>
             </div>
+
+            <!-- Security & Location Instructions Notice Box (Matching Image 3) -->
+            <div style="background-color: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 14px 16px; font-size: 12px; color: #713f12; line-height: 1.55; margin-top: 20px;">
+              <strong style="display: block; margin-bottom: 6px; color: #854d0e; font-size: 12px;">Instruções para o Dia do Teste:</strong>
+              <div style="margin-bottom: 5px;">
+                • <strong>Local:</strong> Overwatch — Av. Paulo Samuel Khankhomba nº 1948, antes da esquina com a Av. Filipe Samuel Magaia, Maputo
+                (<a href="${mapsUrl}" target="_blank" style="color: #0284c7; text-decoration: underline; font-weight: 600;">Ver no Google Maps &rarr;</a>)
+              </div>
+              <div style="margin-bottom: 5px;">
+                • <strong>Horário &amp; Pontualidade:</strong> Estar no local às 09h30 (30 minutos antes). O portão encerra impreterivelmente às 09h50.
+              </div>
+              <div>
+                • <strong>Documentos &amp; Material:</strong> Trazer caneta esferográfica e documento de identificação original e válido (BI/Passaporte/DIRE).
+              </div>
+            </div>
           </div>
 
-          <!-- Formal Legal & Contact Footer -->
-          <div style="background-color: #f8fafc; padding: 22px 32px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6;">
-            <strong style="color: #090d16;">Overwatch Moçambique, Lda.</strong><br />
-            ${addressPt}<br />
-            Telefone / WhatsApp: <a href="https://wa.me/258842870793" style="color: #0284c7; text-decoration: none; font-weight: 600;">+258 84 287 0793</a> · Email: <a href="mailto:info@overwatchmoz.com" style="color: #0284c7; text-decoration: none;">info@overwatchmoz.com</a> · Website: <a href="${origin}" style="color: #64748b; text-decoration: none;">www.overwatchmoz.com</a>
+          <!-- Sign-Off & Official Footer -->
+          <div style="background-color: #f8fafc; padding: 14px 24px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #64748b;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td>
+                  <strong style="color: #0f172a;">Equipa de Recrutamento</strong> · Overwatch Moçambique
+                </td>
+                <td style="text-align: right; font-family: monospace; color: #94a3b8; font-size: 10px;">
+                  Maputo, MZ
+                </td>
+              </tr>
+            </table>
           </div>
+
         </div>
       </div>
     </body>
@@ -178,9 +191,9 @@ Overwatch`;
       email: "noreply@overwatchmoz.com",
     },
     to: [{ email: targetEmail, name: targetName }],
-    subject: "Confirmação de Teste de Selecção: Overwatch Moçambique",
+    subject: outgoingSubject,
     htmlContent: htmlContent,
-    textContent: `${processedMessage}\n\nLocal:\n${addressPt}\n\nCom os melhores cumprimentos,\nOverwatch`,
+    textContent: `${processedMessage}\n\nTurno Agendado: ${slot}\nLocal:\n${addressPt}\n\nCom os melhores cumprimentos,\nEquipa de Recrutamento · Overwatch Moçambique`,
   };
 
   console.log(`Sending confirmation test email to ${targetEmail} via Brevo API...`);
