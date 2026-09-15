@@ -1604,10 +1604,7 @@ Overwatch`;
 
           <div className="mt-2.5 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-400"></span>
-              </span>
+              <span className="h-1.5 w-1.5 rounded-full bg-white/40"></span>
               <span className="text-[0.68rem] font-bold uppercase tracking-widest text-white/60">
                 {t("Talent Operations", "Operações de Recrutamento")}
               </span>
@@ -1615,19 +1612,16 @@ Overwatch`;
           </div>
 
           {/* Live Admin Presence Indicator */}
-          <div className="mt-3 flex items-center justify-between rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2 text-[0.68rem]">
+          <div className="mt-3 flex items-center justify-between rounded-xl bg-white/[0.03] border border-white/10 px-3 py-2 text-[0.68rem]">
             <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
-              </span>
-              <span className="font-medium text-white/90">
+              <span className="h-2 w-2 rounded-full bg-emerald-400"></span>
+              <span className="font-medium text-white/85">
                 {lang === "pt"
                   ? `${onlineCount} Admin${onlineCount > 1 ? "s" : ""} Online`
                   : `${onlineCount} Admin${onlineCount > 1 ? "s" : ""} Live`}
               </span>
             </div>
-            <span className="text-[0.62rem] font-mono text-emerald-400 font-semibold bg-emerald-500/15 border border-emerald-500/25 px-1.5 py-0.5 rounded">
+            <span className="text-[0.62rem] font-mono text-white/60 bg-white/[0.06] border border-white/10 px-1.5 py-0.5 rounded">
               {t("Active", "Activo")}
             </span>
           </div>
@@ -1769,7 +1763,7 @@ Overwatch`;
                             </div>
                             <div className="flex items-center gap-1">
                               {rolePending > 0 && (
-                                <span className="rounded-full bg-emerald-500 text-[#090d16] px-1.5 py-0.5 text-[0.58rem] font-bold animate-pulse">
+                                <span className="rounded-md bg-white/10 text-white/90 border border-white/10 px-1.5 py-0.5 text-[0.58rem] font-mono font-medium">
                                   {rolePending}
                                 </span>
                               )}
@@ -1786,11 +1780,11 @@ Overwatch`;
                             }`}
                           >
                             <div className="flex items-center gap-2">
-                              <Calendar size={13} className="text-cyan-400" />
+                              <Calendar size={13} className="text-white/70" />
                               <span>{t("Test Schedule", "Agenda de Testes")}</span>
                             </div>
                             {roleConfirmed > 0 && (
-                              <span className="rounded-full bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 text-[0.6rem] font-bold">
+                              <span className="rounded-md bg-white/10 text-white/80 border border-white/10 px-1.5 py-0.5 text-[0.58rem] font-mono font-medium">
                                 {roleConfirmed}
                               </span>
                             )}
@@ -2156,42 +2150,36 @@ Overwatch`;
               <button
                 type="button"
                 onClick={() => setFilterInvited("uninvited")}
-                className={`flex items-center justify-between p-4 rounded-2xl border transition-all text-left cursor-pointer ${
+                className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left cursor-pointer ${
                   filterInvited === "uninvited"
-                    ? "border-emerald-500/50 bg-emerald-500/10 shadow-lg ring-1 ring-emerald-500/30"
-                    : "border-white/10 bg-[#121827]/80 hover:bg-white/[0.04] text-white/70 hover:text-white"
+                    ? "border-white/25 bg-white/[0.08] shadow-sm text-white ring-1 ring-white/10"
+                    : "border-white/10 bg-[#0e1320]/80 hover:bg-white/[0.03] text-white/70 hover:text-white"
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className={`p-2.5 rounded-xl border ${
+                    className={`h-9 w-9 rounded-lg border flex items-center justify-center shrink-0 transition-colors ${
                       filterInvited === "uninvited"
-                        ? "bg-emerald-500 text-[#090d16] border-emerald-400 font-bold"
-                        : "bg-white/5 border-white/10 text-emerald-400"
+                        ? "bg-white/15 border-white/20 text-white"
+                        : "bg-white/[0.04] border-white/10 text-white/60"
                     }`}
                   >
-                    <Mail size={18} />
+                    <Mail size={16} />
                   </div>
                   <div>
-                    <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
-                      <span>{t("Ready to Invite", "Prontos para Envio")}</span>
-                      {pendingConvocationsCount > 0 && (
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
-                        </span>
-                      )}
+                    <h3 className="text-xs sm:text-sm font-semibold text-white">
+                      {t("Ready to Invite", "Prontos para Envio")}
                     </h3>
-                    <p className="text-[0.68rem] text-white/50 mt-0.5">
+                    <p className="text-[0.68rem] text-white/45 mt-0.5">
                       {t("Auto-shortlisted & awaiting email", "Pré-selecionados a aguardar envio")}
                     </p>
                   </div>
                 </div>
                 <span
-                  className={`px-2.5 py-1 rounded-full text-xs font-bold font-mono ${
+                  className={`px-2 py-0.5 rounded-md text-xs font-mono font-medium border ${
                     filterInvited === "uninvited"
-                      ? "bg-emerald-500 text-[#090d16]"
-                      : "bg-white/10 text-emerald-300"
+                      ? "bg-white/20 text-white border-white/25"
+                      : "bg-white/[0.06] text-white/70 border-white/10"
                   }`}
                 >
                   {pendingConvocationsCount}
@@ -2202,36 +2190,36 @@ Overwatch`;
               <button
                 type="button"
                 onClick={() => setFilterInvited("invited")}
-                className={`flex items-center justify-between p-4 rounded-2xl border transition-all text-left cursor-pointer ${
+                className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left cursor-pointer ${
                   filterInvited === "invited"
-                    ? "border-cyan-500/50 bg-cyan-500/10 shadow-lg ring-1 ring-cyan-500/30"
-                    : "border-white/10 bg-[#121827]/80 hover:bg-white/[0.04] text-white/70 hover:text-white"
+                    ? "border-white/25 bg-white/[0.08] shadow-sm text-white ring-1 ring-white/10"
+                    : "border-white/10 bg-[#0e1320]/80 hover:bg-white/[0.03] text-white/70 hover:text-white"
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className={`p-2.5 rounded-xl border ${
+                    className={`h-9 w-9 rounded-lg border flex items-center justify-center shrink-0 transition-colors ${
                       filterInvited === "invited"
-                        ? "bg-cyan-500 text-[#090d16] border-cyan-400 font-bold"
-                        : "bg-white/5 border-white/10 text-cyan-400"
+                        ? "bg-white/15 border-white/20 text-white"
+                        : "bg-white/[0.04] border-white/10 text-white/60"
                     }`}
                   >
-                    <CheckCircle2 size={18} />
+                    <CheckCircle2 size={16} />
                   </div>
                   <div>
-                    <h3 className="text-xs sm:text-sm font-bold text-white">
+                    <h3 className="text-xs sm:text-sm font-semibold text-white">
                       {t("Already Dispatched", "Já Convocados")}
                     </h3>
-                    <p className="text-[0.68rem] text-white/50 mt-0.5">
+                    <p className="text-[0.68rem] text-white/45 mt-0.5">
                       {t("Sent invitations & bookings", "Convites enviados e presenças")}
                     </p>
                   </div>
                 </div>
                 <span
-                  className={`px-2.5 py-1 rounded-full text-xs font-bold font-mono ${
+                  className={`px-2 py-0.5 rounded-md text-xs font-mono font-medium border ${
                     filterInvited === "invited"
-                      ? "bg-cyan-500 text-[#090d16]"
-                      : "bg-white/10 text-cyan-300"
+                      ? "bg-white/20 text-white border-white/25"
+                      : "bg-white/[0.06] text-white/70 border-white/10"
                   }`}
                 >
                   {dispatchedConvocationsCount}
@@ -2242,36 +2230,36 @@ Overwatch`;
               <button
                 type="button"
                 onClick={() => setFilterInvited("all")}
-                className={`flex items-center justify-between p-4 rounded-2xl border transition-all text-left cursor-pointer ${
+                className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left cursor-pointer ${
                   filterInvited === "all"
-                    ? "border-white/40 bg-white/10 shadow-lg ring-1 ring-white/20"
-                    : "border-white/10 bg-[#121827]/80 hover:bg-white/[0.04] text-white/70 hover:text-white"
+                    ? "border-white/25 bg-white/[0.08] shadow-sm text-white ring-1 ring-white/10"
+                    : "border-white/10 bg-[#0e1320]/80 hover:bg-white/[0.03] text-white/70 hover:text-white"
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className={`p-2.5 rounded-xl border ${
+                    className={`h-9 w-9 rounded-lg border flex items-center justify-center shrink-0 transition-colors ${
                       filterInvited === "all"
-                        ? "bg-white text-[#090d16] border-white font-bold"
-                        : "bg-white/5 border-white/10 text-white/70"
+                        ? "bg-white/15 border-white/20 text-white"
+                        : "bg-white/[0.04] border-white/10 text-white/60"
                     }`}
                   >
-                    <Users size={18} />
+                    <Users size={16} />
                   </div>
                   <div>
-                    <h3 className="text-xs sm:text-sm font-bold text-white">
+                    <h3 className="text-xs sm:text-sm font-semibold text-white">
                       {t("All Target Candidates", "Todos Elegíveis")}
                     </h3>
-                    <p className="text-[0.68rem] text-white/50 mt-0.5">
+                    <p className="text-[0.68rem] text-white/45 mt-0.5">
                       {t("Combined eligible pool", "Total de candidatos alvo")}
                     </p>
                   </div>
                 </div>
                 <span
-                  className={`px-2.5 py-1 rounded-full text-xs font-bold font-mono ${
+                  className={`px-2 py-0.5 rounded-md text-xs font-mono font-medium border ${
                     filterInvited === "all"
-                      ? "bg-white text-[#090d16]"
-                      : "bg-white/10 text-white/80"
+                      ? "bg-white/20 text-white border-white/25"
+                      : "bg-white/[0.06] text-white/70 border-white/10"
                   }`}
                 >
                   {targetCount}
@@ -2281,13 +2269,15 @@ Overwatch`;
 
             {/* Contextual Section Notification Banner */}
             {filterInvited === "uninvited" && (
-              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs text-emerald-200 flex items-start gap-3">
-                <Mail size={18} className="text-emerald-400 shrink-0 mt-0.5" />
+              <div className="rounded-xl border border-white/10 bg-[#0e1320] p-4 text-xs text-white/80 flex items-start gap-3.5">
+                <div className="h-8 w-8 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <Mail size={15} />
+                </div>
                 <div className="space-y-1">
-                  <span className="font-bold text-white block text-sm">
+                  <span className="font-semibold text-white block text-sm">
                     {t("Active Dispatch Queue · Ready to Send", "Fila de Envio Ativa · Prontos para Convocatória")}
                   </span>
-                  <p className="text-emerald-200/90 text-xs leading-relaxed">
+                  <p className="text-white/60 text-xs leading-relaxed">
                     {t(
                       "New applicants submitting on the careers page who meet the target criteria (Female or Male with CCTV experience) are automatically shortlisted and land directly here without an email sent yet. You can review and dispatch their convocations with 1 click.",
                       "Novas candidaturas submetidas no site que cumpram os critérios (Mulheres ou Homens com experiência CCTV) são pré-selecionadas automaticamente e entram diretamente nesta fila. Pode revê-las e disparar as suas convocatórias com 1 clique.",
@@ -2298,13 +2288,15 @@ Overwatch`;
             )}
 
             {filterInvited === "invited" && (
-              <div className="rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4 text-xs text-cyan-200 flex items-start gap-3">
-                <CheckCircle2 size={18} className="text-cyan-400 shrink-0 mt-0.5" />
+              <div className="rounded-xl border border-white/10 bg-[#0e1320] p-4 text-xs text-white/80 flex items-start gap-3.5">
+                <div className="h-8 w-8 rounded-lg bg-white/[0.06] border border-white/10 text-white/80 flex items-center justify-center shrink-0 mt-0.5">
+                  <CheckCircle2 size={15} />
+                </div>
                 <div className="space-y-1">
-                  <span className="font-bold text-white block text-sm">
+                  <span className="font-semibold text-white block text-sm">
                     {t("Already Dispatched Convocations", "Convocatórias Já Enviadas")}
                   </span>
-                  <p className="text-cyan-200/90 text-xs leading-relaxed">
+                  <p className="text-white/60 text-xs leading-relaxed">
                     {t(
                       "These candidates have already received their personalized convocation email and test booking link. You can review booking status or individually resend an email if requested.",
                       "Estes candidatos já receberam o e-mail oficial com o link de agendamento do teste. Pode verificar quem já marcou data ou reenviar o e-mail individualmente se solicitado.",
@@ -2313,6 +2305,7 @@ Overwatch`;
                 </div>
               </div>
             )}
+
 
             {/* Audience Criteria & Queue Controls */}
             <div className="rounded-2xl border border-white/10 bg-[#121827]/95 p-6 shadow-sm space-y-5">
@@ -2740,9 +2733,9 @@ Overwatch`;
                             <span
                               className={`px-2 py-0.5 rounded text-[0.65rem] font-semibold uppercase tracking-wider ${
                                 a.status === "shortlisted"
-                                  ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 font-bold"
+                                  ? "bg-sky-500/10 text-sky-300 border border-sky-500/20"
                                   : a.status === "archived"
-                                    ? "bg-slate-500/20 text-slate-400 border border-slate-500/30"
+                                    ? "bg-slate-500/15 text-slate-400 border border-slate-500/25"
                                     : "bg-white/10 text-white/70"
                               }`}
                             >
@@ -2764,20 +2757,20 @@ Overwatch`;
                             </span>
 
                             {hasBooked ? (
-                              <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                              <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] font-medium bg-indigo-500/15 text-indigo-300 border border-indigo-500/25">
                                 {t("Booked:", "Agendado:")} {formatSlotDisplay(a.testSlot?.split("–")[0].trim() || "", lang)}
                               </span>
                             ) : isAlreadyInvited ? (
-                              <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center gap-1">
+                              <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] font-medium bg-white/[0.06] text-white/70 border border-white/10 flex items-center gap-1">
                                 <span>{t("Invited", "Convocado")}</span>
                                 {a.invitedAt && (
-                                  <span className="text-[0.62rem] text-cyan-200/60 font-mono">
+                                  <span className="text-[0.62rem] text-white/40 font-mono">
                                     · {new Date(a.invitedAt).toLocaleDateString(lang === "pt" ? "pt-MZ" : "en-GB")}
                                   </span>
                                 )}
                               </span>
                             ) : (
-                              <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 font-medium">
+                              <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] text-white/90 bg-white/[0.08] border border-white/15 font-medium">
                                 {t("Ready to Invite", "Pronto para Envio")}
                               </span>
                             )}
@@ -3027,10 +3020,10 @@ Overwatch`;
                             {t("Dynamic tags: {{name}}, {{booking_link}}, {{greeting}}", "Tags dinâmicas: {{name}}, {{booking_link}}, {{greeting}}")}
                           </span>
                           {/* Live Mozambique greeting clock */}
-                          <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 text-[0.65rem] font-semibold text-emerald-400">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
-                            {t("Mozambique now:", "Moçambique agora:")}
-                            {" "}<strong>{lang === "pt" ? mozambiqueGreeting.pt : mozambiqueGreeting.en}</strong>
+                          <span className="flex items-center gap-2 rounded-lg bg-white/[0.04] border border-white/10 px-2.5 py-1 text-[0.68rem] text-white/70">
+                            <span className="w-1.5 h-1.5 rounded-full bg-sky-400 inline-block" />
+                            <span>{t("Mozambique now:", "Moçambique agora:")}</span>
+                            <strong className="text-white font-semibold">{lang === "pt" ? mozambiqueGreeting.pt : mozambiqueGreeting.en}</strong>
                           </span>
                         </div>
                       </div>
@@ -3728,7 +3721,7 @@ Overwatch`;
                         </span>
                       </div>
 
-                      <span className="rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 text-xs font-bold">
+                      <span className="rounded-md bg-white/10 text-white font-mono border border-white/10 px-2.5 py-0.5 text-xs font-semibold">
                         {candidatesInSlot.length}
                       </span>
                     </div>
@@ -3918,10 +3911,10 @@ Overwatch`;
                       </div>
                     </div>
                     {/* Live Mozambique greeting clock badge */}
-                    <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 text-[0.65rem] font-semibold text-emerald-400 shrink-0">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
-                      {t("Mozambique now:", "Moçambique agora:")}{" "}
-                      <strong className="ml-1 text-emerald-300">
+                    <span className="flex items-center gap-2 rounded-lg bg-white/[0.04] border border-white/10 px-2.5 py-1 text-[0.68rem] text-white/70 shrink-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-sky-400 inline-block" />
+                      <span>{t("Mozambique now:", "Moçambique agora:")}</span>
+                      <strong className="text-white font-semibold">
                         {lang === "pt" ? mozambiqueGreeting.pt : mozambiqueGreeting.en}
                       </strong>
                     </span>
@@ -4240,8 +4233,8 @@ Overwatch`;
                     onClick={() => setAppQuickFilter("shortlisted")}
                     className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                       appQuickFilter === "shortlisted"
-                        ? "bg-emerald-500 text-[#090d16] font-bold shadow-sm"
-                        : "bg-white/[0.04] text-white/70 hover:text-emerald-300"
+                        ? "bg-white text-[#090d16] font-semibold shadow-sm"
+                        : "bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white border border-white/10"
                     }`}
                   >
                     {t("Shortlisted", "Pré-selecionados")} ({applications.filter((a) => a.status === "shortlisted").length})
@@ -4252,8 +4245,8 @@ Overwatch`;
                     onClick={() => setAppQuickFilter("booked")}
                     className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                       appQuickFilter === "booked"
-                        ? "bg-emerald-500 text-[#090d16] font-bold shadow-sm"
-                        : "bg-white/[0.04] text-white/70 hover:text-emerald-300"
+                        ? "bg-white text-[#090d16] font-semibold shadow-sm"
+                        : "bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white border border-white/10"
                     }`}
                   >
                     {t("Test Booked", "Teste Agendado")} ({confirmedCount})
@@ -4490,12 +4483,12 @@ Overwatch`;
                           {/* Test Slot / Convocatória Status */}
                           <td className="px-4 py-3 whitespace-nowrap">
                             {a.testSlot ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[0.68rem] font-semibold text-emerald-300">
-                                <CalendarCheck size={11} className="text-emerald-400" />
+                              <span className="inline-flex items-center gap-1 rounded-full bg-indigo-500/15 border border-indigo-500/25 px-2.5 py-0.5 text-[0.68rem] font-medium text-indigo-300">
+                                <CalendarCheck size={11} className="text-indigo-400" />
                                 {formatSlotDisplay(a.testSlot.split("–")[0].trim(), lang)}
                               </span>
                             ) : a.invitedAt ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-500/30 px-2.5 py-0.5 text-[0.68rem] font-medium text-amber-300">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/25 px-2.5 py-0.5 text-[0.68rem] font-medium text-amber-300">
                                 <Clock size={11} /> {t("Invited", "Convocado")}
                               </span>
                             ) : (
@@ -4509,9 +4502,9 @@ Overwatch`;
                               href={`https://wa.me/${a.whatsapp.replace(/\D/g, "")}`}
                               target="_blank"
                               rel="noreferrer"
-                              className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 hover:underline font-medium"
+                              className="inline-flex items-center gap-1.5 text-white/80 hover:text-white hover:underline text-xs"
                             >
-                              <Phone size={12} />
+                              <Phone size={11} className="text-sky-400" />
                               <span>{a.whatsapp}</span>
                             </a>
                           </td>
@@ -5263,30 +5256,26 @@ Overwatch`;
           : liveNotification.subtitle.slice(0, 2).toUpperCase();
         return (
           <div className="fixed bottom-5 right-4 z-50 w-[320px] animate-in slide-in-from-bottom-4 fade-in duration-300">
-            <div className={`relative rounded-2xl bg-[#0d1422] border shadow-[0_8px_40px_rgba(0,0,0,0.7)] overflow-hidden flex ${
-              isApp ? "border-emerald-500/25" : "border-cyan-500/25"
-            }`}>
+            <div className="relative rounded-2xl bg-[#0d1422] border border-white/10 shadow-[0_8px_40px_rgba(0,0,0,0.7)] overflow-hidden flex">
               {/* Left accent bar */}
-              <div className={`w-1 shrink-0 ${isApp ? "bg-emerald-500" : "bg-cyan-400"}`} />
+              <div className={`w-1 shrink-0 ${isApp ? "bg-sky-400" : "bg-indigo-400"}`} />
 
               <div className="flex-1 px-4 py-3.5 min-w-0">
                 {/* Top row: label + timestamp + close */}
                 <div className="flex items-center justify-between mb-2.5">
-                  <span className={`text-[0.6rem] font-bold uppercase tracking-widest ${
-                    isApp ? "text-emerald-400" : "text-cyan-400"
-                  }`}>
+                  <span className="text-[0.6rem] font-semibold uppercase tracking-widest text-white/50">
                     {isApp
                       ? t("New application", "Nova candidatura")
                       : t("Test slot confirmed", "Agendamento confirmado")}
                   </span>
                   <div className="flex items-center gap-2">
-                    <span className="text-[0.6rem] text-white/30 font-mono tabular-nums">
+                    <span className="text-[0.6rem] text-white/35 font-mono tabular-nums">
                       {liveNotification.timestamp}
                     </span>
                     <button
                       type="button"
                       onClick={() => setLiveNotification(null)}
-                      className="text-white/25 hover:text-white/70 transition-colors cursor-pointer -mr-1"
+                      className="text-white/30 hover:text-white/80 transition-colors cursor-pointer -mr-1"
                     >
                       <X size={13} />
                     </button>
@@ -5296,15 +5285,11 @@ Overwatch`;
                 {/* Candidate row */}
                 <div className="flex items-center gap-3">
                   {/* Initials avatar */}
-                  <div className={`h-9 w-9 shrink-0 rounded-xl flex items-center justify-center text-[0.7rem] font-bold ${
-                    isApp
-                      ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/20"
-                      : "bg-cyan-500/15 text-cyan-300 border border-cyan-500/20"
-                  }`}>
+                  <div className="h-9 w-9 shrink-0 rounded-xl flex items-center justify-center text-[0.72rem] font-semibold bg-white/10 text-white/90 border border-white/15">
                     {initials}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold text-white leading-tight truncate">
+                    <p className="text-sm font-semibold text-white leading-tight truncate">
                       {liveNotification.subtitle.split("—")[0].trim()}
                     </p>
                     {liveNotification.subtitle.includes("—") && (
@@ -5324,11 +5309,7 @@ Overwatch`;
                       if (found) { setSelected(found); setView("applications"); }
                       setLiveNotification(null);
                     }}
-                    className={`mt-3 text-[0.68rem] font-semibold flex items-center gap-1 cursor-pointer transition-colors ${
-                      isApp
-                        ? "text-emerald-400/80 hover:text-emerald-300"
-                        : "text-cyan-400/80 hover:text-cyan-300"
-                    }`}
+                    className="mt-3 text-[0.68rem] font-medium text-sky-400 hover:text-sky-300 flex items-center gap-1 cursor-pointer transition-colors"
                   >
                     <ArrowUpRight size={12} />
                     {isApp
