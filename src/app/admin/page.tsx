@@ -4898,17 +4898,17 @@ Overwatch`;
                     </span>
                   </div>
 
-                  <div className="overflow-x-auto rounded-xl border border-white/10 bg-black/20">
-                    <table className="w-full text-left text-xs border-collapse">
+                  <div className="overflow-x-auto rounded-xl border border-white/10">
+                    <table className="admin-table">
                       <thead>
-                        <tr className="border-b border-white/10 bg-white/[0.02] text-white/50 uppercase font-semibold text-[0.68rem] tracking-wider">
-                          <th className="px-4 py-2.5">{t("Candidate", "Candidato(a)")}</th>
-                          <th className="px-4 py-2.5">{t("WhatsApp Contact", "Contacto WhatsApp")}</th>
-                          <th className="px-4 py-2.5">{t("Invited On", "Convocado Em")}</th>
-                          <th className="px-4 py-2.5 text-right">{t("Quick Actions", "Ações Rápidas")}</th>
+                        <tr>
+                          <th>{t("Candidate", "Candidato(a)")}</th>
+                          <th>{t("WhatsApp Contact", "Contacto WhatsApp")}</th>
+                          <th>{t("Invited On", "Convocado Em")}</th>
+                          <th className="text-right">{t("Quick Actions", "Ações Rápidas")}</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-white/5">
+                      <tbody>
                         {pendingInvites.map((c) => (
                           <tr key={c.id} className="hover:bg-white/[0.03] transition-colors">
                             <td className="px-4 py-3">
@@ -6016,20 +6016,20 @@ Overwatch`;
                     </p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto rounded-xl border border-white/10 bg-black/20">
-                    <table className="w-full text-left text-xs border-collapse">
+                  <div className="overflow-x-auto rounded-xl border border-white/10">
+                    <table className="admin-table">
                       <thead>
-                        <tr className="border-b border-white/10 bg-white/[0.02] text-white/50 uppercase font-semibold text-[0.68rem] tracking-wider">
-                          <th className="px-4 py-3">#</th>
-                          <th className="px-4 py-3">{t("Candidate", "Candidato")}</th>
-                          <th className="px-4 py-3">{t("WhatsApp Contact", "Contacto WhatsApp")}</th>
-                          <th className="px-4 py-3">{t("Gender", "Género")}</th>
-                          <th className="px-4 py-3">{t("Compliance Flaw", "Motivo de Não Conformidade")}</th>
-                          <th className="px-4 py-3">{t("Test Slot", "Turno de Teste")}</th>
-                          <th className="px-4 py-3 text-right">{t("Actions", "Ações")}</th>
+                        <tr>
+                          <th>#</th>
+                          <th>{t("Candidate", "Candidato")}</th>
+                          <th>{t("WhatsApp Contact", "Contacto WhatsApp")}</th>
+                          <th>{t("Gender", "Género")}</th>
+                          <th>{t("Compliance Flaw", "Motivo de Não Conformidade")}</th>
+                          <th>{t("Test Slot", "Turno de Teste")}</th>
+                          <th className="text-right">{t("Actions", "Ações")}</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-white/5">
+                      <tbody>
                         {displayedList.map(({ app: c, screening }, idx) => (
                           <tr key={c.id} className="hover:bg-white/[0.03] transition-colors">
                             <td className="px-4 py-3.5 text-center text-white/40 font-mono text-[0.72rem]">
@@ -6466,36 +6466,36 @@ Overwatch`;
             )}
 
             {/* Candidate Table */}
-            <div className="rounded-2xl border border-white/10 bg-[#121827]/95 shadow-sm overflow-hidden">
+            <div className="rounded-2xl border border-white/10 overflow-hidden" style={{ background: "var(--bg-card)" }}>
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
+                <table className="admin-table">
                   <thead>
-                    <tr className="border-b border-white/10 bg-white/[0.02] text-white/60 uppercase font-semibold text-[0.68rem] tracking-wider">
-                      <th className="px-3.5 py-3.5 w-10 text-center">
+                    <tr>
+                      <th className="w-10 text-center">
                         <input
                           type="checkbox"
                           checked={allCurrentPageSelected}
                           onChange={toggleSelectAllOnPage}
-                          className="rounded border-white/20 bg-white/10 accent-white focus:ring-0 cursor-pointer h-4 w-4"
+                          className="admin-checkbox"
                           title={t("Select all on this page", "Selecionar todos nesta página")}
                         />
                       </th>
-                      <th className="px-3 py-3.5 w-12 text-center">{t("#", "Nº")}</th>
-                      <th className="px-4 py-3.5">{t("Candidate", "Candidato")}</th>
-                      <th className="px-4 py-3.5">{t("Role", "Vaga")}</th>
-                      <th className="px-4 py-3.5">{t("Status", "Estado")}</th>
-                      <th className="px-4 py-3.5">{t("Convocation / Slot", "Convocatória / Turno")}</th>
-                      <th className="px-4 py-3.5">{t("WhatsApp", "WhatsApp")}</th>
-                      <th className="px-4 py-3.5">{t("Cover Letter", "Carta")}</th>
-                      <th className="px-4 py-3.5">{t("12th Grade", "12.ª Classe")}</th>
-                      <th className="px-4 py-3.5">{t("Sex", "Sexo")}</th>
-                      <th className="px-4 py-3.5">{t("AI User", "Usa IA")}</th>
-                      <th className="px-4 py-3.5">{t("CCTV Exp.", "Exp. CCTV")}</th>
-                      <th className="px-4 py-3.5">{t("Last Profession", "Última Profissão")}</th>
-                      <th className="px-4 py-3.5">{t("2D/2N Shifts", "Turnos 2D/2N")}</th>
-                      <th className="px-4 py-3.5">{t("Date", "Data")}</th>
-                      <th className="px-4 py-3.5">{t("CV", "CV")}</th>
-                      <th className="px-4 py-3.5 text-right">{t("Actions", "Ações")}</th>
+                      <th className="w-12 text-center">{t("#", "Nº")}</th>
+                      <th>{t("Candidate", "Candidato")}</th>
+                      <th>{t("Role", "Vaga")}</th>
+                      <th>{t("Status", "Estado")}</th>
+                      <th>{t("Convocation / Slot", "Convocatória / Turno")}</th>
+                      <th>{t("WhatsApp", "WhatsApp")}</th>
+                      <th>{t("Cover Letter", "Carta")}</th>
+                      <th>{t("12th Grade", "12.ª Classe")}</th>
+                      <th>{t("Sex", "Sexo")}</th>
+                      <th>{t("AI User", "Usa IA")}</th>
+                      <th>{t("CCTV Exp.", "Exp. CCTV")}</th>
+                      <th>{t("Last Profession", "Última Profissão")}</th>
+                      <th>{t("2D/2N Shifts", "Turnos 2D/2N")}</th>
+                      <th>{t("Date", "Data")}</th>
+                      <th>{t("CV", "CV")}</th>
+                      <th className="text-right">{t("Actions", "Ações")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
@@ -7472,8 +7472,8 @@ Overwatch`;
 
       {/* ─── PERMANENT DELETE CONFIRMATION MODAL ─────────────────────── */}
       {deleteModalState.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-red-500/30 bg-[#121827] p-6 shadow-2xl space-y-5">
+        <div className="admin-modal-overlay">
+          <div className="admin-modal p-6 space-y-5" style={{ borderColor: "rgba(239,68,68,0.3)" }}>
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30">
@@ -7578,8 +7578,8 @@ Overwatch`;
 
       {/* ─── DISQUALIFICATION CONFIRMATION MODAL ───────────────────── */}
       {disqualifyModalState.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-amber-500/30 bg-[#121827] p-6 shadow-2xl space-y-5">
+        <div className="admin-modal-overlay">
+          <div className="admin-modal p-6 space-y-5" style={{ borderColor: "rgba(245,158,11,0.25)" }}>
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30">
@@ -7702,8 +7702,8 @@ Overwatch`;
 
       {/* ─── UNDO DISQUALIFICATION & RECTIFICATION MODAL ───────────── */}
       {restoreModalState.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-emerald-500/40 bg-[#121827] p-6 shadow-2xl space-y-5">
+        <div className="admin-modal-overlay">
+          <div className="admin-modal p-6 space-y-5" style={{ borderColor: "rgba(16,185,129,0.3)" }}>
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
@@ -7831,29 +7831,28 @@ Overwatch`;
 
       {/* ─── RESTORE SUCCESS TOAST ──────────────────────────────────── */}
       {restoreSuccessToast && (
-        <div className="fixed top-6 right-6 z-50 max-w-md animate-in slide-in-from-top-4 fade-in duration-300">
-          <div className="rounded-2xl border border-emerald-500/40 bg-[#0d1c16] text-emerald-200 p-4 shadow-2xl flex items-start gap-3">
-            <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
-              <CheckCircle2 size={18} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <strong className="block text-xs font-bold text-white mb-0.5">
-                {lang === "pt" ? "Operação Concluída" : "Restore Completed"}
-              </strong>
-              <p className="text-xs text-emerald-200/90 leading-relaxed">
-                {restoreSuccessToast}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setRestoreSuccessToast(null)}
-              className="text-emerald-400/60 hover:text-emerald-300 cursor-pointer"
-            >
-              <X size={16} />
-            </button>
+        <div className="admin-toast admin-toast-green" style={{ zIndex: 999 }}>
+          <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+            <CheckCircle2 size={18} />
           </div>
+          <div className="flex-1 min-w-0">
+            <strong className="block text-xs font-bold text-white mb-0.5">
+              {lang === "pt" ? "Operação Concluída" : "Restore Completed"}
+            </strong>
+            <p className="text-xs leading-relaxed" style={{ color: "var(--accent-green)", opacity: 0.9 }}>
+              {restoreSuccessToast}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setRestoreSuccessToast(null)}
+            className="text-emerald-400/60 hover:text-emerald-300 cursor-pointer shrink-0"
+          >
+            <X size={16} />
+          </button>
         </div>
       )}
+
 
       {/* ─── Live Arrival Toast ─────────────────────────────────────── */}
       {liveNotification && (() => {
