@@ -719,3 +719,171 @@ export async function sendBookingConfirmation({
 
   return sendTransactionalEmail(payload);
 }
+
+export async function sendCustomBookingConfirmation({
+  application,
+  slot,
+  messageText,
+  subject,
+  baseUrl,
+}: {
+  application: Application;
+  slot: string;
+  messageText?: string;
+  subject?: string;
+  baseUrl?: string;
+}) {
+  if (
+    (!process.env.BREVO_API_KEY && !process.env.FALLBACK_SMTP_PASS) ||
+    application.email.endsWith(".invalid") ||
+    process.env.CAREERS_TEST_MODE === "true"
+  ) {
+    return { success: true, mocked: true };
+  }
+
+  const origin = (
+    baseUrl ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "https://www.overwatchmoz.com"
+  ).replace(/\/+$/, "");
+  const logoUrl = `${origin}/logo.png`;
+  const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent(
+    "Av. Paulo Samuel Khankhomba nº 1948, Maputo"
+  )}`;
+
+  const sender = {
+    name: "Overwatch Recrutamento",
+    email: "noreply@overwatchmoz.com",
+  };
+
+  const defaultMsg = `{{greeting}},
+
+Obrigada pela confirmação.
+
+O seu teste de selecção para a vaga de Operadora de CCO da Overwatch ficou agendado para:
+
+Data: {{slot}}
+Hora do teste: 10h00
+Local:
+Overwatch
+Av. Paulo Samuel Khankhomba nº 1948, antes da esquina com a Av. Filipe Samuel Magaia
+
+Pedimos que esteja no local 30 minutos antes, às 09h30.
+
+Por motivos de organização do processo, às 09h50 o portão será encerrado e não será permitida a entrada de candidatas que cheguem depois dessa hora.
+
+Pedimos também que traga:
+• Uma caneta
+• Uma cópia do seu documento de identificação
+
+Por favor, planeie a sua deslocação com antecedência.
+
+Com os melhores cumprimentos,
+Overwatch`;
+
+  const rawText = messageText && messageText.trim() ? messageText.trim() : defaultMsg;
+
+  const processedMessage = rawText
+    .replace(/\{\{greeting\}\}/gi, getMozambiqueGreeting("pt"))
+    .replace(/\{\{name\}\}/gi, application.name)
+    .replace(/\{\{slot\}\}/gi, slot)
+    .replace(/\[inserir data\]/gi, slot);
+
+  const processedMessageHtml = processedMessage
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/•/g, "&#8226;")
+    .replace(/\n\n/g, "</p><p style=\"margin: 0 0 14px 0; font-size: 15px; line-height: 1.65; color: #334155;\">")
+    .replace(/\n/g, "<br />");
+
+  const messageHtmlWrapped = `<p style="margin: 0 0 14px 0; font-size: 15px; line-height: 1.65; color: #334155;">${processedMessageHtml}</p>`;
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="pt">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Confirmação de Teste — Overwatch Moçambique</title>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; -webkit-font-smoothing: antialiased;">
+      <div style="background-color: #f1f5f9; padding: 36px 16px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; border: 1px solid #cbd5e1; box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06); overflow: hidden;">
+          
+          <!-- Top Accent Line -->
+          <div style="height: 4px; background-color: #090d16;"></div>
+
+          <!-- Letterhead Header -->
+          <div style="padding: 28px 32px 20px 32px; border-bottom: 1px solid #e2e8f0;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="vertical-align: middle;">
+                  <img src="${logoUrl}" alt="Overwatch" height="26" style="height: 26px; width: auto; display: block; border: 0;" />
+                </td>
+                <td style="vertical-align: middle; text-align: right;">
+                  <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #475569; display: block;">
+                    Confirmação de Agendamento
+                  </span>
+                  <span style="font-size: 11px; color: #94a3b8; display: block; margin-top: 2px;">
+                    Maputo, Moçambique
+                  </span>
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Body Content -->
+          <div style="padding: 32px 32px 28px 32px;">
+            <div style="margin-bottom: 24px;">
+              ${messageHtmlWrapped}
+            </div>
+
+            <!-- Location Callout -->
+            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #090d16; border-radius: 8px; padding: 16px 20px; margin-bottom: 24px;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="vertical-align: top; width: 24px; padding-top: 2px;">
+                    📍
+                  </td>
+                  <td>
+                    <div style="font-size: 13px; font-weight: 700; color: #0f172a;">
+                      Local do Teste Presencial
+                    </div>
+                    <div style="font-size: 13px; color: #334155; margin-top: 2px;">
+                      Av. Paulo Samuel Khankhomba nº 1948, antes da esquina com a Av. Filipe Samuel Magaia, Maputo
+                    </div>
+                    <div style="margin-top: 6px;">
+                      <a href="${mapsUrl}" target="_blank" style="color: #0284c7; font-size: 12px; font-weight: 600; text-decoration: underline;">
+                        Ver localização no Google Maps &rarr;
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </div>
+          </div>
+
+          <!-- Formal Legal & Contact Footer -->
+          <div style="background-color: #f8fafc; padding: 22px 32px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6;">
+            <strong style="color: #090d16;">Overwatch Moçambique, Lda.</strong><br />
+            ${siteContact.address.pt}<br />
+            Telefone / WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #0284c7; text-decoration: none; font-weight: 600;">+258 84 287 0793</a> · Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none;">${siteContact.email}</a> · Website: <a href="${origin}" style="color: #64748b; text-decoration: none;">www.overwatchmoz.com</a>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const payload = {
+    sender,
+    to: [{ email: application.email, name: application.name }],
+    subject: subject || "Confirmação de Teste de Selecção: Overwatch Moçambique",
+    htmlContent,
+    textContent: `${processedMessage}\n\nLocal:\nAv. Paulo Samuel Khankhomba nº 1948, Maputo\n\nCom os melhores cumprimentos,\nOverwatch`,
+  };
+
+  return sendTransactionalEmail(payload);
+}
+

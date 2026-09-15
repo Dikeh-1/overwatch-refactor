@@ -209,6 +209,36 @@ export default function AdminPage() {
   );
   const [templateSavedFeedback, setTemplateSavedFeedback] = useState(false);
 
+  // ─── Booking Confirmation Send Section ────────────────────────────
+  const CONFIRM_DEFAULT_PT = `{{greeting}},
+
+Obrigada pela confirmação.
+
+O seu teste de selecção para a vaga de Operadora de CCO da Overwatch ficou agendado para:
+
+Data: {{slot}}
+Hora do teste: 10h00
+Local:
+Overwatch — Av. Paulo Samuel Khankhomba nº 1948, antes da esquina com a Av. Filipe Samuel Magaia, Maputo
+
+Pedimos que esteja no local 30 minutos antes, às 09h30.
+
+Por motivos de organização do processo, às 09h50 o portão será encerrado e não será permitida a entrada de candidatas que cheguem depois dessa hora.
+
+Pedimos também que traga:
+• Uma caneta
+• Uma cópia do seu documento de identificação
+
+Por favor, planeie a sua deslocação com antecedência.
+
+Com os melhores cumprimentos,
+Overwatch`;
+  const [confirmMessage, setConfirmMessage] = useState(CONFIRM_DEFAULT_PT);
+  const [confirmPreview, setConfirmPreview] = useState<"edit" | "preview">("edit");
+  const [confirmSending, setConfirmSending] = useState(false);
+  const [confirmResult, setConfirmResult] = useState<{ success: number; failed: number } | null>(null);
+  const [confirmSelectedIds, setConfirmSelectedIds] = useState<string[]>([]);
+
   // ─── Live Admin Presence Tracking ─────────────────────────────────
   const [onlineCount, setOnlineCount] = useState<number>(1);
 
@@ -1202,6 +1232,34 @@ export default function AdminPage() {
       setError((err as Error).message);
     } finally {
       setSendingBroadcast(false);
+    }
+  }
+
+  async function handleSendConfirmations() {
+    if (confirmSelectedIds.length === 0) return;
+    setConfirmSending(true);
+    setConfirmResult(null);
+    let success = 0, failed = 0;
+    try {
+      for (const id of confirmSelectedIds) {
+        const candidate = applications.find((a) => a.id === id);
+        if (!candidate || !candidate.testSlot) { failed++; continue; }
+        try {
+          const res = await fetch("/api/admin/careers/send-confirmation", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ candidateId: id, messageText: confirmMessage }),
+          });
+          if (res.ok) { success++; } else { failed++; }
+        } catch { failed++; }
+        await new Promise((r) => setTimeout(r, 120));
+      }
+      setConfirmResult({ success, failed });
+      setConfirmSelectedIds([]);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setConfirmSending(false);
     }
   }
 
@@ -3820,6 +3878,261 @@ export default function AdminPage() {
                   ))}
               </div>
             </div>
+
+            {/* ─── BOOKING CONFIRMATION SEND SECTION ───────────────── */}
+            {(() => {
+              const confirmedCandidates = campaignApps.filter((a) => Boolean(a.testSlot));
+              const allSelectedConfirm =
+                confirmedCandidates.length > 0 &&
+                confirmedCandidates.every((a) => confirmSelectedIds.includes(a.id));
+
+              const previewText = confirmMessage
+                .replace(/\{\{greeting\}\}/gi, lang === "pt" ? mozambiqueGreeting.pt : mozambiqueGreeting.en)
+                .replace(/\{\{slot\}\}/gi, "Quarta-feira, 16 de Setembro – 10h00")
+                .replace(/\{\{name\}\}/gi, "Candidata");
+
+              const previewHtml = previewText
+                .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+                .replace(/•/g, "&#8226;")
+                .replace(/\n\n/g, "</p><p style='margin:0 0 12px 0;'>")
+                .replace(/\n/g, "<br />");
+
+              return (
+                <div className="rounded-2xl border border-white/10 bg-[#0e1520]/90 overflow-hidden shadow-lg mt-6">
+                  {/* Section header */}
+                  <div className="px-5 py-4 border-b border-white/10 flex flex-wrap items-center justify-between gap-3 bg-white/[0.02]">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-xl bg-sky-500/15 border border-sky-500/25 flex items-center justify-center shrink-0">
+                        <Send size={16} className="text-sky-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-white">
+                          {t("Send Booking Confirmations", "Enviar Confirmações de Agendamento")}
+                        </h3>
+                        <p className="text-[0.68rem] text-white/50 mt-0.5">
+                          {t(
+                            "Send test instructions with official location and schedule to confirmed candidates.",
+                            "Envie instruções oficiais de presença com endereço e horário às candidatas agendadas."
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    {/* Live Mozambique greeting clock badge */}
+                    <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 text-[0.65rem] font-semibold text-emerald-400 shrink-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+                      {t("Mozambique now:", "Moçambique agora:")}{" "}
+                      <strong className="ml-1 text-emerald-300">
+                        {lang === "pt" ? mozambiqueGreeting.pt : mozambiqueGreeting.en}
+                      </strong>
+                    </span>
+                  </div>
+
+                  <div className="p-5 space-y-5">
+                    {/* Candidate selector */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-semibold text-white/70">
+                          {t("Select candidates to notify:", "Selecionar candidatas para enviar confirmação:")}
+                        </label>
+                        {confirmedCandidates.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              allSelectedConfirm
+                                ? setConfirmSelectedIds([])
+                                : setConfirmSelectedIds(confirmedCandidates.map((a) => a.id))
+                            }
+                            className="text-[0.68rem] text-sky-400 hover:text-sky-300 font-semibold cursor-pointer transition-colors"
+                          >
+                            {allSelectedConfirm
+                              ? t("Deselect all", "Desselecionar todos")
+                              : t("Select all", "Selecionar todos")}{" "}
+                            ({confirmedCandidates.length})
+                          </button>
+                        )}
+                      </div>
+
+                      {confirmedCandidates.length === 0 ? (
+                        <div className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-6 text-center text-xs text-white/40 italic">
+                          {t("No candidates have confirmed a test slot yet.", "Ainda não há candidatas com data confirmada.")}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-56 overflow-y-auto pr-1">
+                          {confirmedCandidates.map((c) => {
+                            const isChecked = confirmSelectedIds.includes(c.id);
+                            return (
+                              <button
+                                key={c.id}
+                                type="button"
+                                onClick={() =>
+                                  setConfirmSelectedIds((prev) =>
+                                    isChecked ? prev.filter((id) => id !== c.id) : [...prev, c.id]
+                                  )
+                                }
+                                className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all cursor-pointer ${
+                                  isChecked
+                                    ? "border-sky-500/40 bg-sky-500/10 text-white shadow-sm"
+                                    : "border-white/10 bg-white/[0.02] text-white/60 hover:bg-white/[0.05] hover:text-white"
+                                }`}
+                              >
+                                <div
+                                  className={`h-4 w-4 shrink-0 rounded border flex items-center justify-center transition-colors ${
+                                    isChecked ? "bg-sky-500 border-sky-500" : "border-white/30"
+                                  }`}
+                                >
+                                  {isChecked && <Check size={10} className="text-white" />}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-semibold text-white truncate">{c.name}</p>
+                                  <p className="text-[0.63rem] text-white/45 truncate">
+                                    {formatSlotDisplay(c.testSlot ?? "", lang)}
+                                  </p>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Edit / Preview tabs */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex rounded-lg border border-white/10 overflow-hidden text-[0.68rem] font-semibold bg-white/[0.03]">
+                          {(["edit", "preview"] as const).map((tab) => (
+                            <button
+                              key={tab}
+                              type="button"
+                              onClick={() => setConfirmPreview(tab)}
+                              className={`px-3 py-1.5 cursor-pointer transition-colors ${
+                                confirmPreview === tab
+                                  ? "bg-white/[0.12] text-white shadow-sm"
+                                  : "text-white/50 hover:text-white hover:bg-white/[0.05]"
+                              }`}
+                            >
+                              {tab === "edit" ? t("Edit template", "Editar modelo") : t("Preview email", "Pré-visualizar e-mail")}
+                            </button>
+                          ))}
+                        </div>
+                        <span className="text-[0.65rem] text-white/40">
+                          {t("Tags: {{greeting}}, {{slot}}, {{name}}", "Tags: {{greeting}}, {{slot}}, {{name}}")}
+                        </span>
+                      </div>
+
+                      {confirmPreview === "edit" ? (
+                        <div className="space-y-1.5">
+                          <textarea
+                            rows={15}
+                            value={confirmMessage}
+                            onChange={(e) => setConfirmMessage(e.target.value)}
+                            className="w-full rounded-xl border border-white/10 bg-white/[0.04] p-4 text-xs font-mono text-white leading-relaxed focus:border-white/30 focus:outline-none resize-y"
+                          />
+                          <p className="text-[0.65rem] text-white/40 italic">
+                            {t(
+                              "The {{greeting}} tag automatically adapts to Mozambique time (Bom dia / Boa tarde / Boa noite) at send time.",
+                              "A tag {{greeting}} ajusta automaticamente a saudação à hora de Moçambique no momento do envio."
+                            )}
+                          </p>
+                        </div>
+                      ) : (
+                        /* Mobile-responsive email preview */
+                        <div className="rounded-xl border border-white/10 overflow-hidden bg-[#f1f5f9] max-w-xl mx-auto shadow-md">
+                          {/* Accent bar */}
+                          <div className="h-1 bg-[#090d16]" />
+                          {/* Letterhead */}
+                          <div className="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between bg-white">
+                            <span className="text-xs font-black text-slate-800 tracking-widest uppercase">
+                              OVERWATCH
+                            </span>
+                            <div className="text-right">
+                              <span className="text-[0.6rem] font-bold text-slate-500 uppercase tracking-wider block">
+                                Recrutamento &amp; Selecção
+                              </span>
+                              <span className="text-[0.6rem] text-slate-400 block">
+                                Maputo, Moçambique
+                              </span>
+                            </div>
+                          </div>
+                          {/* Body */}
+                          <div className="bg-white px-5 py-5 text-[13px] text-slate-700 leading-relaxed font-sans">
+                            <div
+                              dangerouslySetInnerHTML={{
+                                __html: `<p style='margin:0 0 12px 0;'>${previewHtml}</p>`,
+                              }}
+                            />
+
+                            {/* Location Callout preview */}
+                            <div className="mt-4 p-3.5 bg-slate-50 border border-slate-200 border-l-4 border-l-[#090d16] rounded-lg text-xs">
+                              <div className="font-bold text-slate-800">Local do Teste Presencial:</div>
+                              <div className="text-slate-600 mt-0.5">
+                                Av. Paulo Samuel Khankhomba nº 1948, antes da esquina com a Av. Filipe Samuel Magaia, Maputo
+                              </div>
+                              <div className="text-[0.68rem] text-sky-600 font-semibold mt-1">
+                                Ver localização no Google Maps &rarr;
+                              </div>
+                            </div>
+                          </div>
+                          {/* Footer */}
+                          <div className="bg-slate-50 border-t border-slate-200 px-5 py-3 text-[0.65rem] text-slate-500">
+                            <strong className="text-slate-700 block">Overwatch Moçambique, Lda.</strong>
+                            Av. Paulo Samuel Khankhomba nº 1948, Maputo · info@overwatchmoz.com
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions row */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/10">
+                      <button
+                        type="button"
+                        onClick={() => setConfirmMessage(CONFIRM_DEFAULT_PT)}
+                        className="flex items-center gap-1.5 text-[0.68rem] text-white/50 hover:text-white/80 font-medium cursor-pointer transition-colors"
+                      >
+                        <RotateCcw size={12} />
+                        {t("Reset template to default", "Repor modelo padrão")}
+                      </button>
+
+                      <div className="flex items-center gap-3">
+                        {confirmResult && (
+                          <span
+                            className={`text-[0.7rem] font-semibold ${
+                              confirmResult.failed > 0 ? "text-amber-400" : "text-emerald-400"
+                            }`}
+                          >
+                            {confirmResult.success > 0 && `✓ ${confirmResult.success} ${t("sent", "enviados")}`}
+                            {confirmResult.failed > 0 &&
+                              ` · ✕ ${confirmResult.failed} ${t("failed", "falharam")}`}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => void handleSendConfirmations()}
+                          disabled={confirmSending || confirmSelectedIds.length === 0}
+                          className="flex items-center gap-2 rounded-xl bg-sky-600 hover:bg-sky-500 active:bg-sky-700 disabled:opacity-40 disabled:cursor-not-allowed px-5 py-2.5 text-xs font-bold text-white transition-all cursor-pointer shadow-lg shadow-sky-900/20"
+                        >
+                          {confirmSending ? (
+                            <>
+                              <Loader2 size={13} className="animate-spin" />
+                              <span>{t("Sending confirmations…", "A enviar confirmações…")}</span>
+                            </>
+                          ) : (
+                            <>
+                              <Send size={13} />
+                              <span>
+                                {t(
+                                  `Send Confirmation (${confirmSelectedIds.length})`,
+                                  `Enviar Confirmação (${confirmSelectedIds.length})`
+                                )}
+                              </span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </section>
         )}
 
@@ -4941,78 +5254,93 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ─── Real-time Live Arrival Toast Notification ─────────────── */}
-      {liveNotification && (
-        <div className="fixed bottom-6 right-6 z-50 max-w-md w-full animate-in slide-in-from-bottom-5 fade-in duration-300 p-2">
-          <div
-            className={`rounded-2xl border p-4 shadow-[0_20px_50px_rgba(0,0,0,0.6)] backdrop-blur-xl flex items-start justify-between gap-3 ${
-              liveNotification.type === "new_app"
-                ? "border-emerald-500/40 bg-[#0e1726]/95 text-white"
-                : "border-cyan-500/40 bg-[#0a192f]/95 text-white"
-            }`}
-          >
-            <div className="flex items-start gap-3 min-w-0">
-              <div
-                className={`p-2.5 rounded-xl shrink-0 ${
-                  liveNotification.type === "new_app"
-                    ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                    : "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
-                }`}
-              >
-                {liveNotification.type === "new_app" ? (
-                  <Users size={18} />
-                ) : (
-                  <CalendarCheck size={18} />
-                )}
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <h4
-                    className={`text-xs font-bold uppercase tracking-wider ${
-                      liveNotification.type === "new_app"
-                        ? "text-emerald-400"
-                        : "text-cyan-400"
-                    }`}
-                  >
-                    {liveNotification.title}
-                  </h4>
-                  <span className="text-[0.62rem] font-mono text-white/50">
-                    {liveNotification.timestamp}
+      {/* ─── Live Arrival Toast ─────────────────────────────────────── */}
+      {liveNotification && (() => {
+        const isApp = liveNotification.type === "new_app";
+        const nameParts = liveNotification.subtitle.split("—")[0].trim().split(" ");
+        const initials = nameParts.length >= 2
+          ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase()
+          : liveNotification.subtitle.slice(0, 2).toUpperCase();
+        return (
+          <div className="fixed bottom-5 right-4 z-50 w-[320px] animate-in slide-in-from-bottom-4 fade-in duration-300">
+            <div className={`relative rounded-2xl bg-[#0d1422] border shadow-[0_8px_40px_rgba(0,0,0,0.7)] overflow-hidden flex ${
+              isApp ? "border-emerald-500/25" : "border-cyan-500/25"
+            }`}>
+              {/* Left accent bar */}
+              <div className={`w-1 shrink-0 ${isApp ? "bg-emerald-500" : "bg-cyan-400"}`} />
+
+              <div className="flex-1 px-4 py-3.5 min-w-0">
+                {/* Top row: label + timestamp + close */}
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className={`text-[0.6rem] font-bold uppercase tracking-widest ${
+                    isApp ? "text-emerald-400" : "text-cyan-400"
+                  }`}>
+                    {isApp
+                      ? t("New application", "Nova candidatura")
+                      : t("Test slot confirmed", "Agendamento confirmado")}
                   </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[0.6rem] text-white/30 font-mono tabular-nums">
+                      {liveNotification.timestamp}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setLiveNotification(null)}
+                      className="text-white/25 hover:text-white/70 transition-colors cursor-pointer -mr-1"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
                 </div>
-                <p className="text-xs font-semibold text-white mt-1 truncate">
-                  {liveNotification.subtitle}
-                </p>
+
+                {/* Candidate row */}
+                <div className="flex items-center gap-3">
+                  {/* Initials avatar */}
+                  <div className={`h-9 w-9 shrink-0 rounded-xl flex items-center justify-center text-[0.7rem] font-bold ${
+                    isApp
+                      ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/20"
+                      : "bg-cyan-500/15 text-cyan-300 border border-cyan-500/20"
+                  }`}>
+                    {initials}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-white leading-tight truncate">
+                      {liveNotification.subtitle.split("—")[0].trim()}
+                    </p>
+                    {liveNotification.subtitle.includes("—") && (
+                      <p className="text-[0.67rem] text-white/45 mt-0.5 truncate">
+                        {liveNotification.subtitle.split("—").slice(1).join("—").trim()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Action link */}
                 {liveNotification.candidateId && (
                   <button
                     type="button"
                     onClick={() => {
-                      const found = applications.find(
-                        (a) => a.id === liveNotification.candidateId,
-                      );
-                      if (found) {
-                        setSelected(found);
-                        setView("applications");
-                      }
+                      const found = applications.find(a => a.id === liveNotification.candidateId);
+                      if (found) { setSelected(found); setView("applications"); }
                       setLiveNotification(null);
                     }}
-                    className="mt-2 text-xs text-sky-400 hover:text-sky-300 font-semibold underline underline-offset-2 flex items-center gap-1 cursor-pointer"
+                    className={`mt-3 text-[0.68rem] font-semibold flex items-center gap-1 cursor-pointer transition-colors ${
+                      isApp
+                        ? "text-emerald-400/80 hover:text-emerald-300"
+                        : "text-cyan-400/80 hover:text-cyan-300"
+                    }`}
                   >
-                    <span>{t("Open candidate details →", "Ver ficha do candidato →")}</span>
+                    <ArrowUpRight size={12} />
+                    {isApp
+                      ? t("Open application", "Ver candidatura")
+                      : t("View in schedule", "Ver na agenda")}
                   </button>
                 )}
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setLiveNotification(null)}
-              className="text-white/40 hover:text-white p-1 rounded-lg cursor-pointer shrink-0"
-            >
-              <X size={16} />
-            </button>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
