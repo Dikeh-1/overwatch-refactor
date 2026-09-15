@@ -746,7 +746,9 @@ export async function sendCustomBookingConfirmation({
     process.env.NEXT_PUBLIC_SITE_URL ||
     "https://www.overwatchmoz.com"
   ).replace(/\/+$/, "");
-  const logoUrl = `${origin}/logo.png`;
+  const logoUrl = origin.includes("localhost") || origin.includes("127.0.0.1")
+    ? "https://www.overwatchmoz.com/logo.png"
+    : `${origin}/logo.png`;
   const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent(
     "Av. Paulo Samuel Khankhomba nº 1948, Maputo"
   )}`;
@@ -783,11 +785,16 @@ Overwatch`;
 
   const rawText = messageText && messageText.trim() ? messageText.trim() : defaultMsg;
 
-  const processedMessage = rawText
-    .replace(/\{\{greeting\}\}/gi, getMozambiqueGreeting("pt"))
+  // Auto-detect Mozambique greeting for current time
+  const greetingPt = getMozambiqueGreeting("pt");
+  let processedMessage = rawText
+    .replace(/\{\{greeting\}\}/gi, greetingPt)
     .replace(/\{\{name\}\}/gi, application.name)
     .replace(/\{\{slot\}\}/gi, slot)
     .replace(/\[inserir data\]/gi, slot);
+
+  // If message starts with hardcoded greeting, auto-update to Mozambique time greeting
+  processedMessage = processedMessage.replace(/^(Boa tarde|Bom dia|Boa noite)(,?)/i, `${greetingPt}$2`);
 
   const processedMessageHtml = processedMessage
     .replace(/&/g, "&amp;")

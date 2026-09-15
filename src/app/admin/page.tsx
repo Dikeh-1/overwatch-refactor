@@ -134,12 +134,12 @@ export default function AdminPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [view, setView] = useState<
-    "applications" | "roles" | "broadcast" | "schedule"
+    "applications" | "roles" | "broadcast" | "confirmations" | "schedule"
   >("applications");
   // ─── Per-Role Campaign Workspace ──────────────────────────────────
   const [activeCampaignRole, setActiveCampaignRole] = useState<string | null>(null);
   const [activeCampaignView, setActiveCampaignView] = useState<
-    "applications" | "broadcast" | "schedule"
+    "applications" | "broadcast" | "confirmations" | "schedule"
   >("applications");
   const [query, setQuery] = useState("");
   const [stageFilter, setStageFilter] = useState("all");
@@ -238,6 +238,11 @@ Overwatch`;
   const [confirmSending, setConfirmSending] = useState(false);
   const [confirmResult, setConfirmResult] = useState<{ success: number; failed: number } | null>(null);
   const [confirmSelectedIds, setConfirmSelectedIds] = useState<string[]>([]);
+  const [confirmSubTab, setConfirmSubTab] = useState<"unsent" | "sent">("unsent");
+  const [resendingConfirmId, setResendingConfirmId] = useState<string | null>(null);
+  const [testConfirmEmail, setTestConfirmEmail] = useState("ebubemichael033@gmail.com");
+  const [testConfirmSending, setTestConfirmSending] = useState(false);
+  const [testConfirmStatus, setTestConfirmStatus] = useState<"idle" | "success" | "error">("idle");
 
   // ─── Live Admin Presence Tracking ─────────────────────────────────
   const [onlineCount, setOnlineCount] = useState<number>(1);
@@ -1256,10 +1261,58 @@ Overwatch`;
       }
       setConfirmResult({ success, failed });
       setConfirmSelectedIds([]);
+      await load();
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setConfirmSending(false);
+    }
+  }
+
+  async function handleResendConfirmation(candidateId: string) {
+    setResendingConfirmId(candidateId);
+    try {
+      const res = await fetch("/api/admin/careers/send-confirmation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ candidateId, messageText: confirmMessage }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error || "Failed to resend confirmation.");
+      }
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setResendingConfirmId(null);
+    }
+  }
+
+  async function handleSendTestConfirmation() {
+    if (!testConfirmEmail.trim()) return;
+    setTestConfirmSending(true);
+    setTestConfirmStatus("idle");
+    try {
+      const res = await fetch("/api/admin/careers/send-confirmation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          testEmail: testConfirmEmail.trim(),
+          messageText: confirmMessage,
+        }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error || "Failed to send test confirmation email.");
+      }
+      setTestConfirmStatus("success");
+      setTimeout(() => setTestConfirmStatus("idle"), 6000);
+    } catch (err) {
+      setError((err as Error).message);
+      setTestConfirmStatus("error");
+    } finally {
+      setTestConfirmSending(false);
     }
   }
 
@@ -1684,6 +1737,9 @@ Overwatch`;
                   const roleConfirmed = applications.filter(
                     (a) => a.role === role.id && Boolean(a.testSlot),
                   ).length;
+                  const roleConfirmedUnsent = applications.filter(
+                    (a) => a.role === role.id && Boolean(a.testSlot) && !a.confirmationSentAt,
+                  ).length;
 
                   return (
                     <div key={role.id}>
@@ -1789,6 +1845,32 @@ Overwatch`;
                               </span>
                             )}
                           </button>
+
+                          {/* Confirmations sub-tab */}
+                          <button
+                            onClick={() => { setView("confirmations"); setSidebarOpen(false); }}
+                            className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[0.72rem] font-semibold transition-all cursor-pointer ${
+                              view === "confirmations"
+                                ? "bg-white/[0.1] text-white border border-white/15"
+                                : "text-white/60 hover:bg-white/[0.05] hover:text-white border border-transparent"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 size={13} className="text-white/70" />
+                              <span>{t("Confirmations", "Confirmações")}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {roleConfirmedUnsent > 0 ? (
+                                <span className="rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 text-[0.58rem] font-mono font-medium">
+                                  {roleConfirmedUnsent}
+                                </span>
+                              ) : roleConfirmed > 0 ? (
+                                <span className="rounded-md bg-white/10 text-white/60 border border-white/10 px-1.5 py-0.5 text-[0.58rem] font-mono font-medium">
+                                  {roleConfirmed}
+                                </span>
+                              ) : null}
+                            </div>
+                          </button>
                         </div>
                       )}
                     </div>
@@ -1884,7 +1966,9 @@ Overwatch`;
                     ? t("Convocations", "Convocatórias")
                     : view === "schedule"
                       ? t("Test Schedule", "Agenda de Testes")
-                      : t("Applications", "Candidaturas")}
+                      : view === "confirmations"
+                        ? t("Confirmations", "Confirmações")
+                        : t("Applications", "Candidaturas")}
                 </span>
               </div>
             )}
@@ -1895,7 +1979,9 @@ Overwatch`;
                   ? t("Test Convocations", "Convocatórias de Teste")
                   : view === "schedule"
                     ? t("Selection Test Schedule", "Agenda de Testes Presenciais")
-                    : t("Applications", "Candidaturas")}
+                    : view === "confirmations"
+                      ? t("Booking Confirmations", "Confirmações de Agendamento")
+                      : t("Applications", "Candidaturas")}
             </h1>
             <p className="mt-0.5 text-xs text-white/50">
               {view === "roles"
@@ -1904,7 +1990,9 @@ Overwatch`;
                   ? t("Dispatch and track candidate test invitations", "Envio e controlo de convites para testes presenciais")
                   : view === "schedule"
                     ? t("Confirmed candidate attendance by session", "Presenças confirmadas de candidatos por turno")
-                    : t("Review and manage candidate applications", "Rever e gerir candidaturas recebidas")}
+                    : view === "confirmations"
+                      ? t("Dispatch official test instructions to confirmed candidates", "Envio de instruções oficiais às candidatas que já agendaram turno")
+                      : t("Review and manage candidate applications", "Rever e gerir candidaturas recebidas")}
             </p>
           </div>
 
@@ -3872,262 +3960,537 @@ Overwatch`;
               </div>
             </div>
 
-            {/* ─── BOOKING CONFIRMATION SEND SECTION ───────────────── */}
-            {(() => {
-              const confirmedCandidates = campaignApps.filter((a) => Boolean(a.testSlot));
-              const allSelectedConfirm =
-                confirmedCandidates.length > 0 &&
-                confirmedCandidates.every((a) => confirmSelectedIds.includes(a.id));
+            {/* Quick Navigation to Dedicated Confirmations Workspace */}
+            {confirmedCount > 0 && (
+              <div className="rounded-2xl border border-sky-500/20 bg-sky-500/5 p-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-xl bg-sky-500/15 border border-sky-500/25 flex items-center justify-center shrink-0">
+                    <Send size={16} className="text-sky-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-white">
+                      {t("Dispatch Official Attendance Confirmations", "Enviar Confirmações de Presença Oficiais")}
+                    </p>
+                    <p className="text-[0.68rem] text-white/50">
+                      {t(
+                        `${campaignApps.filter((a) => Boolean(a.testSlot) && !a.confirmationSentAt).length} candidates with confirmed slots are awaiting confirmation dispatch.`,
+                        `${campaignApps.filter((a) => Boolean(a.testSlot) && !a.confirmationSentAt).length} candidatas agendadas aguardam o envio de instruções oficiais.`
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setView("confirmations")}
+                  className="flex items-center gap-2 rounded-xl bg-sky-600 hover:bg-sky-500 px-4 py-2 text-xs font-bold text-white transition-all cursor-pointer shadow-sm"
+                >
+                  <CheckCircle2 size={13} />
+                  <span>{t("Open Confirmations Tab →", "Abrir Separador de Confirmações →")}</span>
+                </button>
+              </div>
+            )}
+          </section>
+        )}
 
-              const previewText = confirmMessage
-                .replace(/\{\{greeting\}\}/gi, lang === "pt" ? mozambiqueGreeting.pt : mozambiqueGreeting.en)
-                .replace(/\{\{slot\}\}/gi, "Quarta-feira, 16 de Setembro – 10h00")
-                .replace(/\{\{name\}\}/gi, "Candidata");
+        {/* ─── TAB: BOOKING CONFIRMATIONS WORKSPACE ─────────────────── */}
+        {view === "confirmations" && (() => {
+          const confirmedCandidates = campaignApps.filter((a) => Boolean(a.testSlot));
+          const unsentCandidates = confirmedCandidates.filter((a) => !a.confirmationSentAt);
+          const sentCandidates = confirmedCandidates.filter((a) => Boolean(a.confirmationSentAt));
 
-              const previewHtml = previewText
-                .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-                .replace(/•/g, "&#8226;")
-                .replace(/\n\n/g, "</p><p style='margin:0 0 12px 0;'>")
-                .replace(/\n/g, "<br />");
+          const allSelectedConfirm =
+            unsentCandidates.length > 0 &&
+            unsentCandidates.every((a) => confirmSelectedIds.includes(a.id));
 
-              return (
-                <div className="rounded-2xl border border-white/10 bg-[#0e1520]/90 overflow-hidden shadow-lg mt-6">
-                  {/* Section header */}
-                  <div className="px-5 py-4 border-b border-white/10 flex flex-wrap items-center justify-between gap-3 bg-white/[0.02]">
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-xl bg-sky-500/15 border border-sky-500/25 flex items-center justify-center shrink-0">
-                        <Send size={16} className="text-sky-400" />
+          // Real Mozambique greeting strictly in Portuguese
+          const greetingPt = mozambiqueGreeting.pt;
+
+          let previewText = confirmMessage
+            .replace(/\{\{greeting\}\}/gi, greetingPt)
+            .replace(/\{\{slot\}\}/gi, "Quarta-feira, 16 de Setembro – 10h00")
+            .replace(/\{\{name\}\}/gi, "Candidata");
+
+          previewText = previewText.replace(/^(Boa tarde|Bom dia|Boa noite)(,?)/i, `${greetingPt}$2`);
+
+          const previewHtml = previewText
+            .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+            .replace(/•/g, "&#8226;")
+            .replace(/\n\n/g, "</p><p style='margin:0 0 12px 0;'>")
+            .replace(/\n/g, "<br />");
+
+          return (
+            <section className="space-y-6">
+              {/* Top KPI Cards for Confirmations */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="rounded-2xl border border-white/10 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
+                  <div className="flex items-center justify-between text-xs font-semibold text-white/60">
+                    <span>{t("Booked Candidates", "Candidatas Agendadas")}</span>
+                    <CalendarCheck size={16} className="text-cyan-400" />
+                  </div>
+                  <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-white">
+                    {confirmedCandidates.length}
+                  </strong>
+                  <span className="text-[0.7rem] text-white/40">
+                    {t("Slots selected by candidate", "Turno escolhido")}
+                  </span>
+                </div>
+
+                <div className="rounded-2xl border border-amber-500/20 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
+                  <div className="flex items-center justify-between text-xs font-semibold text-white/60">
+                    <span>{t("Awaiting Dispatch", "Aguardam Envio")}</span>
+                    <Clock size={16} className="text-amber-400" />
+                  </div>
+                  <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-amber-400">
+                    {unsentCandidates.length}
+                  </strong>
+                  <span className="text-[0.7rem] text-amber-400/70">
+                    {t("Not yet notified with location/rules", "Ainda não notificadas")}
+                  </span>
+                </div>
+
+                <div className="rounded-2xl border border-emerald-500/20 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
+                  <div className="flex items-center justify-between text-xs font-semibold text-white/60">
+                    <span>{t("Confirmations Sent", "Já Enviadas")}</span>
+                    <CheckCircle2 size={16} className="text-emerald-400" />
+                  </div>
+                  <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-emerald-400">
+                    {sentCandidates.length}
+                  </strong>
+                  <span className="text-[0.7rem] text-white/40">
+                    {t("Official instructions delivered", "Instruções já entregues")}
+                  </span>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
+                  <div className="flex items-center justify-between text-xs font-semibold text-white/60">
+                    <span>{t("Mozambique Clock", "Relógio Moçambique")}</span>
+                    <Globe size={16} className="text-sky-400" />
+                  </div>
+                  <strong className="mt-2 block text-xl sm:text-2xl font-bold text-white tracking-tight">
+                    {greetingPt}
+                  </strong>
+                  <span className="text-[0.7rem] text-sky-400/80">
+                    {t("Live greeting for outgoing emails", "Saudação activa de envio")}
+                  </span>
+                </div>
+              </div>
+
+              {/* Sub-tabs: Aguardam Envio vs Já Enviadas */}
+              <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmSubTab("unsent")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      confirmSubTab === "unsent"
+                        ? "bg-white text-[#090d16] shadow-sm"
+                        : "text-white/60 hover:text-white hover:bg-white/[0.04]"
+                    }`}
+                  >
+                    <span>{t("Awaiting Confirmation Dispatch", "Por Enviar (Aguardam Envio)")}</span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full text-[0.6rem] font-bold ${
+                        confirmSubTab === "unsent"
+                          ? "bg-[#090d16]/15 text-[#090d16]"
+                          : unsentCandidates.length > 0
+                            ? "bg-amber-500/20 text-amber-300"
+                            : "bg-white/10 text-white/60"
+                      }`}
+                    >
+                      {unsentCandidates.length}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setConfirmSubTab("sent")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      confirmSubTab === "sent"
+                        ? "bg-white text-[#090d16] shadow-sm"
+                        : "text-white/60 hover:text-white hover:bg-white/[0.04]"
+                    }`}
+                  >
+                    <span>{t("Already Dispatched", "Já Enviadas")}</span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full text-[0.6rem] font-bold ${
+                        confirmSubTab === "sent"
+                          ? "bg-[#090d16]/15 text-[#090d16]"
+                          : "bg-white/10 text-white/60"
+                      }`}
+                    >
+                      {sentCandidates.length}
+                    </span>
+                  </button>
+                </div>
+
+                {confirmSubTab === "unsent" && unsentCandidates.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      allSelectedConfirm
+                        ? setConfirmSelectedIds([])
+                        : setConfirmSelectedIds(unsentCandidates.map((a) => a.id))
+                    }
+                    className="text-xs font-semibold text-sky-400 hover:text-sky-300 transition-colors cursor-pointer"
+                  >
+                    {allSelectedConfirm
+                      ? t("Deselect all", "Desselecionar todas")
+                      : t("Select all candidates", "Selecionar todas as candidatas")}{" "}
+                    ({unsentCandidates.length})
+                  </button>
+                )}
+              </div>
+
+              {/* TAB 1: UNSENT / AWAITING DISPATCH */}
+              {confirmSubTab === "unsent" && (
+                <div className="space-y-3">
+                  {unsentCandidates.length === 0 ? (
+                    <div className="rounded-2xl border border-white/10 bg-[#121827]/70 p-8 text-center">
+                      <CheckCircle2 size={28} className="mx-auto text-emerald-400/80 mb-2" />
+                      <p className="text-sm font-semibold text-white">
+                        {t(
+                          "All confirmed candidates have already been notified!",
+                          "Todas as candidatas que agendaram teste já receberam a confirmação oficial."
+                        )}
+                      </p>
+                      <p className="text-xs text-white/50 mt-1">
+                        {t(
+                          "When new candidates select a test date, they will appear here ready for dispatch.",
+                          "Assim que novas candidatas marcarem turno, surgirão aqui para receber instruções."
+                        )}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {unsentCandidates.map((c) => {
+                        const isChecked = confirmSelectedIds.includes(c.id);
+                        return (
+                          <div
+                            key={c.id}
+                            onClick={() =>
+                              setConfirmSelectedIds((prev) =>
+                                isChecked ? prev.filter((id) => id !== c.id) : [...prev, c.id]
+                              )
+                            }
+                            className={`rounded-xl border p-3.5 transition-all cursor-pointer flex items-start gap-3 ${
+                              isChecked
+                                ? "border-sky-500/50 bg-sky-500/10 shadow-sm"
+                                : "border-white/10 bg-[#121827]/80 hover:bg-white/[0.04] text-white/70 hover:text-white"
+                            }`}
+                          >
+                            <div
+                              className={`mt-0.5 h-4 w-4 shrink-0 rounded border flex items-center justify-center transition-colors ${
+                                isChecked ? "bg-sky-500 border-sky-500 text-white" : "border-white/30"
+                              }`}
+                            >
+                              {isChecked && <Check size={11} className="text-white stroke-[3]" />}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1">
+                                <strong className="text-xs font-bold text-white truncate">
+                                  {c.name}
+                                </strong>
+                                <span className="rounded bg-amber-500/15 border border-amber-500/25 px-1.5 py-0.5 text-[0.6rem] font-mono text-amber-300 shrink-0">
+                                  {t("Unsent", "Por Enviar")}
+                                </span>
+                              </div>
+                              <p className="text-[0.68rem] text-sky-400 font-medium mt-1 truncate">
+                                📅 {formatSlotDisplay(c.testSlot ?? "", lang)}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1.5 text-[0.65rem] text-white/50">
+                                <span className="truncate">{c.email}</span>
+                                <span>•</span>
+                                <span className="truncate">{c.whatsapp}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 2: SENT QUEUE */}
+              {confirmSubTab === "sent" && (
+                <div className="space-y-3">
+                  {sentCandidates.length === 0 ? (
+                    <div className="rounded-2xl border border-white/10 bg-[#121827]/70 p-8 text-center text-xs text-white/40 italic">
+                      {t("No confirmations have been sent yet.", "Nenhuma confirmação enviada ainda.")}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {sentCandidates.map((c) => (
+                        <div
+                          key={c.id}
+                          className="rounded-xl border border-white/10 bg-[#121827]/80 p-3.5 flex items-start justify-between gap-3"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
+                              <strong className="text-xs font-bold text-white truncate">
+                                {c.name}
+                              </strong>
+                            </div>
+                            <p className="text-[0.68rem] text-sky-300 font-medium mt-1 truncate">
+                              📅 {formatSlotDisplay(c.testSlot ?? "", lang)}
+                            </p>
+                            <div className="mt-1 text-[0.65rem] text-emerald-400 font-mono">
+                              ✓ {t("Sent:", "Enviado:")}{" "}
+                              {c.confirmationSentAt
+                                ? new Date(c.confirmationSentAt).toLocaleString("pt-MZ", {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })
+                                : "—"}
+                            </div>
+                            <div className="flex items-center gap-2 mt-1 text-[0.65rem] text-white/40">
+                              <span className="truncate">{c.email}</span>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => void handleResendConfirmation(c.id)}
+                            disabled={resendingConfirmId === c.id}
+                            title={t("Resend confirmation email", "Reenviar e-mail de confirmação")}
+                            className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/[0.04] text-[0.68rem] font-semibold text-white/80 hover:bg-white/[0.08] hover:text-white disabled:opacity-40 transition-colors cursor-pointer"
+                          >
+                            {resendingConfirmId === c.id ? (
+                              <>
+                                <Loader2 size={11} className="animate-spin" />
+                                <span>{t("Resending…", "A reenviar…")}</span>
+                              </>
+                            ) : (
+                              <>
+                                <RotateCcw size={11} />
+                                <span>{t("Resend", "Reenviar")}</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Template Editor & Email Preview Workspace */}
+              <div className="rounded-2xl border border-white/10 bg-[#0e1520]/95 overflow-hidden shadow-lg">
+                {/* Header of Editor Box */}
+                <div className="px-5 py-4 border-b border-white/10 flex flex-wrap items-center justify-between gap-3 bg-white/[0.02]">
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-xl bg-sky-500/15 border border-sky-500/25 flex items-center justify-center shrink-0">
+                      <Send size={16} className="text-sky-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-white">
+                        {t("Confirmation Message Template", "Modelo da Mensagem de Confirmação")}
+                      </h3>
+                      <p className="text-[0.68rem] text-white/50 mt-0.5">
+                        {t(
+                          "Customise the official confirmation letter before dispatching to candidates.",
+                          "Personalize o modelo oficial de confirmação com regras e horário do teste presencial."
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Edit / Preview Tabs Toggle */}
+                  <div className="flex rounded-lg border border-white/10 overflow-hidden text-[0.68rem] font-semibold bg-white/[0.03]">
+                    {(["edit", "preview"] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        type="button"
+                        onClick={() => setConfirmPreview(tab)}
+                        className={`px-3.5 py-1.5 cursor-pointer transition-colors ${
+                          confirmPreview === tab
+                            ? "bg-white text-[#090d16] font-bold shadow-sm"
+                            : "text-white/60 hover:text-white hover:bg-white/[0.05]"
+                        }`}
+                      >
+                        {tab === "edit" ? t("Edit Template", "Editar Modelo") : t("Preview Email", "Pré-visualizar E-mail")}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="p-5 space-y-4">
+                  {confirmPreview === "edit" ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between flex-wrap gap-2 text-[0.68rem] text-white/50">
+                        <span>{t("Available tags:", "Tags dinâmicas disponíveis:")} <code className="text-sky-400">{"{{greeting}}"}</code>, <code className="text-sky-400">{"{{slot}}"}</code>, <code className="text-sky-400">{"{{name}}"}</code></span>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmMessage(CONFIRM_DEFAULT_PT)}
+                          className="flex items-center gap-1 text-white/40 hover:text-white/80 cursor-pointer transition-colors"
+                        >
+                          <RotateCcw size={11} />
+                          <span>{t("Reset to default", "Repor modelo padrão")}</span>
+                        </button>
                       </div>
-                      <div>
-                        <h3 className="text-sm font-bold text-white">
-                          {t("Send Booking Confirmations", "Enviar Confirmações de Agendamento")}
-                        </h3>
-                        <p className="text-[0.68rem] text-white/50 mt-0.5">
+
+                      <textarea
+                        rows={14}
+                        value={confirmMessage}
+                        onChange={(e) => setConfirmMessage(e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-[#090d16]/80 p-4 text-xs font-mono text-white leading-relaxed focus:border-white/30 focus:outline-none resize-y"
+                      />
+
+                      <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3 text-[0.68rem] text-white/50 space-y-1">
+                        <p>
+                          💡 <strong>{t("Automatic Mozambique Greeting:", "Actualizador de Saudação Automático:")}</strong>{" "}
                           {t(
-                            "Send test instructions with official location and schedule to confirmed candidates.",
-                            "Envie instruções oficiais de presença com endereço e horário às candidatas agendadas."
+                            "The system automatically detects the current time in Mozambique and updates the greeting to 'Bom dia', 'Boa tarde' or 'Boa noite'. Candidate emails are strictly in Portuguese.",
+                            "O sistema detecta em tempo real a hora oficial de Moçambique e actualiza automaticamente a saudação para 'Bom dia', 'Boa tarde' ou 'Boa noite'. As comunicações a candidatos são sempre em Português."
                           )}
                         </p>
                       </div>
                     </div>
-                    {/* Live Mozambique greeting clock badge */}
-                    <span className="flex items-center gap-2 rounded-lg bg-white/[0.04] border border-white/10 px-2.5 py-1 text-[0.68rem] text-white/70 shrink-0">
-                      <span className="w-1.5 h-1.5 rounded-full bg-sky-400 inline-block" />
-                      <span>{t("Mozambique now:", "Moçambique agora:")}</span>
-                      <strong className="text-white font-semibold">
-                        {lang === "pt" ? mozambiqueGreeting.pt : mozambiqueGreeting.en}
-                      </strong>
-                    </span>
-                  </div>
+                  ) : (
+                    /* High-fidelity responsive preview matching official email */
+                    <div className="rounded-xl border border-slate-300 overflow-hidden bg-[#f1f5f9] max-w-xl mx-auto shadow-md">
+                      {/* Top Accent Bar */}
+                      <div className="h-1 bg-[#090d16]" />
 
-                  <div className="p-5 space-y-5">
-                    {/* Candidate selector */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-semibold text-white/70">
-                          {t("Select candidates to notify:", "Selecionar candidatas para enviar confirmação:")}
-                        </label>
-                        {confirmedCandidates.length > 0 && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              allSelectedConfirm
-                                ? setConfirmSelectedIds([])
-                                : setConfirmSelectedIds(confirmedCandidates.map((a) => a.id))
-                            }
-                            className="text-[0.68rem] text-sky-400 hover:text-sky-300 font-semibold cursor-pointer transition-colors"
-                          >
-                            {allSelectedConfirm
-                              ? t("Deselect all", "Desselecionar todos")
-                              : t("Select all", "Selecionar todos")}{" "}
-                            ({confirmedCandidates.length})
-                          </button>
-                        )}
+                      {/* Official Letterhead Header with Logo */}
+                      <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-white">
+                        <img
+                          src="/logo.png"
+                          alt="Overwatch"
+                          className="h-6 w-auto block"
+                        />
+                        <div className="text-right">
+                          <span className="text-[0.65rem] font-bold text-slate-700 uppercase tracking-wider block">
+                            Recrutamento &amp; Selecção
+                          </span>
+                          <span className="text-[0.62rem] text-slate-400 block">
+                            Maputo, Moçambique
+                          </span>
+                        </div>
                       </div>
 
-                      {confirmedCandidates.length === 0 ? (
-                        <div className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-6 text-center text-xs text-white/40 italic">
-                          {t("No candidates have confirmed a test slot yet.", "Ainda não há candidatas com data confirmada.")}
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-56 overflow-y-auto pr-1">
-                          {confirmedCandidates.map((c) => {
-                            const isChecked = confirmSelectedIds.includes(c.id);
-                            return (
-                              <button
-                                key={c.id}
-                                type="button"
-                                onClick={() =>
-                                  setConfirmSelectedIds((prev) =>
-                                    isChecked ? prev.filter((id) => id !== c.id) : [...prev, c.id]
-                                  )
-                                }
-                                className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all cursor-pointer ${
-                                  isChecked
-                                    ? "border-sky-500/40 bg-sky-500/10 text-white shadow-sm"
-                                    : "border-white/10 bg-white/[0.02] text-white/60 hover:bg-white/[0.05] hover:text-white"
-                                }`}
-                              >
-                                <div
-                                  className={`h-4 w-4 shrink-0 rounded border flex items-center justify-center transition-colors ${
-                                    isChecked ? "bg-sky-500 border-sky-500" : "border-white/30"
-                                  }`}
-                                >
-                                  {isChecked && <Check size={10} className="text-white" />}
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-xs font-semibold text-white truncate">{c.name}</p>
-                                  <p className="text-[0.63rem] text-white/45 truncate">
-                                    {formatSlotDisplay(c.testSlot ?? "", lang)}
-                                  </p>
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
+                      {/* Body Content */}
+                      <div className="bg-white px-6 py-5 text-[13px] text-slate-700 leading-relaxed font-sans">
+                        <div
+                          dangerouslySetInnerHTML={{
+                            __html: `<p style='margin:0 0 12px 0;'>${previewHtml}</p>`,
+                          }}
+                        />
 
-                    {/* Edit / Preview tabs */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between flex-wrap gap-2">
-                        <div className="flex rounded-lg border border-white/10 overflow-hidden text-[0.68rem] font-semibold bg-white/[0.03]">
-                          {(["edit", "preview"] as const).map((tab) => (
-                            <button
-                              key={tab}
-                              type="button"
-                              onClick={() => setConfirmPreview(tab)}
-                              className={`px-3 py-1.5 cursor-pointer transition-colors ${
-                                confirmPreview === tab
-                                  ? "bg-white/[0.12] text-white shadow-sm"
-                                  : "text-white/50 hover:text-white hover:bg-white/[0.05]"
-                              }`}
-                            >
-                              {tab === "edit" ? t("Edit template", "Editar modelo") : t("Preview email", "Pré-visualizar e-mail")}
-                            </button>
-                          ))}
+                        {/* Location Callout Card */}
+                        <div className="mt-4 p-4 bg-slate-50 border border-slate-200 border-l-4 border-l-[#090d16] rounded-lg text-xs">
+                          <div className="font-bold text-slate-800">
+                            📍 Local do Teste Presencial
+                          </div>
+                          <div className="text-slate-600 mt-1">
+                            Av. Paulo Samuel Khankhomba nº 1948, antes da esquina com a Av. Filipe Samuel Magaia, Maputo
+                          </div>
+                          <div className="text-[0.7rem] text-sky-600 font-semibold mt-2">
+                            Ver localização no Google Maps &rarr;
+                          </div>
                         </div>
-                        <span className="text-[0.65rem] text-white/40">
-                          {t("Tags: {{greeting}}, {{slot}}, {{name}}", "Tags: {{greeting}}, {{slot}}, {{name}}")}
-                        </span>
                       </div>
 
-                      {confirmPreview === "edit" ? (
-                        <div className="space-y-1.5">
-                          <textarea
-                            rows={15}
-                            value={confirmMessage}
-                            onChange={(e) => setConfirmMessage(e.target.value)}
-                            className="w-full rounded-xl border border-white/10 bg-white/[0.04] p-4 text-xs font-mono text-white leading-relaxed focus:border-white/30 focus:outline-none resize-y"
-                          />
-                          <p className="text-[0.65rem] text-white/40 italic">
-                            {t(
-                              "The {{greeting}} tag automatically adapts to Mozambique time (Bom dia / Boa tarde / Boa noite) at send time.",
-                              "A tag {{greeting}} ajusta automaticamente a saudação à hora de Moçambique no momento do envio."
-                            )}
-                          </p>
-                        </div>
-                      ) : (
-                        /* Mobile-responsive email preview */
-                        <div className="rounded-xl border border-white/10 overflow-hidden bg-[#f1f5f9] max-w-xl mx-auto shadow-md">
-                          {/* Accent bar */}
-                          <div className="h-1 bg-[#090d16]" />
-                          {/* Letterhead */}
-                          <div className="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between bg-white">
-                            <span className="text-xs font-black text-slate-800 tracking-widest uppercase">
-                              OVERWATCH
-                            </span>
-                            <div className="text-right">
-                              <span className="text-[0.6rem] font-bold text-slate-500 uppercase tracking-wider block">
-                                Recrutamento &amp; Selecção
-                              </span>
-                              <span className="text-[0.6rem] text-slate-400 block">
-                                Maputo, Moçambique
-                              </span>
-                            </div>
-                          </div>
-                          {/* Body */}
-                          <div className="bg-white px-5 py-5 text-[13px] text-slate-700 leading-relaxed font-sans">
-                            <div
-                              dangerouslySetInnerHTML={{
-                                __html: `<p style='margin:0 0 12px 0;'>${previewHtml}</p>`,
-                              }}
-                            />
-
-                            {/* Location Callout preview */}
-                            <div className="mt-4 p-3.5 bg-slate-50 border border-slate-200 border-l-4 border-l-[#090d16] rounded-lg text-xs">
-                              <div className="font-bold text-slate-800">Local do Teste Presencial:</div>
-                              <div className="text-slate-600 mt-0.5">
-                                Av. Paulo Samuel Khankhomba nº 1948, antes da esquina com a Av. Filipe Samuel Magaia, Maputo
-                              </div>
-                              <div className="text-[0.68rem] text-sky-600 font-semibold mt-1">
-                                Ver localização no Google Maps &rarr;
-                              </div>
-                            </div>
-                          </div>
-                          {/* Footer */}
-                          <div className="bg-slate-50 border-t border-slate-200 px-5 py-3 text-[0.65rem] text-slate-500">
-                            <strong className="text-slate-700 block">Overwatch Moçambique, Lda.</strong>
-                            Av. Paulo Samuel Khankhomba nº 1948, Maputo · info@overwatchmoz.com
-                          </div>
-                        </div>
-                      )}
+                      {/* Footer */}
+                      <div className="bg-slate-50 border-t border-slate-200 px-6 py-3.5 text-[0.68rem] text-slate-500 leading-relaxed">
+                        <strong className="text-slate-700 block">Overwatch Moçambique, Lda.</strong>
+                        Av. Paulo Samuel Khankhomba nº 1948, Maputo · info@overwatchmoz.com
+                      </div>
                     </div>
+                  )}
 
-                    {/* Actions row */}
-                    <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/10">
+                  {/* Actions & Dispatch Bar */}
+                  <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-white/10">
+                    {/* Left: Quick Test Email Dispatch */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[0.68rem] text-white/50 font-medium">
+                        {t("Test dispatch to:", "Enviar teste para:")}
+                      </span>
+                      <input
+                        type="email"
+                        value={testConfirmEmail}
+                        onChange={(e) => setTestConfirmEmail(e.target.value)}
+                        placeholder="email@exemplo.com"
+                        className="rounded-lg border border-white/15 bg-white/[0.04] px-2.5 py-1.5 text-xs text-white placeholder-white/30 focus:border-white/30 focus:outline-none w-52"
+                      />
                       <button
                         type="button"
-                        onClick={() => setConfirmMessage(CONFIRM_DEFAULT_PT)}
-                        className="flex items-center gap-1.5 text-[0.68rem] text-white/50 hover:text-white/80 font-medium cursor-pointer transition-colors"
+                        onClick={() => void handleSendTestConfirmation()}
+                        disabled={testConfirmSending || !testConfirmEmail.trim()}
+                        className="flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.06] hover:bg-white/[0.1] px-3 py-1.5 text-xs font-semibold text-white transition-colors cursor-pointer disabled:opacity-40"
                       >
-                        <RotateCcw size={12} />
-                        {t("Reset template to default", "Repor modelo padrão")}
-                      </button>
-
-                      <div className="flex items-center gap-3">
-                        {confirmResult && (
-                          <span
-                            className={`text-[0.7rem] font-semibold ${
-                              confirmResult.failed > 0 ? "text-amber-400" : "text-emerald-400"
-                            }`}
-                          >
-                            {confirmResult.success > 0 && `✓ ${confirmResult.success} ${t("sent", "enviados")}`}
-                            {confirmResult.failed > 0 &&
-                              ` · ✕ ${confirmResult.failed} ${t("failed", "falharam")}`}
-                          </span>
+                        {testConfirmSending ? (
+                          <>
+                            <Loader2 size={12} className="animate-spin" />
+                            <span>{t("Sending test…", "A enviar…")}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Mail size={12} />
+                            <span>{t("Send Test Email", "Enviar E-mail de Teste")}</span>
+                          </>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => void handleSendConfirmations()}
-                          disabled={confirmSending || confirmSelectedIds.length === 0}
-                          className="flex items-center gap-2 rounded-xl bg-sky-600 hover:bg-sky-500 active:bg-sky-700 disabled:opacity-40 disabled:cursor-not-allowed px-5 py-2.5 text-xs font-bold text-white transition-all cursor-pointer shadow-lg shadow-sky-900/20"
+                      </button>
+                      {testConfirmStatus === "success" && (
+                        <span className="text-[0.68rem] font-semibold text-emerald-400">
+                          ✓ {t("Test email sent!", "E-mail de teste enviado com sucesso!")}
+                        </span>
+                      )}
+                      {testConfirmStatus === "error" && (
+                        <span className="text-[0.68rem] font-semibold text-red-400">
+                          ✕ {t("Failed to send test email", "Falha no envio de teste")}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Right: Bulk Dispatch Button */}
+                    <div className="flex items-center gap-3">
+                      {confirmResult && (
+                        <span
+                          className={`text-[0.7rem] font-semibold ${
+                            confirmResult.failed > 0 ? "text-amber-400" : "text-emerald-400"
+                          }`}
                         >
-                          {confirmSending ? (
-                            <>
-                              <Loader2 size={13} className="animate-spin" />
-                              <span>{t("Sending confirmations…", "A enviar confirmações…")}</span>
-                            </>
-                          ) : (
-                            <>
-                              <Send size={13} />
-                              <span>
-                                {t(
-                                  `Send Confirmation (${confirmSelectedIds.length})`,
-                                  `Enviar Confirmação (${confirmSelectedIds.length})`
-                                )}
-                              </span>
-                            </>
-                          )}
-                        </button>
-                      </div>
+                          {confirmResult.success > 0 && `✓ ${confirmResult.success} ${t("sent", "enviados")}`}
+                          {confirmResult.failed > 0 &&
+                            ` · ✕ ${confirmResult.failed} ${t("failed", "falharam")}`}
+                        </span>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => void handleSendConfirmations()}
+                        disabled={confirmSending || confirmSelectedIds.length === 0}
+                        className="flex items-center gap-2 rounded-xl bg-sky-600 hover:bg-sky-500 active:bg-sky-700 disabled:opacity-40 disabled:cursor-not-allowed px-5 py-2.5 text-xs font-bold text-white transition-all cursor-pointer shadow-lg shadow-sky-900/20"
+                      >
+                        {confirmSending ? (
+                          <>
+                            <Loader2 size={13} className="animate-spin" />
+                            <span>{t("Sending confirmations…", "A enviar confirmações…")}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Send size={13} />
+                            <span>
+                              {t(
+                                `Send Confirmation (${confirmSelectedIds.length})`,
+                                `Enviar Confirmação (${confirmSelectedIds.length})`
+                              )}
+                            </span>
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
                 </div>
-              );
-            })()}
-          </section>
-        )}
+              </div>
+            </section>
+          );
+        })()}
 
         {/* ─── TAB 4: APPLICATIONS PIPELINE VIEW ──────────────────── */}
         {view === "applications" && (

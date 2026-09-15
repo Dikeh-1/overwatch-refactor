@@ -51,6 +51,7 @@ export type Application = {
   invitedAt?: string;
   testSlot?: string;
   testBookedAt?: string;
+  confirmationSentAt?: string;
 };
 export const MAX_CV = 3 * 1024 * 1024;
 
