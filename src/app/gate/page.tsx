@@ -655,42 +655,43 @@ function GateSecurityContent() {
       <TechGrid className="fixed inset-0 opacity-15 pointer-events-none -z-10" />
 
       {/* Top Header Bar */}
-      <header className="sticky top-0 z-30 bg-[#0d1121]/95 backdrop-blur-md border-b border-white/10 px-4 py-3">
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
+      <header className="sticky top-0 z-30 bg-[#0d1121]/95 backdrop-blur-md border-b border-white/10 px-3 sm:px-4 py-2.5 sm:py-3">
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <Logo size="sm" variant="light" />
-            <div className="h-5 w-px bg-white/10 hidden sm:block" />
+            <div className="h-5 w-px bg-white/10 hidden md:block" />
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h1 className="text-xs font-bold text-white uppercase tracking-wider truncate">
-                  {t.postTitle}
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <h1 className="text-[11px] sm:text-xs font-bold text-white uppercase tracking-wider truncate">
+                  <span className="hidden sm:inline">{t.postTitle}</span>
+                  <span className="sm:hidden">{lang === "pt" ? "Portaria" : "Gate"}</span>
                 </h1>
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
               </div>
-              <p className="text-[10px] text-white/50 truncate flex items-center gap-1">
+              <p className="text-[10px] text-white/50 truncate hidden md:flex items-center gap-1">
                 <MapPin size={10} className="text-white/40" />
                 {t.address}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Live Today Counter */}
-            <div className="px-3 py-1.5 rounded-xl border border-white/10 bg-white/[0.04] text-right">
-              <div className="text-[9px] text-white/50 font-medium leading-none">
+            <div className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl border border-white/10 bg-white/[0.04] text-right">
+              <div className="text-[8px] sm:text-[9px] text-white/50 font-medium leading-none hidden xs:block">
                 {t.presentToday}
               </div>
-              <div className="text-xs font-bold text-emerald-400 font-mono mt-0.5">
-                {rosterStats.present} / {rosterStats.total}
+              <div className="text-[11px] sm:text-xs font-bold text-emerald-400 font-mono">
+                {rosterStats.present}/{rosterStats.total}
               </div>
             </div>
 
             {/* Language Switcher Pill */}
-            <div className="flex items-center rounded-xl bg-white/[0.06] border border-white/10 p-0.5 text-xs">
+            <div className="flex items-center rounded-lg sm:rounded-xl bg-white/[0.06] border border-white/10 p-0.5 text-[10px] sm:text-xs font-bold">
               <button
                 type="button"
                 onClick={() => switchLanguage("pt")}
-                className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                className={`px-2 sm:px-2.5 py-1 rounded-md sm:rounded-lg font-semibold transition-all cursor-pointer ${
                   lang === "pt"
                     ? "bg-white text-[#090d16] shadow-sm font-bold"
                     : "text-white/60 hover:text-white"
@@ -701,7 +702,7 @@ function GateSecurityContent() {
               <button
                 type="button"
                 onClick={() => switchLanguage("en")}
-                className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                className={`px-2 sm:px-2.5 py-1 rounded-md sm:rounded-lg font-semibold transition-all cursor-pointer ${
                   lang === "en"
                     ? "bg-white text-[#090d16] shadow-sm font-bold"
                     : "text-white/60 hover:text-white"
@@ -715,17 +716,17 @@ function GateSecurityContent() {
             <button
               type="button"
               onClick={handleLogout}
-              className="p-2 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer"
               title={t.exitPortal}
             >
-              <LogOut size={16} />
+              <LogOut size={15} />
             </button>
           </div>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 flex flex-col space-y-4">
+      <main className="flex-1 max-w-4xl w-full mx-auto p-3 sm:p-6 flex flex-col space-y-4">
         {/* Navigation Tabs */}
         <div className="grid grid-cols-3 p-1 rounded-xl bg-[#0d1121] border border-white/10 text-xs shadow-inner">
           <button
@@ -734,14 +735,17 @@ function GateSecurityContent() {
               resetScanner();
               setActiveTab("camera");
             }}
-            className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg font-semibold transition-all cursor-pointer ${
+            className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 rounded-lg font-semibold transition-all cursor-pointer ${
               activeTab === "camera"
                 ? "bg-white text-[#090d16] font-bold shadow-md"
                 : "text-white/60 hover:text-white"
             }`}
           >
-            <ScanLine size={15} />
-            <span>{t.tabCamera}</span>
+            <ScanLine size={14} className="shrink-0" />
+            <span className="truncate">
+              <span className="sm:hidden">{lang === "pt" ? "Escanear" : "Scan"}</span>
+              <span className="hidden sm:inline">{t.tabCamera}</span>
+            </span>
           </button>
 
           <button
@@ -750,14 +754,17 @@ function GateSecurityContent() {
               stopCamera();
               setActiveTab("manual");
             }}
-            className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg font-semibold transition-all cursor-pointer ${
+            className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 rounded-lg font-semibold transition-all cursor-pointer ${
               activeTab === "manual"
                 ? "bg-white text-[#090d16] font-bold shadow-md"
                 : "text-white/60 hover:text-white"
             }`}
           >
-            <Search size={15} />
-            <span>{t.tabManual}</span>
+            <Search size={14} className="shrink-0" />
+            <span className="truncate">
+              <span className="sm:hidden">{lang === "pt" ? "Manual" : "Manual"}</span>
+              <span className="hidden sm:inline">{t.tabManual}</span>
+            </span>
           </button>
 
           <button
@@ -767,14 +774,17 @@ function GateSecurityContent() {
               setActiveTab("roster");
               fetchRoster();
             }}
-            className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg font-semibold transition-all cursor-pointer ${
+            className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 rounded-lg font-semibold transition-all cursor-pointer ${
               activeTab === "roster"
                 ? "bg-white text-[#090d16] font-bold shadow-md"
                 : "text-white/60 hover:text-white"
             }`}
           >
-            <Users size={15} />
-            <span>{t.tabRoster} ({rosterStats.total})</span>
+            <Users size={14} className="shrink-0" />
+            <span className="truncate">
+              <span className="sm:hidden">{lang === "pt" ? `Hoje (${rosterStats.total})` : `Today (${rosterStats.total})`}</span>
+              <span className="hidden sm:inline">{t.tabRoster} ({rosterStats.total})</span>
+            </span>
           </button>
         </div>
 
