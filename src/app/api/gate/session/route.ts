@@ -1,15 +1,12 @@
-﻿import { cookies } from "next/headers";
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
 const VALID_PINS = [
   "1498",
-  "OverwatchGate2026!",
-  "OverwatchRecruit2026!",
-  process.env.CAREERS_ADMIN_PASSWORD,
   process.env.GATE_PIN,
-].filter(Boolean);
+].filter(Boolean) as string[];
 
 export async function GET() {
   const cookieStore = await cookies();
