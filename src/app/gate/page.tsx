@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import jsQR from "jsqr";
 import {
   ShieldCheck,
-  Camera,
+  ScanLine,
   Search,
   Users,
   CheckCircle2,
@@ -14,12 +14,18 @@ import {
   Clock,
   RotateCw,
   LogOut,
-  Lock,
+  LockKeyhole,
   RefreshCw,
   Check,
-  Globe,
   FlipHorizontal,
+  ArrowRight,
+  MapPin,
+  Sparkles,
 } from "lucide-react";
+import Logo from "@/components/ui/Logo";
+import TechGrid from "@/components/ui/TechGrid";
+import LazyVideo from "@/components/ui/LazyVideo";
+import { IMAGES } from "@/lib/constants";
 import { formatSlotDisplay } from "@/lib/careers";
 
 type TodayCandidate = {
@@ -49,41 +55,42 @@ type VerificationResult = {
 
 const DICT = {
   pt: {
-    loading: "A carregar controlo de portaria...",
-    lockTitle: "Portaria Overwatch",
-    lockSubtitle: "Controlo de Acesso & Validação de Passes de Teste",
+    loading: "A ligar ao posto de segurança...",
+    lockBadge: "Portaria de Segurança",
+    lockTitle: "Controlo de Acesso Overwatch",
+    lockSubtitle: "Validação e registo de presenças para testes presenciais de candidatas.",
     pinLabel: "PIN de Segurança da Portaria",
-    pinPlaceholder: "Introduza o PIN (ex: 1498)",
-    pinSubmit: "Entrar na Portaria",
-    pinVerifying: "A verificar...",
+    pinPlaceholder: "Introduza o código PIN",
+    pinSubmit: "Entrar no Posto",
+    pinVerifying: "A verificar…",
     pinIncorrect: "PIN de segurança incorrecto.",
     pinError: "Erro ao comunicar com o servidor.",
     address: "Av. Paulo Samuel Kankhomba nº 1498, Maputo",
-    postTitle: "Posto de Acesso Overwatch",
+    postTitle: "Posto de Portaria Overwatch",
     presentToday: "Presentes Hoje",
-    exitPortal: "Sair da Portaria",
+    exitPortal: "Terminar Sessão",
     tabCamera: "Leitor QR",
-    tabManual: "Pesquisar",
-    tabRoster: "Hoje",
+    tabManual: "Pesquisa Manual",
+    tabRoster: "Lista de Hoje",
     scannerHelp: "Aponte a câmara para o código QR apresentado pela candidata no telemóvel ou em papel.",
-    validatingPass: "A validar passe no sistema...",
-    cameraError: "Não foi possível aceder à câmara. Use a aba de Pesquisa Manual.",
+    validatingPass: "A validar passe no sistema…",
+    cameraError: "Não foi possível aceder à câmara. Utilize a aba de Pesquisa Manual.",
     accessGranted: "Entrada Autorizada",
     accessWrongDay: "Acesso Recusado: Turno Incorrecto",
     accessDenied: "Acesso Recusado",
     candidateDefault: "Candidato(a)",
     mandatoryProcedure: "Procedimento Obrigatório na Portaria:",
     step1: "Exigir Documento de Identificação Original (BI / Passaporte).",
-    step2: "Verificar se tem caneta esferográfica (azul ou preta).",
+    step2: "Confirmar que a candidata tem caneta esferográfica (azul ou preta).",
     step3: "Autorizar entrada para a sala de testes.",
     wrongDayMsg: "Esta candidata NÃO está escalada para o turno de hoje.",
     officialDate: "Data Oficial do Agendamento:",
     guardInstruction: "⚠️ Instrução ao Guarda: Não autorizar a entrada. A candidata deve regressar exclusivamente no dia agendado para respeitar a lotação diária de 10 candidatas.",
     genericDenied: "Esta candidatura não está aprovada para realização de teste.",
-    scanNext: "Escanear Próxima Candidata",
-    manualTitle: "Pesquisa Manual da Portaria",
+    scanNext: "Validar Próxima Candidata",
+    manualTitle: "Pesquisa Manual de Candidata",
     manualSubtitle: "Utilize caso a candidata esteja com o telemóvel descarregado ou ecrã danificado.",
-    searchPlaceholder: "Número de WhatsApp (ex: 84... ou 82...) ou Nome",
+    searchPlaceholder: "Número de WhatsApp (ex: 84... ou 82...) ou Nome completo",
     searchBtn: "Verificar & Dar Entrada",
     rosterTitle: "Escala de Hoje",
     rosterSubtitle: "Candidatas com teste confirmado para hoje às 10h00.",
@@ -95,24 +102,25 @@ const DICT = {
     flipCamera: "Mudar câmara",
   },
   en: {
-    loading: "Loading gate security control...",
-    lockTitle: "Overwatch Security Gate",
-    lockSubtitle: "Access Control & Test Pass Verification",
+    loading: "Connecting to security gate…",
+    lockBadge: "Security Gate Portal",
+    lockTitle: "Overwatch Access Control",
+    lockSubtitle: "Entrance pass verification and attendance logging for candidate testing.",
     pinLabel: "Gate Security PIN",
-    pinPlaceholder: "Enter PIN (e.g. 1498)",
-    pinSubmit: "Enter Gate Portal",
-    pinVerifying: "Verifying...",
+    pinPlaceholder: "Enter security PIN",
+    pinSubmit: "Enter Gate Post",
+    pinVerifying: "Verifying…",
     pinIncorrect: "Incorrect security PIN.",
     pinError: "Error communicating with server.",
     address: "Av. Paulo Samuel Kankhomba nº 1498, Maputo",
-    postTitle: "Overwatch Access Post",
+    postTitle: "Overwatch Gate Post",
     presentToday: "Present Today",
-    exitPortal: "Exit Gate Portal",
+    exitPortal: "Sign Out",
     tabCamera: "QR Scanner",
     tabManual: "Manual Search",
-    tabRoster: "Today",
+    tabRoster: "Today's Roster",
     scannerHelp: "Point camera at the QR code presented by the candidate on their phone or printed paper.",
-    validatingPass: "Validating pass in database...",
+    validatingPass: "Validating pass in database…",
     cameraError: "Could not access camera. Please use the Manual Search tab.",
     accessGranted: "Access Granted",
     accessWrongDay: "Access Denied: Scheduled for Another Day",
@@ -126,10 +134,10 @@ const DICT = {
     officialDate: "Official Scheduled Date & Time:",
     guardInstruction: "⚠️ Guard Instruction: Do NOT grant entry. The candidate must return strictly on their scheduled date to maintain the daily cap of 10 candidates.",
     genericDenied: "This application is not approved or not booked for a test session.",
-    scanNext: "Scan Next Candidate",
-    manualTitle: "Manual Security Search",
+    scanNext: "Validate Next Candidate",
+    manualTitle: "Manual Candidate Search",
     manualSubtitle: "Use if candidate's phone battery is flat or screen is damaged.",
-    searchPlaceholder: "WhatsApp number (e.g. 84... or 82...) or Name",
+    searchPlaceholder: "WhatsApp number (e.g. 84... or 82...) or Full Name",
     searchBtn: "Verify & Check In",
     rosterTitle: "Today's Roster",
     rosterSubtitle: "Candidates confirmed for today's test at 10:00 AM.",
@@ -280,8 +288,8 @@ function GateSecurityContent() {
       gain.connect(ctx.destination);
 
       if (type === "allowed") {
-        osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
-        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.12); // A5
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.12);
         gain.gain.setValueAtTime(0.3, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
         osc.start();
@@ -476,30 +484,43 @@ function GateSecurityContent() {
   // Loading Session
   if (authed === null) {
     return (
-      <div className="min-h-screen bg-[#07090e] text-white flex items-center justify-center p-4">
-        <div className="flex items-center gap-3 text-sm text-slate-400">
-          <RefreshCw className="animate-spin text-emerald-400" size={20} />
+      <div className="min-h-screen bg-[#07080f] text-white flex items-center justify-center p-4">
+        <div className="flex items-center gap-3 text-sm text-white/70">
+          <RefreshCw className="animate-spin text-white/80" size={20} />
           <span>{t.loading}</span>
         </div>
       </div>
     );
   }
 
-  // ── LOCK SCREEN FOR SECURITY PIN ──
+  // ── LOCK SCREEN WITH BACKGROUND VIDEO (MATCHING ADMIN PORTAL) ──
   if (!authed) {
     return (
-      <div className="min-h-screen bg-[#07090e] text-white flex items-center justify-center p-4">
-        <div className="w-full max-w-sm bg-slate-900 border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6 relative">
-          {/* Language Toggle on Lock Screen */}
-          <div className="flex justify-end">
-            <div className="inline-flex items-center bg-slate-950 border border-white/15 rounded-lg p-0.5 text-xs font-bold">
+      <main className="min-h-screen flex items-center justify-center bg-[#07080f] text-white relative isolate overflow-hidden px-4 py-12">
+        {/* Background Video */}
+        <div className="absolute inset-0 z-0 opacity-30 pointer-events-none">
+          <LazyVideo
+            className="h-full w-full object-cover mix-blend-luminosity"
+            poster={IMAGES.videoPoster}
+            rootMargin="700px"
+            src={IMAGES.videoSrc}
+          />
+        </div>
+        <div className="absolute inset-0 bg-[#07080f]/80 z-0 pointer-events-none" />
+        <TechGrid className="absolute inset-0 opacity-35 pointer-events-none z-0" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.06),transparent_40%),radial-gradient(circle_at_80%_80%,rgba(255,255,255,0.03),transparent_40%)] pointer-events-none z-0" />
+
+        <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-[#121827]/95 p-8 shadow-[0_32px_80px_rgba(0,0,0,0.6)] backdrop-blur-md">
+          {/* Top Language Toggle */}
+          <div className="flex justify-end mb-2">
+            <div className="flex items-center rounded-xl bg-white/[0.06] border border-white/10 p-0.5 text-xs">
               <button
                 type="button"
                 onClick={() => switchLanguage("pt")}
-                className={`px-2.5 py-1 rounded transition-colors ${
+                className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
                   lang === "pt"
-                    ? "bg-emerald-500 text-slate-950 shadow"
-                    : "text-slate-400 hover:text-white"
+                    ? "bg-white text-[#090d16] shadow-sm font-bold"
+                    : "text-white/60 hover:text-white"
                 }`}
               >
                 PT
@@ -507,10 +528,10 @@ function GateSecurityContent() {
               <button
                 type="button"
                 onClick={() => switchLanguage("en")}
-                className={`px-2.5 py-1 rounded transition-colors ${
+                className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
                   lang === "en"
-                    ? "bg-emerald-500 text-slate-950 shadow"
-                    : "text-slate-400 hover:text-white"
+                    ? "bg-white text-[#090d16] shadow-sm font-bold"
+                    : "text-white/60 hover:text-white"
                 }`}
               >
                 EN
@@ -518,25 +539,29 @@ function GateSecurityContent() {
             </div>
           </div>
 
-          <div className="text-center space-y-2">
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto">
-              <ShieldCheck size={26} />
+          <div className="text-center pb-6 border-b border-white/10">
+            <div className="flex justify-center mb-4">
+              <Logo size="md" variant="light" />
             </div>
-            <h1 className="text-base font-bold text-white tracking-wide uppercase">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.06] px-3 py-1 text-[0.68rem] font-bold uppercase tracking-wider text-white/80">
+              <ShieldCheck size={13} className="text-sky-400" />
+              {t.lockBadge}
+            </span>
+            <h1 className="mt-3 text-xl font-bold text-white tracking-tight">
               {t.lockTitle}
             </h1>
-            <p className="text-xs text-slate-400">
+            <p className="mt-1 text-xs text-white/60">
               {t.lockSubtitle}
             </p>
           </div>
 
-          <form onSubmit={handlePinSubmit} className="space-y-4">
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+          <form onSubmit={handlePinSubmit} className="mt-6 space-y-4">
+            <label className="block space-y-1.5 text-left">
+              <span className="text-xs font-semibold text-white/80">
                 {t.pinLabel}
-              </label>
+              </span>
               <div className="relative">
-                <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                <LockKeyhole size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
                 <input
                   type="password"
                   value={pinInput}
@@ -544,41 +569,50 @@ function GateSecurityContent() {
                   placeholder={t.pinPlaceholder}
                   autoFocus
                   required
-                  className="w-full pl-9 pr-3 py-3 rounded-xl bg-slate-950 border border-white/15 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-emerald-400"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-white/15 bg-white/[0.04] text-white text-sm placeholder:text-white/30 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/15 transition-colors tracking-widest text-center"
                 />
               </div>
               {pinError && (
-                <p className="text-xs text-red-400 mt-1.5 font-medium">{pinError}</p>
+                <div
+                  role="alert"
+                  className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400 font-medium mt-2"
+                >
+                  {pinError}
+                </div>
               )}
-            </div>
+            </label>
 
             <button
               type="submit"
               disabled={pinBusy || !pinInput.trim()}
-              className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-3.5 text-sm font-semibold text-[#090d16] shadow-lg shadow-black/30 transition-all hover:bg-white/90 active:scale-[0.99] disabled:opacity-50 cursor-pointer"
             >
-              {pinBusy ? <RotateCw size={15} className="animate-spin" /> : <span>{t.pinSubmit}</span>}
+              {pinBusy ? <RotateCw size={16} className="animate-spin" /> : null}
+              <span>{pinBusy ? t.pinVerifying : t.pinSubmit}</span>
+              {!pinBusy && <ArrowRight size={16} />}
             </button>
           </form>
 
-          <p className="text-[10px] text-slate-500 text-center font-mono">
+          <p className="mt-6 text-[11px] text-white/40 text-center font-mono flex items-center justify-center gap-1.5">
+            <MapPin size={11} className="text-white/30" />
             {t.address}
           </p>
         </div>
-      </div>
+      </main>
     );
   }
 
   // ── MAIN GATE SECURITY DASHBOARD ──
   return (
-    <div className="min-h-screen bg-[#07090e] text-white flex flex-col">
+    <div className="min-h-screen bg-[#07080f] text-white flex flex-col relative isolate">
+      <TechGrid className="fixed inset-0 opacity-15 pointer-events-none -z-10" />
+
       {/* Top Header Bar */}
-      <header className="sticky top-0 z-30 bg-slate-950/90 backdrop-blur-md border-b border-white/10 px-4 py-3">
+      <header className="sticky top-0 z-30 bg-[#0d1121]/95 backdrop-blur-md border-b border-white/10 px-4 py-3">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
-              <ShieldCheck size={18} />
-            </div>
+          <div className="flex items-center gap-3 min-w-0">
+            <Logo size="sm" variant="light" />
+            <div className="h-5 w-px bg-white/10 hidden sm:block" />
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h1 className="text-xs font-bold text-white uppercase tracking-wider truncate">
@@ -586,7 +620,8 @@ function GateSecurityContent() {
                 </h1>
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
               </div>
-              <p className="text-[10px] text-slate-400 truncate">
+              <p className="text-[10px] text-white/50 truncate flex items-center gap-1">
+                <MapPin size={10} className="text-white/40" />
                 {t.address}
               </p>
             </div>
@@ -594,8 +629,8 @@ function GateSecurityContent() {
 
           <div className="flex items-center gap-2 shrink-0">
             {/* Live Today Counter */}
-            <div className="px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 text-right">
-              <div className="text-[9px] text-slate-400 font-medium leading-none">
+            <div className="px-3 py-1.5 rounded-xl border border-white/10 bg-white/[0.04] text-right">
+              <div className="text-[9px] text-white/50 font-medium leading-none">
                 {t.presentToday}
               </div>
               <div className="text-xs font-bold text-emerald-400 font-mono mt-0.5">
@@ -604,14 +639,14 @@ function GateSecurityContent() {
             </div>
 
             {/* Language Switcher Pill */}
-            <div className="flex items-center bg-slate-900 border border-white/15 rounded-lg p-0.5 text-[11px] font-bold">
+            <div className="flex items-center rounded-xl bg-white/[0.06] border border-white/10 p-0.5 text-xs">
               <button
                 type="button"
                 onClick={() => switchLanguage("pt")}
-                className={`px-2 py-1 rounded transition-colors ${
+                className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
                   lang === "pt"
-                    ? "bg-emerald-500 text-slate-950 shadow"
-                    : "text-slate-400 hover:text-white"
+                    ? "bg-white text-[#090d16] shadow-sm font-bold"
+                    : "text-white/60 hover:text-white"
                 }`}
               >
                 PT
@@ -619,10 +654,10 @@ function GateSecurityContent() {
               <button
                 type="button"
                 onClick={() => switchLanguage("en")}
-                className={`px-2 py-1 rounded transition-colors ${
+                className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
                   lang === "en"
-                    ? "bg-emerald-500 text-slate-950 shadow"
-                    : "text-slate-400 hover:text-white"
+                    ? "bg-white text-[#090d16] shadow-sm font-bold"
+                    : "text-white/60 hover:text-white"
                 }`}
               >
                 EN
@@ -633,7 +668,7 @@ function GateSecurityContent() {
             <button
               type="button"
               onClick={handleLogout}
-              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              className="p-2 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer"
               title={t.exitPortal}
             >
               <LogOut size={16} />
@@ -643,9 +678,9 @@ function GateSecurityContent() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-4xl w-full mx-auto p-4 flex flex-col space-y-4">
+      <main className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 flex flex-col space-y-4">
         {/* Navigation Tabs */}
-        <div className="grid grid-cols-3 p-1 rounded-xl bg-slate-900 border border-white/10 text-xs">
+        <div className="grid grid-cols-3 p-1 rounded-xl bg-[#0d1121] border border-white/10 text-xs shadow-inner">
           <button
             type="button"
             onClick={() => {
@@ -654,11 +689,11 @@ function GateSecurityContent() {
             }}
             className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg font-semibold transition-all cursor-pointer ${
               activeTab === "camera"
-                ? "bg-emerald-500 text-slate-950 shadow"
-                : "text-slate-400 hover:text-white"
+                ? "bg-white text-[#090d16] font-bold shadow-md"
+                : "text-white/60 hover:text-white"
             }`}
           >
-            <Camera size={14} />
+            <ScanLine size={15} />
             <span>{t.tabCamera}</span>
           </button>
 
@@ -670,11 +705,11 @@ function GateSecurityContent() {
             }}
             className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg font-semibold transition-all cursor-pointer ${
               activeTab === "manual"
-                ? "bg-emerald-500 text-slate-950 shadow"
-                : "text-slate-400 hover:text-white"
+                ? "bg-white text-[#090d16] font-bold shadow-md"
+                : "text-white/60 hover:text-white"
             }`}
           >
-            <Search size={14} />
+            <Search size={15} />
             <span>{t.tabManual}</span>
           </button>
 
@@ -687,11 +722,11 @@ function GateSecurityContent() {
             }}
             className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg font-semibold transition-all cursor-pointer ${
               activeTab === "roster"
-                ? "bg-emerald-500 text-slate-950 shadow"
-                : "text-slate-400 hover:text-white"
+                ? "bg-white text-[#090d16] font-bold shadow-md"
+                : "text-white/60 hover:text-white"
             }`}
           >
-            <Users size={14} />
+            <Users size={15} />
             <span>{t.tabRoster} ({rosterStats.total})</span>
           </button>
         </div>
@@ -724,7 +759,7 @@ function GateSecurityContent() {
 
               <div className="space-y-2 flex-1 min-w-0">
                 <span
-                  className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                     result.success
                       ? "bg-emerald-500/30 text-emerald-300 border border-emerald-500/40"
                       : result.code === "WRONG_DAY"
@@ -757,15 +792,15 @@ function GateSecurityContent() {
                       {t.mandatoryProcedure}
                     </p>
                     <div className="flex items-center gap-1.5">
-                      <Check size={13} className="text-emerald-400 shrink-0" />
+                      <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
                       <span>{t.step1}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <Check size={13} className="text-emerald-400 shrink-0" />
+                      <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
                       <span>{t.step2}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <Check size={13} className="text-emerald-400 shrink-0" />
+                      <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
                       <span>{t.step3}</span>
                     </div>
                   </div>
@@ -778,7 +813,7 @@ function GateSecurityContent() {
                       {t.wrongDayMsg}
                     </p>
                     {result.actualSlot && (
-                      <div className="p-2.5 rounded-xl bg-black/40 border border-amber-500/30">
+                      <div className="p-3 rounded-xl bg-black/40 border border-amber-500/30">
                         <span className="text-[10px] text-amber-300 uppercase tracking-wide block font-bold">
                           {t.officialDate}
                         </span>
@@ -807,7 +842,7 @@ function GateSecurityContent() {
               <button
                 type="button"
                 onClick={resetScanner}
-                className="w-full py-2.5 rounded-xl bg-white/15 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer text-center"
+                className="w-full py-3 rounded-xl bg-white/15 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer text-center"
               >
                 {t.scanNext}
               </button>
@@ -818,7 +853,7 @@ function GateSecurityContent() {
         {/* ── TAB 1: CAMERA SCANNER ── */}
         {activeTab === "camera" && !result && (
           <div className="flex-1 flex flex-col space-y-3">
-            <div className="relative rounded-2xl overflow-hidden bg-black border border-white/10 aspect-[4/3] sm:aspect-video flex items-center justify-center">
+            <div className="relative rounded-2xl overflow-hidden bg-black border border-white/10 aspect-[4/3] sm:aspect-video flex items-center justify-center shadow-2xl">
               <video
                 ref={videoRef}
                 className="w-full h-full object-cover"
@@ -845,11 +880,11 @@ function GateSecurityContent() {
                 onClick={() => {
                   setCameraFacing((prev) => (prev === "environment" ? "user" : "environment"));
                 }}
-                className="absolute top-3 right-3 p-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/20 text-white hover:bg-black/80 transition-colors cursor-pointer text-xs flex items-center gap-1.5"
+                className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-black/60 backdrop-blur-md border border-white/20 text-white hover:bg-black/80 transition-colors cursor-pointer text-xs flex items-center gap-1.5 shadow-lg"
                 title={t.flipCamera}
               >
                 <FlipHorizontal size={14} />
-                <span className="text-[10px] hidden sm:inline">{t.flipCamera}</span>
+                <span className="text-[10px] hidden sm:inline font-medium">{t.flipCamera}</span>
               </button>
 
               {/* Processing Overlay */}
@@ -862,13 +897,13 @@ function GateSecurityContent() {
             </div>
 
             {cameraError && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-200 text-xs flex items-center gap-2">
+              <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-200 text-xs flex items-center gap-2">
                 <AlertTriangle size={14} className="shrink-0 text-red-400" />
                 <span>{cameraError}</span>
               </div>
             )}
 
-            <p className="text-xs text-slate-400 text-center">
+            <p className="text-xs text-white/50 text-center">
               {t.scannerHelp}
             </p>
           </div>
@@ -876,12 +911,13 @@ function GateSecurityContent() {
 
         {/* ── TAB 2: MANUAL SEARCH ── */}
         {activeTab === "manual" && !result && (
-          <div className="rounded-2xl bg-slate-900 border border-white/10 p-5 space-y-4 shadow-xl">
+          <div className="rounded-2xl bg-[#111827] border border-white/10 p-6 space-y-4 shadow-xl">
             <div>
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <Search size={15} className="text-white/60" />
                 {t.manualTitle}
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-white/50 mt-1">
                 {t.manualSubtitle}
               </p>
             </div>
@@ -893,25 +929,27 @@ function GateSecurityContent() {
                   executeCheckIn({ query: searchQuery.trim() });
                 }
               }}
-              className="space-y-3"
+              className="space-y-4"
             >
               <div className="relative">
-                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={t.searchPlaceholder}
-                  className="w-full pl-9 pr-3 py-3 rounded-xl bg-slate-950 border border-white/15 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-emerald-400"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-white/15 bg-white/[0.04] text-white text-sm placeholder:text-white/30 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/15 transition-colors"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={processing || !searchQuery.trim()}
-                className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer shadow flex items-center justify-center gap-2"
+                className="w-full py-3.5 rounded-xl bg-white hover:bg-white/90 text-[#090d16] text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer shadow-lg shadow-black/30 flex items-center justify-center gap-2"
               >
-                {processing ? <RotateCw size={15} className="animate-spin" /> : <span>{t.searchBtn}</span>}
+                {processing ? <RotateCw size={15} className="animate-spin" /> : null}
+                <span>{t.searchBtn}</span>
+                {!processing && <ArrowRight size={15} />}
               </button>
             </form>
           </div>
@@ -919,13 +957,14 @@ function GateSecurityContent() {
 
         {/* ── TAB 3: TODAY'S LIST (ROSTER) ── */}
         {activeTab === "roster" && (
-          <div className="rounded-2xl bg-slate-900 border border-white/10 p-5 space-y-4 shadow-xl">
+          <div className="rounded-2xl bg-[#111827] border border-white/10 p-6 space-y-4 shadow-xl">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                  <Users size={15} className="text-white/60" />
                   {t.rosterTitle} ({rosterStats.present} / {rosterStats.total})
                 </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-xs text-white/50 mt-1">
                   {t.rosterSubtitle}
                 </p>
               </div>
@@ -933,51 +972,61 @@ function GateSecurityContent() {
                 type="button"
                 onClick={fetchRoster}
                 disabled={rosterLoading}
-                className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 transition-colors cursor-pointer"
+                className="p-2 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/10 text-white/70 hover:text-white transition-colors cursor-pointer"
                 title={t.refreshTooltip}
               >
-                <RefreshCw size={14} className={rosterLoading ? "animate-spin text-emerald-400" : ""} />
+                <RefreshCw size={14} className={rosterLoading ? "animate-spin text-sky-400" : ""} />
               </button>
             </div>
 
             {roster.length === 0 ? (
-              <div className="py-10 text-center text-slate-500 text-xs">
+              <div className="py-12 text-center text-white/40 text-xs">
                 {t.rosterEmpty}
               </div>
             ) : (
               <div className="divide-y divide-white/5 max-h-[60vh] overflow-y-auto">
-                {roster.map((c, idx) => (
-                  <div
-                    key={c.id}
-                    className="py-3 flex items-center justify-between gap-3 text-xs"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="w-5 text-center text-slate-600 font-mono text-[11px]">
-                        {idx + 1}
-                      </span>
-                      <div className="min-w-0">
-                        <strong className="block text-white truncate text-xs">
-                          {c.name}
-                        </strong>
-                        <span className="text-[11px] text-slate-400 block font-mono">
-                          {c.whatsapp}
-                        </span>
+                {roster.map((c, idx) => {
+                  const initials = c.name
+                    .split(" ")
+                    .filter(Boolean)
+                    .map((n) => n[0])
+                    .slice(0, 2)
+                    .join("")
+                    .toUpperCase();
+
+                  return (
+                    <div
+                      key={c.id}
+                      className="py-3.5 flex items-center justify-between gap-3 text-xs"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-white/[0.06] border border-white/10 flex items-center justify-center font-mono font-bold text-white/70 text-xs shrink-0">
+                          {initials || idx + 1}
+                        </div>
+                        <div className="min-w-0">
+                          <strong className="block text-white truncate text-xs font-semibold">
+                            {c.name}
+                          </strong>
+                          <span className="text-[11px] text-white/50 block font-mono">
+                            {c.whatsapp}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 flex items-center gap-2">
+                        {c.attendedAt ? (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 border border-emerald-500/30 text-emerald-300">
+                            🟢 {t.rosterPresent} ({new Date(c.attendedAt).toLocaleTimeString(lang === "pt" ? "pt-MZ" : "en-US", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Maputo" })})
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-white/5 border border-white/10 text-white/40">
+                            ⏳ {t.rosterAwaiting}
+                          </span>
+                        )}
                       </div>
                     </div>
-
-                    <div className="shrink-0 flex items-center gap-2">
-                      {c.attendedAt ? (
-                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 border border-emerald-500/30 text-emerald-300">
-                          🟢 {t.rosterPresent} ({new Date(c.attendedAt).toLocaleTimeString(lang === "pt" ? "pt-MZ" : "en-US", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Maputo" })})
-                        </span>
-                      ) : (
-                        <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-white/5 border border-white/10 text-slate-400">
-                          ⏳ {t.rosterAwaiting}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -991,8 +1040,8 @@ export default function GateSecurityPortal() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#07090e] text-white flex items-center justify-center p-4">
-          <RefreshCw className="animate-spin text-emerald-400" size={24} />
+        <div className="min-h-screen bg-[#07080f] text-white flex items-center justify-center p-4">
+          <RefreshCw className="animate-spin text-white/80" size={24} />
         </div>
       }
     >
