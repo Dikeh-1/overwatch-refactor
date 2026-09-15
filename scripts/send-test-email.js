@@ -201,20 +201,14 @@ Por favor, escolha uma das seguintes opções de data e confirme a sua presença
             </table>
           </div>
 
-          <!-- Subject Bar -->
-          <div style="background-color: #f1f5f9; padding: 10px 24px; border-bottom: 1px solid #e2e8f0; font-size: 12px; color: #334155;">
-            <span style="font-weight: 700; color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; margin-right: 8px;">ASSUNTO:</span>
-            <span style="font-weight: 600; color: #0f172a;">${subject}</span>
-          </div>
-
           <!-- Official Subheading Bar -->
-          <div style="background-color: #f8fafc; padding: 10px 24px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #334155;">
+          <div style="background-color: #f8fafc; padding: 12px 20px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #334155;">
             <table style="width: 100%; border-collapse: collapse;">
               <tr>
-                <td style="font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #334155;">
+                <td style="font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #334155; font-size: 11px;">
                   CONVOCATÓRIA OFICIAL · TESTE DE SELECÇÃO PRESENCIAL
                 </td>
-                <td style="text-align: right; color: #64748b;">
+                <td style="text-align: right; color: #64748b; font-size: 11px;">
                   Maputo, Moçambique
                 </td>
               </tr>
@@ -222,14 +216,14 @@ Por favor, escolha uma das seguintes opções de data e confirme a sua presença
           </div>
 
           <!-- Body Content (Clean White) -->
-          <div style="padding: 28px 24px; background-color: #ffffff;">
+          <div style="padding: 24px 20px; background-color: #ffffff;">
             <div style="margin-bottom: 20px;">
               ${messageHtmlWrapped}
             </div>
 
             <!-- Available Slots Schedule Table -->
-            <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin: 24px 0;">
-              <div style="background-color: #f1f5f9; padding: 8px 14px; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #334155;">
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin: 22px 0;">
+              <div style="background-color: #f8fafc; padding: 9px 14px; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #475569;">
                 Turnos Disponíveis (10h00 – 11h30):
               </div>
               <table style="width: 100%; border-collapse: collapse; background-color: #ffffff;">

@@ -3261,16 +3261,6 @@ Overwatch`;
                               </div>
                             </div>
 
-                            {/* Subject Bar */}
-                            <div className="bg-slate-100/90 px-5 py-2.5 border-b border-slate-200 text-[0.72rem] flex items-center gap-2 text-slate-700">
-                              <span className="font-bold text-slate-500 text-[0.65rem] uppercase tracking-wider">{tp("Subject:", "Assunto:")}</span>
-                              <span className="font-semibold text-slate-900 truncate">
-                                {previewLang === "pt"
-                                  ? (templatePT.subject || EMAIL_TEMPLATES.pt.subject)
-                                  : broadcastSubject}
-                              </span>
-                            </div>
-
                             {/* Official Document Subheading */}
                             <div className="bg-slate-50 px-5 py-2.5 border-b border-slate-200 flex items-center justify-between text-[0.68rem]">
                               <span className="font-semibold text-slate-700 uppercase tracking-wide">
@@ -4370,16 +4360,6 @@ Overwatch`;
                             </div>
                           </div>
                         </div>
-                      </div>
-
-                      {/* Subject Bar */}
-                      <div className="bg-slate-100/90 px-5 py-2.5 border-b border-slate-200 text-[0.72rem] flex items-center gap-2 text-slate-700">
-                        <span className="font-bold text-slate-500 text-[0.65rem] uppercase tracking-wider">
-                          ASSUNTO:
-                        </span>
-                        <span className="font-semibold text-slate-900 truncate">
-                          Confirmação de Presença: Teste de Selecção — Overwatch Moçambique
-                        </span>
                       </div>
 
                       {/* Official Document Subheading */}

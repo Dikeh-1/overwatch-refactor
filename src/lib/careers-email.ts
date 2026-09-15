@@ -475,20 +475,14 @@ export async function sendTestInvitation({
             </table>
           </div>
 
-          <!-- Subject Bar -->
-          <div style="background-color: #f1f5f9; padding: 10px 24px; border-bottom: 1px solid #e2e8f0; font-size: 12px; color: #334155;">
-            <span style="font-weight: 700; color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; margin-right: 8px;">ASSUNTO:</span>
-            <span style="font-weight: 600; color: #0f172a;">${subject}</span>
-          </div>
-
           <!-- Official Subheading Bar -->
-          <div style="background-color: #f8fafc; padding: 10px 24px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #334155;">
+          <div style="background-color: #f8fafc; padding: 12px 20px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #334155;">
             <table style="width: 100%; border-collapse: collapse;">
               <tr>
-                <td style="font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #334155;">
+                <td style="font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #334155; font-size: 11px;">
                   CONVOCATÓRIA OFICIAL · TESTE DE SELECÇÃO PRESENCIAL
                 </td>
-                <td style="text-align: right; color: #64748b;">
+                <td style="text-align: right; color: #64748b; font-size: 11px;">
                   Maputo, Moçambique
                 </td>
               </tr>
@@ -496,14 +490,14 @@ export async function sendTestInvitation({
           </div>
 
           <!-- Body Content (Clean White) -->
-          <div style="padding: 28px 24px; background-color: #ffffff;">
+          <div style="padding: 24px 20px; background-color: #ffffff;">
             <div style="margin-bottom: 20px;">
               ${messageHtmlWrapped}
             </div>
 
             <!-- Available Slots Schedule Table -->
-            <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin: 24px 0;">
-              <div style="background-color: #f1f5f9; padding: 8px 14px; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #334155;">
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin: 22px 0;">
+              <div style="background-color: #f8fafc; padding: 9px 14px; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #475569;">
                 Turnos Disponíveis (10h00 – 11h30):
               </div>
               <table style="width: 100%; border-collapse: collapse; background-color: #ffffff;">
@@ -522,14 +516,14 @@ export async function sendTestInvitation({
             </div>
 
             <!-- Security Notice Box -->
-            <div style="background-color: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 12px 16px; font-size: 11px; color: #713f12; line-height: 1.55; margin-top: 22px;">
-              <strong style="display: block; margin-bottom: 4px; color: #854d0e;">Nota de Segurança:</strong>
+            <div style="background-color: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 14px 16px; font-size: 12px; color: #713f12; line-height: 1.6; margin-top: 22px;">
+              <strong style="display: block; margin-bottom: 5px; color: #854d0e; font-size: 12px;">Nota de Segurança:</strong>
               Apresente documento de identificação original (BI/Passaporte) na portaria da Overwatch para entrada autorizada.
             </div>
           </div>
 
           <!-- Sign-Off & Official Footer -->
-          <div style="background-color: #f8fafc; padding: 14px 24px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #64748b;">
+          <div style="background-color: #f8fafc; padding: 14px 20px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #64748b;">
             <table style="width: 100%; border-collapse: collapse;">
               <tr>
                 <td>
@@ -621,11 +615,6 @@ export async function sendBookingConfirmation({
             </table>
           </div>
 
-          <!-- Subject Bar -->
-          <div style="background-color: #f1f5f9; padding: 10px 24px; border-bottom: 1px solid #e2e8f0; font-size: 12px; color: #334155;">
-            <span style="font-weight: 700; color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; margin-right: 8px;">ASSUNTO:</span>
-            <span style="font-weight: 600; color: #0f172a;">Presença Confirmada: Teste de Selecção Overwatch</span>
-          </div>
 
           <!-- Official Subheading Bar -->
           <div style="background-color: #f8fafc; padding: 10px 24px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #334155;">
@@ -853,20 +842,14 @@ Overwatch`;
             </table>
           </div>
 
-          <!-- Subject Bar -->
-          <div style="background-color: #f1f5f9; padding: 10px 24px; border-bottom: 1px solid #e2e8f0; font-size: 12px; color: #334155;">
-            <span style="font-weight: 700; color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; margin-right: 8px;">ASSUNTO:</span>
-            <span style="font-weight: 600; color: #0f172a;">${outgoingSubject}</span>
-          </div>
-
           <!-- Official Subheading Bar -->
-          <div style="background-color: #f8fafc; padding: 10px 24px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #334155;">
+          <div style="background-color: #f8fafc; padding: 12px 20px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #334155;">
             <table style="width: 100%; border-collapse: collapse;">
               <tr>
-                <td style="font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #334155;">
+                <td style="font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #334155; font-size: 11px;">
                   CONFIRMAÇÃO OFICIAL · TESTE DE SELECÇÃO PRESENCIAL
                 </td>
-                <td style="text-align: right; color: #64748b;">
+                <td style="text-align: right; color: #64748b; font-size: 11px;">
                   Maputo, Moçambique
                 </td>
               </tr>
@@ -874,14 +857,14 @@ Overwatch`;
           </div>
 
           <!-- Body Content (Clean White) -->
-          <div style="padding: 28px 24px; background-color: #ffffff;">
+          <div style="padding: 24px 20px; background-color: #ffffff;">
             <div style="margin-bottom: 20px;">
               ${messageHtmlWrapped}
             </div>
 
             <!-- Confirmed Slot Card -->
-            <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin: 20px 0;">
-              <div style="background-color: #f1f5f9; padding: 8px 14px; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #334155;">
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin: 22px 0;">
+              <div style="background-color: #f8fafc; padding: 9px 14px; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #475569;">
                 Turno Agendado:
               </div>
               <table style="width: 100%; border-collapse: collapse; background-color: #ffffff;">
@@ -890,7 +873,7 @@ Overwatch`;
                     📅 ${slot}
                   </td>
                   <td style="padding: 12px 14px; text-align: right;">
-                    <span style="font-family: monospace; font-size: 10px; font-weight: 700; color: #047857; background-color: #ecfdf5; padding: 3px 8px; border-radius: 4px; border: 1px solid #a7f3d0;">
+                    <span style="font-family: monospace; font-size: 10px; font-weight: 700; color: #047857; background-color: #ecfdf5; padding: 4px 10px; border-radius: 4px; border: 1px solid #a7f3d0; display: inline-block;">
                       Confirmado
                     </span>
                   </td>
@@ -899,13 +882,13 @@ Overwatch`;
             </div>
 
             <!-- Security & Location Instructions Notice Box (Matching Image 3) -->
-            <div style="background-color: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 14px 16px; font-size: 12px; color: #713f12; line-height: 1.55; margin-top: 20px;">
-              <strong style="display: block; margin-bottom: 6px; color: #854d0e; font-size: 12px;">Instruções para o Dia do Teste:</strong>
-              <div style="margin-bottom: 5px;">
+            <div style="background-color: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 14px 16px; font-size: 12px; color: #713f12; line-height: 1.6; margin-top: 22px;">
+              <strong style="display: block; margin-bottom: 8px; color: #854d0e; font-size: 12px;">Instruções para o Dia do Teste:</strong>
+              <div style="margin-bottom: 8px;">
                 • <strong>Local:</strong> Overwatch — Av. Paulo Samuel Khankhomba nº 1948, antes da esquina com a Av. Filipe Samuel Magaia, Maputo
                 (<a href="${mapsUrl}" target="_blank" style="color: #0284c7; text-decoration: underline; font-weight: 600;">Ver no Google Maps &rarr;</a>)
               </div>
-              <div style="margin-bottom: 5px;">
+              <div style="margin-bottom: 8px;">
                 • <strong>Horário &amp; Pontualidade:</strong> Estar no local às 09h30 (30 minutos antes). O portão encerra impreterivelmente às 09h50.
               </div>
               <div>
@@ -915,7 +898,7 @@ Overwatch`;
           </div>
 
           <!-- Sign-Off & Official Footer -->
-          <div style="background-color: #f8fafc; padding: 14px 24px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #64748b;">
+          <div style="background-color: #f8fafc; padding: 14px 20px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #64748b;">
             <table style="width: 100%; border-collapse: collapse;">
               <tr>
                 <td>
