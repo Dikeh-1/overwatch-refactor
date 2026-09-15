@@ -430,10 +430,14 @@ export async function sendTestInvitation({
     )
     .join("");
 
-  const processedMessage = messageText
-    .replace(/\{\{greeting\}\}/gi, getMozambiqueGreeting("pt"))
+  const greetingPt = getMozambiqueGreeting("pt");
+  let processedMessage = messageText
+    .replace(/\{\{greeting\}\}/gi, greetingPt)
     .replace(/\{\{name\}\}/gi, application.name)
     .replace(/\{\{booking_link\}\}/gi, bookingUrl);
+
+  // If message starts with hardcoded greeting, auto-update to current Mozambique time greeting
+  processedMessage = processedMessage.replace(/^(Boa tarde|Bom dia|Boa noite)(,?)/i, `${greetingPt}$2`);
 
   const processedMessageHtml = processedMessage
     .replace(/&/g, "&amp;")

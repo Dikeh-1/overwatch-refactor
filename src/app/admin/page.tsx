@@ -161,7 +161,7 @@ export default function AdminPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [view, setView] = useState<
-    "applications" | "roles" | "broadcast" | "confirmations" | "schedule"
+    "applications" | "roles" | "broadcast" | "confirmations" | "schedule" | "disqualify"
   >("applications");
   // ─── Per-Role Campaign Workspace ──────────────────────────────────
   const [activeCampaignRole, setActiveCampaignRole] = useState<string | null>(null);
@@ -407,6 +407,19 @@ Overwatch`;
   const [testConfirmEmail, setTestConfirmEmail] = useState("ebubemichael033@gmail.com");
   const [testConfirmSending, setTestConfirmSending] = useState(false);
   const [testConfirmStatus, setTestConfirmStatus] = useState<"idle" | "success" | "error">("idle");
+  const [testEmailAddress, setTestEmailAddress] = useState("ebubemichael033@gmail.com");
+  const [testSendingType, setTestSendingType] = useState<"convocation" | "confirmation" | "disqualification" | null>(null);
+  const [testEmailResult, setTestEmailResult] = useState<{
+    type: "convocation" | "confirmation" | "disqualification";
+    success: boolean;
+    messageId?: string;
+    error?: string;
+  } | null>(null);
+  const [disqualifyReasonPreset, setDisqualifyReasonPreset] = useState<string>(
+    "Não cumprimento dos requisitos eliminatórios do concurso (ausência de carta de apresentação ou falta de comprovação curricular de experiência prévia em sistemas de CCTV para candidatos masculinos)."
+  );
+  const [customDisqualifyReason, setCustomDisqualifyReason] = useState<string>("");
+  const [disqualifyFilterTab, setDisqualifyFilterTab] = useState<"all" | "booked">("all");
 
   // ─── Live Admin Presence Tracking ─────────────────────────────────
   const [onlineCount, setOnlineCount] = useState<number>(1);
@@ -473,7 +486,7 @@ Overwatch`;
     // Migrate any stale templates that still have hardcoded greeting words — replace with {{greeting}}
     const migrateGreeting = (text: string): string =>
       text.replace(
-        /^(Bom dia|Boa tarde|Boa noite|Good morning|Good afternoon|Good evening)(\s+\{\{name\}\})/i,
+        /^(Bom dia|Boa tarde|Boa noite|Good morning|Good afternoon|Good evening)(,?\s*)/i,
         "{{greeting}}$2"
       );
 
@@ -1568,31 +1581,85 @@ Overwatch`;
     }
   }
 
-  async function handleSendTestConfirmation() {
-    if (!testConfirmEmail.trim()) return;
+  async function handleSendTestEmail(
+    type: "convocation" | "confirmation" | "disqualification",
+    targetEmail?: string,
+    options?: {
+      subject?: string;
+      messageText?: string;
+      slot?: string;
+      reason?: string;
+    }
+  ) {
+    const to = (targetEmail || testEmailAddress || testConfirmEmail).trim();
+    if (!to || !to.includes("@")) {
+      setError(lang === "pt" ? "Por favor indique um e-mail de teste válido." : "Please enter a valid test email.");
+      return;
+    }
+    setTestSendingType(type);
     setTestConfirmSending(true);
+    setTestEmailResult(null);
     setTestConfirmStatus("idle");
     try {
-      const res = await fetch("/api/admin/careers/send-confirmation", {
+      const res = await fetch("/api/admin/careers/test-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          testEmail: testConfirmEmail.trim(),
-          messageText: confirmMessage,
+          type,
+          toEmail: to,
+          subject:
+            options?.subject ||
+            (type === "convocation" ? broadcastSubject : undefined),
+          messageText:
+            options?.messageText ||
+            (type === "convocation"
+              ? broadcastMessage
+              : type === "confirmation"
+                ? confirmMessage
+                : undefined),
+          slot:
+            options?.slot ||
+            activeRosterSlot ||
+            "Segunda-feira, 21 de Setembro – 10h00",
+          reason:
+            options?.reason ||
+            customDisqualifyReason ||
+            disqualifyReasonPreset,
+          slots: broadcastSlots,
         }),
       });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        throw new Error(d.error || "Failed to send test confirmation email.");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Falha ao enviar e-mail de teste.");
       }
+      setTestEmailResult({
+        type,
+        success: true,
+        messageId: data.messageId,
+      });
       setTestConfirmStatus("success");
-      setTimeout(() => setTestConfirmStatus("idle"), 6000);
+      setTimeout(() => {
+        setTestEmailResult(null);
+        setTestConfirmStatus("idle");
+      }, 8000);
     } catch (err) {
-      setError((err as Error).message);
+      const errMsg = (err as Error).message || "Erro no envio de teste.";
+      setTestEmailResult({
+        type,
+        success: false,
+        error: errMsg,
+      });
       setTestConfirmStatus("error");
+      setError(errMsg);
     } finally {
+      setTestSendingType(null);
       setTestConfirmSending(false);
     }
+  }
+
+  // Backward compatibility alias for confirmation section
+  async function handleSendTestConfirmation() {
+    await handleSendTestEmail("confirmation", testConfirmEmail);
   }
 
   async function sendSingleInvite(candidateId: string) {
@@ -2023,6 +2090,12 @@ Overwatch`;
                   const roleConfirmedUnsent = applications.filter(
                     (a) => a.role === role.id && Boolean(a.testSlot) && !a.confirmationSentAt,
                   ).length;
+                  const roleDisqualified = applications.filter(
+                    (a) => a.role === role.id && screenCandidate(a).disqualified,
+                  ).length;
+                  const roleDisqualifiedBooked = applications.filter(
+                    (a) => a.role === role.id && Boolean(a.testSlot) && screenCandidate(a).disqualified,
+                  ).length;
 
                   return (
                     <div key={role.id}>
@@ -2154,6 +2227,32 @@ Overwatch`;
                               ) : null}
                             </div>
                           </button>
+
+                          {/* Disqualifications sub-tab */}
+                          <button
+                            onClick={() => { setView("disqualify"); setSidebarOpen(false); }}
+                            className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[0.72rem] font-semibold transition-all cursor-pointer ${
+                              view === "disqualify"
+                                ? "bg-white/[0.1] text-white border border-white/15"
+                                : "text-white/60 hover:bg-white/[0.05] hover:text-white border border-transparent"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <UserX size={13} className={roleDisqualifiedBooked > 0 ? "text-amber-400" : "text-white/70"} />
+                              <span>{t("Disqualifications", "Desqualificações")}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {roleDisqualifiedBooked > 0 ? (
+                                <span className="rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 text-[0.58rem] font-mono font-medium" title={t("Booked candidates failing criteria", "Agendados sem requisitos")}>
+                                  {roleDisqualifiedBooked} {t("booked", "agendados")}
+                                </span>
+                              ) : roleDisqualified > 0 ? (
+                                <span className="rounded-md bg-white/10 text-white/60 border border-white/10 px-1.5 py-0.5 text-[0.58rem] font-mono font-medium">
+                                  {roleDisqualified}
+                                </span>
+                              ) : null}
+                            </div>
+                          </button>
                         </div>
                       )}
                     </div>
@@ -2251,7 +2350,9 @@ Overwatch`;
                       ? t("Test Schedule", "Agenda de Testes")
                       : view === "confirmations"
                         ? t("Confirmations", "Confirmações")
-                        : t("Applications", "Candidaturas")}
+                        : view === "disqualify"
+                          ? t("Disqualifications", "Desqualificações")
+                          : t("Applications", "Candidaturas")}
                 </span>
               </div>
             )}
@@ -2264,7 +2365,9 @@ Overwatch`;
                     ? t("Selection Test Schedule", "Agenda de Testes Presenciais")
                     : view === "confirmations"
                       ? t("Booking Confirmations", "Confirmações de Agendamento")
-                      : t("Applications", "Candidaturas")}
+                      : view === "disqualify"
+                        ? t("Disqualification & Compliance", "Desqualificação & Conformidade")
+                        : t("Applications", "Candidaturas")}
             </h1>
             <p className="mt-0.5 text-xs text-white/50">
               {view === "roles"
@@ -2275,7 +2378,9 @@ Overwatch`;
                     ? t("Confirmed candidate attendance by session", "Presenças confirmadas de candidatos por turno")
                     : view === "confirmations"
                       ? t("Dispatch official test instructions to confirmed candidates", "Envio de instruções oficiais às candidatas que já agendaram turno")
-                      : t("Review and manage candidate applications", "Rever e gerir candidaturas recebidas")}
+                      : view === "disqualify"
+                        ? t("Manage candidate screening compliance, preview rejection letters, and cancel booked slots for non-compliant candidates", "Gestão de conformidade de critérios, pré-visualização de modelo de desqualificação e cancelamento de testes")
+                        : t("Review and manage candidate applications", "Rever e gerir candidaturas recebidas")}
             </p>
           </div>
 
@@ -3899,8 +4004,60 @@ Overwatch`;
                       })()}
                     </div>
 
+                    {/* Quick Test Email Dispatch for Convocations */}
+                    <div className="mt-4 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 bg-white/[0.02] p-3 rounded-xl border border-white/10">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[0.68rem] text-white/50 font-medium">
+                          {t("Test dispatch to:", "Enviar teste para:")}
+                        </span>
+                        <input
+                          type="email"
+                          value={testEmailAddress}
+                          onChange={(e) => {
+                            setTestEmailAddress(e.target.value);
+                            setTestConfirmEmail(e.target.value);
+                          }}
+                          placeholder="email@exemplo.com"
+                          className="rounded-lg border border-white/15 bg-white/[0.04] px-2.5 py-1.5 text-xs text-white placeholder-white/30 focus:border-white/30 focus:outline-none w-56"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void handleSendTestEmail("convocation")}
+                          disabled={testSendingType === "convocation" || !testEmailAddress.trim()}
+                          className="flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.06] hover:bg-white/[0.1] px-3 py-1.5 text-xs font-semibold text-white transition-colors cursor-pointer disabled:opacity-40"
+                        >
+                          {testSendingType === "convocation" ? (
+                            <>
+                              <Loader2 size={12} className="animate-spin" />
+                              <span>{t("Sending test…", "A enviar teste…")}</span>
+                            </>
+                          ) : (
+                            <>
+                              <Mail size={12} />
+                              <span>{t("Send Test Email", "Enviar E-mail de Teste")}</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {testEmailResult?.type === "convocation" && (
+                        <div className="text-[0.68rem] font-semibold">
+                          {testEmailResult.success ? (
+                            <span className="text-emerald-400 flex items-center gap-1">
+                              <CheckCircle2 size={12} />
+                              <span>{t("Test email sent!", "E-mail de teste enviado com sucesso!")}</span>
+                            </span>
+                          ) : (
+                            <span className="text-red-400">
+                              ✕ {testEmailResult.error || t("Failed to send test email", "Falha no envio de teste")}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
                     {/* Send Button */}
-                    <div className="mt-6 pt-4 border-t border-white/10">
+                    <div className="mt-4 pt-2">
                       <button
                         type="button"
                         onClick={() => setConfirmModalOpen(true)}
@@ -4436,6 +4593,47 @@ Overwatch`;
                       </div>
                     </div>
 
+                    {/* Non-Compliant Attendees Warning Banner for this Session */}
+                    {(() => {
+                      const nonCompliantInSlot = candidatesInSlot.filter((c) => screenCandidate(c).disqualified);
+                      if (nonCompliantInSlot.length === 0) return null;
+                      return (
+                        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 flex flex-wrap items-center justify-between gap-3 text-xs text-amber-200">
+                          <div className="flex items-center gap-2.5">
+                            <AlertCircle size={18} className="text-amber-400 shrink-0" />
+                            <div>
+                              <strong className="block text-white font-semibold">
+                                {nonCompliantInSlot.length} {t("Candidate(s) failing recruitment criteria scheduled for this session", "Candidato(s) sem requisitos eliminatórios agendados para este turno")}
+                              </strong>
+                              <span className="text-[0.7rem] text-amber-200/80">
+                                {t(
+                                  "E.g. male candidates without CCTV experience or missing cover letter. Filipa instructed these must be canceled before test day.",
+                                  "Ex: candidatos masculinos sem experiência CCTV ou sem carta. A Direção determinou que não devem realizar o teste presencial.",
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDisqualifyModalState({
+                                open: true,
+                                ids: nonCompliantInSlot.map((c) => c.id),
+                                candidateNames: nonCompliantInSlot.map((c) => c.name),
+                                bookedCount: nonCompliantInSlot.length,
+                              });
+                            }}
+                            className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-md cursor-pointer transition-all flex items-center gap-1.5"
+                          >
+                            <UserX size={13} />
+                            <span>
+                              {t("Cancel & Disqualify All Non-Compliant for this Session", "Cancelar & Desqualificar Não Conformes Deste Turno")} ({nonCompliantInSlot.length})
+                            </span>
+                          </button>
+                        </div>
+                      );
+                    })()}
+
                     {/* Table View of Candidates for this Day */}
                     {candidatesInSlot.length === 0 ? (
                       <div className="py-14 text-center rounded-xl border border-dashed border-white/10 bg-white/[0.01] space-y-2">
@@ -4464,72 +4662,131 @@ Overwatch`;
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-white/5">
-                            {candidatesInSlot.map((c, idx) => (
-                              <tr key={c.id} className="hover:bg-white/[0.03] transition-colors">
-                                <td className="px-4 py-3.5 text-center text-white/40 font-mono text-[0.72rem]">
-                                  {idx + 1}
-                                </td>
-                                <td className="px-4 py-3.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => setSelected(c)}
-                                    className="text-left group cursor-pointer block"
-                                  >
-                                    <strong className="block text-white font-medium text-xs group-hover:text-sky-300 transition-colors">
-                                      {c.name}
-                                    </strong>
-                                    <span className="text-[0.68rem] text-white/40 block">
-                                      {c.email}
+                            {candidatesInSlot.map((c, idx) => {
+                              const screening = screenCandidate(c);
+                              return (
+                                <tr key={c.id} className="hover:bg-white/[0.03] transition-colors">
+                                  <td className="px-4 py-3.5 text-center text-white/40 font-mono text-[0.72rem]">
+                                    {idx + 1}
+                                  </td>
+                                  <td className="px-4 py-3.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelected(c)}
+                                      className="text-left group cursor-pointer block"
+                                    >
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <strong className="text-white font-medium text-xs group-hover:text-sky-300 transition-colors">
+                                          {c.name}
+                                        </strong>
+                                        {screening.disqualified && (
+                                          <span className="px-1.5 py-0.5 rounded text-[0.6rem] font-bold bg-red-500/20 text-red-300 border border-red-500/30">
+                                            ⚠️ {screening.isMale && !screening.hasCctvExperience
+                                              ? t("Male w/o CCTV", "Homem s/ CCTV")
+                                              : t("Non-compliant", "Não Conforme")}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <span className="text-[0.68rem] text-white/40 block">
+                                        {c.email}
+                                      </span>
+                                    </button>
+                                  </td>
+                                  <td className="px-4 py-3.5 whitespace-nowrap">
+                                    <a
+                                      href={`https://wa.me/${c.whatsapp.replace(/\D/g, "")}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="inline-flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 font-medium text-xs hover:underline"
+                                    >
+                                      <Phone size={11} />
+                                      <span>{c.whatsapp}</span>
+                                    </a>
+                                  </td>
+                                  <td className="px-4 py-3.5 whitespace-nowrap">
+                                    <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-white/10 text-white/80 capitalize">
+                                      {c.sex === "female" ? t("Female", "Feminino") : t("Male", "Masculino")}
                                     </span>
-                                  </button>
-                                </td>
-                                <td className="px-4 py-3.5 whitespace-nowrap">
-                                  <a
-                                    href={`https://wa.me/${c.whatsapp.replace(/\D/g, "")}`}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="inline-flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 font-medium text-xs hover:underline"
-                                  >
-                                    <Phone size={11} />
-                                    <span>{c.whatsapp}</span>
-                                  </a>
-                                </td>
-                                <td className="px-4 py-3.5 whitespace-nowrap">
-                                  <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-white/10 text-white/80 capitalize">
-                                    {c.sex === "female" ? t("Female", "Feminino") : t("Male", "Masculino")}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3.5 whitespace-nowrap text-[0.72rem] text-white/60">
-                                  {c.testBookedAt
-                                    ? new Date(c.testBookedAt).toLocaleString(lang === "pt" ? "pt-MZ" : "en-GB", {
-                                        day: "2-digit",
-                                        month: "short",
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })
-                                    : t("Pre-assigned", "Pré-atribuído")}
-                                </td>
-                                <td className="px-4 py-3.5 text-right whitespace-nowrap space-x-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => setSelected(c)}
-                                    className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/[0.04] px-2.5 py-1 text-[0.7rem] font-semibold text-white hover:bg-white/10 transition-colors cursor-pointer"
-                                  >
-                                    <span>{t("Profile & CV", "Perfil & CV")}</span>
-                                  </button>
-                                  <a
-                                    href={`/${lang}/careers/test-invite/${c.id}`}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    title={t("Open candidate booking page", "Abrir página de teste")}
-                                    className="inline-flex items-center gap-1 text-sky-400 hover:text-sky-300 text-[0.7rem] font-medium px-2 py-1"
-                                  >
-                                    <span>{t("Link", "Link")}</span>
-                                    <ExternalLink size={10} />
-                                  </a>
-                                </td>
-                              </tr>
-                            ))}
+                                  </td>
+                                  <td className="px-4 py-3.5 whitespace-nowrap text-[0.72rem] text-white/60">
+                                    {c.testBookedAt
+                                      ? new Date(c.testBookedAt).toLocaleString(lang === "pt" ? "pt-MZ" : "en-GB", {
+                                          day: "2-digit",
+                                          month: "short",
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })
+                                      : t("Pre-assigned", "Pré-atribuído")}
+                                  </td>
+                                  <td className="px-4 py-3.5 text-right whitespace-nowrap space-x-2">
+                                    {screening.disqualified ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setDisqualifyModalState({
+                                            open: true,
+                                            ids: [c.id],
+                                            candidateNames: [c.name],
+                                            bookedCount: 1,
+                                          });
+                                        }}
+                                        className="inline-flex items-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-[0.7rem] font-bold text-red-300 hover:bg-red-500/20 transition-colors cursor-pointer"
+                                        title={t("Cancel test slot & dispatch polite disqualification notice", "Cancelar vaga e enviar notificação de desqualificação")}
+                                      >
+                                        <UserX size={11} />
+                                        <span>{t("Cancel & Disqualify", "Cancelar & Desqualificar")}</span>
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={async () => {
+                                          const confirmMsg = lang === "pt"
+                                            ? `Deseja libertar a vaga agendada de ${c.name}? O turno voltará a ficar livre para outros candidatos.`
+                                            : `Do you want to free the booked slot for ${c.name}? The slot will become available for other applicants.`;
+                                          if (!confirm(confirmMsg)) return;
+                                          try {
+                                            const res = await fetch(`/api/admin/careers?id=${c.id}`, {
+                                              method: "PATCH",
+                                              headers: { "Content-Type": "application/json" },
+                                              body: JSON.stringify({ testSlot: null, testBookedAt: null }),
+                                            });
+                                            if (res.ok) {
+                                              setApplications((prev) =>
+                                                prev.map((a) => (a.id === c.id ? { ...a, testSlot: undefined, testBookedAt: undefined } : a))
+                                              );
+                                            }
+                                          } catch (err) {
+                                            console.error("Failed to cancel slot:", err);
+                                          }
+                                        }}
+                                        title={t("Free up this booked slot without archiving", "Libertar este turno")}
+                                        className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1 text-[0.68rem] text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                                      >
+                                        <X size={11} />
+                                        <span>{t("Free Slot", "Libertar")}</span>
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelected(c)}
+                                      className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/[0.04] px-2.5 py-1 text-[0.7rem] font-semibold text-white hover:bg-white/10 transition-colors cursor-pointer"
+                                    >
+                                      <span>{t("Profile & CV", "Perfil & CV")}</span>
+                                    </button>
+                                    <a
+                                      href={`/${lang}/careers/test-invite/${c.id}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      title={t("Open candidate booking page", "Abrir página de teste")}
+                                      className="inline-flex items-center gap-1 text-sky-400 hover:text-sky-300 text-[0.7rem] font-medium px-2 py-1"
+                                    >
+                                      <span>{t("Link", "Link")}</span>
+                                      <ExternalLink size={10} />
+                                    </a>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -5201,6 +5458,526 @@ Overwatch`;
                     </div>
                   </div>
                 </div>
+              </div>
+            </section>
+          );
+        })()}
+
+        {/* ─── TAB: DISQUALIFICATION & REJECTION WORKSPACE ─────────── */}
+        {view === "disqualify" && (() => {
+          const screenedList = campaignApps.map((a) => ({
+            app: a,
+            screening: screenCandidate(a),
+          }));
+
+          const nonCompliantList = screenedList.filter(({ screening }) => screening.disqualified);
+          const bookedNonCompliant = nonCompliantList.filter(({ app }) => Boolean(app.testSlot));
+          const menWithoutCctv = nonCompliantList.filter(
+            ({ screening }) => screening.isMale && !screening.hasCctvExperience
+          );
+          const missingCoverLetter = nonCompliantList.filter(
+            ({ screening }) => !screening.hasCoverLetter
+          );
+
+          const displayedList =
+            disqualifyFilterTab === "booked" ? bookedNonCompliant : nonCompliantList;
+
+          const activeReason = customDisqualifyReason.trim() || disqualifyReasonPreset;
+          const greetingPt = mozambiqueGreeting.pt;
+
+          return (
+            <section className="space-y-6">
+              {/* Top KPI Cards for Disqualification Compliance */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="rounded-2xl border border-red-500/20 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
+                  <div className="flex items-center justify-between text-xs font-semibold text-white/60">
+                    <span>{t("Total Non-Compliant", "Total Não Conformes")}</span>
+                    <UserX size={16} className="text-red-400" />
+                  </div>
+                  <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-red-400">
+                    {nonCompliantList.length}
+                  </strong>
+                  <span className="text-[0.7rem] text-white/40">
+                    {t("Failed mandatory requirements", "Falharam critérios eliminatórios")}
+                  </span>
+                </div>
+
+                <div className="rounded-2xl border border-amber-500/20 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
+                  <div className="flex items-center justify-between text-xs font-semibold text-white/60">
+                    <span>{t("Men w/o CCTV Experience", "Homens sem CCTV")}</span>
+                    <AlertCircle size={16} className="text-amber-400" />
+                  </div>
+                  <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-amber-400">
+                    {menWithoutCctv.length}
+                  </strong>
+                  <span className="text-[0.7rem] text-amber-400/70">
+                    {t("Filipa rule (disqualify & archive)", "Critério Filipa (não realizam teste)")}
+                  </span>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
+                  <div className="flex items-center justify-between text-xs font-semibold text-white/60">
+                    <span>{t("Missing Cover Letter", "Sem Carta Apresentação")}</span>
+                    <FileText size={16} className="text-sky-400" />
+                  </div>
+                  <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-white">
+                    {missingCoverLetter.length}
+                  </strong>
+                  <span className="text-[0.7rem] text-white/40">
+                    {t("Mandatory for all genders", "Obrigatória p/ homens e mulheres")}
+                  </span>
+                </div>
+
+                <div className={`rounded-2xl border p-4 sm:p-5 shadow-sm ${
+                  bookedNonCompliant.length > 0
+                    ? "border-red-500/40 bg-red-500/10"
+                    : "border-emerald-500/20 bg-[#121827]/90"
+                }`}>
+                  <div className="flex items-center justify-between text-xs font-semibold text-white/60">
+                    <span>{t("Scheduled for In-Person Test", "Agendados para Teste")}</span>
+                    <CalendarCheck size={16} className={bookedNonCompliant.length > 0 ? "text-red-400" : "text-emerald-400"} />
+                  </div>
+                  <strong className={`mt-2 block text-2xl sm:text-3xl font-bold ${
+                    bookedNonCompliant.length > 0 ? "text-red-300" : "text-emerald-400"
+                  }`}>
+                    {bookedNonCompliant.length}
+                  </strong>
+                  <span className="text-[0.7rem] text-white/50">
+                    {bookedNonCompliant.length > 0
+                      ? t("Urgent: cancel before test day!", "Urgente: cancelar antes do teste!")
+                      : t("No non-compliant booked", "Nenhum agendamento irregular")}
+                  </span>
+                </div>
+              </div>
+
+              {/* Urgent Action Banner if non-compliant are booked */}
+              {bookedNonCompliant.length > 0 && (
+                <div className="rounded-2xl border border-red-500/40 bg-gradient-to-r from-red-950/40 via-red-900/20 to-transparent p-5 flex flex-wrap items-center justify-between gap-4 shadow-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-red-500/20 text-red-300 border border-red-500/30">
+                      <AlertCircle size={22} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">
+                        {t(
+                          `⚠️ ${bookedNonCompliant.length} Non-compliant candidate(s) currently occupy in-person test spots!`,
+                          `⚠️ ${bookedNonCompliant.length} Candidato(s) não conforme(s) estão agendados para o teste presencial!`,
+                        )}
+                      </h4>
+                      <p className="text-xs text-red-200/80 mt-0.5 max-w-2xl leading-relaxed">
+                        {t(
+                          "Filipa instructed that men without CCTV experience must not be tested. Canceling their test frees up slots under the 10/day quota and dispatches the official disqualification email.",
+                          "A Direção determinou que homens sem CCTV comprovado não realizam o teste. O cancelamento liberta imediatamente as vagas sob a cota diária de 10 candidatos e envia a notificação formal por e-mail.",
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDisqualifyModalState({
+                        open: true,
+                        ids: bookedNonCompliant.map((b) => b.app.id),
+                        candidateNames: bookedNonCompliant.map((b) => b.app.name),
+                        bookedCount: bookedNonCompliant.length,
+                      });
+                    }}
+                    className="flex items-center gap-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-2.5 text-xs shadow-lg transition-all cursor-pointer"
+                  >
+                    <UserX size={14} />
+                    <span>
+                      {t("Cancel & Disqualify All Booked Candidates", "Cancelar & Desqualificar Todos os Agendados")} ({bookedNonCompliant.length})
+                    </span>
+                  </button>
+                </div>
+              )}
+
+              {/* Disqualification Email Template Configuration & Live Letterhead Preview */}
+              <div className="rounded-2xl border border-white/10 bg-[#121827]/95 overflow-hidden shadow-sm">
+                <div className="p-4 sm:p-5 border-b border-white/10 flex flex-wrap items-center justify-between gap-3 bg-white/[0.01]">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Mail size={16} className="text-red-400" />
+                      <span>{t("Official Disqualification Notice Template", "Modelo Oficial de Desqualificação & Arquivamento")}</span>
+                    </h3>
+                    <p className="text-xs text-white/50 mt-0.5">
+                      {t(
+                        "Pre-configured formal letterhead notice sent when candidates are archived due to recruitment criteria.",
+                        "Carta formal com cabeçalho oficial enviada aos candidatos desqualificados do concurso.",
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Mozambique Live Greeting Badge */}
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/10 text-[0.7rem] text-white/70">
+                    <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>
+                      {t("Maputo Time (UTC+2) Greeting:", "Saudação Maputo (UTC+2):")} <strong className="text-white font-mono">"{greetingPt}"</strong>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-5 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  {/* Left Column: Decision Reason Settings */}
+                  <div className="lg:col-span-5 space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-white/70 mb-2">
+                        {t("Select or Customize Decision Reason:", "Seleccione ou Personalize o Motivo da Decisão:")}
+                      </label>
+                      <div className="space-y-2">
+                        {[
+                          {
+                            id: "p1",
+                            label: t("Male without CCTV experience (Filipa rule)", "Homem sem experiência CCTV (Regra Filipa)"),
+                            text: "Candidato masculino sem comprovação curricular de experiência prévia em sistemas CCTV/CCO.",
+                          },
+                          {
+                            id: "p2",
+                            label: t("Missing mandatory cover letter", "Ausência de carta de apresentação"),
+                            text: "Ausência de carta de apresentação (requisito eliminatório básico da candidatura).",
+                          },
+                          {
+                            id: "p3",
+                            label: t("Combined criteria failure (default)", "Critérios combinados (padrão oficial)"),
+                            text: "Não cumprimento da totalidade dos requisitos eliminatórios do concurso (submissão de carta de apresentação e/ou comprovação curricular de experiência em sistemas de CCTV para candidatos masculinos).",
+                          },
+                        ].map((preset) => (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            onClick={() => {
+                              setDisqualifyReasonPreset(preset.text);
+                              setCustomDisqualifyReason("");
+                            }}
+                            className={`w-full text-left p-3 rounded-xl border text-xs transition-all cursor-pointer ${
+                              disqualifyReasonPreset === preset.text && !customDisqualifyReason.trim()
+                                ? "border-red-500/50 bg-red-500/10 text-white font-medium shadow-sm"
+                                : "border-white/10 bg-white/[0.02] text-white/70 hover:bg-white/[0.05]"
+                            }`}
+                          >
+                            <span className="block font-semibold text-white text-[0.72rem] mb-0.5">
+                              {preset.label}
+                            </span>
+                            <span className="block text-[0.68rem] text-white/50 line-clamp-2">
+                              {preset.text}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-white/70 mb-1.5">
+                        {t("Or write custom decision text:", "Ou edite o texto personalizado:")}
+                      </label>
+                      <textarea
+                        rows={4}
+                        value={customDisqualifyReason}
+                        onChange={(e) => setCustomDisqualifyReason(e.target.value)}
+                        placeholder={disqualifyReasonPreset}
+                        className="w-full rounded-xl border border-white/10 bg-[#090d16]/80 p-3 text-xs font-mono text-white leading-relaxed focus:border-white/30 focus:outline-none resize-y"
+                      />
+                      <span className="text-[0.65rem] text-white/40 block mt-1">
+                        {t(
+                          "This text appears inside the red highlighted callout box in the candidate's email.",
+                          "Este texto é inserido na caixa de destaque com fundo vermelho no e-mail do candidato.",
+                        )}
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 text-[0.7rem] text-white/60 space-y-1.5">
+                      <strong className="block text-white text-xs">ℹ️ {t("Legal & Compliance Note", "Nota de Conformidade:")}</strong>
+                      <p className="leading-relaxed">
+                        {t(
+                          "Disqualification emails are sent strictly in Portuguese with official Overwatch Mozambique legal letterhead. The greeting dynamically adapts to the candidate's local time in Maputo.",
+                          "As notificações de desqualificação são enviadas em Português com o cabeçalho oficial da Overwatch Moçambique. A saudação inicial adapta-se automaticamente à hora de Maputo.",
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Right Column: High-Fidelity Letterhead Preview */}
+                  <div className="lg:col-span-7">
+                    <div className="rounded-xl border border-slate-200 bg-white text-slate-800 shadow-xl overflow-hidden text-xs max-w-xl mx-auto">
+                      {/* Official Letterhead Header (Dark Navy) */}
+                      <div className="bg-[#0b1329] px-5 py-4 border-b-2 border-white/20 text-white">
+                        <div className="flex items-center justify-between">
+                          <Logo size="sm" variant="light" />
+                          <div className="text-right">
+                            <span className="inline-block bg-white/10 text-white font-mono text-[0.6rem] px-2 py-0.5 rounded border border-white/10 font-bold tracking-wider">
+                              REF: CCO-2026/MAPUTO
+                            </span>
+                            <div className="text-[0.65rem] text-slate-300 mt-0.5 font-medium">
+                              Departamento de Recursos Humanos
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Official Subheading Bar */}
+                      <div className="bg-slate-50 px-5 py-2.5 border-b border-slate-200 flex items-center justify-between text-[0.68rem]">
+                        <span className="font-semibold text-slate-700 uppercase tracking-wide">
+                          NOTIFICAÇÃO OFICIAL · PROCESSO DE SELECÇÃO
+                        </span>
+                        <span className="text-slate-500">
+                          Maputo, Moçambique
+                        </span>
+                      </div>
+
+                      {/* Body Content */}
+                      <div className="p-5 space-y-3.5 leading-relaxed text-slate-700">
+                        <h4 className="text-sm font-bold text-slate-900">
+                          {greetingPt} Candidato(a),
+                        </h4>
+                        <p>
+                          Agradecemos a sua candidatura e o interesse demonstrado em integrar a equipa de Operadoras de CCO da <strong>Overwatch Moçambique</strong>.
+                        </p>
+                        <p>
+                          Após verificação detalhada da conformidade da sua candidatura com os requisitos formais e eliminatórios do concurso, informamos que o seu perfil não preenche os critérios obrigatórios definidos pela direcção para avançar para a fase de testes presenciais.
+                        </p>
+
+                        {/* Red Highlighted Reason Callout Box */}
+                        <div className="rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs text-red-900">
+                          <strong className="block text-[0.68rem] uppercase tracking-wider text-red-800 mb-1 font-bold">
+                            Motivo da Decisão:
+                          </strong>
+                          <p className="font-medium text-red-950 leading-relaxed">
+                            {activeReason}
+                          </p>
+                        </div>
+
+                        <p className="text-[0.72rem] text-slate-500">
+                          Nestes termos, qualquer agendamento de teste anteriormente registado fica sem efeito e a sua candidatura foi arquivada na nossa base de dados.
+                        </p>
+                        <p className="text-[0.72rem] text-slate-500">
+                          Agradecemos o tempo dedicado ao processo e desejamos-lhe os maiores sucessos nos seus projectos futuros e na sua carreira profissional.
+                        </p>
+
+                        <div className="pt-2 text-xs text-slate-700">
+                          Com os melhores cumprimentos,<br />
+                          <strong className="text-slate-900 font-semibold">Equipa de Recrutamento & Selecção</strong><br />
+                          <span className="text-slate-500">Overwatch Moçambique</span>
+                        </div>
+                      </div>
+
+                      {/* Official Sign-Off & Legal Footer */}
+                      <div className="bg-slate-50 px-5 py-3 border-t border-slate-200 text-[0.65rem] text-slate-500 leading-normal">
+                        <strong className="text-slate-800 block">Overwatch Moçambique, Lda.</strong>
+                        <span>{siteContact.address.pt}</span>
+                        <div className="mt-0.5 text-slate-400">
+                          Telefone / WhatsApp: +258 84 287 0793 · Email: {siteContact.email}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions & Dispatch Bar with Test Email Input */}
+                <div className="p-4 sm:p-5 border-t border-white/10 bg-white/[0.01] flex flex-wrap items-center justify-between gap-4">
+                  {/* Left: Quick Test Email Dispatch */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[0.68rem] text-white/50 font-medium">
+                      {t("Test dispatch to:", "Enviar teste para:")}
+                    </span>
+                    <input
+                      type="email"
+                      value={testEmailAddress}
+                      onChange={(e) => {
+                        setTestEmailAddress(e.target.value);
+                        setTestConfirmEmail(e.target.value);
+                      }}
+                      placeholder="email@exemplo.com"
+                      className="rounded-lg border border-white/15 bg-white/[0.04] px-2.5 py-1.5 text-xs text-white placeholder-white/30 focus:border-white/30 focus:outline-none w-56"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void handleSendTestEmail("disqualification")}
+                      disabled={testSendingType === "disqualification" || !testEmailAddress.trim()}
+                      className="flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.06] hover:bg-white/[0.1] px-3.5 py-1.5 text-xs font-semibold text-white transition-colors cursor-pointer disabled:opacity-40"
+                    >
+                      {testSendingType === "disqualification" ? (
+                        <>
+                          <Loader2 size={12} className="animate-spin" />
+                          <span>{t("Sending test…", "A enviar teste…")}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Mail size={12} />
+                          <span>{t("Send Test Email", "Enviar E-mail de Teste")}</span>
+                        </>
+                      )}
+                    </button>
+
+                    {testEmailResult?.type === "disqualification" && (
+                      <span
+                        className={`text-[0.68rem] font-semibold ${
+                          testEmailResult.success ? "text-emerald-400" : "text-red-400"
+                        }`}
+                      >
+                        {testEmailResult.success
+                          ? `✓ ${t("Test email delivered!", "E-mail de teste enviado com sucesso!")} (ID: ${testEmailResult.messageId || "ok"})`
+                          : `✕ ${testEmailResult.error || t("Failed to send test email", "Falha no envio de teste")}`}
+                      </span>
+                    )}
+                  </div>
+
+                  <span className="text-[0.68rem] text-white/40 italic">
+                    {t(
+                      "Delivers exact letterhead with Maputo dynamic greeting and selected reason.",
+                      "Entrega o modelo oficial com saudação de Maputo e motivo da decisão.",
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              {/* Table of Non-Compliant Candidates */}
+              <div className="rounded-2xl border border-white/10 bg-[#121827]/95 overflow-hidden shadow-sm space-y-4 p-5 sm:p-6">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <UserX size={16} className="text-red-400" />
+                      <span>{t("Non-Compliant Applicants List", "Lista de Candidatos Não Conformes")}</span>
+                    </h3>
+                    <p className="text-xs text-white/50 mt-0.5">
+                      {t(
+                        "Candidates flagged by automated screening rules. Review their profiles or cancel bookings.",
+                        "Candidatos identificados pelo filtro de conformidade. Reveja o perfil ou cancele agendamentos.",
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Filter Tabs */}
+                  <div className="flex rounded-lg border border-white/10 overflow-hidden text-[0.68rem] font-semibold bg-white/[0.03]">
+                    <button
+                      type="button"
+                      onClick={() => setDisqualifyFilterTab("all")}
+                      className={`px-3 py-1.5 cursor-pointer transition-colors ${
+                        disqualifyFilterTab === "all"
+                          ? "bg-white text-[#090d16] font-bold shadow-sm"
+                          : "text-white/60 hover:text-white"
+                      }`}
+                    >
+                      {t("All Non-Compliant", "Todos os Não Conformes")} ({nonCompliantList.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDisqualifyFilterTab("booked")}
+                      className={`px-3 py-1.5 cursor-pointer transition-colors ${
+                        disqualifyFilterTab === "booked"
+                          ? "bg-white text-[#090d16] font-bold shadow-sm"
+                          : "text-white/60 hover:text-white"
+                      }`}
+                    >
+                      {t("Only with Booked Test", "Apenas c/ Teste Marcado")} ({bookedNonCompliant.length})
+                    </button>
+                  </div>
+                </div>
+
+                {displayedList.length === 0 ? (
+                  <div className="py-12 text-center rounded-xl border border-dashed border-white/10 bg-white/[0.01]">
+                    <CheckCircle2 size={24} className="mx-auto text-emerald-400 mb-2" />
+                    <p className="text-xs font-semibold text-white">
+                      {t("No candidates match this filter.", "Nenhum candidato corresponde a este filtro.")}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-xl border border-white/10 bg-black/20">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-white/10 bg-white/[0.02] text-white/50 uppercase font-semibold text-[0.68rem] tracking-wider">
+                          <th className="px-4 py-3">#</th>
+                          <th className="px-4 py-3">{t("Candidate", "Candidato")}</th>
+                          <th className="px-4 py-3">{t("WhatsApp Contact", "Contacto WhatsApp")}</th>
+                          <th className="px-4 py-3">{t("Gender", "Género")}</th>
+                          <th className="px-4 py-3">{t("Compliance Flaw", "Motivo de Não Conformidade")}</th>
+                          <th className="px-4 py-3">{t("Test Slot", "Turno de Teste")}</th>
+                          <th className="px-4 py-3 text-right">{t("Actions", "Ações")}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {displayedList.map(({ app: c, screening }, idx) => (
+                          <tr key={c.id} className="hover:bg-white/[0.03] transition-colors">
+                            <td className="px-4 py-3.5 text-center text-white/40 font-mono text-[0.72rem]">
+                              {idx + 1}
+                            </td>
+                            <td className="px-4 py-3.5">
+                              <button
+                                type="button"
+                                onClick={() => setSelected(c)}
+                                className="text-left group cursor-pointer block"
+                              >
+                                <strong className="block text-white font-medium text-xs group-hover:text-sky-300 transition-colors">
+                                  {c.name}
+                                </strong>
+                                <span className="text-[0.68rem] text-white/40 block">
+                                  {c.email}
+                                </span>
+                              </button>
+                            </td>
+                            <td className="px-4 py-3.5 whitespace-nowrap">
+                              <a
+                                href={`https://wa.me/${c.whatsapp.replace(/\D/g, "")}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-medium text-xs hover:underline"
+                              >
+                                <Phone size={11} />
+                                <span>{c.whatsapp}</span>
+                              </a>
+                            </td>
+                            <td className="px-4 py-3.5 whitespace-nowrap">
+                              <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-white/10 text-white/80 capitalize">
+                                {c.sex === "female" ? t("Female", "Feminino") : t("Male", "Masculino")}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3.5">
+                              <span className="inline-block px-2 py-0.5 rounded text-[0.62rem] font-bold bg-red-500/20 text-red-300 border border-red-500/30">
+                                {screening.isMale && !screening.hasCctvExperience
+                                  ? t("Male w/o CCTV Experience", "Homem s/ CCTV")
+                                  : t("Missing Cover Letter", "Sem Carta Apresentação")}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3.5 whitespace-nowrap text-[0.72rem]">
+                              {c.testSlot ? (
+                                <span className="px-2 py-0.5 rounded-full text-[0.65rem] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                  {formatSlotDisplay(c.testSlot, lang)}
+                                </span>
+                              ) : (
+                                <span className="text-white/40 text-[0.68rem]">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3.5 text-right whitespace-nowrap space-x-2">
+                              {c.status !== "archived" && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setDisqualifyModalState({
+                                      open: true,
+                                      ids: [c.id],
+                                      candidateNames: [c.name],
+                                      bookedCount: c.testSlot ? 1 : 0,
+                                    });
+                                  }}
+                                  className="inline-flex items-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-[0.7rem] font-bold text-red-300 hover:bg-red-500/20 transition-colors cursor-pointer"
+                                >
+                                  <UserX size={11} />
+                                  <span>{t("Disqualify", "Desqualificar")}</span>
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setSelected(c)}
+                                className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/[0.04] px-2.5 py-1 text-[0.7rem] font-semibold text-white hover:bg-white/10 transition-colors cursor-pointer"
+                              >
+                                <span>{t("Profile & CV", "Perfil & CV")}</span>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </section>
           );
@@ -6216,6 +6993,54 @@ Overwatch`;
                       {t("Booked on:", "Marcado em:")} {new Date(current.testBookedAt).toLocaleString(lang === "pt" ? "pt-MZ" : "en-GB")}
                     </span>
                   )}
+
+                  {/* Slot Actions */}
+                  <div className="pt-2 border-t border-white/10 flex items-center justify-between gap-2 mt-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const confirmMsg = lang === "pt"
+                          ? `Deseja cancelar o agendamento de ${current.name}? O turno "${current.testSlot}" será libertado para outros candidatos.`
+                          : `Do you want to cancel the booking for ${current.name}? The slot will be freed.`;
+                        if (!confirm(confirmMsg)) return;
+                        try {
+                          const res = await fetch(`/api/admin/careers?id=${current.id}`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ testSlot: null, testBookedAt: null }),
+                          });
+                          if (res.ok) {
+                            setApplications((prev) =>
+                              prev.map((a) => (a.id === current.id ? { ...a, testSlot: undefined, testBookedAt: undefined } : a))
+                            );
+                            setSelected((prev) => (prev ? { ...prev, testSlot: undefined, testBookedAt: undefined } : null));
+                          }
+                        } catch (err) {
+                          console.error("Failed to cancel test slot:", err);
+                        }
+                      }}
+                      className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.04] hover:bg-white/10 text-white/70 hover:text-white py-1.5 text-[0.68rem] font-semibold transition-colors cursor-pointer"
+                    >
+                      <X size={11} />
+                      <span>{t("Free Slot", "Libertar Turno")}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDisqualifyModalState({
+                          open: true,
+                          ids: [current.id],
+                          candidateNames: [current.name],
+                          bookedCount: 1,
+                        });
+                      }}
+                      className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 py-1.5 text-[0.68rem] font-bold transition-colors cursor-pointer"
+                    >
+                      <UserX size={11} />
+                      <span>{t("Cancel & Disqualify", "Cancelar & Desqualificar")}</span>
+                    </button>
+                  </div>
                 </div>
               ) : current.invitedAt ? (
                 <div className="rounded-xl bg-[#090d16]/80 p-3 border border-white/10 text-xs">
