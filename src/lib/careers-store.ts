@@ -1,7 +1,7 @@
 import "server-only";
 import { mkdir, readFile, writeFile, rename, unlink } from "node:fs/promises";
 import path from "node:path";
-import { roles, type Role, type Application } from "./careers";
+import { roles, type Role, type Application, DEFAULT_TEST_SLOTS } from "./careers";
 
 const directory = path.join(process.cwd(), ".careers-data");
 
@@ -249,5 +249,23 @@ export async function deleteApplications(ids: string[]): Promise<void> {
 
 export async function deleteApplication(id: string): Promise<void> {
   await deleteApplications([id]);
+}
+
+export async function getTestSlots(): Promise<string[]> {
+  try {
+    return await read<string[]>("test-slots.json", [...DEFAULT_TEST_SLOTS]);
+  } catch {
+    return [...DEFAULT_TEST_SLOTS];
+  }
+}
+
+export async function saveTestSlots(slots: string[]): Promise<string[]> {
+  const cleanSlots = Array.isArray(slots)
+    ? slots.map((s) => String(s).trim()).filter(Boolean)
+    : [...DEFAULT_TEST_SLOTS];
+  await exclusive(async () => {
+    await write("test-slots.json", cleanSlots);
+  });
+  return cleanSlots;
 }
 

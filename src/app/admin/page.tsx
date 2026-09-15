@@ -47,6 +47,11 @@ import {
   Briefcase,
   ChevronDown,
   Menu,
+  Plus,
+  ArrowUp,
+  ArrowDown,
+  CalendarDays,
+  Edit3,
 } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 import TechGrid from "@/components/ui/TechGrid";
@@ -86,11 +91,31 @@ const stageLabels: Record<"en" | "pt", Record<string, string>> = {
 export function formatSlotDisplay(slot: string, l: "en" | "pt") {
   if (l === "pt") return slot;
   return slot
+    .replace("Segunda-feira", "Monday")
+    .replace("Terça-feira", "Tuesday")
     .replace("Quarta-feira", "Wednesday")
     .replace("Quinta-feira", "Thursday")
     .replace("Sexta-feira", "Friday")
+    .replace("Sábado", "Saturday")
+    .replace("Domingo", "Sunday")
     .replace("de Setembro", "September")
-    .replace("10h00", "10:00 AM");
+    .replace("de Outubro", "October")
+    .replace("de Novembro", "November")
+    .replace("de Dezembro", "December")
+    .replace("de Janeiro", "January")
+    .replace("de Fevereiro", "February")
+    .replace("de Março", "March")
+    .replace("de Abril", "April")
+    .replace("de Maio", "May")
+    .replace("de Junho", "June")
+    .replace("de Julho", "July")
+    .replace("de Agosto", "August")
+    .replace(/(\d{1,2})h(\d{2})/, (_, h, m) => {
+      const hour = parseInt(h, 10);
+      const ampm = hour >= 12 ? "PM" : "AM";
+      const h12 = hour % 12 || 12;
+      return `${h12}:${m} ${ampm}`;
+    });
 }
 
 const EMAIL_TEMPLATES = {
@@ -183,8 +208,133 @@ export default function AdminPage() {
   const [isDraftDirty, setIsDraftDirty] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   const [previewLang, setPreviewLang] = useState<"pt" | "en">("pt");
+  const [broadcastSlots, setBroadcastSlots] = useState<string[]>([...DEFAULT_TEST_SLOTS]);
+  const [savingSlots, setSavingSlots] = useState(false);
+  const [slotsSavedFeedback, setSlotsSavedFeedback] = useState(false);
+  const [isManagingSlots, setIsManagingSlots] = useState(false);
+  const [newSlotDay, setNewSlotDay] = useState("Segunda-feira");
+  const [newSlotDayNum, setNewSlotDayNum] = useState("21");
+  const [newSlotMonth, setNewSlotMonth] = useState("Setembro");
+  const [newSlotTime, setNewSlotTime] = useState("10h00");
+  const [newSlotCustom, setNewSlotCustom] = useState("");
+  const [useCustomInput, setUseCustomInput] = useState(false);
 
-  const [broadcastSlots] = useState<string[]>([...DEFAULT_TEST_SLOTS]);
+  const rosterSlots = useMemo(() => {
+    const list = [...broadcastSlots];
+    for (const a of applications) {
+      if (a.testSlot && !list.includes(a.testSlot)) {
+        list.push(a.testSlot);
+      }
+    }
+    return list;
+  }, [broadcastSlots, applications]);
+
+  useEffect(() => {
+    async function loadTestSlots() {
+      try {
+        const res = await fetch("/api/admin/careers/test-slots");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.slots) && data.slots.length > 0) {
+            setBroadcastSlots(data.slots);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load test slots:", err);
+      }
+    }
+    loadTestSlots();
+  }, []);
+
+  const handleSaveSlotsToServer = async (slotsToSave: string[]) => {
+    const valid = slotsToSave.map((s) => s.trim()).filter(Boolean);
+    if (valid.length === 0) return;
+    setSavingSlots(true);
+    try {
+      const res = await fetch("/api/admin/careers/test-slots", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slots: valid }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.slots)) {
+          setBroadcastSlots(data.slots);
+        }
+        setSlotsSavedFeedback(true);
+        setTimeout(() => setSlotsSavedFeedback(false), 3000);
+      }
+    } catch (err) {
+      console.error("Failed to save slots:", err);
+    } finally {
+      setSavingSlots(false);
+    }
+  };
+
+  const handleAddSlot = () => {
+    const slotStr = useCustomInput
+      ? newSlotCustom.trim()
+      : `${newSlotDay}, ${newSlotDayNum} de ${newSlotMonth} – ${newSlotTime}`;
+    if (!slotStr) return;
+    if (broadcastSlots.includes(slotStr)) {
+      return;
+    }
+    const updated = [...broadcastSlots, slotStr];
+    setBroadcastSlots(updated);
+    if (useCustomInput) setNewSlotCustom("");
+    handleSaveSlotsToServer(updated);
+  };
+
+  const handleRemoveSlot = (index: number) => {
+    if (broadcastSlots.length <= 1) return;
+    const updated = broadcastSlots.filter((_, idx) => idx !== index);
+    setBroadcastSlots(updated);
+    handleSaveSlotsToServer(updated);
+  };
+
+  const handleMoveSlot = (index: number, direction: "up" | "down") => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= broadcastSlots.length) return;
+    const updated = [...broadcastSlots];
+    const [moved] = updated.splice(index, 1);
+    updated.splice(targetIndex, 0, moved);
+    setBroadcastSlots(updated);
+    handleSaveSlotsToServer(updated);
+  };
+
+  const handleSlotEditChange = (index: number, newValue: string) => {
+    const updated = [...broadcastSlots];
+    updated[index] = newValue;
+    setBroadcastSlots(updated);
+  };
+
+  const handleApplyPreset = (presetKey: "next_week_5" | "next_week_3" | "current_week") => {
+    let slots: string[] = [];
+    if (presetKey === "next_week_5") {
+      slots = [
+        "Segunda-feira, 21 de Setembro – 10h00",
+        "Terça-feira, 22 de Setembro – 10h00",
+        "Quarta-feira, 23 de Setembro – 10h00",
+        "Quinta-feira, 24 de Setembro – 10h00",
+        "Sexta-feira, 25 de Setembro – 10h00",
+      ];
+    } else if (presetKey === "next_week_3") {
+      slots = [
+        "Segunda-feira, 21 de Setembro – 10h00",
+        "Terça-feira, 22 de Setembro – 10h00",
+        "Quarta-feira, 23 de Setembro – 10h00",
+      ];
+    } else if (presetKey === "current_week") {
+      slots = [
+        "Quarta-feira, 16 de Setembro – 10h00",
+        "Quinta-feira, 17 de Setembro – 10h00",
+        "Sexta-feira, 18 de Setembro – 10h00",
+      ];
+    }
+    setBroadcastSlots(slots);
+    handleSaveSlotsToServer(slots);
+  };
+
   const [sendingBroadcast, setSendingBroadcast] = useState(false);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [broadcastResult, setBroadcastResult] = useState<{
@@ -3143,21 +3293,285 @@ Overwatch`;
                       </div>
                     </div>
 
-                    {/* Slots info */}
-                    <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 space-y-2 text-xs">
-                      <span className="font-semibold text-white/80 block">
-                        {t("Test Slots Included in Email & Candidate Portal:", "Opções de Turnos Incluídas no E-mail e Portal:")}
-                      </span>
-                      <div className="space-y-1">
-                        {broadcastSlots.map((s, idx) => (
+                    {/* Test Slots Configuration & Manual Entry Card */}
+                    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 sm:p-5 space-y-4 text-xs">
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
+                        <div className="flex items-center gap-2">
+                          <CalendarDays size={16} className="text-cyan-400 shrink-0" />
+                          <div>
+                            <span className="font-bold text-white text-xs block">
+                              {t("Configure Test Schedule (Days, Dates & Times)", "Configuração de Datas, Dias e Horários do Teste")}
+                            </span>
+                            <span className="text-[0.68rem] text-white/50">
+                              {t(
+                                "Manual entry for test slots included in invitations and candidate booking link.",
+                                "Entrada manual dos dias e horas incluídos nos convites e no link de agendamento.",
+                              )}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-mono text-[0.65rem] px-2.5 py-0.5 font-semibold">
+                            {broadcastSlots.length} {t("Slots Active", "Turnos Activos")}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setIsManagingSlots((prev) => !prev)}
+                            className="flex items-center gap-1.5 rounded-lg border border-white/20 bg-white/[0.05] hover:bg-white/10 px-2.5 py-1 text-[0.7rem] font-semibold text-white transition-colors cursor-pointer"
+                          >
+                            <Edit3 size={12} />
+                            <span>{isManagingSlots ? t("Close Editor", "Fechar Gestor") : t("Manage / Add Slots", "Gerir / Adicionar")}</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Quick Presets Toolbar */}
+                      <div className="flex flex-wrap items-center gap-2 pt-0.5 text-[0.7rem]">
+                        <span className="text-white/40 font-medium text-[0.68rem]">
+                          {t("Quick Presets:", "Predefinições:")}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyPreset("next_week_5")}
+                          className="px-2.5 py-1 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/25 transition-all font-medium cursor-pointer"
+                        >
+                          📅 {t("Next Week (Mon–Fri 10:00)", "Próxima Semana (Seg–Sex 10h00)")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyPreset("next_week_3")}
+                          className="px-2.5 py-1 rounded-md bg-white/[0.05] border border-white/10 text-white/70 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                        >
+                          📅 {t("Next Week (Mon–Wed)", "Próxima Semana (Seg–Qua)")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyPreset("current_week")}
+                          className="px-2.5 py-1 rounded-md bg-white/[0.05] border border-white/10 text-white/50 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                        >
+                          ↺ {t("Reset 16–18 Sept", "Repor 16–18 Set")}
+                        </button>
+                      </div>
+
+                      {/* Slots List (Editable Rows) */}
+                      <div className="space-y-2">
+                        {broadcastSlots.map((slot, idx) => (
                           <div
                             key={idx}
-                            className="flex items-center gap-2 text-sky-300 font-medium"
+                            className="rounded-lg border border-white/10 bg-black/30 p-2.5 flex items-center justify-between gap-3 text-xs group hover:border-white/20 transition-all"
                           >
-                            <Calendar size={13} />
-                            <span>{formatSlotDisplay(s, lang)}</span>
+                            <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                              <span className="font-mono text-[0.62rem] text-slate-400 bg-white/10 px-1.5 py-0.5 rounded shrink-0">
+                                #{idx + 1}
+                              </span>
+
+                              {isManagingSlots ? (
+                                <input
+                                  type="text"
+                                  value={slot}
+                                  onChange={(e) => handleSlotEditChange(idx, e.target.value)}
+                                  className="w-full bg-white/[0.06] border border-white/20 rounded px-2.5 py-1 text-xs text-white font-medium focus:border-cyan-400 focus:outline-none"
+                                  placeholder="Ex: Segunda-feira, 21 de Setembro – 10h00"
+                                />
+                              ) : (
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <Calendar size={13} className="text-cyan-400 shrink-0" />
+                                  <span className="font-medium text-white truncate">
+                                    {slot}
+                                  </span>
+                                  {lang === "en" && (
+                                    <span className="text-[0.68rem] text-white/40 truncate">
+                                      ({formatSlotDisplay(slot, "en")})
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-1 shrink-0">
+                              {isManagingSlots && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMoveSlot(idx, "up")}
+                                    disabled={idx === 0}
+                                    title="Mover para cima"
+                                    className="p-1 rounded text-white/50 hover:text-white hover:bg-white/10 disabled:opacity-20 cursor-pointer"
+                                  >
+                                    <ArrowUp size={13} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMoveSlot(idx, "down")}
+                                    disabled={idx === broadcastSlots.length - 1}
+                                    title="Mover para baixo"
+                                    className="p-1 rounded text-white/50 hover:text-white hover:bg-white/10 disabled:opacity-20 cursor-pointer"
+                                  >
+                                    <ArrowDown size={13} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveSlot(idx)}
+                                    disabled={broadcastSlots.length <= 1}
+                                    title="Remover turno"
+                                    className="p-1 rounded text-red-400 hover:text-red-300 hover:bg-red-500/10 disabled:opacity-20 cursor-pointer"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </>
+                              )}
+                            </div>
                           </div>
                         ))}
+                      </div>
+
+                      {/* Add Slot Builder / Manual Entry Form (Shown when isManagingSlots is active) */}
+                      {isManagingSlots && (
+                        <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/[0.04] p-3.5 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-white text-[0.72rem] uppercase tracking-wider text-cyan-300">
+                              {t("+ Add New Test Slot / Date", "+ Adicionar Novo Turno / Data")}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setUseCustomInput((p) => !p)}
+                              className="text-[0.68rem] text-cyan-400 hover:underline cursor-pointer"
+                            >
+                              {useCustomInput
+                                ? t("Use Day/Date Pickers", "Usar Selecção Rápida")
+                                : t("Enter Custom Text Directly", "Digitar Texto Manual")}
+                            </button>
+                          </div>
+
+                          {!useCustomInput ? (
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                              <div>
+                                <label className="text-[0.65rem] text-white/50 block mb-1">
+                                  {t("Day of Week", "Dia da Semana")}
+                                </label>
+                                <select
+                                  value={newSlotDay}
+                                  onChange={(e) => setNewSlotDay(e.target.value)}
+                                  className="w-full rounded bg-white/[0.08] border border-white/20 px-2 py-1.5 text-xs text-white"
+                                >
+                                  <option value="Segunda-feira" className="bg-[#121827]">Segunda-feira</option>
+                                  <option value="Terça-feira" className="bg-[#121827]">Terça-feira</option>
+                                  <option value="Quarta-feira" className="bg-[#121827]">Quarta-feira</option>
+                                  <option value="Quinta-feira" className="bg-[#121827]">Quinta-feira</option>
+                                  <option value="Sexta-feira" className="bg-[#121827]">Sexta-feira</option>
+                                  <option value="Sábado" className="bg-[#121827]">Sábado</option>
+                                  <option value="Domingo" className="bg-[#121827]">Domingo</option>
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="text-[0.65rem] text-white/50 block mb-1">
+                                  {t("Day Number", "Dia (Número)")}
+                                </label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="31"
+                                  value={newSlotDayNum}
+                                  onChange={(e) => setNewSlotDayNum(e.target.value)}
+                                  className="w-full rounded bg-white/[0.08] border border-white/20 px-2 py-1.5 text-xs text-white"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-[0.65rem] text-white/50 block mb-1">
+                                  {t("Month", "Mês")}
+                                </label>
+                                <select
+                                  value={newSlotMonth}
+                                  onChange={(e) => setNewSlotMonth(e.target.value)}
+                                  className="w-full rounded bg-white/[0.08] border border-white/20 px-2 py-1.5 text-xs text-white"
+                                >
+                                  <option value="Janeiro" className="bg-[#121827]">Janeiro</option>
+                                  <option value="Fevereiro" className="bg-[#121827]">Fevereiro</option>
+                                  <option value="Março" className="bg-[#121827]">Março</option>
+                                  <option value="Abril" className="bg-[#121827]">Abril</option>
+                                  <option value="Maio" className="bg-[#121827]">Maio</option>
+                                  <option value="Junho" className="bg-[#121827]">Junho</option>
+                                  <option value="Julho" className="bg-[#121827]">Julho</option>
+                                  <option value="Agosto" className="bg-[#121827]">Agosto</option>
+                                  <option value="Setembro" className="bg-[#121827]">Setembro</option>
+                                  <option value="Outubro" className="bg-[#121827]">Outubro</option>
+                                  <option value="Novembro" className="bg-[#121827]">Novembro</option>
+                                  <option value="Dezembro" className="bg-[#121827]">Dezembro</option>
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="text-[0.65rem] text-white/50 block mb-1">
+                                  {t("Time", "Horário")}
+                                </label>
+                                <input
+                                  type="text"
+                                  value={newSlotTime}
+                                  onChange={(e) => setNewSlotTime(e.target.value)}
+                                  placeholder="10h00"
+                                  className="w-full rounded bg-white/[0.08] border border-white/20 px-2 py-1.5 text-xs text-white"
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <input
+                                type="text"
+                                value={newSlotCustom}
+                                onChange={(e) => setNewSlotCustom(e.target.value)}
+                                placeholder="Ex: Segunda-feira, 21 de Setembro – 10h00"
+                                className="w-full rounded bg-white/[0.08] border border-white/20 px-3 py-2 text-xs text-white"
+                              />
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between pt-1">
+                            <span className="text-[0.68rem] text-white/40">
+                              Preview: <strong className="text-white">{useCustomInput ? newSlotCustom || "—" : `${newSlotDay}, ${newSlotDayNum} de ${newSlotMonth} – ${newSlotTime}`}</strong>
+                            </span>
+
+                            <button
+                              type="button"
+                              onClick={handleAddSlot}
+                              className="flex items-center gap-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 px-3.5 py-1.5 text-xs font-bold text-[#090d16] transition-all cursor-pointer shadow-sm"
+                            >
+                              <Plus size={13} />
+                              <span>{t("Add to Slots List", "Adicionar à Lista")}</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Save Changes Button & Feedback */}
+                      <div className="pt-2 border-t border-white/10 flex items-center justify-between flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleSaveSlotsToServer(broadcastSlots)}
+                          disabled={savingSlots}
+                          className="flex items-center gap-2 rounded-lg bg-white/[0.08] hover:bg-white/[0.14] border border-white/20 px-3 py-1.5 text-xs font-semibold text-white transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {savingSlots ? (
+                            <>
+                              <Loader2 size={13} className="animate-spin" />
+                              <span>{t("Saving...", "A gravar...")}</span>
+                            </>
+                          ) : (
+                            <>
+                              <Save size={13} className="text-cyan-400" />
+                              <span>{t("Save Slots to System", "Gravar Turnos no Sistema")}</span>
+                            </>
+                          )}
+                        </button>
+
+                        {slotsSavedFeedback && (
+                          <span className="flex items-center gap-1 text-[0.68rem] font-semibold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-md">
+                            <Check size={11} />
+                            <span>{t("Saved & synchronized with portal!", "Gravado e sincronizado com o portal!")}</span>
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -3775,11 +4189,22 @@ Overwatch`;
                   )}
                 </p>
               </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setView("broadcast")}
+                  className="flex items-center gap-1.5 rounded-lg border border-white/20 bg-white/[0.05] hover:bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition-colors cursor-pointer"
+                >
+                  <Edit3 size={13} />
+                  <span>{t("Configure Test Slots →", "Configurar Datas & Turnos →")}</span>
+                </button>
+              </div>
             </div>
 
             {/* Grid of Slots */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              {DEFAULT_TEST_SLOTS.map((slot) => {
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              {rosterSlots.map((slot) => {
                 const candidatesInSlot = applications.filter(
                   (a) => a.testSlot === slot,
                 );

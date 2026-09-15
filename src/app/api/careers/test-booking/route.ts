@@ -1,4 +1,4 @@
-import { getApplication, updateApplication } from "@/lib/careers-store";
+import { getApplication, updateApplication, getTestSlots } from "@/lib/careers-store";
 import { DEFAULT_TEST_SLOTS } from "@/lib/careers";
 import { sendBookingConfirmation } from "@/lib/careers-email";
 import { siteContact } from "@/lib/site-config";
@@ -25,6 +25,12 @@ export async function GET(request: Request) {
       );
     }
 
+    const activeSlots = await getTestSlots();
+    const candidateSlots =
+      Array.isArray(candidate.invitedSlots) && candidate.invitedSlots.length > 0
+        ? candidate.invitedSlots
+        : activeSlots;
+
     return Response.json({
       id: candidate.id,
       name: candidate.name,
@@ -32,7 +38,7 @@ export async function GET(request: Request) {
       testSlot: candidate.testSlot || null,
       testBookedAt: candidate.testBookedAt || null,
       invitedAt: candidate.invitedAt || null,
-      slots: DEFAULT_TEST_SLOTS,
+      slots: candidateSlots,
       address: siteContact.address.pt,
       whatsapp: siteContact.whatsappNumber,
     });

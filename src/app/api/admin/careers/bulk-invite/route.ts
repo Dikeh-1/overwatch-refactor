@@ -87,9 +87,10 @@ Overwatch Moçambique`;
           baseUrl: origin,
         });
 
-        // Mark as invited and advance to shortlisted
+        // Mark as invited and advance to shortlisted with the assigned slots
         await updateApplication(id, {
           invitedAt: new Date().toISOString(),
+          invitedSlots: slots,
           status: "shortlisted",
         });
 
