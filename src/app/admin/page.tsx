@@ -1291,7 +1291,7 @@ Overwatch`;
   };
 
   const handleToggleArchive = async (candidate: Application) => {
-    const nextStatus = candidate.status === "archived" ? "review" : "archived";
+    const nextStatus = candidate.status === "archived" ? "reviewing" : "archived";
     await change({
       kind: "status",
       id: candidate.id,
@@ -1686,7 +1686,7 @@ Overwatch`;
                 : undefined),
           slot:
             options?.slot ||
-            activeRosterSlot ||
+            (activeRosterSlot !== "all" ? activeRosterSlot : broadcastSlots[0]) ||
             "Segunda-feira, 21 de Setembro – 10h00",
           reason:
             options?.reason ||
@@ -4857,10 +4857,10 @@ Overwatch`;
                                             : `Do you want to free the booked slot for ${c.name}? The slot will become available for other applicants.`;
                                           if (!confirm(confirmMsg)) return;
                                           try {
-                                            const res = await fetch(`/api/admin/careers?id=${c.id}`, {
+                                            const res = await fetch("/api/admin/careers", {
                                               method: "PATCH",
                                               headers: { "Content-Type": "application/json" },
-                                              body: JSON.stringify({ testSlot: null, testBookedAt: null }),
+                                              body: JSON.stringify({ kind: "clear_slot", id: c.id }),
                                             });
                                             if (res.ok) {
                                               setApplications((prev) =>

@@ -6,6 +6,7 @@ import {
   setStatus,
   deleteApplication,
   deleteApplications,
+  updateApplication,
 } from "@/lib/careers-store";
 import { roles, stages } from "@/lib/careers";
 export async function GET() {
@@ -55,12 +56,23 @@ export async function PATCH(request: Request) {
         }
       }
     }
-    else return new Response(null, { status: 400 });
-      return Response.json({ success: true });
-    } catch {
-      return Response.json({ error: "Could not save changes." }, { status: 503 });
+    else if (
+      data.kind === "clear_slot" &&
+      /^[\da-f-]{36}$/.test(data.id)
+    ) {
+      // Clear booked test slot without changing candidate status
+      await updateApplication(data.id, { testSlot: undefined, testBookedAt: undefined });
     }
+    else {
+      return new Response(null, { status: 400 });
+    }
+    return Response.json({ success: true });
+  } catch (err) {
+    console.error("Admin careers PATCH error:", err);
+    return Response.json({ error: "Could not save changes." }, { status: 503 });
   }
+}
+
 
   export async function DELETE(request: Request) {
     if (!(await authenticated()) || !sameOrigin(request)) {
