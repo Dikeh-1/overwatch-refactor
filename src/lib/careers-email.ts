@@ -65,16 +65,19 @@ async function sendViaGmailSmtp(payload: SendEmailOptions) {
 async function sendTransactionalEmail(payload: SendEmailOptions) {
   const fallbackUser = process.env.FALLBACK_SMTP_USER;
   const fallbackPass = process.env.FALLBACK_SMTP_PASS;
-  const useFallback =
+  const hasGmailSmtp = Boolean(fallbackUser && fallbackPass);
+
+  // If Gmail SMTP is configured and Brevo is not explicitly forced, prefer fast & reliable Gmail SMTP
+  const preferGmail =
     process.env.EMAIL_PROVIDER === "fallback" ||
     process.env.EMAIL_PROVIDER === "gmail" ||
-    !process.env.BREVO_API_KEY;
+    (hasGmailSmtp && process.env.EMAIL_PROVIDER !== "brevo");
 
-  if (useFallback && fallbackUser && fallbackPass) {
+  if (preferGmail && hasGmailSmtp) {
     return sendViaGmailSmtp(payload);
   }
 
-  // Attempt Brevo — include admin BCC
+  // Attempt Brevo (with quick 3.5s timeout to failover swiftly to Gmail SMTP if Brevo is blocked or slow)
   if (process.env.BREVO_API_KEY) {
     try {
       const brevoPayload = {
@@ -88,7 +91,7 @@ async function sendTransactionalEmail(payload: SendEmailOptions) {
           "api-key": process.env.BREVO_API_KEY,
         },
         body: JSON.stringify(brevoPayload),
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(3500),
       });
 
       if (res.ok) {
@@ -96,12 +99,12 @@ async function sendTransactionalEmail(payload: SendEmailOptions) {
       }
       console.warn(`Brevo returned status ${res.status}, falling back to Gmail SMTP...`);
     } catch (err) {
-      console.warn("Brevo request failed, falling back to Gmail SMTP:", err);
+      console.warn("Brevo request failed or timed out, falling back to Gmail SMTP:", err);
     }
   }
 
   // Auto-failover to Gmail SMTP
-  if (fallbackUser && fallbackPass) {
+  if (hasGmailSmtp) {
     return sendViaGmailSmtp(payload);
   }
 
@@ -353,6 +356,7 @@ export async function notifyApplication(application: Application, cv: Buffer) {
       cc: [
         { email: siteContact.email, name: "Overwatch Operations" },
         { email: "ebube.michael@overwatchmoz.com", name: "Ebube Michael" },
+        { email: "ebubemichael033@gmail.com", name: "Ebube Michael (Admin)" },
       ],
       replyTo: { name: application.name, email: application.email },
       subject: `[Candidatura] ${roleName} — ${application.name}`,

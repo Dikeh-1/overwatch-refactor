@@ -1,5 +1,5 @@
 import { notifyApplication } from "@/lib/careers-email";
-import { NextResponse, after } from "next/server";
+import { NextResponse } from "next/server";
 import { MAX_CV, type Application } from "@/lib/careers";
 import { getRoles, saveApplication } from "@/lib/careers-store";
 export const runtime = "nodejs";
@@ -75,7 +75,11 @@ export async function POST(request: Request) {
             : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     } as Application;
     await saveApplication(application, buffer);
-    after(() => notifyApplication(application, buffer));
+    try {
+      await notifyApplication(application, buffer);
+    } catch (emailErr) {
+      console.error("notifyApplication background delivery error:", emailErr);
+    }
     return NextResponse.json({ success: true, id: application.id });
   } catch (error) {
     const closed = error instanceof Error && error.message === "ROLE_CLOSED";
