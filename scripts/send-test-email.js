@@ -155,6 +155,14 @@ async function run() {
   const subject = "Convocatória: Teste de Selecção Presencial — Overwatch Moçambique";
   const candidateName = "Ebube Junior Michael";
 
+  const plainTextMessage = `${greetingPt} ${candidateName},
+
+Agradecemos a sua candidatura à vaga de Operadora de CCO da Overwatch.
+
+Após análise da sua candidatura, foi seleccionada para avançar para a próxima fase do processo de recrutamento: teste de selecção presencial.
+
+Por favor, escolha uma das seguintes opções de data e confirme a sua presença através do botão abaixo. A sua vaga fica automaticamente confirmada no nosso sistema.`;
+
   const messageHtmlWrapped = `
     <p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.65; color: #334155;">${greetingPt} ${candidateName},</p>
     <p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.65; color: #334155;">Agradecemos a sua candidatura à vaga de Operadora de CCO da Overwatch.</p>
@@ -289,7 +297,7 @@ async function run() {
     to: [{ email: "ebubemichael033@gmail.com", name: candidateName }],
     subject: subject,
     htmlContent: htmlContent,
-    textContent: `${messageText}\n\nEscolha a data do teste no seguinte link:\n${bookingUrl}\n\nLocal do Teste:\n${addressPt}\n\nCom os melhores cumprimentos,\nEquipa de Recrutamento\nOverwatch Moçambique`,
+    textContent: `${plainTextMessage}\n\nEscolha a data do teste no seguinte link:\n${bookingUrl}\n\nLocal do Teste:\n${addressPt}\n\nCom os melhores cumprimentos,\nEquipa de Recrutamento · Overwatch Moçambique`,
   };
 
   console.log("Sending email payload to Brevo API...");
