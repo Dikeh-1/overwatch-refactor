@@ -120,6 +120,28 @@ export function formatSlotDisplay(slot: string, l: "en" | "pt") {
     });
 }
 
+/** Extract numeric day of the month from a slot label (e.g. "16", "21") */
+export function getSlotDayNumber(slot: string): number | null {
+  if (!slot) return null;
+  const match = slot.match(/(?:^|[^\d])(\d{1,2})(?:\s*de\s*|\s+)?/);
+  if (match) {
+    const num = parseInt(match[1], 10);
+    if (!isNaN(num) && num >= 1 && num <= 31) return num;
+  }
+  return null;
+}
+
+/** Classify slot into This Week (16 – 18 Sept) or Next Week (21 – 25 Sept) */
+export function getSlotWeekCategory(slot: string): "this_week" | "next_week" {
+  const day = getSlotDayNumber(slot);
+  // September 2026: Days 14 to 20 are This Week (tests on 16, 17, 18).
+  // Days 21 and above are Next Week (tests on 21, 22, 23, 24, 25).
+  if (day !== null && day <= 20) {
+    return "this_week";
+  }
+  return "next_week";
+}
+
 const EMAIL_TEMPLATES = {
   pt: {
     subject: "Convocatória: Teste de Selecção Presencial — Overwatch Moçambique",
@@ -223,24 +245,58 @@ export default function AdminPage() {
 
   const rosterSlots = useMemo(() => {
     const list = [...broadcastSlots];
+    // Guarantee this week's scheduled sessions are present so admin can track them
+    const THIS_WEEK_DEFAULTS = [
+      "Quarta-feira, 16 de Setembro – 10h00",
+      "Quinta-feira, 17 de Setembro – 10h00",
+      "Sexta-feira, 18 de Setembro – 10h00",
+    ];
+    for (const tw of THIS_WEEK_DEFAULTS) {
+      if (!list.includes(tw)) list.push(tw);
+    }
     for (const a of applications) {
       if (a.testSlot && !list.includes(a.testSlot)) {
         list.push(a.testSlot);
       }
     }
-    return list;
+    // Sort all slots chronologically by day number (16, 17, 18, 21, 22, 23, 24, 25...)
+    return list.sort((a, b) => {
+      const dayA = getSlotDayNumber(a) ?? 99;
+      const dayB = getSlotDayNumber(b) ?? 99;
+      return dayA - dayB;
+    });
   }, [broadcastSlots, applications]);
 
-  const [selectedRosterSlot, setSelectedRosterSlot] = useState<string>("all");
+  const thisWeekSlots = useMemo(() => {
+    return rosterSlots.filter((s) => getSlotWeekCategory(s) === "this_week");
+  }, [rosterSlots]);
+
+  const nextWeekSlots = useMemo(() => {
+    return rosterSlots.filter((s) => getSlotWeekCategory(s) === "next_week");
+  }, [rosterSlots]);
+
+  const thisWeekCount = useMemo(() => {
+    return applications.filter((a) => Boolean(a.testSlot) && getSlotWeekCategory(a.testSlot!) === "this_week").length;
+  }, [applications]);
+
+  const nextWeekCount = useMemo(() => {
+    return applications.filter((a) => Boolean(a.testSlot) && getSlotWeekCategory(a.testSlot!) === "next_week").length;
+  }, [applications]);
+
+  const [rosterWeekTab, setRosterWeekTab] = useState<"this_week" | "next_week" | "all">("this_week");
+  const [selectedRosterSlot, setSelectedRosterSlot] = useState<string>("all_this_week");
+
   const activeRosterSlot = useMemo(() => {
-    if (selectedRosterSlot === "all") {
-      return "all";
-    }
+    if (selectedRosterSlot === "all") return "all";
+    if (selectedRosterSlot === "all_this_week") return "all_this_week";
+    if (selectedRosterSlot === "all_next_week") return "all_next_week";
     if (selectedRosterSlot && rosterSlots.includes(selectedRosterSlot)) {
       return selectedRosterSlot;
     }
+    if (rosterWeekTab === "this_week") return "all_this_week";
+    if (rosterWeekTab === "next_week") return "all_next_week";
     return "all";
-  }, [selectedRosterSlot, rosterSlots]);
+  }, [selectedRosterSlot, rosterSlots, rosterWeekTab]);
 
   useEffect(() => {
     async function loadTestSlots() {
@@ -1686,8 +1742,7 @@ Overwatch`;
                 : undefined),
           slot:
             options?.slot ||
-            (activeRosterSlot !== "all" ? activeRosterSlot : broadcastSlots[0]) ||
-            "Segunda-feira, 21 de Setembro – 10h00",
+            (!["all", "all_this_week", "all_next_week"].includes(activeRosterSlot) ? activeRosterSlot : (broadcastSlots[0] || "Segunda-feira, 21 de Setembro – 10h00")),
           reason:
             options?.reason ||
             customDisqualifyReason ||
@@ -1805,9 +1860,13 @@ Overwatch`;
   }
 
   function exportAttendanceCSV(slotFilter?: string) {
-    const targetApps = applications.filter((a) =>
-      slotFilter ? a.testSlot === slotFilter : Boolean(a.testSlot),
-    );
+    const targetApps = applications.filter((a) => {
+      if (!a.testSlot) return false;
+      if (!slotFilter || slotFilter === "all") return true;
+      if (slotFilter === "all_this_week") return getSlotWeekCategory(a.testSlot) === "this_week";
+      if (slotFilter === "all_next_week") return getSlotWeekCategory(a.testSlot) === "next_week";
+      return a.testSlot === slotFilter;
+    });
     if (!targetApps.length) {
       alert(t("No confirmed candidates found for this slot filter.", "Nenhum candidato com teste confirmado para este filtro."));
       return;
@@ -1844,7 +1903,15 @@ Overwatch`;
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `overwatch-attendance-roster-${new Date().toISOString().slice(0, 10)}.csv`;
+    const suffix =
+      slotFilter === "all_this_week"
+        ? "-esta-semana"
+        : slotFilter === "all_next_week"
+          ? "-proxima-semana"
+          : slotFilter && slotFilter !== "all"
+            ? `-${slotFilter.replace(/[^\w.-]/g, "_").slice(0, 24)}`
+            : "-consolidado";
+    a.download = `overwatch-attendance-roster${suffix}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -4573,41 +4640,184 @@ Overwatch`;
 
             {/* ─── SMART ATTENDANCE CONSOLE & INTERACTIVE DATE NAVIGATOR ─── */}
             <div className="rounded-2xl border border-white/10 bg-[#121827]/95 overflow-hidden shadow-sm">
-              {/* Date Navigation Bar (Pill Tabs) */}
-              <div className="p-4 border-b border-white/10 bg-white/[0.01]">
-                <div className="flex items-center justify-between gap-3 pb-3">
-                  <div className="text-xs font-bold uppercase tracking-wider text-white/50 flex items-center gap-1.5">
-                    <CalendarDays size={13} className="text-sky-400" />
-                    <span>{t("Select Test Session Date:", "Seleccione o Turno de Teste:")}</span>
-                  </div>
-                  <span className="text-[0.68rem] text-white/40">
-                    {rosterSlots.length} {t("sessions configured", "turnos configurados")}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
-                  {/* "All Confirmed Sessions" Pill */}
-                  <button
-                    type="button"
-                    onClick={() => setSelectedRosterSlot("all")}
-                    className={`slot-pill ${activeRosterSlot === "all" ? "active" : ""}`}
-                  >
-                    <span>{t("All Confirmed Sessions", "Todos os Turnos")}</span>
-                    <span
-                      className={`slot-pill-count rounded-full ${
-                        activeRosterSlot === "all"
-                          ? "bg-[var(--accent-blue)] text-white font-bold"
-                          : "bg-white/15 text-white"
+              {/* Date Navigation Bar with Week Sections */}
+              <div className="p-4 border-b border-white/10 bg-white/[0.01] space-y-3.5">
+                {/* ─── TWO TABS: THIS WEEK vs NEXT WEEK ─────────────────────── */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
+                  <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white/[0.04] border border-white/10 flex-wrap">
+                    {/* Tab 1: Esta Semana */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRosterWeekTab("this_week");
+                        setSelectedRosterSlot("all_this_week");
+                      }}
+                      className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        rosterWeekTab === "this_week"
+                          ? "bg-sky-500 text-white shadow-md shadow-sky-500/25 ring-1 ring-white/20"
+                          : "text-white/60 hover:text-white hover:bg-white/[0.05]"
                       }`}
                     >
-                      {confirmedCount}
-                    </span>
-                  </button>
+                      <Calendar size={14} className={rosterWeekTab === "this_week" ? "text-white" : "text-sky-400"} />
+                      <span>{t("This Week (16 – 18 Sept)", "Esta Semana (16 – 18 Set)")}</span>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[0.65rem] font-bold ${
+                          rosterWeekTab === "this_week"
+                            ? "bg-black/30 text-white"
+                            : "bg-sky-500/20 text-sky-300 border border-sky-500/30"
+                        }`}
+                      >
+                        {thisWeekCount}
+                      </span>
+                    </button>
 
-                  {rosterSlots.map((slot) => {
+                    {/* Tab 2: Próxima Semana */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRosterWeekTab("next_week");
+                        setSelectedRosterSlot("all_next_week");
+                      }}
+                      className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        rosterWeekTab === "next_week"
+                          ? "bg-purple-600 text-white shadow-md shadow-purple-600/25 ring-1 ring-white/20"
+                          : "text-white/60 hover:text-white hover:bg-white/[0.05]"
+                      }`}
+                    >
+                      <Calendar size={14} className={rosterWeekTab === "next_week" ? "text-white" : "text-purple-400"} />
+                      <span>{t("Next Week (21 – 25 Sept)", "Próxima Semana (21 – 25 Set)")}</span>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[0.65rem] font-bold ${
+                          rosterWeekTab === "next_week"
+                            ? "bg-black/30 text-white"
+                            : "bg-purple-500/20 text-purple-300 border border-purple-500/30"
+                        }`}
+                      >
+                        {nextWeekCount}
+                      </span>
+                    </button>
+
+                    {/* Tab 3: Todos os Turnos */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRosterWeekTab("all");
+                        setSelectedRosterSlot("all");
+                      }}
+                      className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        rosterWeekTab === "all"
+                          ? "bg-white text-[#090d16] shadow-md font-bold"
+                          : "text-white/60 hover:text-white hover:bg-white/[0.05]"
+                      }`}
+                    >
+                      <CalendarDays size={14} />
+                      <span>{t("All Sessions", "Todos os Turnos")}</span>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[0.65rem] font-bold ${
+                          rosterWeekTab === "all"
+                            ? "bg-black/20 text-black font-extrabold"
+                            : "bg-white/10 text-white/70"
+                        }`}
+                      >
+                        {confirmedCount}
+                      </span>
+                    </button>
+                  </div>
+
+                  <div className="text-[0.7rem] flex items-center gap-2">
+                    {rosterWeekTab === "this_week" && (
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-sky-500/10 border border-sky-500/25 text-sky-300 font-semibold">
+                        <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
+                        <span>{t("Showing This Week (Wed 16 – Fri 18 Sept)", "A mostrar Esta Semana (Qua 16 – Sex 18 Set)")}</span>
+                      </span>
+                    )}
+                    {rosterWeekTab === "next_week" && (
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/25 text-purple-300 font-semibold">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                        <span>{t("Showing Next Week (Mon 21 – Fri 25 Sept)", "A mostrar Próxima Semana (Seg 21 – Sex 25 Set)")}</span>
+                      </span>
+                    )}
+                    {rosterWeekTab === "all" && (
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 border border-white/20 text-white/80 font-semibold">
+                        <span>{rosterSlots.length} {t("sessions total", "turnos no total")}</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* ─── SLOT PILLS ROW (FILTERED BY SELECTED WEEK TAB) ───────── */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+                  {/* Consolidated pill for "This Week" */}
+                  {rosterWeekTab === "this_week" && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRosterSlot("all_this_week")}
+                      className={`slot-pill ${activeRosterSlot === "all_this_week" ? "active" : ""}`}
+                    >
+                      <span>{t("All This Week", "Todos Desta Semana")}</span>
+                      <span
+                        className={`slot-pill-count rounded-full ${
+                          activeRosterSlot === "all_this_week"
+                            ? "bg-sky-500 text-white font-bold"
+                            : "bg-white/15 text-white"
+                        }`}
+                      >
+                        {thisWeekCount}
+                      </span>
+                    </button>
+                  )}
+
+                  {/* Consolidated pill for "Next Week" */}
+                  {rosterWeekTab === "next_week" && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRosterSlot("all_next_week")}
+                      className={`slot-pill ${activeRosterSlot === "all_next_week" ? "active" : ""}`}
+                    >
+                      <span>{t("All Next Week", "Todos da Próx. Semana")}</span>
+                      <span
+                        className={`slot-pill-count rounded-full ${
+                          activeRosterSlot === "all_next_week"
+                            ? "bg-purple-600 text-white font-bold"
+                            : "bg-white/15 text-white"
+                        }`}
+                      >
+                        {nextWeekCount}
+                      </span>
+                    </button>
+                  )}
+
+                  {/* Consolidated pill for "All Sessions" */}
+                  {rosterWeekTab === "all" && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRosterSlot("all")}
+                      className={`slot-pill ${activeRosterSlot === "all" ? "active" : ""}`}
+                    >
+                      <span>{t("All Confirmed Sessions", "Todos os Turnos (Consolidado)")}</span>
+                      <span
+                        className={`slot-pill-count rounded-full ${
+                          activeRosterSlot === "all"
+                            ? "bg-[var(--accent-blue)] text-white font-bold"
+                            : "bg-white/15 text-white"
+                        }`}
+                      >
+                        {confirmedCount}
+                      </span>
+                    </button>
+                  )}
+
+                  {/* Individual slot pills */}
+                  {(rosterWeekTab === "this_week"
+                    ? thisWeekSlots
+                    : rosterWeekTab === "next_week"
+                      ? nextWeekSlots
+                      : rosterSlots
+                  ).map((slot) => {
                     const count = applications.filter((a) => a.testSlot === slot).length;
                     const isSelected = activeRosterSlot === slot;
                     const isFull = count >= 10;
+                    const isThisWeek = getSlotWeekCategory(slot) === "this_week";
 
                     return (
                       <button
@@ -4623,7 +4833,9 @@ Overwatch`;
                               ? "bg-red-500/20 text-red-300 border border-red-500/30"
                               : count > 0
                                 ? isSelected
-                                  ? "bg-[var(--accent-blue)] text-white"
+                                  ? isThisWeek
+                                    ? "bg-sky-500 text-white font-bold"
+                                    : "bg-purple-600 text-white font-bold"
                                   : "bg-white/15 text-white"
                                 : "bg-white/5 text-white/30"
                           }`}
@@ -4638,21 +4850,38 @@ Overwatch`;
 
               {/* Active Day Console Header & Table */}
               {activeRosterSlot && (() => {
+                const isConsolidated = ["all", "all_this_week", "all_next_week"].includes(activeRosterSlot);
                 const candidatesInSlot = activeRosterSlot === "all"
                   ? applications.filter((a) => Boolean(a.testSlot))
-                  : applications.filter((a) => a.testSlot === activeRosterSlot);
-                const isFull = activeRosterSlot !== "all" && candidatesInSlot.length >= 10;
-                const remaining = activeRosterSlot !== "all" ? Math.max(0, 10 - candidatesInSlot.length) : 0;
+                  : activeRosterSlot === "all_this_week"
+                    ? applications.filter((a) => Boolean(a.testSlot) && getSlotWeekCategory(a.testSlot!) === "this_week")
+                    : activeRosterSlot === "all_next_week"
+                      ? applications.filter((a) => Boolean(a.testSlot) && getSlotWeekCategory(a.testSlot!) === "next_week")
+                      : applications.filter((a) => a.testSlot === activeRosterSlot);
+                const isFull = !isConsolidated && candidatesInSlot.length >= 10;
+                const remaining = !isConsolidated ? Math.max(0, 10 - candidatesInSlot.length) : 0;
 
                 return (
                   <div className="p-5 sm:p-6 space-y-5">
                     <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-white/10">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-bold uppercase tracking-wider text-sky-400">
+                          <span
+                            className={`text-xs font-bold uppercase tracking-wider ${
+                              activeRosterSlot === "all_this_week"
+                                ? "text-sky-400"
+                                : activeRosterSlot === "all_next_week"
+                                  ? "text-purple-400"
+                                  : "text-sky-400"
+                            }`}
+                          >
                             {activeRosterSlot === "all"
-                              ? t("All Confirmed Sessions Roster", "Lista Consolidada de Todos os Turnos")
-                              : t("Active Session Roster", "Escala do Turno Ativo")}
+                              ? t("Consolidated Roster (All Sessions)", "Lista Consolidada de Todos os Turnos")
+                              : activeRosterSlot === "all_this_week"
+                                ? t("This Week Roster (16 – 18 Sept)", "Escala Desta Semana (16 – 18 Set)")
+                                : activeRosterSlot === "all_next_week"
+                                  ? t("Next Week Roster (21 – 25 Sept)", "Escala da Próxima Semana (21 – 25 Set)")
+                                  : t("Active Session Roster", "Escala do Turno Ativo")}
                           </span>
                           <span
                             className={`px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold border ${
@@ -4664,20 +4893,30 @@ Overwatch`;
                             }`}
                           >
                             {candidatesInSlot.length} {t("candidates confirmed", "candidatas confirmadas")}
-                            {activeRosterSlot !== "all" && (isFull ? ` · ${t("Full (10/10)", "Lotação Esgotada")}` : ` (${remaining} ${t("spots free", "vagas livres")})`)}
+                            {!isConsolidated && (isFull ? ` · ${t("Full (10/10)", "Lotação Esgotada")}` : ` (${remaining} ${t("spots free", "vagas livres")})`)}
                           </span>
                         </div>
 
                         <h3 className="text-lg sm:text-xl font-bold text-white mt-1">
                           {activeRosterSlot === "all"
                             ? t("All Confirmed Candidates (All Sessions)", "Todas as Candidatas Confirmadas (Todos os Turnos)")
-                            : formatSlotDisplay(activeRosterSlot, lang)}
+                            : activeRosterSlot === "all_this_week"
+                              ? t("All Confirmed Candidates — This Week (16 – 18 September)", "Todas as Candidatas Desta Semana (16 – 18 de Setembro)")
+                              : activeRosterSlot === "all_next_week"
+                                ? t("All Confirmed Candidates — Next Week (21 – 25 September)", "Todas as Candidatas da Próxima Semana (21 – 25 de Setembro)")
+                                : formatSlotDisplay(activeRosterSlot, lang)}
                         </h3>
 
                         <div className="flex flex-wrap items-center gap-3 text-xs text-white/50 mt-1">
                           <span className="flex items-center gap-1">
                             <Clock size={12} className="text-sky-400" />
-                            <span>{t("10:00 to 11:30 (Arrival 09:30 · Gates lock at 09:50)", "10h00 às 11h30 (Chegada 09h30 · Portão fecha às 09h50)")}</span>
+                            <span>
+                              {activeRosterSlot === "all_this_week"
+                                ? t("In-person test sessions: Wednesday 16, Thursday 17 & Friday 18 Sept (10:00 AM · Arrival 09:30)", "Sessões presenciais: Quarta 16, Quinta 17 e Sexta 18 de Setembro (10h00 · Chegada 09h30)")
+                                : activeRosterSlot === "all_next_week"
+                                  ? t("In-person test sessions: Monday 21 to Friday 25 Sept (10:00 AM · Arrival 09:30)", "Sessões presencias: Segunda 21 a Sexta 25 de Setembro (10h00 · Chegada 09h30)")
+                                  : t("10:00 to 11:30 (Arrival 09:30 · Gates lock at 09:50)", "10h00 às 11h30 (Chegada 09h30 · Portão fecha às 09h50)")}
+                            </span>
                           </span>
                           <span>•</span>
                           <span>{siteContact.address.pt}</span>
@@ -4687,7 +4926,7 @@ Overwatch`;
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => exportAttendanceCSV(activeRosterSlot === "all" ? undefined : activeRosterSlot)}
+                          onClick={() => exportAttendanceCSV(isConsolidated ? activeRosterSlot : activeRosterSlot)}
                           disabled={candidatesInSlot.length === 0}
                           className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.05] hover:bg-white/10 px-3.5 py-2 text-xs font-semibold text-white transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
                         >
@@ -4759,7 +4998,7 @@ Overwatch`;
                             <tr>
                               <th className="w-12 text-center">#</th>
                               <th>{t("Candidate", "Candidato(a)")}</th>
-                              {activeRosterSlot === "all" && <th>{t("Test Session", "Turno Marcado")}</th>}
+                              {isConsolidated && <th>{t("Test Session", "Turno Marcado")}</th>}
                               <th>{t("WhatsApp Contact", "Contacto WhatsApp")}</th>
                               <th>{t("Gender", "Género")}</th>
                               <th>{t("Confirmation Time", "Horário da Marcação")}</th>
@@ -4797,11 +5036,23 @@ Overwatch`;
                                       </span>
                                     </button>
                                   </td>
-                                  {activeRosterSlot === "all" && (
+                                  {isConsolidated && (
                                     <td className="px-4 py-3.5 whitespace-nowrap">
-                                      <span className="px-2.5 py-1 rounded-lg text-[0.68rem] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/25">
-                                        {formatSlotDisplay(c.testSlot?.split("–")[0].trim() || c.testSlot || "", lang)}
-                                      </span>
+                                      {(() => {
+                                        const isTw = getSlotWeekCategory(c.testSlot || "") === "this_week";
+                                        return (
+                                          <span
+                                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[0.68rem] font-bold border ${
+                                              isTw
+                                                ? "bg-sky-500/15 text-sky-300 border-sky-500/25"
+                                                : "bg-purple-500/15 text-purple-300 border-purple-500/25"
+                                            }`}
+                                          >
+                                            <span className={`w-1.5 h-1.5 rounded-full ${isTw ? "bg-sky-400" : "bg-purple-400"}`} />
+                                            <span>{formatSlotDisplay(c.testSlot?.split("–")[0].trim() || c.testSlot || "", lang)}</span>
+                                          </span>
+                                        );
+                                      })()}
                                     </td>
                                   )}
                                   <td className="px-4 py-3.5 whitespace-nowrap">
