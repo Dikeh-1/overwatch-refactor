@@ -931,3 +931,142 @@ Overwatch`;
   return sendTransactionalEmail(payload);
 }
 
+export async function sendDisqualificationEmail({
+  application,
+  reason,
+  baseUrl,
+}: {
+  application: Application;
+  reason?: string;
+  baseUrl?: string;
+}) {
+  if (
+    (!process.env.BREVO_API_KEY && !process.env.FALLBACK_SMTP_PASS) ||
+    application.email.endsWith(".invalid") ||
+    process.env.CAREERS_TEST_MODE === "true"
+  ) {
+    return { success: true, mocked: true };
+  }
+
+  const origin = (
+    baseUrl ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "https://www.overwatchmoz.com"
+  ).replace(/\/+$/, "");
+  const logoWhiteUrl = `${origin}/logo-white.png`;
+
+  const sender = {
+    name: "Overwatch Recrutamento",
+    email: "noreply@overwatchmoz.com",
+  };
+
+  const greeting = getMozambiqueGreeting("pt");
+  const defaultReason =
+    "Não cumprimento da totalidade dos requisitos eliminatórios do concurso (submissão de carta de apresentação e/ou comprovação curricular de experiência em sistemas de CCTV para candidatos masculinos).";
+  const finalReason = reason || defaultReason;
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="pt">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Actualização de Candidatura — Overwatch Moçambique</title>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; -webkit-font-smoothing: antialiased;">
+      <div style="background-color: #f1f5f9; padding: 32px 16px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08); overflow: hidden;">
+          
+          <!-- Official Letterhead Header (Dark Navy) -->
+          <div style="background-color: #0b1329; padding: 18px 24px; border-bottom: 2px solid rgba(255, 255, 255, 0.15);">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="vertical-align: middle;">
+                  <img src="${logoWhiteUrl}" alt="Overwatch" height="22" width="147" style="height: 22px; width: auto; max-width: 145px; display: block; border: 0;" />
+                </td>
+                <td style="vertical-align: middle; text-align: right;">
+                  <span style="display: inline-block; background-color: rgba(255, 255, 255, 0.12); color: #ffffff; font-family: monospace; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.2); letter-spacing: 0.04em;">
+                    REF: CCO-2026/MAPUTO
+                  </span>
+                  <div style="font-size: 11px; color: #cbd5e1; margin-top: 4px; font-weight: 500;">
+                    Departamento de Recursos Humanos
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Official Subheading Bar -->
+          <div style="background-color: #f8fafc; padding: 10px 24px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #334155;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #334155;">
+                  NOTIFICAÇÃO OFICIAL · PROCESSO DE SELECÇÃO
+                </td>
+                <td style="text-align: right; color: #64748b;">
+                  Maputo, Moçambique
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Body Content (Clean White) -->
+          <div style="padding: 28px 24px; background-color: #ffffff;">
+            <h1 style="font-size: 18px; font-weight: 700; color: #090d16; margin: 0 0 12px 0;">
+              ${greeting} ${application.name},
+            </h1>
+            <p style="font-size: 14px; color: #475569; margin: 0 0 16px 0; line-height: 1.6;">
+              Agradecemos a sua candidatura e o interesse demonstrado em integrar a equipa de Operadoras de CCO da <strong>Overwatch Moçambique</strong>.
+            </p>
+            <p style="font-size: 14px; color: #475569; margin: 0 0 20px 0; line-height: 1.6;">
+              Após verificação detalhada da conformidade da sua candidatura com os requisitos formais e eliminatórios do concurso, informamos que o seu perfil não preenche os critérios obrigatórios definidos pela direcção para avançar para a fase de testes presenciais.
+            </p>
+
+            <!-- Disqualification Reason Box -->
+            <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-left: 4px solid #ef4444; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+              <strong style="font-size: 12px; color: #991b1b; display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em;">
+                Motivo da Decisão:
+              </strong>
+              <div style="font-size: 13px; color: #7f1d1d; line-height: 1.5;">
+                ${finalReason}
+              </div>
+            </div>
+
+            <p style="font-size: 13px; color: #64748b; margin: 0 0 16px 0; line-height: 1.55;">
+              Nestes termos, qualquer agendamento de teste anteriormente registado fica sem efeito e a sua candidatura foi arquivada na nossa base de dados.
+            </p>
+            <p style="font-size: 13px; color: #64748b; margin: 0 0 24px 0; line-height: 1.55;">
+              Agradecemos o tempo dedicado ao processo e desejamos-lhe os maiores sucessos nos seus projectos futuros e na sua carreira profissional.
+            </p>
+
+            <!-- Formal Sign-Off -->
+            <div style="margin-top: 24px; font-size: 14px; color: #334155; line-height: 1.5;">
+              Com os melhores cumprimentos,<br />
+              <strong style="color: #090d16;">Equipa de Recrutamento & Selecção</strong><br />
+              Overwatch Moçambique
+            </div>
+          </div>
+
+          <!-- Formal Legal & Contact Footer -->
+          <div style="background-color: #f8fafc; padding: 22px 32px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6;">
+            <strong style="color: #090d16;">Overwatch Moçambique, Lda.</strong><br />
+            ${siteContact.address.pt}<br />
+            Telefone / WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #0284c7; text-decoration: none; font-weight: 600;">+258 84 287 0793</a> · Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none;">${siteContact.email}</a> · Website: <a href="${origin}" style="color: #64748b; text-decoration: none;">www.overwatchmoz.com</a>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const payload = {
+    sender,
+    to: [{ email: application.email, name: application.name }],
+    subject: "Actualização de Candidatura: Operadora de CCO — Overwatch Moçambique",
+    htmlContent,
+    textContent: `${greeting} ${application.name},\n\nAgradecemos a sua candidatura para a vaga de Operadora de CCO da Overwatch Moçambique.\n\nApós análise dos requisitos eliminatórios do concurso, informamos que a sua candidatura não foi seleccionada para avançar para a fase de testes presenciais.\n\nMotivo:\n${finalReason}\n\nQualquer agendamento de teste anterior fica cancelado e a candidatura foi arquivada.\n\nDesejamos-lhe os maiores sucessos futuros.\n\nCom os melhores cumprimentos,\nEquipa de Recrutamento\nOverwatch Moçambique`,
+  };
+
+  return sendTransactionalEmail(payload);
+}
+

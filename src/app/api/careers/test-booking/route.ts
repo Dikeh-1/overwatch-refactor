@@ -1,4 +1,4 @@
-import { getApplication, updateApplication, getTestSlots } from "@/lib/careers-store";
+import { getApplication, updateApplication, getTestSlots, getApplications } from "@/lib/careers-store";
 import { DEFAULT_TEST_SLOTS } from "@/lib/careers";
 import { sendBookingConfirmation } from "@/lib/careers-email";
 import { siteContact } from "@/lib/site-config";
@@ -25,11 +25,23 @@ export async function GET(request: Request) {
       );
     }
 
+    const allApps = await getApplications();
     const activeSlots = await getTestSlots();
-    const candidateSlots =
-      Array.isArray(candidate.invitedSlots) && candidate.invitedSlots.length > 0
-        ? candidate.invitedSlots
-        : activeSlots;
+    const candidateSlots = activeSlots;
+
+    const maxPerDay = 10;
+    const slotStats: Record<string, { booked: number; max: number; isFull: boolean; remaining: number }> = {};
+    for (const s of candidateSlots) {
+      const booked = allApps.filter(
+        (a) => a.testSlot === s && a.status !== "rejected" && a.status !== "archived" && a.id !== candidate.id
+      ).length;
+      slotStats[s] = {
+        booked,
+        max: maxPerDay,
+        isFull: booked >= maxPerDay,
+        remaining: Math.max(0, maxPerDay - booked),
+      };
+    }
 
     return Response.json({
       id: candidate.id,
@@ -39,6 +51,8 @@ export async function GET(request: Request) {
       testBookedAt: candidate.testBookedAt || null,
       invitedAt: candidate.invitedAt || null,
       slots: candidateSlots,
+      slotStats,
+      windowFilledNotice: !candidate.testSlot,
       address: siteContact.address.pt,
       whatsapp: siteContact.whatsappNumber,
     });
@@ -86,6 +100,23 @@ export async function POST(request: Request) {
             "Já agendou o seu teste anteriormente. O agendamento só pode ser realizado uma única vez.",
           alreadyBooked: true,
           testSlot: candidate.testSlot,
+        },
+        { status: 409 },
+      );
+    }
+
+    // Slot quota safeguard: max 10 candidates per day
+    const allApps = await getApplications();
+    const currentBookings = allApps.filter(
+      (a) => a.testSlot === slot.trim() && a.status !== "rejected" && a.status !== "archived" && a.id !== id
+    ).length;
+
+    if (currentBookings >= 10) {
+      return Response.json(
+        {
+          error:
+            "As vagas para este dia já se encontram esgotadas (limite de 10 candidatas por dia atingido). Por favor seleccione outra data disponível.",
+          slotFull: true,
         },
         { status: 409 },
       );

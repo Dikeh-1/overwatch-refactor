@@ -21,6 +21,13 @@ import {
 import { siteContact, getGoogleMapsUrl } from "@/lib/site-config";
 import { DEFAULT_TEST_SLOTS } from "@/lib/careers";
 
+type SlotStat = {
+  booked: number;
+  max: number;
+  isFull: boolean;
+  remaining: number;
+};
+
 type CandidateData = {
   id: string;
   name: string;
@@ -29,6 +36,8 @@ type CandidateData = {
   testBookedAt: string | null;
   invitedAt: string | null;
   slots: string[];
+  slotStats?: Record<string, SlotStat>;
+  windowFilledNotice?: boolean;
   address: string;
   whatsapp: string;
 };
@@ -137,7 +146,8 @@ export default function CandidateBookingClient({
           if (data.testSlot) {
             setSelectedSlot(data.testSlot);
           } else if (data.slots && data.slots.length > 0) {
-            setSelectedSlot(data.slots[0]);
+            const available = data.slots.find((s) => !data.slotStats?.[s]?.isFull);
+            setSelectedSlot(available || data.slots[0]);
           } else {
             setSelectedSlot(DEFAULT_TEST_SLOTS[0]);
           }
@@ -189,7 +199,7 @@ export default function CandidateBookingClient({
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        if (res.status === 409) {
+        if (res.status === 409 && data.alreadyBooked) {
           setCandidate((prev) =>
             prev
               ? {
@@ -505,6 +515,25 @@ export default function CandidateBookingClient({
                   </div>
                 </div>
 
+                {/* Capacity Update Notice Banner */}
+                {candidate?.windowFilledNotice && (
+                  <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-4 sm:p-5 flex items-start gap-3.5 text-xs text-sky-200">
+                    <AlertCircle size={20} className="text-sky-400 shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <div className="font-bold text-sky-300 uppercase tracking-wider text-[0.72rem]">
+                        {isPt
+                          ? "📢 AVISO DE VAGAS: SESSÕES DESTA SEMANA ESGOTADAS"
+                          : "📢 NOTICE: THIS WEEK'S SESSIONS ARE FULL"}
+                      </div>
+                      <p className="text-[0.75rem] text-sky-100/90 leading-relaxed">
+                        {isPt
+                          ? "O período de testes desta semana atingiu a lotação máxima recomendada. Disponibilizámos novas sessões para a próxima semana (Segunda a Sexta-feira, 10h00), estritamente limitadas a 10 vagas por dia. Seleccione a sua data abaixo para garantir o seu lugar."
+                          : "This week's testing window has reached full capacity. New sessions for next week (Monday to Friday, 10:00 AM) are now open, strictly limited to 10 candidates per day. Please select your date below to secure your seat."}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <h2 className="text-base font-bold text-white flex items-center gap-2">
                     <Calendar size={18} className="text-white/70" />
@@ -516,8 +545,8 @@ export default function CandidateBookingClient({
                   </h2>
                   <p className="mt-1 text-xs text-white/60 leading-relaxed">
                     {isPt
-                      ? "Seleccione uma das datas abaixo para a realização do seu teste presencial. A confirmação é gravada imediatamente no sistema de recursos humanos."
-                      : "Select one of the dates below for your in-person technical evaluation. Your selection is immediately saved in the recruitment system."}
+                      ? "Seleccione uma das datas abaixo para a realização do seu teste presencial. Cada sessão tem limite estrito de 10 candidatas. A confirmação é gravada imediatamente no sistema."
+                      : "Select one of the dates below for your in-person evaluation. Each session is strictly limited to 10 candidates. Confirmation is instantly saved."}
                   </p>
                 </div>
 
@@ -525,45 +554,83 @@ export default function CandidateBookingClient({
                 <div className="space-y-2.5">
                   {slotsList.map((slot) => {
                     const isSelected = selectedSlot === slot;
+                    const stat = candidate?.slotStats?.[slot];
+                    const isFull = Boolean(stat?.isFull);
+                    const remaining = stat ? Math.max(0, stat.remaining) : undefined;
 
                     return (
                       <button
                         key={slot}
                         type="button"
-                        onClick={() => setSelectedSlot(slot)}
-                        className={`w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between gap-3 cursor-pointer ${
-                          isSelected
-                            ? "border-emerald-500/50 bg-emerald-500/[0.08] shadow-sm"
-                            : "border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.05]"
+                        disabled={isFull}
+                        onClick={() => {
+                          if (!isFull) setSelectedSlot(slot);
+                        }}
+                        className={`w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between gap-3 ${
+                          isFull
+                            ? "border-red-500/20 bg-red-950/20 opacity-70 cursor-not-allowed"
+                            : isSelected
+                            ? "border-emerald-500/50 bg-emerald-500/[0.08] shadow-sm cursor-pointer"
+                            : "border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.05] cursor-pointer"
                         }`}
                       >
                         <div className="flex items-center gap-3.5">
                           <div
                             className={`h-4 w-4 rounded-full border flex items-center justify-center transition-colors shrink-0 ${
-                              isSelected
+                              isFull
+                                ? "border-red-500/40 bg-red-500/20 text-red-400"
+                                : isSelected
                                 ? "border-emerald-400 bg-emerald-400 text-[#090d16]"
                                 : "border-white/30 bg-transparent"
                             }`}
                           >
-                            {isSelected && <Check size={11} strokeWidth={3} />}
+                            {isFull ? (
+                              <Lock size={10} strokeWidth={2.5} />
+                            ) : (
+                              isSelected && <Check size={11} strokeWidth={3} />
+                            )}
                           </div>
                           <div>
-                            <div className="text-xs sm:text-sm font-semibold text-white">
+                            <div className={`text-xs sm:text-sm font-semibold ${isFull ? "text-white/60 line-through decoration-red-400/50" : "text-white"}`}>
                               {formatSlotDisplay(slot, isPt)}
                             </div>
-                            <div className="text-[0.68rem] text-white/50 flex items-center gap-2 mt-0.5">
-                              <span>{isPt ? "10h00 às 11h30 (Chegada 09h30)" : "10:00 to 11:30 (Arrival 09:30)"}</span>
-                              <span>•</span>
-                              <span>{isPt ? "Sede Maputo" : "Maputo HQ"}</span>
-                            </div>
+                            {isFull ? (
+                              <div className="text-[0.68rem] text-red-300/90 flex items-center gap-1.5 mt-0.5 font-medium">
+                                <Lock size={11} className="shrink-0 text-red-400" />
+                                <span>
+                                  {isPt
+                                    ? "Lotação esgotada (10/10 vagas preenchidas). Seleccione outra data."
+                                    : "Quota reached (10/10 booked). Please select another date."}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="text-[0.68rem] text-white/50 flex items-center gap-2 mt-0.5">
+                                <span>{isPt ? "10h00 às 11h30 (Chegada 09h30)" : "10:00 to 11:30 (Arrival 09:30)"}</span>
+                                <span>•</span>
+                                <span>{isPt ? "Sede Maputo" : "Maputo HQ"}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
 
-                        {isSelected && (
-                          <span className="text-[0.65rem] font-semibold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-500/30">
+                        {isFull ? (
+                          <span className="text-[0.65rem] font-semibold text-red-300 bg-red-500/20 px-2 py-0.5 rounded border border-red-500/30 flex items-center gap-1 shrink-0">
+                            <Lock size={10} />
+                            <span>{isPt ? "Esgotado (10/10)" : "Full (10/10)"}</span>
+                          </span>
+                        ) : isSelected ? (
+                          <span className="text-[0.65rem] font-semibold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-500/30 shrink-0">
                             {isPt ? "Seleccionada" : "Selected"}
                           </span>
-                        )}
+                        ) : remaining !== undefined && remaining <= 3 ? (
+                          <span className="text-[0.65rem] font-medium text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/25 shrink-0">
+                            {isPt ? `Últimas ${remaining} vagas` : `Only ${remaining} spots`}
+                          </span>
+                        ) : remaining !== undefined ? (
+                          <span className="text-[0.65rem] text-white/40 shrink-0">
+                            {isPt ? `${remaining} vagas livres` : `${remaining} spots open`}
+                          </span>
+                        ) : null}
                       </button>
                     );
                   })}
