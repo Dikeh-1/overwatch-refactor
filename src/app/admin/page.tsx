@@ -104,7 +104,7 @@ Após análise da sua candidatura, foi seleccionada para avançar para a próxim
 
 Por favor, escolha uma das seguintes opções de data e confirme a sua presença através do link pessoal no botão abaixo.
 
-Após a sua selecção, a sua vaga fica automaticamente confirmada no nosso sistema.
+Após a sua selecção, a sua vaga fica automaticamente confirmada no nosso sistema. O agendamento é de utilização única e a escolha é definitiva, não podendo ser alterada.
 
 Com os melhores cumprimentos,
 Equipa de Recrutamento
@@ -120,7 +120,7 @@ Following the review of your application, you have been shortlisted to advance t
 
 Please select one of the available date options below to confirm your attendance using your personalized link.
 
-Upon selection, your slot is automatically confirmed in our system.
+Upon selection, your slot is automatically confirmed in our system. Booking is single-use and your selection is final and cannot be changed.
 
 Com os melhores cumprimentos,
 Equipa de Recrutamento

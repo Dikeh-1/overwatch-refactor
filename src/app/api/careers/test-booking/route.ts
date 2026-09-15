@@ -72,6 +72,19 @@ export async function POST(request: Request) {
       );
     }
 
+    // Single-use booking safeguard: block repeat booking
+    if (candidate.testSlot) {
+      return Response.json(
+        {
+          error:
+            "Já agendou o seu teste anteriormente. O agendamento só pode ser realizado uma única vez.",
+          alreadyBooked: true,
+          testSlot: candidate.testSlot,
+        },
+        { status: 409 },
+      );
+    }
+
     const bookedAt = new Date().toISOString();
     const updated = await updateApplication(id, {
       testSlot: slot.trim(),

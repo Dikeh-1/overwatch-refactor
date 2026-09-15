@@ -513,6 +513,9 @@ export async function sendTestInvitation({
               <div style="font-size: 11px; color: #64748b; margin-top: 8px;">
                 Clique no botão acima para escolher a sua data no sistema.
               </div>
+              <div style="font-size: 11px; color: #92400e; background-color: #fef3c7; border: 1px solid #fde68a; border-radius: 6px; padding: 8px 12px; display: inline-block; margin-top: 10px; font-weight: 600;">
+                ⚠️ O agendamento é de utilização única. Uma vez confirmada a data, a escolha é definitiva e não poderá ser alterada.
+              </div>
             </div>
 
             <!-- Security Notice Box -->
@@ -690,10 +693,10 @@ export async function sendBookingConfirmation({
               </div>
             </div>
 
-            <p style="font-size: 12px; color: #64748b; margin-top: 16px;">
-              Caso surja algum imprevisto e necessite de reagendar, utilize o seu link pessoal:<br />
-              <a href="${bookingUrl}" style="color: #0284c7; text-decoration: underline;">${bookingUrl}</a>
-            </p>
+            <div style="background-color: #f1f5f9; border-radius: 6px; padding: 12px 14px; font-size: 12px; color: #475569; margin-top: 18px; line-height: 1.55;">
+              <strong style="color: #0f172a;">Agendamento Concluído:</strong> A sua presença está gravada no sistema. O agendamento é de utilização única. Pode consultar as instruções do teste e detalhes da convocatória a qualquer momento através do seu link pessoal:<br />
+              <a href="${bookingUrl}" style="color: #0284c7; text-decoration: underline; word-break: break-all;">${bookingUrl}</a>
+            </div>
 
             <!-- Formal Sign-Off -->
             <div style="margin-top: 24px; font-size: 14px; color: #334155; line-height: 1.5;">
@@ -720,7 +723,7 @@ export async function sendBookingConfirmation({
     to: [{ email: application.email, name: application.name }],
     subject: "Presença Confirmada: Teste de Selecção Overwatch",
     htmlContent,
-    textContent: `Olá, ${application.name}.\n\nA sua presença no teste presencial de Operadora de CCO está confirmada para:\n${slot}\n\nLocal:\n${siteContact.address.pt}\n\nRequisitos:\n- Trazer BI ou Passaporte original\n- Trazer caneta esferográfica\n- Chegar com 15 minutos de antecedência (09h45)\n\nCom os melhores cumprimentos,\nEquipa de Recrutamento\nOverwatch Moçambique`,
+    textContent: `Olá, ${application.name}.\n\nA sua presença no teste presencial de Operadora de CCO está confirmada de forma definitiva para:\n${slot}\n\nLocal:\n${siteContact.address.pt}\n\nRequisitos:\n- Trazer BI ou Passaporte original\n- Trazer caneta esferográfica\n- Chegar com pontualidade (09h30, portões encerram às 09h50)\n\nConsulte o seu link pessoal de agendamento:\n${bookingUrl}\n\nCom os melhores cumprimentos,\nEquipa de Recrutamento\nOverwatch Moçambique`,
   };
 
   return sendTransactionalEmail(payload);
