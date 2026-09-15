@@ -20,7 +20,6 @@ import {
   FlipHorizontal,
   ArrowRight,
   MapPin,
-  Sparkles,
 } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 import TechGrid from "@/components/ui/TechGrid";
@@ -40,8 +39,10 @@ type TodayCandidate = {
 type VerificationResult = {
   success: boolean;
   code?: string;
+  alreadyCheckedIn?: boolean;
   error?: string;
   actualSlot?: string;
+  attendedAt?: string;
   candidate?: {
     id: string;
     name: string;
@@ -77,13 +78,16 @@ const DICT = {
     cameraError: "Não foi possível aceder à câmara. Utilize a aba de Pesquisa Manual.",
     accessGranted: "Entrada Autorizada",
     accessWrongDay: "Acesso Recusado: Turno Incorrecto",
+    accessAlreadyCheckedIn: "Entrada Já Registada",
     accessDenied: "Acesso Recusado",
-    candidateDefault: "Candidato(a)",
+    candidateDefault: "Candidata",
     mandatoryProcedure: "Procedimento Obrigatório na Portaria:",
     step1: "Exigir Documento de Identificação Original (BI / Passaporte).",
     step2: "Confirmar que a candidata tem caneta esferográfica (azul ou preta).",
     step3: "Autorizar entrada para a sala de testes.",
     wrongDayMsg: "Esta candidata NÃO está escalada para o turno de hoje.",
+    alreadyCheckedInMsg: "Candidata já realizou o check-in anteriormente. Por favor, valide a próxima candidata.",
+    checkedInTimePrefix: "Entrada registada às:",
     officialDate: "Data Oficial do Agendamento:",
     guardInstruction: "⚠️ Instrução ao Guarda: Não autorizar a entrada. A candidata deve regressar exclusivamente no dia agendado para respeitar a lotação diária de 10 candidatas.",
     genericDenied: "Esta candidatura não está aprovada para realização de teste.",
@@ -124,6 +128,7 @@ const DICT = {
     cameraError: "Could not access camera. Please use the Manual Search tab.",
     accessGranted: "Access Granted",
     accessWrongDay: "Access Denied: Scheduled for Another Day",
+    accessAlreadyCheckedIn: "Already Checked In",
     accessDenied: "Access Denied",
     candidateDefault: "Candidate",
     mandatoryProcedure: "Mandatory Gate Procedure:",
@@ -131,10 +136,12 @@ const DICT = {
     step2: "Confirm candidate has a ballpoint pen (blue or black).",
     step3: "Grant entry to the examination room.",
     wrongDayMsg: "This candidate is NOT scheduled for today's session.",
+    alreadyCheckedInMsg: "Applicant already checked in. Please scan next applicant.",
+    checkedInTimePrefix: "Checked in at:",
     officialDate: "Official Scheduled Date & Time:",
     guardInstruction: "⚠️ Guard Instruction: Do NOT grant entry. The candidate must return strictly on their scheduled date to maintain the daily cap of 10 candidates.",
     genericDenied: "This application is not approved or not booked for a test session.",
-    scanNext: "Validate Next Candidate",
+    scanNext: "Scan Next Applicant",
     manualTitle: "Manual Candidate Search",
     manualSubtitle: "Use if candidate's phone battery is flat or screen is damaged.",
     searchPlaceholder: "WhatsApp number (e.g. 84... or 82...) or Full Name",
@@ -212,6 +219,7 @@ function GateSecurityContent() {
   const animFrameRef = useRef<number | null>(null);
   const lastScannedRef = useRef<string | null>(null);
   const scanCooldownRef = useRef<NodeJS.Timeout | null>(null);
+  const lastScanTimeRef = useRef<number>(0);
 
   // Check auth session
   useEffect(() => {
@@ -241,7 +249,7 @@ function GateSecurityContent() {
   useEffect(() => {
     if (authed) {
       fetchRoster();
-      const interval = setInterval(fetchRoster, 25000);
+      const interval = setInterval(fetchRoster, 30000);
       return () => clearInterval(interval);
     }
   }, [authed, fetchRoster]);
@@ -306,14 +314,18 @@ function GateSecurityContent() {
     } catch (_) {}
   };
 
-  // Stop camera
+  // Stop camera cleanly
   const stopCamera = useCallback(() => {
     if (animFrameRef.current) {
       cancelAnimationFrame(animFrameRef.current);
       animFrameRef.current = null;
     }
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current.getTracks().forEach((t) => {
+        try {
+          t.stop();
+        } catch (_) {}
+      });
       streamRef.current = null;
     }
     if (videoRef.current) {
@@ -345,6 +357,21 @@ function GateSecurityContent() {
           playSound("allowed");
           if (typeof navigator !== "undefined" && navigator.vibrate) {
             navigator.vibrate([100, 50, 150]);
+          }
+          fetchRoster();
+        } else if (data.alreadyCheckedIn || data.code === "ALREADY_CHECKED_IN") {
+          // Already checked in case
+          setResult({
+            success: false,
+            alreadyCheckedIn: true,
+            code: "ALREADY_CHECKED_IN",
+            attendedAt: data.attendedAt || data.candidate?.attendedAt,
+            actualSlot: data.scheduledSlot || data.actualSlot,
+            candidate: data.candidate,
+          });
+          playSound("denied");
+          if (typeof navigator !== "undefined" && navigator.vibrate) {
+            navigator.vibrate([200, 100, 200]);
           }
           fetchRoster();
         } else {
@@ -385,46 +412,61 @@ function GateSecurityContent() {
     }
   }, [authed, urlId, executeCheckIn]);
 
-  // QR Scanning Loop
+  // HIGH-PERFORMANCE THROTTLED QR SCANNING LOOP
   const scanLoop = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) return;
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
 
-    if (video.readyState === video.HAVE_ENOUGH_DATA && ctx) {
-      canvas.height = video.videoHeight;
-      canvas.width = video.videoWidth;
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    // Performance throttle: Scan at most once every 120ms (approx 8 scans/sec instead of 60fps)
+    const now = performance.now();
+    if (now - lastScanTimeRef.current >= 120) {
+      lastScanTimeRef.current = now;
 
-      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(imgData.data, imgData.width, imgData.height, {
-        inversionAttempts: "dontInvert",
-      });
+      if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && video.videoWidth > 0) {
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (ctx) {
+          // Downscale to max 480px width for 55x less pixel crunching and instant mobile speed
+          const scale = Math.min(1, 480 / video.videoWidth);
+          const targetW = Math.max(240, Math.floor(video.videoWidth * scale));
+          const targetH = Math.max(180, Math.floor(video.videoHeight * scale));
 
-      if (code && code.data && !processing) {
-        const raw = code.data.trim();
-        if (raw !== lastScannedRef.current) {
-          lastScannedRef.current = raw;
-          let candidateId = raw;
-          try {
-            if (raw.includes("id=")) {
-              const url = new URL(raw, window.location.origin);
-              const extracted = url.searchParams.get("id");
-              if (extracted) candidateId = extracted;
-            } else if (raw.includes("test-invite/")) {
-              candidateId = raw.split("test-invite/")[1].split(/[?#/]/)[0];
-            } else if (raw.startsWith("OVERWATCH-PASS:")) {
-              candidateId = raw.replace("OVERWATCH-PASS:", "").trim();
+          if (canvas.width !== targetW || canvas.height !== targetH) {
+            canvas.width = targetW;
+            canvas.height = targetH;
+          }
+
+          ctx.drawImage(video, 0, 0, targetW, targetH);
+          const imgData = ctx.getImageData(0, 0, targetW, targetH);
+          const code = jsQR(imgData.data, targetW, targetH, {
+            inversionAttempts: "dontInvert",
+          });
+
+          if (code && code.data && !processing) {
+            const raw = code.data.trim();
+            if (raw !== lastScannedRef.current) {
+              lastScannedRef.current = raw;
+              let candidateId = raw;
+              try {
+                if (raw.includes("id=")) {
+                  const url = new URL(raw, window.location.origin);
+                  const extracted = url.searchParams.get("id");
+                  if (extracted) candidateId = extracted;
+                } else if (raw.includes("test-invite/")) {
+                  candidateId = raw.split("test-invite/")[1].split(/[?#/]/)[0];
+                } else if (raw.startsWith("OVERWATCH-PASS:")) {
+                  candidateId = raw.replace("OVERWATCH-PASS:", "").trim();
+                }
+              } catch (_) {}
+
+              executeCheckIn({ id: candidateId });
+
+              if (scanCooldownRef.current) clearTimeout(scanCooldownRef.current);
+              scanCooldownRef.current = setTimeout(() => {
+                lastScannedRef.current = null;
+              }, 3000);
             }
-          } catch (_) {}
-
-          executeCheckIn({ id: candidateId });
-
-          if (scanCooldownRef.current) clearTimeout(scanCooldownRef.current);
-          scanCooldownRef.current = setTimeout(() => {
-            lastScannedRef.current = null;
-          }, 3500);
+          }
         }
       }
     }
@@ -432,7 +474,7 @@ function GateSecurityContent() {
     animFrameRef.current = requestAnimationFrame(scanLoop);
   }, [executeCheckIn, processing]);
 
-  // Start Camera
+  // Start Camera with clean device acquisition
   const startCamera = useCallback(async () => {
     setCameraError("");
     try {
@@ -455,6 +497,7 @@ function GateSecurityContent() {
         videoRef.current.setAttribute("playsinline", "true");
         await videoRef.current.play();
         setCameraActive(true);
+        lastScanTimeRef.current = 0;
         animFrameRef.current = requestAnimationFrame(scanLoop);
       }
     } catch (err: any) {
@@ -479,6 +522,10 @@ function GateSecurityContent() {
   const resetScanner = () => {
     setResult(null);
     lastScannedRef.current = null;
+    if (scanCooldownRef.current) {
+      clearTimeout(scanCooldownRef.current);
+      scanCooldownRef.current = null;
+    }
   };
 
   // Loading Session
@@ -493,7 +540,7 @@ function GateSecurityContent() {
     );
   }
 
-  // ── LOCK SCREEN WITH BACKGROUND VIDEO (MATCHING ADMIN PORTAL) ──
+  // ── LOCK SCREEN WITH BACKGROUND VIDEO (IDENTICAL TO ADMIN PORTAL) ──
   if (!authed) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-[#07080f] text-white relative isolate overflow-hidden px-4 py-12">
@@ -737,15 +784,21 @@ function GateSecurityContent() {
             className={`rounded-2xl border p-5 sm:p-6 transition-all shadow-2xl animate-in fade-in zoom-in-95 duration-200 ${
               result.success
                 ? "bg-emerald-950/80 border-emerald-500/60 shadow-emerald-950/50 text-emerald-100"
-                : result.code === "WRONG_DAY"
-                  ? "bg-amber-950/85 border-amber-500/60 shadow-amber-950/50 text-amber-100"
-                  : "bg-red-950/85 border-red-500/60 shadow-red-950/50 text-red-100"
+                : result.alreadyCheckedIn || result.code === "ALREADY_CHECKED_IN"
+                  ? "bg-cyan-950/85 border-cyan-500/60 shadow-cyan-950/50 text-cyan-100"
+                  : result.code === "WRONG_DAY"
+                    ? "bg-amber-950/85 border-amber-500/60 shadow-amber-950/50 text-amber-100"
+                    : "bg-red-950/85 border-red-500/60 shadow-red-950/50 text-red-100"
             }`}
           >
             <div className="flex items-start gap-4">
               {result.success ? (
                 <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center text-emerald-300 shrink-0">
                   <CheckCircle2 size={30} />
+                </div>
+              ) : result.alreadyCheckedIn || result.code === "ALREADY_CHECKED_IN" ? (
+                <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 border-2 border-cyan-400 flex items-center justify-center text-cyan-300 shrink-0">
+                  <AlertTriangle size={30} />
                 </div>
               ) : result.code === "WRONG_DAY" ? (
                 <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-amber-300 shrink-0">
@@ -762,16 +815,20 @@ function GateSecurityContent() {
                   className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                     result.success
                       ? "bg-emerald-500/30 text-emerald-300 border border-emerald-500/40"
-                      : result.code === "WRONG_DAY"
-                        ? "bg-amber-500/30 text-amber-300 border border-amber-500/40"
-                        : "bg-red-500/30 text-red-300 border border-red-500/40"
+                      : result.alreadyCheckedIn || result.code === "ALREADY_CHECKED_IN"
+                        ? "bg-cyan-500/30 text-cyan-300 border border-cyan-500/40"
+                        : result.code === "WRONG_DAY"
+                          ? "bg-amber-500/30 text-amber-300 border border-amber-500/40"
+                          : "bg-red-500/30 text-red-300 border border-red-500/40"
                   }`}
                 >
                   {result.success
                     ? t.accessGranted
-                    : result.code === "WRONG_DAY"
-                      ? t.accessWrongDay
-                      : t.accessDenied}
+                    : result.alreadyCheckedIn || result.code === "ALREADY_CHECKED_IN"
+                      ? t.accessAlreadyCheckedIn
+                      : result.code === "WRONG_DAY"
+                        ? t.accessWrongDay
+                        : t.accessDenied}
                 </span>
 
                 <h2 className="text-lg sm:text-xl font-black text-white leading-tight">
@@ -806,8 +863,32 @@ function GateSecurityContent() {
                   </div>
                 )}
 
+                {/* ALREADY CHECKED IN CASE */}
+                {(result.alreadyCheckedIn || result.code === "ALREADY_CHECKED_IN") && (
+                  <div className="pt-2 mt-2 border-t border-cyan-500/30 space-y-2 text-xs">
+                    <p className="text-white font-semibold text-sm">
+                      {t.alreadyCheckedInMsg}
+                    </p>
+                    {result.attendedAt && (
+                      <div className="p-3 rounded-xl bg-black/40 border border-cyan-500/30">
+                        <span className="text-[10px] text-cyan-300 uppercase tracking-wide block font-bold">
+                          {t.checkedInTimePrefix}
+                        </span>
+                        <span className="text-sm font-bold text-white block mt-0.5 font-mono">
+                          {new Date(result.attendedAt).toLocaleTimeString(lang === "pt" ? "pt-MZ" : "en-US", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                            timeZone: "Africa/Maputo",
+                          })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Wrong Day Details */}
-                {!result.success && result.code === "WRONG_DAY" && (
+                {!result.success && !result.alreadyCheckedIn && result.code === "WRONG_DAY" && (
                   <div className="pt-2 mt-2 border-t border-amber-500/30 space-y-2 text-xs">
                     <p className="text-white font-medium">
                       {t.wrongDayMsg}
@@ -829,7 +910,7 @@ function GateSecurityContent() {
                 )}
 
                 {/* Other Error */}
-                {!result.success && result.code !== "WRONG_DAY" && (
+                {!result.success && !result.alreadyCheckedIn && result.code !== "WRONG_DAY" && (
                   <p className="text-xs text-red-200 mt-1">
                     {result.error || t.genericDenied}
                   </p>

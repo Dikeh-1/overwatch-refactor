@@ -1,4 +1,4 @@
-﻿import { getApplication, getApplications, updateApplication } from "@/lib/careers-store";
+import { getApplication, getApplications, updateApplication } from "@/lib/careers-store";
 import { siteContact } from "@/lib/site-config";
 
 export const dynamic = "force-dynamic";
@@ -39,17 +39,22 @@ export async function GET(request: Request) {
     if (id && /^[\da-f-]{36}$/i.test(id)) {
       candidate = await getApplication(id);
     } else if (query) {
-      const cleanPhone = query.replace(/\D/g, "");
+      const qStr = String(query).trim();
+      const cleanPhone = qStr.replace(/\D/g, "");
+      const qLower = qStr.toLowerCase();
       const all = await getApplications();
       candidate = all.find((a) => {
         const appPhone = (a.whatsapp || "").replace(/\D/g, "");
-        if (cleanPhone && (appPhone.endsWith(cleanPhone) || cleanPhone.endsWith(appPhone))) {
+        if (cleanPhone && cleanPhone.length >= 4 && (appPhone.endsWith(cleanPhone) || cleanPhone.endsWith(appPhone))) {
           return true;
         }
-        if (a.email.toLowerCase() === query.toLowerCase()) {
+        if (a.email && a.email.toLowerCase() === qLower) {
           return true;
         }
-        if (a.id.toLowerCase().startsWith(query.toLowerCase())) {
+        if (a.name && a.name.toLowerCase().includes(qLower)) {
+          return true;
+        }
+        if (a.id && a.id.toLowerCase().startsWith(qLower)) {
           return true;
         }
         return false;
@@ -107,17 +112,22 @@ export async function POST(request: Request) {
     if (id && /^[\da-f-]{36}$/i.test(id)) {
       candidate = await getApplication(id);
     } else if (query) {
-      const cleanPhone = String(query).replace(/\D/g, "");
+      const qStr = String(query).trim();
+      const cleanPhone = qStr.replace(/\D/g, "");
+      const qLower = qStr.toLowerCase();
       const all = await getApplications();
       candidate = all.find((a) => {
         const appPhone = (a.whatsapp || "").replace(/\D/g, "");
-        if (cleanPhone && (appPhone.endsWith(cleanPhone) || cleanPhone.endsWith(appPhone))) {
+        if (cleanPhone && cleanPhone.length >= 4 && (appPhone.endsWith(cleanPhone) || cleanPhone.endsWith(appPhone))) {
           return true;
         }
-        if (a.email.toLowerCase() === String(query).toLowerCase().trim()) {
+        if (a.email && a.email.toLowerCase() === qLower) {
           return true;
         }
-        if (a.id.toLowerCase().startsWith(String(query).toLowerCase().trim())) {
+        if (a.name && a.name.toLowerCase().includes(qLower)) {
+          return true;
+        }
+        if (a.id && a.id.toLowerCase().startsWith(qLower)) {
           return true;
         }
         return false;
@@ -219,10 +229,34 @@ export async function POST(request: Request) {
       );
     }
 
+    // Safeguard 4: Duplicate Scan Prevention (Already Checked In)
+    if (candidate.attendedAt && !force) {
+      return Response.json(
+        {
+          success: false,
+          alreadyCheckedIn: true,
+          code: "ALREADY_CHECKED_IN",
+          error: "Candidato(a) já realizou o check-in anteriormente.",
+          attendedAt: candidate.attendedAt,
+          scheduledSlot: candidate.testSlot,
+          candidate: {
+            id: candidate.id,
+            name: candidate.name,
+            testSlot: candidate.testSlot,
+            attendedAt: candidate.attendedAt,
+            attendanceStatus: candidate.attendanceStatus || "present",
+            whatsapp: candidate.whatsapp,
+            email: candidate.email,
+          },
+        },
+        { status: 409 }
+      );
+    }
+
     // Record attendance
     const nowIso = new Date().toISOString();
     const updated = await updateApplication(candidate.id, {
-      attendedAt: candidate.attendedAt || nowIso,
+      attendedAt: nowIso,
       attendanceStatus: "present",
     });
 
