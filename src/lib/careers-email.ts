@@ -3,6 +3,17 @@ import nodemailer from "nodemailer";
 import { roles, type Application } from "./careers";
 import { siteContact } from "./site-config";
 
+/** Compute time-based greeting in Mozambique (UTC+2) at the moment of sending */
+function getMozambiqueGreeting(lang: "pt" | "en" = "pt"): string {
+  const h = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Africa/Maputo" })
+  ).getHours();
+  if (h >= 5 && h < 12) return lang === "pt" ? "Bom dia" : "Good morning";
+  if (h >= 12 && h < 18) return lang === "pt" ? "Boa tarde" : "Good afternoon";
+  return lang === "pt" ? "Boa noite" : "Good evening";
+}
+
+
 interface SendEmailOptions {
   sender?: { name: string; email: string };
   to: { email: string; name: string }[];
@@ -419,8 +430,20 @@ export async function sendTestInvitation({
     .join("");
 
   const processedMessage = messageText
+    .replace(/\{\{greeting\}\}/gi, getMozambiqueGreeting("pt"))
     .replace(/\{\{name\}\}/gi, application.name)
     .replace(/\{\{booking_link\}\}/gi, bookingUrl);
+
+  // Convert plain-text newlines to <br> tags for reliable mobile email rendering.
+  // Many email clients (Gmail Android, Samsung Mail) strip CSS white-space: pre-line.
+  const processedMessageHtml = processedMessage
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\n\n/g, "</p><p style=\"margin: 0 0 14px 0; font-size: 15px; line-height: 1.65; color: #334155;\">")
+    .replace(/\n/g, "<br />");
+
+  const messageHtmlWrapped = `<p style="margin: 0 0 14px 0; font-size: 15px; line-height: 1.65; color: #334155;">${processedMessageHtml}</p>`;
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -458,8 +481,8 @@ export async function sendTestInvitation({
 
           <!-- Body Content -->
           <div style="padding: 32px 32px 28px 32px;">
-            <div style="font-size: 15px; line-height: 1.65; color: #334155; white-space: pre-line; margin-bottom: 24px;">
-${processedMessage}
+            <div style="margin-bottom: 24px;">
+${messageHtmlWrapped}
             </div>
 
             <!-- Available Slots Schedule Table -->

@@ -46,6 +46,7 @@ import {
   Radio,
   Briefcase,
   ChevronDown,
+  Menu,
 } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 import TechGrid from "@/components/ui/TechGrid";
@@ -95,7 +96,7 @@ export function formatSlotDisplay(slot: string, l: "en" | "pt") {
 const EMAIL_TEMPLATES = {
   pt: {
     subject: "Convocatória: Teste de Selecção Presencial — Overwatch Moçambique",
-    message: `Boa tarde {{name}},
+    message: `{{greeting}} {{name}},
 
 Agradecemos a sua candidatura à vaga de Operadora de CCO da Overwatch.
 
@@ -111,7 +112,7 @@ Overwatch Moçambique`,
   },
   en: {
     subject: "Convocation: In-Person Selection Test — Overwatch Mozambique",
-    message: `Good afternoon {{name}},
+    message: `{{greeting}} {{name}},
 
 Thank you for your application for the CCTV Operator position at Overwatch.
 
@@ -240,24 +241,49 @@ export default function AdminPage() {
   const prevAppIds = useRef<Set<string> | null>(null);
   const prevBookedMap = useRef<Map<string, string> | null>(null);
 
+  // ─── Mobile sidebar toggle ─────────────────────────────────────────
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // ─── Live Mozambique greeting clock (UTC+2) ────────────────────────
+  const [mozambiqueGreeting, setMozambiqueGreeting] = useState(() => {
+    const h = new Date(new Date().toLocaleString("en-US", { timeZone: "Africa/Maputo" })).getHours();
+    if (h >= 5 && h < 12) return { pt: "Bom dia", en: "Good morning" };
+    if (h >= 12 && h < 18) return { pt: "Boa tarde", en: "Good afternoon" };
+    return { pt: "Boa noite", en: "Good evening" };
+  });
+
   // Load language preference and persisted template customizations
   useEffect(() => {
     const savedLang = (localStorage.getItem("overwatch_admin_lang") as "en" | "pt") || "en";
     if (savedLang === "pt" || savedLang === "en") {
       setLang(savedLang);
     }
+
+    // Migrate any stale templates that still have hardcoded greeting words — replace with {{greeting}}
+    const migrateGreeting = (text: string): string =>
+      text.replace(
+        /^(Bom dia|Boa tarde|Boa noite|Good morning|Good afternoon|Good evening)(\s+\{\{name\}\})/i,
+        "{{greeting}}$2"
+      );
+
     const savedSubPT =
       localStorage.getItem("overwatch_template_subject_pt") ||
       EMAIL_TEMPLATES.pt.subject;
-    const savedMsgPT =
+    const savedMsgPT = migrateGreeting(
       localStorage.getItem("overwatch_template_message_pt") ||
-      EMAIL_TEMPLATES.pt.message;
+      EMAIL_TEMPLATES.pt.message
+    );
     const savedSubEN =
       localStorage.getItem("overwatch_template_subject_en") ||
       EMAIL_TEMPLATES.en.subject;
-    const savedMsgEN =
+    const savedMsgEN = migrateGreeting(
       localStorage.getItem("overwatch_template_message_en") ||
-      EMAIL_TEMPLATES.en.message;
+      EMAIL_TEMPLATES.en.message
+    );
+
+    // Persist migrated versions so future loads are clean
+    localStorage.setItem("overwatch_template_message_pt", savedMsgPT);
+    localStorage.setItem("overwatch_template_message_en", savedMsgEN);
 
     const ptTpl = { subject: savedSubPT, message: savedMsgPT };
     const enTpl = { subject: savedSubEN, message: savedMsgEN };
@@ -659,6 +685,18 @@ export default function AdminPage() {
     }, 6000);
     return () => clearTimeout(timer);
   }, [liveNotification]);
+
+  // ─── Live Mozambique greeting clock — updates every second ───────────
+  useEffect(() => {
+    const computeGreeting = () => {
+      const h = new Date(new Date().toLocaleString("en-US", { timeZone: "Africa/Maputo" })).getHours();
+      if (h >= 5 && h < 12) return { pt: "Bom dia", en: "Good morning" };
+      if (h >= 12 && h < 18) return { pt: "Boa tarde", en: "Good afternoon" };
+      return { pt: "Boa noite", en: "Good evening" };
+    };
+    const tick = setInterval(() => setMozambiqueGreeting(computeGreeting()), 1000);
+    return () => clearInterval(tick);
+  }, []);
 
   useEffect(() => {
     if (!selected) return;
@@ -1444,8 +1482,61 @@ export default function AdminPage() {
     <div className="min-h-screen bg-[#090d16] text-white flex flex-col lg:flex-row relative isolate">
       <TechGrid className="fixed inset-0 opacity-25 pointer-events-none" />
 
+      {/* ─── MOBILE TOP BAR ─────────────────────────────────────────── */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 bg-[#0e1320] border-b border-white/10 backdrop-blur-md">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="flex items-center justify-center h-9 w-9 rounded-xl border border-white/15 bg-white/[0.06] text-white/80 hover:text-white hover:bg-white/[0.1] transition-colors cursor-pointer"
+            aria-label="Open menu"
+          >
+            <Menu size={18} />
+          </button>
+          <Logo size="sm" variant="light" />
+        </div>
+        <div className="flex items-center gap-2">
+          {activeCampaignRole && view !== "roles" && (
+            <span className="flex items-center gap-1 text-[0.65rem] font-bold text-sky-400 bg-sky-500/10 border border-sky-500/20 rounded-full px-2.5 py-1">
+              <Briefcase size={10} />
+              {roleLabel(activeCampaignRole)}
+            </span>
+          )}
+          <button
+            onClick={() => void load(true)}
+            disabled={isRefreshing}
+            className="flex items-center justify-center h-9 w-9 rounded-xl border border-white/15 bg-white/[0.06] text-white/80 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+            aria-label="Refresh"
+          >
+            <RefreshCw size={15} className={isRefreshing ? "animate-spin" : ""} />
+          </button>
+        </div>
+      </div>
+
+      {/* ─── MOBILE SIDEBAR OVERLAY ──────────────────────────────────── */}
+      {sidebarOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* ─── SIDEBAR ──────────────────────────────────────────────── */}
-      <aside className="w-full lg:w-64 shrink-0 border-b lg:border-b-0 lg:border-r border-white/10 bg-[#0e1320] p-5 lg:p-6 flex flex-col z-30 backdrop-blur-md lg:fixed lg:inset-y-0 lg:left-0 lg:overflow-y-auto">
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 w-72 bg-[#0e1320] flex flex-col backdrop-blur-md border-r border-white/10 overflow-y-auto
+        transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+        lg:translate-x-0 lg:w-64 lg:z-30 p-5 lg:p-6
+      `}>
+        {/* Mobile close button inside sidebar */}
+        <div className="lg:hidden flex justify-end mb-2 -mt-1">
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
         <div className="pb-5 border-b border-white/10">
           <div className="flex items-center justify-between">
             <Link href="/admin" className="block">
@@ -1549,6 +1640,7 @@ export default function AdminPage() {
                         onClick={() => {
                           setActiveCampaignRole(role.id);
                           setView("applications");
+                          setSidebarOpen(false);
                         }}
                         className={`w-full flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all cursor-pointer ${
                           isActiveCampaign
@@ -1586,7 +1678,7 @@ export default function AdminPage() {
                         <div className="mt-1 ml-3 pl-3 border-l border-sky-500/20 space-y-0.5">
                           {/* Applications sub-tab */}
                           <button
-                            onClick={() => setView("applications")}
+                            onClick={() => { setView("applications"); setSidebarOpen(false); }}
                             className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[0.72rem] font-semibold transition-all cursor-pointer ${
                               view === "applications"
                                 ? "bg-white/[0.1] text-white border border-white/15"
@@ -1606,7 +1698,7 @@ export default function AdminPage() {
 
                           {/* Convocations sub-tab */}
                           <button
-                            onClick={() => setView("broadcast")}
+                            onClick={() => { setView("broadcast"); setSidebarOpen(false); }}
                             className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[0.72rem] font-semibold transition-all cursor-pointer ${
                               view === "broadcast"
                                 ? "bg-white/[0.1] text-white border border-white/15"
@@ -1628,7 +1720,7 @@ export default function AdminPage() {
 
                           {/* Test Schedule sub-tab */}
                           <button
-                            onClick={() => setView("schedule")}
+                            onClick={() => { setView("schedule"); setSidebarOpen(false); }}
                             className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[0.72rem] font-semibold transition-all cursor-pointer ${
                               view === "schedule"
                                 ? "bg-white/[0.1] text-white border border-white/15"
@@ -1673,7 +1765,7 @@ export default function AdminPage() {
               {t("System", "Sistema")}
             </p>
             <button
-              onClick={() => setView("roles")}
+              onClick={() => { setView("roles"); setSidebarOpen(false); }}
               className={`w-full flex items-center justify-between gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all cursor-pointer ${
                 view === "roles"
                   ? "bg-white/[0.1] text-white border border-white/20 shadow-sm"
@@ -1723,7 +1815,7 @@ export default function AdminPage() {
       </aside>
 
       {/* ─── MAIN CONTENT AREA ──────────────────────────────────────── */}
-      <main className="flex-1 min-w-0 lg:ml-64 p-4 sm:p-6 lg:p-8 space-y-6">
+      <main className="flex-1 min-w-0 lg:ml-64 pt-16 lg:pt-0 p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Top Header Bar */}
         <header className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-white/10">
           <div>
@@ -2868,13 +2960,21 @@ export default function AdminPage() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
                         <label className="text-xs font-semibold text-white/70">
                           {t("Message Body (Text):", "Corpo da Mensagem (Texto):")}
                         </label>
-                        <span className="text-[0.68rem] text-white/40">
-                          {t("Dynamic tags: {{name}}, {{booking_link}}", "Tags dinâmicas: {{name}}, {{booking_link}}")}
-                        </span>
+                        <div className="flex items-center gap-3 flex-wrap justify-end">
+                          <span className="text-[0.68rem] text-white/40">
+                            {t("Dynamic tags: {{name}}, {{booking_link}}, {{greeting}}", "Tags dinâmicas: {{name}}, {{booking_link}}, {{greeting}}")}
+                          </span>
+                          {/* Live Mozambique greeting clock */}
+                          <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 text-[0.65rem] font-semibold text-emerald-400">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+                            {t("Mozambique now:", "Moçambique agora:")}
+                            {" "}<strong>{lang === "pt" ? mozambiqueGreeting.pt : mozambiqueGreeting.en}</strong>
+                          </span>
+                        </div>
                       </div>
                       <textarea
                         rows={emailPreviewTab === "edit" ? 14 : 11}

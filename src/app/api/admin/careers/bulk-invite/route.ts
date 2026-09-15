@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     const messageText: string =
       typeof body.messageText === "string" && body.messageText.trim()
         ? body.messageText.trim()
-        : `Boa tarde {{name}},
+        : `{{greeting}} {{name}},
 
 Agradecemos a sua candidatura à vaga de Operadora de CCO da Overwatch.
 
@@ -38,6 +38,7 @@ Após a sua selecção, a sua vaga fica automaticamente confirmada no nosso sist
 Com os melhores cumprimentos,
 Equipa de Recrutamento
 Overwatch Moçambique`;
+
 
     const slots: string[] =
       Array.isArray(body.slots) && body.slots.length > 0
