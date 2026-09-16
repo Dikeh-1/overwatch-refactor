@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import jsQR from "jsqr";
@@ -511,7 +511,7 @@ export default function GateCheckInModal({
 
         {/* Footer */}
         <div className="px-5 py-3 border-t border-white/10 bg-slate-950/80 flex items-center justify-between text-xs text-white/40">
-          <span>Overwatch Moçambique · Av. Paulo Samuel Kankhomba nº 1498</span>
+          <span>Overwatch Moçambique · Av. Paulo Samuel Kankhomba nº 1948</span>
           <button
             type="button"
             onClick={onClose}

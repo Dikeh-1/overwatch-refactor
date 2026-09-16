@@ -5,8 +5,8 @@ export const siteContact = {
   whatsappNumber: "258842870793",
   website: "www.overwatchmoz.com",
   address: {
-    en: "Avenida Paulo Samuel Kankhomba, No. 1498, Maputo, Mozambique",
-    pt: "Avenida Paulo Samuel Kankhomba, N.º 1498, Maputo, Moçambique",
+    en: "Avenida Paulo Samuel Kankhomba, No. 1948, Maputo, Mozambique",
+    pt: "Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo, Moçambique",
   },
 } as const;
 

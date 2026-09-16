@@ -507,6 +507,12 @@ Overwatch`;
     skippedToday?: number;
   } | null>(null);
 
+  // ─── Address Rectification & Inocio Wilson Exception ────────────────
+  const [dispatchingCorrection, setDispatchingCorrection] = useState(false);
+  const [correctionResult, setCorrectionResult] = useState<{ success: boolean; count: number; failed: number } | null>(null);
+  const [restoringInocio, setRestoringInocio] = useState(false);
+  const [inocioResult, setInocioResult] = useState<{ success: boolean; message: string; rebookingUrl?: string } | null>(null);
+
   // ─── Live Admin Presence Tracking ─────────────────────────────────
   const [onlineCount, setOnlineCount] = useState<number>(1);
 
@@ -1792,6 +1798,67 @@ Overwatch`;
       setError((err as Error).message);
     } finally {
       setSendingReminders(false);
+    }
+  }
+
+  async function handleSendAddressCorrection() {
+    const bookedCount = applications.filter(
+      (a) => Boolean(a.testSlot) && a.status !== "rejected" && a.status !== "archived"
+    ).length;
+    const msg = lang === "pt"
+      ? `Tem a certeza de que deseja enviar o e-mail oficial de rectificação de endereço (N.º 1948) com o passe QR actualizado para todas as ${bookedCount} candidatas agendadas?`
+      : `Are you sure you want to broadcast the official address correction email (No. 1948) with updated QR pass to all ${bookedCount} booked candidates?`;
+    if (!window.confirm(msg)) return;
+
+    setDispatchingCorrection(true);
+    setCorrectionResult(null);
+    try {
+      const res = await fetch("/api/admin/careers/address-correction", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target: "all_booked", includeInocio: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to send address correction emails.");
+      }
+      setCorrectionResult({ success: data.success, count: data.count || 0, failed: data.failed || 0 });
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setDispatchingCorrection(false);
+    }
+  }
+
+  async function handleRestoreInocioWilson() {
+    const msg = lang === "pt"
+      ? `Deseja reactivar a candidatura de Inocio Wilson (Inosse Lamula) como excepção e enviar-lhe o link exclusivo para escolher uma nova data de teste?`
+      : `Reactivate Inocio Wilson (Inosse Lamula) as an exception and send him an exclusive dedicated link to book a new test slot?`;
+    if (!window.confirm(msg)) return;
+
+    setRestoringInocio(true);
+    setInocioResult(null);
+    try {
+      const res = await fetch("/api/admin/careers/address-correction", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target: "inocio" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to restore Inocio Wilson.");
+      }
+      setInocioResult({
+        success: data.success,
+        message: data.message || "Inocio Wilson reactivado com sucesso!",
+        rebookingUrl: data.candidate?.rebookingUrl,
+      });
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setRestoringInocio(false);
     }
   }
 
@@ -4771,7 +4838,65 @@ Overwatch`;
                 </p>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleSendAddressCorrection}
+                  disabled={dispatchingCorrection}
+                  className="flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 px-3 py-1.5 text-xs font-semibold text-amber-300 transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
+                  title={t("Broadcast address correction (No. 1948) to all booked candidates", "Enviar rectificação de endereço (N.º 1948) a todas as candidatas agendadas")}
+                >
+                  <Mail size={13} className={dispatchingCorrection ? "animate-spin" : ""} />
+                  <span>
+                    {dispatchingCorrection
+                      ? t("Broadcasting...", "A enviar rectificações...")
+                      : t("Rectify Address (No. 1948)", "Rectificar Endereço (N.º 1948)")}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleRestoreInocioWilson}
+                  disabled={restoringInocio}
+                  className="flex items-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 px-3 py-1.5 text-xs font-semibold text-cyan-300 transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
+                  title={t("Reactivate Inocio Wilson with rebooking exception", "Reactivar Inocio Wilson com excepção de reagendamento")}
+                >
+                  <RefreshCw size={13} className={restoringInocio ? "animate-spin" : ""} />
+                  <span>
+                    {restoringInocio
+                      ? t("Reactivating...", "A reactivar...")
+                      : t("Reactivate Inocio Wilson", "Reactivar Inocio Wilson")}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDispatchAllGatePasses}
+                  disabled={dispatchingPasses}
+                  className="flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-300 transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
+                >
+                  <QrCode size={13} className={dispatchingPasses ? "animate-spin" : ""} />
+                  <span>
+                    {dispatchingPasses
+                      ? t("Dispatching Passes...", "A disparar Passes QR...")
+                      : t("Dispatch QR Passes", "Disparar Passes QR")}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSendTomorrowReminders}
+                  disabled={sendingReminders}
+                  className="flex items-center gap-1.5 rounded-lg border border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/20 px-3 py-1.5 text-xs font-semibold text-purple-300 transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
+                >
+                  <Clock size={13} className={sendingReminders ? "animate-spin" : ""} />
+                  <span>
+                    {sendingReminders
+                      ? t("Sending Reminders...", "A enviar Lembretes...")
+                      : t("Send 1-Day Reminders", "Enviar Lembrete de Véspera")}
+                  </span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setView("broadcast")}
@@ -4782,6 +4907,26 @@ Overwatch`;
                 </button>
               </div>
             </div>
+
+            {correctionResult && (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-300 flex items-center justify-between">
+                <span>
+                  ✓ {t(`Address correction dispatched: ${correctionResult.count} candidates updated with No. 1948`, `Rectificação de endereço disparada: ${correctionResult.count} candidatas notificadas com o N.º 1948`)}
+                  {correctionResult.failed > 0 && ` (${correctionResult.failed} ${t("failed", "falharam")})`}
+                </span>
+                <button type="button" onClick={() => setCorrectionResult(null)} className="text-amber-400 hover:text-white ml-3 cursor-pointer">✕</button>
+              </div>
+            )}
+
+            {inocioResult && (
+              <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-3.5 text-xs text-cyan-300 flex items-center justify-between">
+                <span>
+                  ✓ {inocioResult.message}
+                  {inocioResult.rebookingUrl && ` — Link: ${inocioResult.rebookingUrl}`}
+                </span>
+                <button type="button" onClick={() => setInocioResult(null)} className="text-cyan-400 hover:text-white ml-3 cursor-pointer">✕</button>
+              </div>
+            )}
 
             {dispatchPassesResult && (
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-xs text-emerald-300 flex items-center justify-between">

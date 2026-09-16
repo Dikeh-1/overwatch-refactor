@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 const VALID_PINS = [
+  "1948",
   "1498",
   process.env.GATE_PIN,
 ].filter(Boolean) as string[];
@@ -19,6 +20,7 @@ export async function GET(request: Request) {
   const authed =
     token === "authorized_gate_officer" ||
     headerToken === "authorized_gate_officer" ||
+    headerToken === "1948" ||
     headerToken === "1498" ||
     Boolean(adminSession);
 
