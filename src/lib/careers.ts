@@ -53,6 +53,8 @@ export type Application = {
   testSlot?: string;
   testBookedAt?: string;
   confirmationSentAt?: string;
+  gatePassSentAt?: string;
+  reminderSentAt?: string;
   attendedAt?: string;
   attendanceStatus?: "present" | "absent" | "late";
 };
@@ -140,7 +142,7 @@ export function getSlotDayNumber(slot?: string | null): number | null {
  * Get current date & time components in Mozambique / Maputo timezone (Africa/Maputo, UTC+2 / CAT).
  * Uses Intl.DateTimeFormat with formatToParts to guarantee exact numeric values across any server environment.
  */
-export function getMaputoToday() {
+export function getMaputoToday(date: Date = new Date()) {
   const formatter = new Intl.DateTimeFormat("en-US", {
     timeZone: "Africa/Maputo",
     day: "numeric",
@@ -150,7 +152,7 @@ export function getMaputoToday() {
     minute: "numeric",
     hour12: false,
   });
-  const parts = formatter.formatToParts(new Date());
+  const parts = formatter.formatToParts(date);
   const day = parseInt(parts.find((p) => p.type === "day")?.value || "0", 10);
   const month = parseInt(parts.find((p) => p.type === "month")?.value || "0", 10);
   const year = parseInt(parts.find((p) => p.type === "year")?.value || "0", 10);

@@ -496,6 +496,17 @@ Overwatch`;
   const [customDisqualifyReason, setCustomDisqualifyReason] = useState<string>("");
   const [disqualifyFilterTab, setDisqualifyFilterTab] = useState<"all" | "booked">("all");
 
+  // ─── Gate Pass Dispatch & 1-Day Prior Reminders ─────────────────────
+  const [dispatchingPasses, setDispatchingPasses] = useState(false);
+  const [dispatchPassesResult, setDispatchPassesResult] = useState<{ success: number; failed: number } | null>(null);
+  const [sendingReminders, setSendingReminders] = useState(false);
+  const [remindersResult, setRemindersResult] = useState<{
+    success: number;
+    failed: number;
+    targetDay?: number;
+    skippedToday?: number;
+  } | null>(null);
+
   // ─── Live Admin Presence Tracking ─────────────────────────────────
   const [onlineCount, setOnlineCount] = useState<number>(1);
 
@@ -1721,6 +1732,66 @@ Overwatch`;
       setError((err as Error).message);
     } finally {
       setResendingConfirmId(null);
+    }
+  }
+
+  async function handleDispatchAllGatePasses() {
+    const bookedCount = applications.filter((a) => Boolean(a.testSlot) && a.status !== "rejected" && a.status !== "archived").length;
+    const msg = lang === "pt"
+      ? `Tem a certeza de que deseja enviar o Passe Oficial de Acesso com Código QR por e-mail para todas as ${bookedCount} candidatas agendadas?`
+      : `Are you sure you want to send the Official Gate Pass with QR Code via email to all ${bookedCount} booked candidates?`;
+    if (!window.confirm(msg)) return;
+
+    setDispatchingPasses(true);
+    setDispatchPassesResult(null);
+    try {
+      const res = await fetch("/api/admin/careers/dispatch-gate-passes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to dispatch gate passes.");
+      }
+      setDispatchPassesResult({ success: data.count || 0, failed: data.failed || 0 });
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setDispatchingPasses(false);
+    }
+  }
+
+  async function handleSendTomorrowReminders() {
+    const msg = lang === "pt"
+      ? `Deseja enviar o lembrete oficial de teste para as candidatas agendadas para amanhã? (As candidatas de hoje serão automaticamente excluídas).`
+      : `Send official test reminders to candidates scheduled for tomorrow? (Today's candidates will be automatically excluded).`;
+    if (!window.confirm(msg)) return;
+
+    setSendingReminders(true);
+    setRemindersResult(null);
+    try {
+      const res = await fetch("/api/admin/careers/send-reminders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to send reminders.");
+      }
+      setRemindersResult({
+        success: data.count || 0,
+        failed: data.failed || 0,
+        targetDay: data.targetDay,
+        skippedToday: data.skippedTodayCount,
+      });
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSendingReminders(false);
     }
   }
 
@@ -4711,6 +4782,26 @@ Overwatch`;
                 </button>
               </div>
             </div>
+
+            {dispatchPassesResult && (
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-xs text-emerald-300 flex items-center justify-between">
+                <span>
+                  ✓ {t(`Gate passes dispatched: ${dispatchPassesResult.success} succeeded`, `Passes QR disparados: ${dispatchPassesResult.success} enviados com sucesso`)}
+                  {dispatchPassesResult.failed > 0 && ` (${dispatchPassesResult.failed} ${t("failed", "falharam")})`}
+                </span>
+                <button type="button" onClick={() => setDispatchPassesResult(null)} className="text-emerald-400 hover:text-white ml-3">✕</button>
+              </div>
+            )}
+
+            {remindersResult && (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-300 flex items-center justify-between">
+                <span>
+                  ✓ {t(`Reminders sent: ${remindersResult.success} for tomorrow (Day ${remindersResult.targetDay || "N/A"}). Today's candidates skipped: ${remindersResult.skippedToday ?? 0}`, `Lembretes enviados: ${remindersResult.success} para amanhã (Dia ${remindersResult.targetDay || "N/A"}). Candidatas de hoje omitidas: ${remindersResult.skippedToday ?? 0}`)}
+                  {remindersResult.failed > 0 && ` (${remindersResult.failed} ${t("failed", "falharam")})`}
+                </span>
+                <button type="button" onClick={() => setRemindersResult(null)} className="text-amber-400 hover:text-white ml-3">✕</button>
+              </div>
+            )}
 
             {/* ─── SMART ATTENDANCE CONSOLE & INTERACTIVE DATE NAVIGATOR ─── */}
             <div className="rounded-2xl border border-white/10 bg-[#121827]/95 overflow-hidden shadow-sm">

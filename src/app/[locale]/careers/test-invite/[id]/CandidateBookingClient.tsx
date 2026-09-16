@@ -573,6 +573,21 @@ export default function CandidateBookingClient({
             /* ── YET TO BOOK VIEW ── */
             ) : (
               <div className="space-y-4">
+                {/* Gate Pass Generation Notice */}
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 py-3.5 flex items-start gap-3">
+                  <QrCode size={18} className="text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-bold text-emerald-900 mb-0.5 uppercase tracking-wide">
+                      {isPt ? "Passe Oficial com Código QR na Portaria" : "Official QR Code Gate Pass"}
+                    </p>
+                    <p className="text-xs text-emerald-800 leading-relaxed">
+                      {isPt
+                        ? "Assim que seleccionar e confirmar a sua data de teste, o seu Passe Digital exclusivo com Código QR será gerado imediatamente nesta página. Poderá guardá-lo ou descarregar a imagem para o seu telemóvel para apresentar obrigatoriamente na portaria da Overwatch."
+                        : "As soon as you confirm your test date, your exclusive Digital Gate Pass with QR Code will be immediately generated on this page. You can save or download the image to your phone to present at the entrance gate."}
+                    </p>
+                  </div>
+                </div>
+
                 {/* Single-use warning */}
                 <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3.5 flex items-start gap-3">
                   <AlertCircle size={16} className="text-amber-500 shrink-0 mt-0.5" />
