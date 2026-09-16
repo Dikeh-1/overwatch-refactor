@@ -507,11 +507,9 @@ Overwatch`;
     skippedToday?: number;
   } | null>(null);
 
-  // ─── Address Rectification & Inocio Wilson Exception ────────────────
+  // ─── Address Rectification ──────────────────────────────────────────
   const [dispatchingCorrection, setDispatchingCorrection] = useState(false);
   const [correctionResult, setCorrectionResult] = useState<{ success: boolean; count: number; failed: number } | null>(null);
-  const [restoringInocio, setRestoringInocio] = useState(false);
-  const [inocioResult, setInocioResult] = useState<{ success: boolean; message: string; rebookingUrl?: string } | null>(null);
 
   // ─── Live Admin Presence Tracking ─────────────────────────────────
   const [onlineCount, setOnlineCount] = useState<number>(1);
@@ -1816,7 +1814,7 @@ Overwatch`;
       const res = await fetch("/api/admin/careers/address-correction", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ target: "all_booked", includeInocio: true }),
+        body: JSON.stringify({ target: "all_booked" }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -1831,36 +1829,7 @@ Overwatch`;
     }
   }
 
-  async function handleRestoreInocioWilson() {
-    const msg = lang === "pt"
-      ? `Deseja reactivar a candidatura de Inocio Wilson (Inosse Lamula) como excepção e enviar-lhe o link exclusivo para escolher uma nova data de teste?`
-      : `Reactivate Inocio Wilson (Inosse Lamula) as an exception and send him an exclusive dedicated link to book a new test slot?`;
-    if (!window.confirm(msg)) return;
 
-    setRestoringInocio(true);
-    setInocioResult(null);
-    try {
-      const res = await fetch("/api/admin/careers/address-correction", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ target: "inocio" }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to restore Inocio Wilson.");
-      }
-      setInocioResult({
-        success: data.success,
-        message: data.message || "Inocio Wilson reactivado com sucesso!",
-        rebookingUrl: data.candidate?.rebookingUrl,
-      });
-      await load();
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setRestoringInocio(false);
-    }
-  }
 
   async function handleSendTestEmail(
     type: "convocation" | "confirmation" | "disqualification",
@@ -4854,20 +4823,7 @@ Overwatch`;
                   </span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={handleRestoreInocioWilson}
-                  disabled={restoringInocio}
-                  className="flex items-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 px-3 py-1.5 text-xs font-semibold text-cyan-300 transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
-                  title={t("Reactivate Inocio Wilson with rebooking exception", "Reactivar Inocio Wilson com excepção de reagendamento")}
-                >
-                  <RefreshCw size={13} className={restoringInocio ? "animate-spin" : ""} />
-                  <span>
-                    {restoringInocio
-                      ? t("Reactivating...", "A reactivar...")
-                      : t("Reactivate Inocio Wilson", "Reactivar Inocio Wilson")}
-                  </span>
-                </button>
+
 
                 <button
                   type="button"
@@ -4918,15 +4874,7 @@ Overwatch`;
               </div>
             )}
 
-            {inocioResult && (
-              <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-3.5 text-xs text-cyan-300 flex items-center justify-between">
-                <span>
-                  ✓ {inocioResult.message}
-                  {inocioResult.rebookingUrl && ` — Link: ${inocioResult.rebookingUrl}`}
-                </span>
-                <button type="button" onClick={() => setInocioResult(null)} className="text-cyan-400 hover:text-white ml-3 cursor-pointer">✕</button>
-              </div>
-            )}
+
 
             {dispatchPassesResult && (
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-xs text-emerald-300 flex items-center justify-between">

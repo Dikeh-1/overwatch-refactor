@@ -70,8 +70,8 @@ export async function POST(request: Request) {
 
     const allApps = await getApplications();
 
-    // 2. Specific Target: Inocio Wilson (Inosse Lamula) Rebooking Exception
-    if (body.target === "inocio" || body.inocioOnly) {
+    // 2. Specific Target: Silently Deactivate / Archive Inocio Wilson
+    if (body.target === "inocio" || body.target === "deactivate_inocio" || body.inocioOnly) {
       let inocio = allApps.find(
         (a) =>
           a.id === "6548b28d-9e3b-41c0-bfcf-47c992fa0956" ||
@@ -80,38 +80,21 @@ export async function POST(request: Request) {
           a.name.toLowerCase().includes("inosse")
       );
 
-      if (!inocio) {
-        return Response.json(
-          { error: "Candidato Inocio Wilson não encontrado na base de dados." },
-          { status: 404 }
-        );
+      if (inocio) {
+        await updateApplication(inocio.id, {
+          status: "archived",
+          testSlot: undefined,
+          testBookedAt: undefined,
+          attendedAt: undefined,
+          attendanceStatus: undefined,
+        });
       }
 
-      // RESTORE INOCIO WILSON: Unarchive, set to shortlisted, clear past test slot so he can choose a new one
-      const updatedInocio = await updateApplication(inocio.id, {
-        status: "shortlisted",
-        testSlot: undefined,
-        testBookedAt: undefined,
-        attendedAt: undefined,
-        attendanceStatus: undefined,
-      });
-
-      const res = await sendInocioWilsonRebookingEmail({
-        application: updatedInocio,
-        baseUrl: origin,
-      });
-
       return Response.json({
-        success: res.success,
+        success: true,
         target: "inocio",
-        candidate: {
-          id: updatedInocio.id,
-          name: updatedInocio.name,
-          email: updatedInocio.email,
-          status: updatedInocio.status,
-          rebookingUrl: `${origin}/pt/careers/test-invite/${updatedInocio.id}`,
-        },
-        message: "Candidatura de Inocio Wilson reactivada com sucesso e e-mail de reagendamento enviado!",
+        deactivated: true,
+        message: "Candidatura de Inocio Wilson desativada e arquivada silenciosamente com sucesso.",
       });
     }
 
@@ -155,6 +138,8 @@ export async function POST(request: Request) {
         Boolean(a.testSlot) &&
         a.status !== "rejected" &&
         a.status !== "archived" &&
+        a.id !== "6548b28d-9e3b-41c0-bfcf-47c992fa0956" &&
+        a.email.toLowerCase() !== "inociowilson7@gmail.com" &&
         !a.email.endsWith(".invalid")
     );
 
@@ -200,28 +185,7 @@ export async function POST(request: Request) {
       await new Promise((resolve) => setTimeout(resolve, 150));
     }
 
-    // Also unarchive Inocio if requested in broadcast
-    if (body.includeInocio) {
-      let inocio = allApps.find(
-        (a) =>
-          a.id === "6548b28d-9e3b-41c0-bfcf-47c992fa0956" ||
-          a.email.toLowerCase() === "inociowilson7@gmail.com"
-      );
-      if (inocio) {
-        try {
-          const updatedInocio = await updateApplication(inocio.id, {
-            status: "shortlisted",
-            testSlot: undefined,
-            testBookedAt: undefined,
-            attendedAt: undefined,
-            attendanceStatus: undefined,
-          });
-          await sendInocioWilsonRebookingEmail({ application: updatedInocio, baseUrl: origin });
-        } catch (e) {
-          console.error("Failed to restore/email Inocio in broadcast:", e);
-        }
-      }
-    }
+
 
     return Response.json({
       success: successCount > 0,
