@@ -1,30 +1,13 @@
 import { NextResponse } from "next/server";
 import dns from "dns";
 import { siteContact } from "@/lib/site-config";
+import { sendTransactionalEmail } from "@/lib/careers-email";
 
 dns.setDefaultResultOrder("ipv4first");
 
-const BREVO_API_KEY = process.env.BREVO_API_KEY!;
 const FROM_EMAIL = "noreply@overwatchmoz.com";
 const FROM_NAME = "Overwatch Website";
 const OPERATIONS_EMAIL = siteContact.email;
-
-async function sendBrevoEmail(payload: object) {
-  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "api-key": BREVO_API_KEY,
-    },
-    body: JSON.stringify(payload),
-    cache: "no-store",
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Brevo error: ${err}`);
-  }
-  return res.json();
-}
 
 export async function POST(request: Request) {
   try {
@@ -94,17 +77,34 @@ export async function POST(request: Request) {
       </div>
     `;
 
-    // 1. Send alert email to Operations Team (Filipa, CC: Ops, Ebube)
-    await sendBrevoEmail({
+    const adminTextContent = `NOVO PEDIDO DE AVALIAÇÃO DE SEGURANÇA (OVERWATCH)
+--------------------------------------------------
+Nome do Cliente: ${name}
+Email: ${email}
+Telefone: ${phone || "Não informado"}
+Empresa: ${company || "Não informada"}
+Tipo de Propriedade: ${type || "Não especificado"}
+
+Mensagem:
+${message}
+--------------------------------------------------
+Enviado através do portal de contacto do website.`;
+
+    // 1. Send alert email to Operations Team (Filipa, Ebube, Ops)
+    await sendTransactionalEmail({
       sender: { name: FROM_NAME, email: FROM_EMAIL },
-      to: [{ email: "filipa@overwatchmoz.com", name: "Filipa" }],
+      to: [
+        { email: "filipa@overwatchmoz.com", name: "Filipa" },
+        { email: "ebubemichael033@gmail.com", name: "Ebube Michael" },
+      ],
       cc: [
         { email: OPERATIONS_EMAIL, name: "Overwatch Operations" },
         { email: "ebube.michael@overwatchmoz.com", name: "Ebube Michael" },
       ],
       replyTo: { email, name },
-      subject: `[Overwatch] New Assessment Request — ${name}`,
+      subject: `[Overwatch] Novo Pedido de Avaliação — ${name}`,
       htmlContent,
+      textContent: adminTextContent,
     });
 
     const clientCopy = isPortuguese
@@ -171,11 +171,15 @@ export async function POST(request: Request) {
       </div>
     `;
 
-    await sendBrevoEmail({
+    const clientTextContent = `${clientCopy.greeting}\n\n${clientCopy.thanks}\n\n${clientCopy.received}\n\n${clientCopy.regards}\n${clientCopy.team}\n${clientCopy.company}`;
+
+    await sendTransactionalEmail({
       sender: { name: "Overwatch Operations", email: FROM_EMAIL },
       to: [{ email, name }],
+      replyTo: { email: OPERATIONS_EMAIL, name: "Overwatch Operations" },
       subject: clientCopy.subject,
       htmlContent: clientHtmlContent,
+      textContent: clientTextContent,
     });
 
     return NextResponse.json({ success: true });

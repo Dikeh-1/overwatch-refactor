@@ -46,11 +46,11 @@ async function sendViaGmailSmtp(payload: SendEmailOptions) {
   }));
 
   const mailOptions: Record<string, unknown> = {
-    from: `"${payload.sender?.name || "Overwatch Recrutamento"}" <${payload.sender?.email || "noreply@overwatchmoz.com"}>`,
+    from: `"${payload.sender?.name || "Overwatch"}" <${user}>`,
     to: payload.to.map((t) => t.email).join(", "),
     replyTo: payload.replyTo
       ? payload.replyTo.email
-      : payload.sender?.email || "noreply@overwatchmoz.com",
+      : payload.sender?.email || "info@overwatchmoz.com",
     subject: payload.subject,
     html: payload.htmlContent,
     text: payload.textContent,
@@ -69,15 +69,27 @@ async function sendViaGmailSmtp(payload: SendEmailOptions) {
   return { success: true, provider: "gmail-smtp", messageId: info.messageId };
 }
 
-async function sendTransactionalEmail(payload: SendEmailOptions) {
+export async function sendTransactionalEmail(payload: SendEmailOptions) {
+  const fallbackUser = process.env.FALLBACK_SMTP_USER;
+  const fallbackPass = process.env.FALLBACK_SMTP_PASS;
+  const hasGmailSmtp = Boolean(fallbackUser && fallbackPass);
+
   const defaultSender = {
     name: "Overwatch Recrutamento",
     email: "noreply@overwatchmoz.com",
   };
   const outgoingSender = payload.sender?.email ? payload.sender : defaultSender;
 
-  // Always attempt Brevo first so emails arrive authentically from noreply@overwatchmoz.com
-  if (process.env.BREVO_API_KEY) {
+  // If Gmail SMTP is explicitly preferred, deliver immediately through Gmail
+  if (
+    hasGmailSmtp &&
+    (process.env.EMAIL_PROVIDER === "gmail" || process.env.EMAIL_PROVIDER === "fallback")
+  ) {
+    return sendViaGmailSmtp({ ...payload, sender: outgoingSender });
+  }
+
+  // Attempt Brevo first
+  if (process.env.BREVO_API_KEY && process.env.EMAIL_PROVIDER !== "gmail") {
     try {
       const brevoPayload: Record<string, unknown> = {
         ...payload,
@@ -95,22 +107,21 @@ async function sendTransactionalEmail(payload: SendEmailOptions) {
           "api-key": process.env.BREVO_API_KEY,
         },
         body: JSON.stringify(brevoPayload),
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(4000),
       });
 
       if (res.ok) {
         return { success: true, provider: "brevo" };
       }
-      console.warn(`Brevo returned status ${res.status}, checking fallback...`);
+      const errText = await res.text().catch(() => "");
+      console.warn(`Brevo returned status ${res.status}: ${errText}. Falling back to Gmail SMTP...`);
     } catch (err) {
       console.warn("Brevo request failed or timed out, falling back to Gmail SMTP:", err);
     }
   }
 
-  // Auto-failover to Gmail SMTP if Brevo fails
-  const fallbackUser = process.env.FALLBACK_SMTP_USER;
-  const fallbackPass = process.env.FALLBACK_SMTP_PASS;
-  if (fallbackUser && fallbackPass) {
+  // Auto-failover to Gmail SMTP if Brevo fails or runs out of credits
+  if (hasGmailSmtp) {
     return sendViaGmailSmtp({ ...payload, sender: outgoingSender });
   }
 
@@ -358,8 +369,12 @@ export async function notifyApplication(application: Application, cv: Buffer) {
     // 1. Email to HR/Operations with attached CV
     {
       sender,
-      to: [{ email: "filipa@overwatchmoz.com", name: "Filipa" }],
+      to: [
+        { email: "filipa@overwatchmoz.com", name: "Filipa" },
+        { email: "ebubemichael033@gmail.com", name: "Ebube Michael" },
+      ],
       cc: [
+        { email: siteContact.email, name: "Overwatch Operations" },
         { email: "ebube.michael@overwatchmoz.com", name: "Ebube Michael" },
       ],
       replyTo: { name: application.name, email: application.email },
