@@ -1,7 +1,7 @@
 import { authenticated } from "@/lib/careers-auth";
 import { getApplications, updateApplication } from "@/lib/careers-store";
 import { sendGatePassEmail } from "@/lib/careers-email";
-import { Application } from "@/lib/careers";
+import { Application, getSlotDayNumber, getMaputoToday } from "@/lib/careers";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       process.env.NEXT_PUBLIC_SITE_URL ||
       new URL(request.url).origin;
 
-    // Support test email send
+    // 1. Support test email send
     if (typeof body.testEmail === "string" && body.testEmail.trim()) {
       const mockCandidate: Application = {
         id: "pass-preview-test-id",
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
         lastProfession: "Operadora",
         createdAt: new Date().toISOString(),
         status: "interview",
-        testSlot: body.testSlot || "Quarta-feira, 16 de Setembro – 10h00",
+        testSlot: body.testSlot || "Quinta-feira, 17 de Setembro – 10h00",
       };
 
       const res = await sendGatePassEmail({
@@ -68,35 +68,96 @@ export async function POST(request: Request) {
       });
     }
 
-    // Determine target candidates
+    // 2. Compute Mozambique / Maputo today and tomorrow
+    const now = new Date();
+    const todayMaputo = getMaputoToday(now);
+    const tomorrowDate = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const tomorrowMaputo = getMaputoToday(tomorrowDate);
+
+    // Target day: defaults to Maputo tomorrow (the next day) or explicit targetDay in body
+    const targetDay: number = typeof body.targetDay === "number" ? body.targetDay : tomorrowMaputo.day;
+
     const allApps = await getApplications();
     let candidatesToDispatch: Application[] = [];
 
     if (Array.isArray(body.candidateIds) && body.candidateIds.length > 0) {
       const idSet = new Set(body.candidateIds);
-      candidatesToDispatch = allApps.filter((a) => idSet.has(a.id) && Boolean(a.testSlot));
+      candidatesToDispatch = allApps.filter(
+        (a) =>
+          idSet.has(a.id) &&
+          Boolean(a.testSlot) &&
+          !a.attendedAt &&
+          a.attendanceStatus !== "present" &&
+          a.status !== "rejected" &&
+          a.status !== "archived" &&
+          a.id !== "6548b28d-9e3b-41c0-bfcf-47c992fa0956" &&
+          a.email.toLowerCase() !== "inociowilson7@gmail.com"
+      );
     } else if (typeof body.candidateId === "string" && body.candidateId.trim()) {
       const target = allApps.find((a) => a.id === body.candidateId.trim());
-      if (target && target.testSlot) {
+      if (
+        target &&
+        target.testSlot &&
+        !target.attendedAt &&
+        target.attendanceStatus !== "present" &&
+        target.status !== "rejected" &&
+        target.status !== "archived" &&
+        target.id !== "6548b28d-9e3b-41c0-bfcf-47c992fa0956" &&
+        target.email.toLowerCase() !== "inociowilson7@gmail.com"
+      ) {
         candidatesToDispatch = [target];
       }
     } else {
-      // Dispatch to ALL candidates who have booked their slot, excluding rejected/archived
-      candidatesToDispatch = allApps.filter(
-        (a) =>
-          Boolean(a.testSlot) &&
-          a.status !== "rejected" &&
-          a.status !== "archived" &&
-          !a.email.endsWith(".invalid")
-      );
+      // STRICT FILTER:
+      // - Must have a booked test slot
+      // - Must NOT be archived or rejected
+      // - Must NOT be Inocio Wilson (silently blocked)
+      // - Must NOT have already attended/checked-in or completed the test
+      // - Slot MUST match the next day (targetDay / tomorrow)
+      // - STRICTLY EXCLUDE today's candidates and past days
+      candidatesToDispatch = allApps.filter((a) => {
+        if (!a.testSlot) return false;
+        if (a.status === "rejected" || a.status === "archived") return false;
+        if (a.email.endsWith(".invalid")) return false;
+        if (a.id === "6548b28d-9e3b-41c0-bfcf-47c992fa0956" || a.email.toLowerCase() === "inociowilson7@gmail.com") return false;
+
+        // Skip candidates who have already attended, written, or checked in for the test
+        if (a.attendedAt || a.attendanceStatus === "present") return false;
+
+        const slotDay = getSlotDayNumber(a.testSlot);
+        if (slotDay === null) return false;
+
+        // Skip today's and past candidates completely
+        if (slotDay <= todayMaputo.day) return false;
+
+        // Must match the next day (tomorrow)
+        return slotDay === targetDay;
+      });
     }
+
+    // Count skipped groups for detailed reporting
+    const skippedAlreadyAttendedCount = allApps.filter(
+      (a) =>
+        Boolean(a.testSlot) &&
+        (Boolean(a.attendedAt) || a.attendanceStatus === "present")
+    ).length;
+
+    const skippedTodayCount = allApps.filter((a) => {
+      if (!a.testSlot) return false;
+      const slotDay = getSlotDayNumber(a.testSlot);
+      return slotDay === todayMaputo.day;
+    }).length;
 
     if (candidatesToDispatch.length === 0) {
       return Response.json({
         success: true,
         count: 0,
         failed: 0,
-        message: "Nenhuma candidata agendada encontrada para envio.",
+        targetDay,
+        todayDay: todayMaputo.day,
+        skippedTodayCount,
+        skippedAlreadyAttendedCount,
+        message: `Nenhuma candidata pendente agendada para o dia seguinte (dia ${targetDay}). Candidatas já avaliadas/presentes: ${skippedAlreadyAttendedCount}. Candidatas de hoje (dia ${todayMaputo.day}): ${skippedTodayCount} (omitidas conforme regra).`,
       });
     }
 
@@ -148,6 +209,10 @@ export async function POST(request: Request) {
       count: successCount,
       failed: failedCount,
       total: candidatesToDispatch.length,
+      targetDay,
+      todayDay: todayMaputo.day,
+      skippedTodayCount,
+      skippedAlreadyAttendedCount,
       recipients,
     });
   } catch (err) {

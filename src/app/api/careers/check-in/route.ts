@@ -48,7 +48,11 @@ export async function GET(request: Request) {
     const bookedDay = getSlotDayNumber(candidate.testSlot);
     const isBooked = Boolean(candidate.testSlot);
     const isToday = isBooked && bookedDay === today.day;
-    const isDeactivated = candidate.status === "rejected" || candidate.status === "archived";
+    const isDeactivated =
+      candidate.status === "rejected" ||
+      candidate.status === "archived" ||
+      candidate.id === "6548b28d-9e3b-41c0-bfcf-47c992fa0956" ||
+      candidate.email.toLowerCase() === "inociowilson7@gmail.com";
     const isAlreadyAttended = Boolean(candidate.attendedAt);
 
     return Response.json({
@@ -120,8 +124,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Safeguard 1: Disqualified / Archived
-    if (candidate.status === "rejected" || candidate.status === "archived") {
+    // Safeguard 1: Disqualified / Archived or blocked
+    if (
+      candidate.status === "rejected" ||
+      candidate.status === "archived" ||
+      candidate.id === "6548b28d-9e3b-41c0-bfcf-47c992fa0956" ||
+      candidate.email.toLowerCase() === "inociowilson7@gmail.com"
+    ) {
       return Response.json(
         {
           error: "Candidatura não autorizada para teste presencial (estado: desqualificado/arquivado).",

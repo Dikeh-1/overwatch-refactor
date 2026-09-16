@@ -498,7 +498,13 @@ Overwatch`;
 
   // ─── Gate Pass Dispatch & 1-Day Prior Reminders ─────────────────────
   const [dispatchingPasses, setDispatchingPasses] = useState(false);
-  const [dispatchPassesResult, setDispatchPassesResult] = useState<{ success: number; failed: number } | null>(null);
+  const [dispatchPassesResult, setDispatchPassesResult] = useState<{
+    success: number;
+    failed: number;
+    targetDay?: number;
+    skippedToday?: number;
+    skippedAttended?: number;
+  } | null>(null);
   const [sendingReminders, setSendingReminders] = useState(false);
   const [remindersResult, setRemindersResult] = useState<{
     success: number;
@@ -1740,10 +1746,9 @@ Overwatch`;
   }
 
   async function handleDispatchAllGatePasses() {
-    const bookedCount = applications.filter((a) => Boolean(a.testSlot) && a.status !== "rejected" && a.status !== "archived").length;
     const msg = lang === "pt"
-      ? `Tem a certeza de que deseja enviar o Passe Oficial de Acesso com Código QR por e-mail para todas as ${bookedCount} candidatas agendadas?`
-      : `Are you sure you want to send the Official Gate Pass with QR Code via email to all ${bookedCount} booked candidates?`;
+      ? `Deseja enviar o Passe Oficial de Acesso com Código QR por e-mail para as candidatas agendadas para amanhã? (Candidatas que já realizaram o teste ou com data de hoje serão automaticamente excluídas).`
+      : `Send official Gate Access Pass with QR Code via email to candidates scheduled for tomorrow? (Candidates who already took the test or scheduled for today will be automatically excluded).`;
     if (!window.confirm(msg)) return;
 
     setDispatchingPasses(true);
@@ -1758,7 +1763,13 @@ Overwatch`;
       if (!res.ok) {
         throw new Error(data.error || "Failed to dispatch gate passes.");
       }
-      setDispatchPassesResult({ success: data.count || 0, failed: data.failed || 0 });
+      setDispatchPassesResult({
+        success: data.count || 0,
+        failed: data.failed || 0,
+        targetDay: data.targetDay,
+        skippedToday: data.skippedTodayCount,
+        skippedAttended: data.skippedAlreadyAttendedCount,
+      });
       await load();
     } catch (err) {
       setError((err as Error).message);
@@ -4835,7 +4846,7 @@ Overwatch`;
                   <span>
                     {dispatchingPasses
                       ? t("Dispatching Passes...", "A disparar Passes QR...")
-                      : t("Dispatch QR Passes", "Disparar Passes QR")}
+                      : t("Dispatch QR Passes (Tomorrow)", "Disparar Passes QR (Amanhã)")}
                   </span>
                 </button>
 
@@ -4879,10 +4890,13 @@ Overwatch`;
             {dispatchPassesResult && (
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-xs text-emerald-300 flex items-center justify-between">
                 <span>
-                  ✓ {t(`Gate passes dispatched: ${dispatchPassesResult.success} succeeded`, `Passes QR disparados: ${dispatchPassesResult.success} enviados com sucesso`)}
+                  ✓ {t(
+                    `Gate passes dispatched: ${dispatchPassesResult.success} sent for tomorrow (Day ${dispatchPassesResult.targetDay || "N/A"}). Already attended skipped: ${dispatchPassesResult.skippedAttended ?? 0}. Today's candidates skipped: ${dispatchPassesResult.skippedToday ?? 0}`,
+                    `Passes QR disparados: ${dispatchPassesResult.success} enviados para amanhã (Dia ${dispatchPassesResult.targetDay || "N/A"}). Já avaliadas/presentes omitidas: ${dispatchPassesResult.skippedAttended ?? 0}. Candidatas de hoje omitidas: ${dispatchPassesResult.skippedToday ?? 0}`
+                  )}
                   {dispatchPassesResult.failed > 0 && ` (${dispatchPassesResult.failed} ${t("failed", "falharam")})`}
                 </span>
-                <button type="button" onClick={() => setDispatchPassesResult(null)} className="text-emerald-400 hover:text-white ml-3">✕</button>
+                <button type="button" onClick={() => setDispatchPassesResult(null)} className="text-emerald-400 hover:text-white ml-3 cursor-pointer">✕</button>
               </div>
             )}
 

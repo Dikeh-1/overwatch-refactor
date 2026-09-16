@@ -85,39 +85,8 @@ export default function CandidateBookingClient({
   id: string;
   locale: string;
 }) {
-  const [activeLang, setActiveLang] = useState<"pt" | "en">("pt");
-
-  useEffect(() => {
-    let initial: "pt" | "en" = "pt";
-    try {
-      const stored = localStorage.getItem("overwatch_preferred_locale");
-      if (stored === "en" || stored === "pt") {
-        initial = stored;
-      } else {
-        const match = document.cookie.match(/NEXT_LOCALE=([^;]+)/);
-        if (match && (match[1] === "en" || match[1] === "pt")) {
-          initial = match[1] as "pt" | "en";
-        } else if (locale === "en") {
-          initial = "en";
-        }
-      }
-    } catch {
-      // fallback
-    }
-    setActiveLang(initial);
-  }, [locale]);
-
-  const switchLanguage = (newLang: "pt" | "en") => {
-    setActiveLang(newLang);
-    try {
-      localStorage.setItem("overwatch_preferred_locale", newLang);
-      document.cookie = `NEXT_LOCALE=${newLang}; path=/; max-age=31536000; SameSite=Lax`;
-      if (typeof window !== "undefined" && window.history.replaceState) {
-        window.history.replaceState(null, "", `/${newLang}/careers/test-invite/${id}`);
-      }
-    } catch {}
-  };
-
+  // The URL locale (/pt/ or /en/) is the single source of truth. Default is strictly Portuguese (pt).
+  const activeLang: "pt" | "en" = locale === "en" ? "en" : "pt";
   const isPt = activeLang === "pt";
   const [candidate, setCandidate] = useState<CandidateData | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string>("");

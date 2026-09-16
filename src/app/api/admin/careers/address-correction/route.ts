@@ -132,10 +132,12 @@ export async function POST(request: Request) {
       });
     }
 
-    // 4. Broadcast to ALL Booked Candidates
+    // 4. Broadcast to ALL Booked Candidates (excluding those who already wrote or did the test)
     const candidatesToBroadcast = allApps.filter(
       (a) =>
         Boolean(a.testSlot) &&
+        !a.attendedAt &&
+        a.attendanceStatus !== "present" &&
         a.status !== "rejected" &&
         a.status !== "archived" &&
         a.id !== "6548b28d-9e3b-41c0-bfcf-47c992fa0956" &&

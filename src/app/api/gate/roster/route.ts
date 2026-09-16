@@ -42,6 +42,7 @@ export async function GET(request: Request) {
       .filter((a) => {
         if (!a.testSlot) return false;
         if (a.status === "rejected" || a.status === "archived") return false;
+        if (a.id === "6548b28d-9e3b-41c0-bfcf-47c992fa0956" || a.email?.toLowerCase() === "inociowilson7@gmail.com") return false;
         const slotDay = getSlotDayNumber(a.testSlot);
         return slotDay !== null && slotDay === today.day;
       })
