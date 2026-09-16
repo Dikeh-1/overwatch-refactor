@@ -25,7 +25,7 @@ import Logo from "@/components/ui/Logo";
 import TechGrid from "@/components/ui/TechGrid";
 import LazyVideo from "@/components/ui/LazyVideo";
 import { IMAGES } from "@/lib/constants";
-import { formatSlotDisplay } from "@/lib/careers";
+import { formatSlotDisplay, getMaputoTime } from "@/lib/careers";
 
 type TodayCandidate = {
   id: string;
@@ -104,6 +104,17 @@ const DICT = {
     refreshTooltip: "Actualizar lista",
     connError: "Erro de ligação com a base de dados. Tente novamente.",
     flipCamera: "Mudar câmara",
+    timeLockBadge: "Posto Bloqueado até às 09h00 (Hora de Moçambique)",
+    timeLockTitle: "Check-in Bloqueado até às 09h00",
+    timeLockSubtitle: "O check-in de candidatas na portaria só é permitido a partir das 09h00 (Hora de Moçambique). Todo o sistema de validação e leitura de códigos QR será activado automaticamente às 09h00.",
+    timeLockCountdownLabel: "Abertura Automática em:",
+    timeLockCurrentTimeLabel: "Horário Actual de Maputo:",
+    timeLockAutoNotice: "Não é necessário actualizar a página. O sistema activará sozinho às 09h00.",
+    timeLockManualNotice: "A pesquisa manual e o check-in só abrem às 09h00 (Hora de Moçambique).",
+    timeLockBtnDisabled: "Check-in Desactivado até às 09h00",
+    timeLockRosterNotice: "O check-in e validação de presenças estarão disponíveis a partir das 09h00.",
+    timeLockError: "O check-in na portaria só é permitido a partir das 09h00 (Hora de Moçambique). Aguarde até às 09h00.",
+    accessTimeLocked: "Check-in Desactivado (Antes das 09h00)",
   },
   en: {
     loading: "Connecting to security gate…",
@@ -154,6 +165,17 @@ const DICT = {
     refreshTooltip: "Refresh list",
     connError: "Database connection error. Please try again.",
     flipCamera: "Flip camera",
+    timeLockBadge: "Post Locked until 09:00 AM (Mozambique Time)",
+    timeLockTitle: "Check-in Locked until 09:00 AM",
+    timeLockSubtitle: "Candidate check-in at the security gate is strictly permitted starting from 09:00 AM (Mozambique Time). All pass validation and QR scanning will automatically enable at 09:00 AM.",
+    timeLockCountdownLabel: "Automatic Opening In:",
+    timeLockCurrentTimeLabel: "Current Maputo Time:",
+    timeLockAutoNotice: "No need to refresh the page. The system will activate automatically at 09:00 AM.",
+    timeLockManualNotice: "Manual search and check-in will open at 09:00 AM (Mozambique Time).",
+    timeLockBtnDisabled: "Check-in Disabled until 09:00 AM",
+    timeLockRosterNotice: "Check-in and attendance verification will become available at 09:00 AM.",
+    timeLockError: "Gate check-in is strictly permitted from 09:00 AM (Mozambique Time). Please wait until 09:00 AM.",
+    accessTimeLocked: "Check-in Disabled (Before 09:00 AM)",
   },
 };
 
@@ -200,6 +222,16 @@ function GateSecurityContent() {
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState("");
   const [pinBusy, setPinBusy] = useState(false);
+
+  // Live Maputo Time and 9 AM Lock Tracker (Africa/Maputo, UTC+2)
+  const [maputoTime, setMaputoTime] = useState(() => getMaputoTime());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setMaputoTime(getMaputoTime());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const [activeTab, setActiveTab] = useState<"camera" | "manual" | "roster">("camera");
   const [cameraActive, setCameraActive] = useState(false);
@@ -387,6 +419,16 @@ function GateSecurityContent() {
   // Perform Gate Check In
   const executeCheckIn = useCallback(
     async (payload: { id?: string; query?: string; force?: boolean }) => {
+      if (maputoTime.isBeforeNineAm && !payload.force) {
+        setResult({
+          success: false,
+          code: "BEFORE_NINE_AM",
+          error: t.timeLockError,
+        });
+        playSound("denied");
+        return;
+      }
+
       setProcessing(true);
       try {
         const res = await fetch("/api/careers/check-in", {
@@ -451,7 +493,7 @@ function GateSecurityContent() {
         setProcessing(false);
       }
     },
-    [fetchRoster, t.connError],
+    [fetchRoster, t.connError, t.timeLockError, maputoTime.isBeforeNineAm],
   );
 
   // Auto-verify if urlId is passed in query string
@@ -474,7 +516,7 @@ function GateSecurityContent() {
 
   // HIGH-PERFORMANCE THROTTLED QR SCANNING LOOP
   const scanLoop = useCallback(() => {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoRef.current || !canvasRef.current || maputoTime.isBeforeNineAm) return;
     const video = videoRef.current;
     const canvas = canvasRef.current;
 
@@ -569,7 +611,7 @@ function GateSecurityContent() {
   }, [cameraFacing, scanLoop, stopCamera, t.cameraError]);
 
   useEffect(() => {
-    if (authed && activeTab === "camera" && !result) {
+    if (authed && activeTab === "camera" && !result && !maputoTime.isBeforeNineAm) {
       startCamera();
     } else {
       stopCamera();
@@ -577,7 +619,7 @@ function GateSecurityContent() {
     return () => {
       stopCamera();
     };
-  }, [authed, activeTab, result, startCamera, stopCamera]);
+  }, [authed, activeTab, result, maputoTime.isBeforeNineAm, startCamera, stopCamera]);
 
   const resetScanner = () => {
     setResult(null);
@@ -745,6 +787,24 @@ function GateSecurityContent() {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Live Maputo Clock & 9 AM Lock Status */}
+            {maputoTime.isBeforeNineAm ? (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg sm:rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-300 font-mono text-[10px] sm:text-xs">
+                <Clock size={12} className="text-amber-400 shrink-0 animate-pulse" />
+                <span className="hidden sm:inline">Maputo:</span>
+                <span className="font-bold">{maputoTime.timeString}</span>
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/25 text-amber-200 border border-amber-500/40 uppercase font-bold">
+                  {lang === "pt" ? `Abre 09h00` : `Opens 9 AM`}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg sm:rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 font-mono text-[10px] sm:text-xs">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <span className="hidden sm:inline">Maputo:</span>
+                <span className="font-bold">{maputoTime.timeString}</span>
+              </div>
+            )}
+
             {/* Live Today Counter */}
             <div className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl border border-white/10 bg-white/[0.04] text-right">
               <div className="text-[8px] sm:text-[9px] text-white/50 font-medium leading-none hidden xs:block">
@@ -865,7 +925,7 @@ function GateSecurityContent() {
                 ? "bg-emerald-950/80 border-emerald-500/60 shadow-emerald-950/50 text-emerald-100"
                 : result.alreadyCheckedIn || result.code === "ALREADY_CHECKED_IN"
                   ? "bg-cyan-950/85 border-cyan-500/60 shadow-cyan-950/50 text-cyan-100"
-                  : result.code === "WRONG_DAY"
+                  : result.code === "WRONG_DAY" || result.code === "BEFORE_NINE_AM"
                     ? "bg-amber-950/85 border-amber-500/60 shadow-amber-950/50 text-amber-100"
                     : "bg-red-950/85 border-red-500/60 shadow-red-950/50 text-red-100"
             }`}
@@ -879,9 +939,9 @@ function GateSecurityContent() {
                 <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 border-2 border-cyan-400 flex items-center justify-center text-cyan-300 shrink-0">
                   <AlertTriangle size={30} />
                 </div>
-              ) : result.code === "WRONG_DAY" ? (
+              ) : result.code === "WRONG_DAY" || result.code === "BEFORE_NINE_AM" ? (
                 <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-amber-300 shrink-0">
-                  <AlertTriangle size={30} />
+                  {result.code === "BEFORE_NINE_AM" ? <Clock size={30} /> : <AlertTriangle size={30} />}
                 </div>
               ) : (
                 <div className="w-12 h-12 rounded-2xl bg-red-500/20 border-2 border-red-400 flex items-center justify-center text-red-300 shrink-0">
@@ -905,8 +965,10 @@ function GateSecurityContent() {
                     ? t.accessGranted
                     : result.alreadyCheckedIn || result.code === "ALREADY_CHECKED_IN"
                       ? t.accessAlreadyCheckedIn
-                      : result.code === "WRONG_DAY"
-                        ? t.accessWrongDay
+                      : result.code === "BEFORE_NINE_AM"
+                        ? t.accessTimeLocked
+                        : result.code === "WRONG_DAY"
+                          ? t.accessWrongDay
                         : t.accessDenied}
                 </span>
 
@@ -966,6 +1028,29 @@ function GateSecurityContent() {
                   </div>
                 )}
 
+                {/* BEFORE 9 AM LOCK RESULT */}
+                {!result.success && result.code === "BEFORE_NINE_AM" && (
+                  <div className="pt-2 mt-2 border-t border-amber-500/30 space-y-3 text-xs">
+                    <p className="text-white font-semibold text-sm">
+                      {t.timeLockError}
+                    </p>
+                    <div className="p-3.5 rounded-xl bg-black/40 border border-amber-500/30 text-center">
+                      <span className="text-[10px] text-amber-300 uppercase tracking-widest block font-bold">
+                        {t.timeLockCountdownLabel}
+                      </span>
+                      <span className="text-2xl font-black text-white block mt-0.5 font-mono tracking-widest">
+                        {maputoTime.countdownString}
+                      </span>
+                      <span className="text-[10px] text-white/60 font-mono mt-1 block">
+                        {t.timeLockCurrentTimeLabel} {maputoTime.timeString}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-amber-200/90">
+                      {t.timeLockAutoNotice}
+                    </p>
+                  </div>
+                )}
+
                 {/* Wrong Day Details */}
                 {!result.success && !result.alreadyCheckedIn && result.code === "WRONG_DAY" && (
                   <div className="pt-2 mt-2 border-t border-amber-500/30 space-y-2 text-xs">
@@ -1011,7 +1096,48 @@ function GateSecurityContent() {
         )}
 
         {/* ── TAB 1: CAMERA SCANNER ── */}
-        {activeTab === "camera" && !result && (
+        {activeTab === "camera" && !result && maputoTime.isBeforeNineAm && (
+          <div className="rounded-2xl bg-[#0e1424] border border-amber-500/30 p-6 sm:p-8 flex flex-col items-center justify-center text-center space-y-5 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.2)]">
+              <LockKeyhole size={30} />
+            </div>
+
+            <div className="max-w-md space-y-2">
+              <div className="inline-block px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-mono font-bold uppercase tracking-widest">
+                {t.timeLockBadge}
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                {t.timeLockTitle}
+              </h2>
+              <p className="text-xs sm:text-sm text-white/70 leading-relaxed">
+                {t.timeLockSubtitle}
+              </p>
+            </div>
+
+            {/* Big Countdown Timer */}
+            <div className="rounded-2xl border border-white/10 bg-black/40 backdrop-blur-md p-5 sm:p-6 w-full max-w-sm text-center shadow-inner">
+              <div className="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-bold mb-1">
+                {t.timeLockCountdownLabel}
+              </div>
+              <div className="text-3xl sm:text-4xl font-mono font-black text-white tracking-widest my-1 drop-shadow-md">
+                {maputoTime.countdownString}
+              </div>
+              <div className="text-[11px] text-white/50 font-mono mt-2">
+                {t.timeLockCurrentTimeLabel} <span className="text-white font-semibold">{maputoTime.timeString}</span>
+              </div>
+            </div>
+
+            {/* Auto-Enable Notice */}
+            <div className="flex items-center gap-2 text-xs text-amber-200/90 bg-amber-500/10 border border-amber-500/20 px-4 py-2.5 rounded-xl max-w-md">
+              <RotateCw size={14} className="text-amber-400 shrink-0 animate-spin" />
+              <span>{t.timeLockAutoNotice}</span>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "camera" && !result && !maputoTime.isBeforeNineAm && (
           <div className="flex-1 flex flex-col space-y-3">
             <div className="relative rounded-2xl overflow-hidden bg-black border border-white/10 aspect-[4/3] sm:aspect-video flex items-center justify-center shadow-2xl">
               <video
@@ -1072,6 +1198,20 @@ function GateSecurityContent() {
         {/* ── TAB 2: MANUAL SEARCH ── */}
         {activeTab === "manual" && !result && (
           <div className="rounded-2xl bg-[#111827] border border-white/10 p-6 space-y-4 shadow-xl">
+            {maputoTime.isBeforeNineAm && (
+              <div className="rounded-xl bg-amber-500/15 border border-amber-500/30 p-3.5 flex items-start gap-3 text-xs text-amber-200">
+                <Clock size={16} className="text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="block text-amber-300 font-bold uppercase tracking-wide">
+                    {t.timeLockBadge}
+                  </strong>
+                  <span className="text-amber-200/90 mt-0.5 block">
+                    {t.timeLockManualNotice} ({t.timeLockCountdownLabel} <strong className="font-mono text-white">{maputoTime.countdownString}</strong>)
+                  </span>
+                </div>
+              </div>
+            )}
+
             <div>
               <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                 <Search size={15} className="text-white/60" />
@@ -1085,6 +1225,7 @@ function GateSecurityContent() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
+                if (maputoTime.isBeforeNineAm) return;
                 if (searchQuery.trim()) {
                   executeCheckIn({ query: searchQuery.trim() });
                 }
@@ -1095,21 +1236,22 @@ function GateSecurityContent() {
                 <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
                 <input
                   type="text"
+                  disabled={maputoTime.isBeforeNineAm}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={t.searchPlaceholder}
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-white/15 bg-white/[0.04] text-white text-sm placeholder:text-white/30 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/15 transition-colors"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-white/15 bg-white/[0.04] text-white text-sm placeholder:text-white/30 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 />
               </div>
 
               <button
                 type="submit"
-                disabled={processing || !searchQuery.trim()}
-                className="w-full py-3.5 rounded-xl bg-white hover:bg-white/90 text-[#090d16] text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer shadow-lg shadow-black/30 flex items-center justify-center gap-2"
+                disabled={maputoTime.isBeforeNineAm || processing || !searchQuery.trim()}
+                className="w-full py-3.5 rounded-xl bg-white hover:bg-white/90 text-[#090d16] text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-lg shadow-black/30 flex items-center justify-center gap-2"
               >
                 {processing ? <RotateCw size={15} className="animate-spin" /> : null}
-                <span>{t.searchBtn}</span>
-                {!processing && <ArrowRight size={15} />}
+                <span>{maputoTime.isBeforeNineAm ? t.timeLockBtnDisabled : t.searchBtn}</span>
+                {!processing && !maputoTime.isBeforeNineAm && <ArrowRight size={15} />}
               </button>
             </form>
           </div>
@@ -1118,6 +1260,13 @@ function GateSecurityContent() {
         {/* ── TAB 3: TODAY'S LIST (ROSTER) ── */}
         {activeTab === "roster" && (
           <div className="rounded-2xl bg-[#111827] border border-white/10 p-6 space-y-4 shadow-xl">
+            {maputoTime.isBeforeNineAm && (
+              <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 flex items-center gap-2 text-xs text-amber-300 mb-2">
+                <Clock size={14} className="text-amber-400 shrink-0" />
+                <span>{t.timeLockRosterNotice} (Maputo: {maputoTime.timeString})</span>
+              </div>
+            )}
+
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">

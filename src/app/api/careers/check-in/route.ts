@@ -68,6 +68,9 @@ export async function GET(request: Request) {
       isToday,
       isAlreadyAttended,
       isDeactivated,
+      isBeforeNineAm: today.isBeforeNineAm,
+      maputoTime: today.timeString,
+      countdownString: today.countdownString,
       todayDay: today.day,
       bookedDay,
       address: siteContact.address.pt,
@@ -179,6 +182,23 @@ export async function POST(request: Request) {
     }
 
     // Action: Check In (Default)
+    // Safeguard 2.5: Time Check (Check-in strictly allowed starting from 09:00 AM Mozambique Time)
+    if (today.isBeforeNineAm && !force) {
+      return Response.json(
+        {
+          error: "O check-in na portaria só é permitido a partir das 09h00 (Hora de Moçambique). O sistema de validação abrirá automaticamente às 09h00.",
+          beforeNineAm: true,
+          code: "BEFORE_NINE_AM",
+          candidateName: candidate.name,
+          currentHour: today.hour,
+          currentMinute: today.minute,
+          timeString: today.timeString,
+          countdownString: today.countdownString,
+        },
+        { status: 403 }
+      );
+    }
+
     // Safeguard 3: Date Check (Unless admin force override is true)
     if (!isToday && !force) {
       const isFuture = bookedDay !== null && bookedDay > today.day;

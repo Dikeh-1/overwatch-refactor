@@ -150,6 +150,7 @@ export function getMaputoToday(date: Date = new Date()) {
     year: "numeric",
     hour: "numeric",
     minute: "numeric",
+    second: "numeric",
     hour12: false,
   });
   const parts = formatter.formatToParts(date);
@@ -158,6 +159,22 @@ export function getMaputoToday(date: Date = new Date()) {
   const year = parseInt(parts.find((p) => p.type === "year")?.value || "0", 10);
   const hour = parseInt(parts.find((p) => p.type === "hour")?.value || "0", 10);
   const minute = parseInt(parts.find((p) => p.type === "minute")?.value || "0", 10);
+  const second = parseInt(parts.find((p) => p.type === "second")?.value || "0", 10);
+
+  const isBeforeNineAm = hour < 9;
+
+  let countdownString = "";
+  if (isBeforeNineAm) {
+    const totalSecondsNow = hour * 3600 + minute * 60 + second;
+    const targetSeconds = 9 * 3600; // 09:00:00 AM
+    const diff = Math.max(0, targetSeconds - totalSecondsNow);
+    const hrs = Math.floor(diff / 3600);
+    const mins = Math.floor((diff % 3600) / 60);
+    const secs = diff % 60;
+    countdownString = `${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  }
+
+  const timeString = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:${String(second).padStart(2, "0")}`;
 
   return {
     day,
@@ -165,6 +182,13 @@ export function getMaputoToday(date: Date = new Date()) {
     year,
     hour,
     minute,
+    second,
+    isBeforeNineAm,
+    countdownString,
+    timeString,
     dateStr: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
   };
 }
+
+export const getMaputoTime = getMaputoToday;
+
