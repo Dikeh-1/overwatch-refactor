@@ -1,32 +1,8 @@
 import { getApplication, getApplications, updateApplication } from "@/lib/careers-store";
 import { siteContact } from "@/lib/site-config";
+import { getSlotDayNumber, getMaputoToday } from "@/lib/careers";
 
 export const dynamic = "force-dynamic";
-
-/** Extract numeric day of the month from a slot label (e.g. "16", "21") */
-function getSlotDayNumber(slot?: string | null): number | null {
-  if (!slot) return null;
-  const match = slot.match(/(?:^|[^\d])(\d{1,2})(?:\s*de\s*|\s+)?/);
-  if (match) {
-    const num = parseInt(match[1], 10);
-    if (!isNaN(num) && num >= 1 && num <= 31) return num;
-  }
-  return null;
-}
-
-/** Get current date components in Mozambique time (Africa/Maputo, UTC+2) */
-function getMaputoToday() {
-  const maputoStr = new Date().toLocaleString("en-US", { timeZone: "Africa/Maputo" });
-  const maputoDate = new Date(maputoStr);
-  return {
-    day: maputoDate.getDate(),
-    month: maputoDate.getMonth() + 1,
-    year: maputoDate.getFullYear(),
-    hour: maputoDate.getHours(),
-    minute: maputoDate.getMinutes(),
-    dateObj: maputoDate,
-  };
-}
 
 export async function GET(request: Request) {
   try {

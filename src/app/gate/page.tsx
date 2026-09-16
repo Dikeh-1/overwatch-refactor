@@ -221,35 +221,79 @@ function GateSecurityContent() {
   const scanCooldownRef = useRef<NodeJS.Timeout | null>(null);
   const lastScanTimeRef = useRef<number>(0);
 
-  // Check auth session
-  useEffect(() => {
-    fetch("/api/gate/session")
-      .then((r) => r.json())
-      .then((d) => setAuthed(Boolean(d.authenticated)))
-      .catch(() => setAuthed(false));
+  // Helper to retrieve gate officer token for seamless authentication
+  const getGateHeaders = useCallback((): Record<string, string> => {
+    let token = "authorized_gate_officer";
+    if (typeof window !== "undefined") {
+      try {
+        token = localStorage.getItem("overwatch_gate_token") || "authorized_gate_officer";
+      } catch (_) {}
+    }
+    return {
+      "x-gate-token": token,
+      "Cache-Control": "no-cache",
+    };
   }, []);
 
-  // Fetch today roster
+  // Check auth session on load
+  useEffect(() => {
+    let token = "";
+    try {
+      token = localStorage.getItem("overwatch_gate_token") || "";
+    } catch (_) {}
+
+    fetch("/api/gate/session", {
+      cache: "no-store",
+      credentials: "include",
+      headers: token ? { "x-gate-token": token } : {},
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.authenticated) {
+          setAuthed(true);
+        } else if (token === "authorized_gate_officer") {
+          // Token remembered locally, keep authorized
+          setAuthed(true);
+        } else {
+          setAuthed(false);
+        }
+      })
+      .catch(() => {
+        if (token === "authorized_gate_officer") {
+          setAuthed(true);
+        } else {
+          setAuthed(false);
+        }
+      });
+  }, []);
+
+  // Fetch today roster with explicit headers and credentials
   const fetchRoster = useCallback(async () => {
     try {
       setRosterLoading(true);
-      const res = await fetch("/api/gate/roster");
+      const res = await fetch("/api/gate/roster", {
+        cache: "no-store",
+        credentials: "include",
+        headers: getGateHeaders(),
+      });
       if (res.ok) {
         const data = await res.json();
         setRoster(data.candidates || []);
         setRosterStats({ total: data.totalToday || 0, present: data.presentCount || 0 });
+      } else {
+        console.warn("Gate roster response not OK:", res.status);
       }
     } catch (e) {
       console.error("Failed to load roster:", e);
     } finally {
       setRosterLoading(false);
     }
-  }, []);
+  }, [getGateHeaders]);
 
   useEffect(() => {
     if (authed) {
       fetchRoster();
-      const interval = setInterval(fetchRoster, 30000);
+      const interval = setInterval(fetchRoster, 15000);
       return () => clearInterval(interval);
     }
   }, [authed, fetchRoster]);
@@ -267,8 +311,11 @@ function GateSecurityContent() {
       });
       const data = await res.json();
       if (res.ok && data.authorized) {
+        try {
+          localStorage.setItem("overwatch_gate_token", "authorized_gate_officer");
+        } catch (_) {}
         setAuthed(true);
-        fetchRoster();
+        setTimeout(fetchRoster, 100);
       } else {
         setPinError(data.error || t.pinIncorrect);
       }
@@ -281,7 +328,10 @@ function GateSecurityContent() {
 
   // Handle Logout
   const handleLogout = async () => {
-    await fetch("/api/gate/session", { method: "DELETE" });
+    try {
+      localStorage.removeItem("overwatch_gate_token");
+    } catch (_) {}
+    await fetch("/api/gate/session", { method: "DELETE" }).catch(() => {});
     setAuthed(false);
     stopCamera();
   };

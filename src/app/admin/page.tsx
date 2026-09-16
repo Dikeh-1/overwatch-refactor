@@ -126,9 +126,22 @@ export function formatSlotDisplay(slot: string, l: "en" | "pt") {
 /** Extract numeric day of the month from a slot label (e.g. "16", "21") */
 export function getSlotDayNumber(slot: string): number | null {
   if (!slot) return null;
-  const match = slot.match(/(?:^|[^\d])(\d{1,2})(?:\s*de\s*|\s+)?/);
-  if (match) {
-    const num = parseInt(match[1], 10);
+  const s = slot.trim();
+  const iso = s.match(/^\d{4}-\d{2}-(\d{2})/);
+  if (iso) return parseInt(iso[1], 10);
+  const dmy = s.match(/^(\d{1,2})[\/\-](\d{1,2})/);
+  if (dmy) return parseInt(dmy[1], 10);
+  const dayMonth = s.match(
+    /(\d{1,2})(?:st|nd|rd|th)?\s*(?:de\s*)?(?:Setembro|September|Outubro|October|Novembro|November|Dezembro|December|Janeiro|January|Fevereiro|February|Março|March|Abril|April|Maio|May|Junho|June|Julho|July|Agosto|August)/i
+  );
+  if (dayMonth) return parseInt(dayMonth[1], 10);
+  const monthDay = s.match(
+    /(?:Setembro|September|Outubro|October|Novembro|November|Dezembro|December|Janeiro|January|Fevereiro|February|Março|March|Abril|April|Maio|May|Junho|June|Julho|July|Agosto|August)\s*(\d{1,2})/i
+  );
+  if (monthDay) return parseInt(monthDay[1], 10);
+  const generic = s.match(/(?:^|[^\d])(\d{1,2})(?:\s*de\s*|\s+[-–—]|\s+|$)/);
+  if (generic) {
+    const num = parseInt(generic[1], 10);
     if (!isNaN(num) && num >= 1 && num <= 31) return num;
   }
   return null;
