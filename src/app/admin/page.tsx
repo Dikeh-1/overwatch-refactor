@@ -167,6 +167,44 @@ export function getSlotWeekCategory(slot: string): "this_week" | "next_week" {
   return "next_week";
 }
 
+const PT_DAYS = [
+  "Domingo",
+  "Segunda-feira",
+  "Terça-feira",
+  "Quarta-feira",
+  "Quinta-feira",
+  "Sexta-feira",
+  "Sábado",
+];
+
+const PT_MONTHS = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
+
+/** Convert a calendar date string (YYYY-MM-DD) and time to canonical Portuguese test slot string */
+export function formatCalendarDateToSlot(dateStr: string, timeStr: string = "10h00"): string {
+  if (!dateStr) return "";
+  const parts = dateStr.split("-").map(Number);
+  if (parts.length < 3 || isNaN(parts[0]) || isNaN(parts[1]) || isNaN(parts[2])) return "";
+  const [year, month, day] = parts;
+  const d = new Date(year, month - 1, day, 12, 0, 0);
+  const dayOfWeek = PT_DAYS[d.getDay()] || "Segunda-feira";
+  const monthName = PT_MONTHS[d.getMonth()] || "Setembro";
+  const time = timeStr.trim() || "10h00";
+  return normalizeSlot(`${dayOfWeek}, ${day} de ${monthName} - ${time}`);
+}
+
 const EMAIL_TEMPLATES = {
   pt: {
     subject: "Convocatória: Teste de Selecção Presencial — Overwatch Moçambique",
@@ -289,10 +327,10 @@ export default function AdminPage() {
   const [savingSlots, setSavingSlots] = useState(false);
   const [slotsSavedFeedback, setSlotsSavedFeedback] = useState(false);
   const [isManagingSlots, setIsManagingSlots] = useState(false);
-  const [newSlotDay, setNewSlotDay] = useState("Segunda-feira");
-  const [newSlotDayNum, setNewSlotDayNum] = useState("21");
-  const [newSlotMonth, setNewSlotMonth] = useState("Setembro");
+  const [newSlotDate, setNewSlotDate] = useState("2026-09-21");
   const [newSlotTime, setNewSlotTime] = useState("10h00");
+  const [isCustomTime, setIsCustomTime] = useState(false);
+  const [customTimeInput, setCustomTimeInput] = useState("");
   const [newSlotCustom, setNewSlotCustom] = useState("");
   const [useCustomInput, setUseCustomInput] = useState(false);
 
@@ -445,13 +483,22 @@ export default function AdminPage() {
     }
   };
 
+  const computedNewSlot = useMemo(() => {
+    if (useCustomInput) return newSlotCustom.trim();
+    const effectiveTime = isCustomTime ? customTimeInput : newSlotTime;
+    return formatCalendarDateToSlot(newSlotDate, effectiveTime);
+  }, [useCustomInput, newSlotCustom, newSlotDate, isCustomTime, customTimeInput, newSlotTime]);
+
+  const isComputedSlotDuplicate = useMemo(() => {
+    if (!computedNewSlot) return false;
+    return broadcastSlots.some((s) => normalizeSlot(s) === normalizeSlot(computedNewSlot));
+  }, [broadcastSlots, computedNewSlot]);
+
   const handleAddSlot = () => {
-    const raw = useCustomInput
-      ? newSlotCustom.trim()
-      : `${newSlotDay}, ${newSlotDayNum} de ${newSlotMonth} - ${newSlotTime}`;
-    const slotStr = normalizeSlot(raw);
+    const slotStr = normalizeSlot(computedNewSlot);
     if (!slotStr) return;
-    if (broadcastSlots.some((s) => normalizeSlot(s) === slotStr)) {
+    if (isComputedSlotDuplicate) {
+      alert(t("This slot is already in the list.", "Este turno de teste já se encontra na lista."));
       return;
     }
     const updated = [...broadcastSlots, slotStr];
@@ -4223,117 +4270,164 @@ Overwatch`;
                         ))}
                       </div>
 
-                      {/* Add Slot Builder / Manual Entry Form (Shown when isManagingSlots is active) */}
+                      {/* Add Slot Builder / Calendar Entry Form (Shown when isManagingSlots is active) */}
                       {isManagingSlots && (
-                        <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/[0.04] p-3.5 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-white text-[0.72rem] uppercase tracking-wider text-cyan-300">
-                              {t("+ Add New Test Slot / Date", "+ Adicionar Novo Turno / Data")}
-                            </span>
+                        <div className="rounded-xl border border-cyan-500/25 bg-gradient-to-b from-cyan-950/20 to-slate-950/40 p-3.5 sm:p-4 space-y-3.5 shadow-lg">
+                          <div className="flex items-center justify-between gap-2 border-b border-white/[0.08] pb-2.5">
+                            <div className="flex items-center gap-2">
+                              <Calendar size={15} className="text-cyan-400" />
+                              <span className="font-bold text-white text-xs uppercase tracking-wider text-cyan-300">
+                                {t("+ Add New Test Slot / Date", "+ Adicionar Novo Turno / Data")}
+                              </span>
+                            </div>
                             <button
                               type="button"
                               onClick={() => setUseCustomInput((p) => !p)}
-                              className="text-[0.68rem] text-cyan-400 hover:underline cursor-pointer"
+                              className="text-[0.68rem] text-cyan-400 hover:text-cyan-300 hover:underline cursor-pointer flex items-center gap-1"
                             >
-                              {useCustomInput
-                                ? t("Use Day/Date Pickers", "Usar Selecção Rápida")
-                                : t("Enter Custom Text Directly", "Digitar Texto Manual")}
+                              <Edit3 size={11} />
+                              <span>
+                                {useCustomInput
+                                  ? t("Use Calendar Picker", "Usar Calendário")
+                                  : t("Enter Custom Text Directly", "Digitar Texto Manual")}
+                              </span>
                             </button>
                           </div>
 
                           {!useCustomInput ? (
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            <div className="space-y-3">
+                              {/* Quick Date Shortcuts */}
                               <div>
-                                <label className="text-[0.65rem] text-white/50 block mb-1">
-                                  {t("Day of Week", "Dia da Semana")}
+                                <label className="text-[0.65rem] text-white/50 block mb-1.5 uppercase tracking-wider font-semibold">
+                                  {t("Quick Select Date", "Selecção Rápida de Data")}
                                 </label>
-                                <select
-                                  value={newSlotDay}
-                                  onChange={(e) => setNewSlotDay(e.target.value)}
-                                  className="w-full rounded bg-white/[0.08] border border-white/20 px-2 py-1.5 text-xs text-white"
-                                >
-                                  <option value="Segunda-feira" className="bg-[#121827]">Segunda-feira</option>
-                                  <option value="Terça-feira" className="bg-[#121827]">Terça-feira</option>
-                                  <option value="Quarta-feira" className="bg-[#121827]">Quarta-feira</option>
-                                  <option value="Quinta-feira" className="bg-[#121827]">Quinta-feira</option>
-                                  <option value="Sexta-feira" className="bg-[#121827]">Sexta-feira</option>
-                                  <option value="Sábado" className="bg-[#121827]">Sábado</option>
-                                  <option value="Domingo" className="bg-[#121827]">Domingo</option>
-                                </select>
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  {[
+                                    { date: "2026-09-21", label: "21 Sep (Mon)" },
+                                    { date: "2026-09-22", label: "22 Sep (Tue)" },
+                                    { date: "2026-09-23", label: "23 Sep (Wed)" },
+                                    { date: "2026-09-24", label: "24 Sep (Thu)" },
+                                    { date: "2026-09-25", label: "25 Sep (Fri)" },
+                                    { date: "2026-09-28", label: "28 Sep (Mon)" },
+                                  ].map((p) => {
+                                    const isCurrent = newSlotDate === p.date;
+                                    return (
+                                      <button
+                                        key={p.date}
+                                        type="button"
+                                        onClick={() => setNewSlotDate(p.date)}
+                                        className={`px-2.5 py-1 rounded-md text-[0.68rem] font-medium transition-all cursor-pointer border ${
+                                          isCurrent
+                                            ? "bg-cyan-500/20 text-cyan-300 border-cyan-400/50 shadow-sm"
+                                            : "bg-white/[0.04] text-white/70 border-white/10 hover:bg-white/[0.08] hover:text-white"
+                                        }`}
+                                      >
+                                        {p.label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
                               </div>
 
-                              <div>
-                                <label className="text-[0.65rem] text-white/50 block mb-1">
-                                  {t("Day Number", "Dia (Número)")}
-                                </label>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  max="31"
-                                  value={newSlotDayNum}
-                                  onChange={(e) => setNewSlotDayNum(e.target.value)}
-                                  className="w-full rounded bg-white/[0.08] border border-white/20 px-2 py-1.5 text-xs text-white"
-                                />
-                              </div>
+                              {/* Calendar Date Picker & Time Selector */}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                  <label className="text-[0.65rem] text-white/50 block mb-1 uppercase tracking-wider font-semibold">
+                                    {t("Select Date on Calendar", "Seleccionar Data no Calendário")}
+                                  </label>
+                                  <input
+                                    type="date"
+                                    value={newSlotDate}
+                                    onChange={(e) => setNewSlotDate(e.target.value)}
+                                    className="w-full rounded-lg bg-white/[0.06] hover:bg-white/[0.09] focus:bg-white/[0.1] border border-white/15 focus:border-cyan-400 px-3 py-2 text-xs text-white transition-all outline-none"
+                                  />
+                                </div>
 
-                              <div>
-                                <label className="text-[0.65rem] text-white/50 block mb-1">
-                                  {t("Month", "Mês")}
-                                </label>
-                                <select
-                                  value={newSlotMonth}
-                                  onChange={(e) => setNewSlotMonth(e.target.value)}
-                                  className="w-full rounded bg-white/[0.08] border border-white/20 px-2 py-1.5 text-xs text-white"
-                                >
-                                  <option value="Janeiro" className="bg-[#121827]">Janeiro</option>
-                                  <option value="Fevereiro" className="bg-[#121827]">Fevereiro</option>
-                                  <option value="Março" className="bg-[#121827]">Março</option>
-                                  <option value="Abril" className="bg-[#121827]">Abril</option>
-                                  <option value="Maio" className="bg-[#121827]">Maio</option>
-                                  <option value="Junho" className="bg-[#121827]">Junho</option>
-                                  <option value="Julho" className="bg-[#121827]">Julho</option>
-                                  <option value="Agosto" className="bg-[#121827]">Agosto</option>
-                                  <option value="Setembro" className="bg-[#121827]">Setembro</option>
-                                  <option value="Outubro" className="bg-[#121827]">Outubro</option>
-                                  <option value="Novembro" className="bg-[#121827]">Novembro</option>
-                                  <option value="Dezembro" className="bg-[#121827]">Dezembro</option>
-                                </select>
-                              </div>
-
-                              <div>
-                                <label className="text-[0.65rem] text-white/50 block mb-1">
-                                  {t("Time", "Horário")}
-                                </label>
-                                <input
-                                  type="text"
-                                  value={newSlotTime}
-                                  onChange={(e) => setNewSlotTime(e.target.value)}
-                                  placeholder="10h00"
-                                  className="w-full rounded bg-white/[0.08] border border-white/20 px-2 py-1.5 text-xs text-white"
-                                />
+                                <div>
+                                  <label className="text-[0.65rem] text-white/50 block mb-1 uppercase tracking-wider font-semibold">
+                                    {t("Session Time", "Horário da Sessão")}
+                                  </label>
+                                  <div className="flex items-center gap-2">
+                                    <select
+                                      value={isCustomTime ? "custom" : newSlotTime}
+                                      onChange={(e) => {
+                                        if (e.target.value === "custom") {
+                                          setIsCustomTime(true);
+                                          if (!customTimeInput) setCustomTimeInput(newSlotTime);
+                                        } else {
+                                          setIsCustomTime(false);
+                                          setNewSlotTime(e.target.value);
+                                        }
+                                      }}
+                                      className="w-full rounded-lg bg-white/[0.06] hover:bg-white/[0.09] border border-white/15 focus:border-cyan-400 px-3 py-2 text-xs text-white transition-all outline-none"
+                                    >
+                                      <option value="10h00" className="bg-[#0f1524]">10h00 (10:00 AM - Standard CCO)</option>
+                                      <option value="08h30" className="bg-[#0f1524]">08h30 (08:30 AM)</option>
+                                      <option value="09h00" className="bg-[#0f1524]">09h00 (09:00 AM)</option>
+                                      <option value="11h30" className="bg-[#0f1524]">11h30 (11:30 AM)</option>
+                                      <option value="14h00" className="bg-[#0f1524]">14h00 (02:00 PM)</option>
+                                      <option value="15h30" className="bg-[#0f1524]">15h30 (03:30 PM)</option>
+                                      <option value="custom" className="bg-[#0f1524]">{t("Custom Time...", "Outro Horário...")}</option>
+                                    </select>
+                                    {isCustomTime && (
+                                      <input
+                                        type="text"
+                                        value={customTimeInput}
+                                        onChange={(e) => setCustomTimeInput(e.target.value)}
+                                        placeholder="Ex: 16h00"
+                                        className="w-28 rounded-lg bg-white/[0.06] border border-cyan-400/40 px-2.5 py-2 text-xs text-white outline-none"
+                                      />
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           ) : (
                             <div>
+                              <label className="text-[0.65rem] text-white/50 block mb-1 uppercase tracking-wider font-semibold">
+                                {t("Manual Slot String", "Texto Completo do Turno")}
+                              </label>
                               <input
                                 type="text"
                                 value={newSlotCustom}
                                 onChange={(e) => setNewSlotCustom(e.target.value)}
-                                placeholder="Ex: Segunda-feira, 21 de Setembro – 10h00"
-                                className="w-full rounded bg-white/[0.08] border border-white/20 px-3 py-2 text-xs text-white"
+                                placeholder="Ex: Segunda-feira, 21 de Setembro - 10h00"
+                                className="w-full rounded-lg bg-white/[0.08] border border-white/20 px-3 py-2 text-xs text-white outline-none focus:border-cyan-400"
                               />
                             </div>
                           )}
 
-                          <div className="flex items-center justify-between pt-1">
-                            <span className="text-[0.68rem] text-white/40">
-                              Preview: <strong className="text-white">{useCustomInput ? newSlotCustom || "—" : `${newSlotDay}, ${newSlotDayNum} de ${newSlotMonth} – ${newSlotTime}`}</strong>
-                            </span>
+                          {/* Live Slot Preview & Add Action */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2.5 border-t border-white/[0.06]">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[0.68rem] text-white/50 font-medium">Preview:</span>
+                                <strong className="text-white text-xs font-semibold">
+                                  {computedNewSlot || "—"}
+                                </strong>
+                                {isComputedSlotDuplicate && (
+                                  <span className="px-2 py-0.5 rounded text-[0.62rem] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                    {t("Already in list", "Já existe na lista")}
+                                  </span>
+                                )}
+                              </div>
+                              {computedNewSlot && (
+                                <div className="text-[0.65rem] text-white/40 flex items-center gap-1.5 font-mono">
+                                  <span>EN:</span>
+                                  <span>{formatSlotDisplay(computedNewSlot, "en")}</span>
+                                </div>
+                              )}
+                            </div>
 
                             <button
                               type="button"
                               onClick={handleAddSlot}
-                              className="flex items-center gap-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 px-3.5 py-1.5 text-xs font-bold text-[#090d16] transition-all cursor-pointer shadow-sm"
+                              disabled={!computedNewSlot || isComputedSlotDuplicate}
+                              className={`flex items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-xs font-bold transition-all shadow-sm shrink-0 cursor-pointer ${
+                                !computedNewSlot || isComputedSlotDuplicate
+                                  ? "bg-white/10 text-white/30 cursor-not-allowed border border-white/5"
+                                  : "bg-cyan-500 hover:bg-cyan-400 text-[#090d16] active:scale-95 shadow-cyan-500/20"
+                              }`}
                             >
                               <Plus size={13} />
                               <span>{t("Add to Slots List", "Adicionar à Lista")}</span>
