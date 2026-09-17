@@ -69,6 +69,41 @@ async function sendViaGmailSmtp(payload: SendEmailOptions) {
   return { success: true, provider: "gmail-smtp", messageId: info.messageId };
 }
 
+let cachedBrevoHasCredits: boolean | null = null;
+let lastBrevoCheck = 0;
+
+async function checkBrevoHasCredits(): Promise<boolean> {
+  const now = Date.now();
+  if (cachedBrevoHasCredits !== null && now - lastBrevoCheck < 3 * 60 * 1000) {
+    return cachedBrevoHasCredits;
+  }
+  if (!process.env.BREVO_API_KEY) return false;
+  try {
+    const res = await fetch("https://api.brevo.com/v3/account", {
+      headers: { "api-key": process.env.BREVO_API_KEY },
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    const sendLimitPlan = data?.plan?.find(
+      (p: { creditsType?: string; type?: string }) =>
+        p.creditsType === "sendLimit" || p.type === "free",
+    );
+    const credits =
+      typeof sendLimitPlan?.credits === "number" ? sendLimitPlan.credits : 0;
+    cachedBrevoHasCredits = credits > 0;
+    lastBrevoCheck = now;
+    if (!cachedBrevoHasCredits) {
+      console.warn(
+        `[Email Provider] Brevo account has ${credits} credits remaining. Automatically routing through Gmail SMTP.`,
+      );
+    }
+    return cachedBrevoHasCredits;
+  } catch {
+    return false;
+  }
+}
+
 export async function sendTransactionalEmail(payload: SendEmailOptions) {
   const fallbackUser = process.env.FALLBACK_SMTP_USER;
   const fallbackPass = process.env.FALLBACK_SMTP_PASS;
@@ -80,16 +115,20 @@ export async function sendTransactionalEmail(payload: SendEmailOptions) {
   };
   const outgoingSender = payload.sender?.email ? payload.sender : defaultSender;
 
-  // If Gmail SMTP is explicitly preferred, deliver immediately through Gmail
-  if (
-    hasGmailSmtp &&
-    (process.env.EMAIL_PROVIDER === "gmail" || process.env.EMAIL_PROVIDER === "fallback")
-  ) {
+  // Check whether Brevo is available and actually has send credits
+  const brevoUsable =
+    Boolean(process.env.BREVO_API_KEY) &&
+    process.env.EMAIL_PROVIDER !== "gmail" &&
+    process.env.EMAIL_PROVIDER !== "fallback" &&
+    (await checkBrevoHasCredits());
+
+  // If Gmail SMTP is preferred or Brevo has 0 credits, deliver immediately via Gmail SMTP
+  if (hasGmailSmtp && (!brevoUsable || process.env.EMAIL_PROVIDER === "gmail")) {
     return sendViaGmailSmtp({ ...payload, sender: outgoingSender });
   }
 
-  // Attempt Brevo first
-  if (process.env.BREVO_API_KEY && process.env.EMAIL_PROVIDER !== "gmail") {
+  // Attempt Brevo if credits exist
+  if (brevoUsable && process.env.BREVO_API_KEY) {
     try {
       const brevoPayload: Record<string, unknown> = {
         ...payload,

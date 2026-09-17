@@ -219,6 +219,10 @@ export function CustomBroadcastView({
   // Test send state with user-entered custom email
   const [testEmailInput, setTestEmailInput] = useState("");
   const [isSendingTest, setIsSendingTest] = useState(false);
+  const [testFeedback, setTestFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   // Main dispatch state
   const [showRecipientList, setShowRecipientList] = useState(false);
@@ -384,24 +388,26 @@ export function CustomBroadcastView({
   const handleSendTest = async () => {
     const targetEmail = testEmailInput.trim();
     if (!targetEmail || !targetEmail.includes("@")) {
-      setStatusFeedback({
-        type: "error",
-        message: t(
-          "Please enter a valid email address for the test send.",
-          "Por favor introduza um endereço de e-mail válido para o envio de teste."
-        ),
-      });
+      const err = t(
+        "Please enter a valid email address for the test send.",
+        "Por favor introduza um endereço de e-mail válido para o envio de teste."
+      );
+      setTestFeedback({ type: "error", message: err });
+      setStatusFeedback({ type: "error", message: err });
       return;
     }
     if (!subject.trim() || !message.trim()) {
-      setStatusFeedback({
-        type: "error",
-        message: t("Please specify a subject and message.", "Por favor preencha o assunto e a mensagem."),
-      });
+      const err = t(
+        "Please specify a subject and message before sending.",
+        "Por favor preencha o assunto e a mensagem antes de enviar."
+      );
+      setTestFeedback({ type: "error", message: err });
+      setStatusFeedback({ type: "error", message: err });
       return;
     }
 
     setIsSendingTest(true);
+    setTestFeedback(null);
     setStatusFeedback(null);
 
     try {
@@ -424,18 +430,16 @@ export function CustomBroadcastView({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to send test email");
 
-      setStatusFeedback({
-        type: "success",
-        message: t(
-          `Test preview dispatched successfully to ${targetEmail}! Check your inbox.`,
-          `E-mail de teste enviado com sucesso para ${targetEmail}! Verifique a sua caixa de entrada.`
-        ),
-      });
+      const okMsg = t(
+        `✓ Test preview dispatched successfully to ${targetEmail}! Check your inbox.`,
+        `✓ E-mail de teste enviado com sucesso para ${targetEmail}! Verifique a sua caixa de entrada.`
+      );
+      setTestFeedback({ type: "success", message: okMsg });
+      setStatusFeedback({ type: "success", message: okMsg });
     } catch (err) {
-      setStatusFeedback({
-        type: "error",
-        message: (err as Error).message,
-      });
+      const errMsg = (err as Error).message || "Failed to send test email";
+      setTestFeedback({ type: "error", message: errMsg });
+      setStatusFeedback({ type: "error", message: errMsg });
     } finally {
       setIsSendingTest(false);
     }
@@ -837,6 +841,23 @@ export function CustomBroadcastView({
                 <span>{t("Send Test", "Enviar Teste")}</span>
               </button>
             </div>
+
+            {testFeedback && (
+              <div
+                className={`rounded-lg border p-2.5 text-xs flex items-center gap-2 ${
+                  testFeedback.type === "success"
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                    : "border-rose-500/30 bg-rose-500/10 text-rose-300"
+                }`}
+              >
+                {testFeedback.type === "success" ? (
+                  <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
+                ) : (
+                  <AlertTriangle size={14} className="text-rose-400 shrink-0" />
+                )}
+                <span>{testFeedback.message}</span>
+              </div>
+            )}
           </div>
 
           {/* 4. Primary Dispatch Button */}
