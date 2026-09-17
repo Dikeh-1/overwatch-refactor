@@ -1007,32 +1007,55 @@ export default function RebookingGraceView({
                     Reconhecendo o seu manifesto interesse e o esforço de candidatura à vaga de <strong>Operadora de CCO</strong>, a Direcção de Recursos Humanos decidiu conceder-lhe, em regime excepcional, uma <strong>oportunidade final de reagendamento (Período de Graça)</strong> para os dias de teste que ainda dispõem de vagas abertas.
                   </p>
 
-                  <div className="p-3 bg-emerald-50 border border-emerald-200 border-l-4 border-l-emerald-600 rounded">
-                    <strong className="text-emerald-800 text-[11px] block uppercase mb-1">
-                      ✨ AUTORIZAÇÃO EXCEPCIONAL CONCEDIDA
+                  {/* Formal Decision Directive Box (Executive Slate) */}
+                  <div className="p-3.5 bg-[#f8fafc] border border-[#cbd5e1] border-l-4 border-l-[#0b1329] rounded">
+                    <strong className="text-[#0b1329] text-[10px] block uppercase tracking-wider font-bold mb-1">
+                      DELIBERAÇÃO DA DIRECÇÃO DE RECURSOS HUMANOS · CONCESSÃO EXCEPCIONAL
                     </strong>
-                    <p className="text-emerald-700 text-[11px] m-0">
-                      Foi gerado um Link de Utilização Única (OTL) associado à sua candidatura. Através deste link, poderá escolher uma das novas datas disponíveis na próxima semana.
+                    <p className="text-[#334155] text-[11px] leading-relaxed m-0">
+                      Nos termos deliberados pela Direcção, foi emitida uma <strong>autorização pessoal de utilização única (One-Time Link)</strong> para a sua candidatura. Esta credencial faculta o acesso exclusivo para marcação de uma nova data presencial entre as vagas ainda abertas.
                     </p>
                   </div>
 
-                  <div className="p-3 bg-amber-50 border border-amber-200 border-l-4 border-l-amber-500 rounded">
-                    <strong className="text-amber-900 text-[11px] block uppercase mb-1">
-                      📍 ENDEREÇO EXACTO DAS INSTALAÇÕES:
+                  {/* Official Location Specifications (Clean Table Block) */}
+                  <div className="p-3.5 bg-white border border-[#e2e8f0] rounded">
+                    <strong className="text-[#0b1329] text-[10px] block uppercase tracking-wider font-bold mb-2 pb-1 border-b border-[#e2e8f0]">
+                      LOCALIZAÇÃO OFICIAL DAS INSTALAÇÕES
                     </strong>
-                    <p className="text-[#090d16] font-bold text-xs m-0">
-                      Overwatch Moçambique — Edifício Sede
-                    </p>
-                    <p className="text-amber-800 text-[11px] m-0">
-                      Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo
-                    </p>
+                    <table className="w-full text-[11px] text-[#334155]">
+                      <tbody>
+                        <tr>
+                          <td className="py-1 font-semibold text-[#64748b] w-24">Edifício:</td>
+                          <td className="py-1 font-bold text-[#0f172a]">Overwatch Moçambique — Sede Operacional</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1 font-semibold text-[#64748b]">Endereço:</td>
+                          <td className="py-1 font-bold text-[#0f172a]">Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1 font-semibold text-[#64748b] align-top">Referência:</td>
+                          <td className="py-1 text-[#64748b]">Entre a Av. Vladimir Lenine e a Av. Salvador Allende (antes do cruzamento com a Av. Filipe Samuel Magaia).</td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
 
-                  <div className="text-center py-2">
-                    <div className="inline-block bg-[#0b1329] text-white px-5 py-2.5 rounded font-bold text-xs shadow-md">
-                      Reagendar Meu Teste de Selecção &rarr;
+                  {/* Formal Call to Action */}
+                  <div className="text-center py-2.5">
+                    <div className="inline-block bg-[#0b1329] text-white px-6 py-2.5 rounded font-bold text-xs uppercase tracking-wider shadow-sm">
+                      Seleccionar Nova Data de Teste &rarr;
                     </div>
-                    <div className="text-[10px] text-gray-400 mt-1 font-mono">
+                    <div className="text-[10px] text-[#64748b] mt-1.5 font-medium">
+                      Credencial pessoal e intransmissível · Válida para um único acesso
+                    </div>
+                  </div>
+
+                  {/* Clean Link Fallback Box */}
+                  <div className="p-2.5 bg-[#f8fafc] border border-[#e2e8f0] rounded text-[10px]">
+                    <div className="text-[#64748b] mb-1 font-medium">
+                      Endereço seguro associado ao link de utilização única (OTL):
+                    </div>
+                    <div className="font-mono text-[#334155] break-all select-all bg-white p-1.5 border border-[#e2e8f0] rounded text-[9.5px]">
                       {getOtlUrl(previewCandidate)}
                     </div>
                   </div>

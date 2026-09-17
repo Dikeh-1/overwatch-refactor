@@ -246,11 +246,10 @@ export async function notifyApplication(application: Application, cv: Buffer) {
         <!-- Body Info -->
         <div style="padding: 32px;">
           <!-- Attached CV Callout Banner -->
-          <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; display: flex; align-items: center;">
-            <span style="font-size: 18px; margin-right: 12px;">📎</span>
+          <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #0b1329; border-radius: 6px; padding: 14px 18px; margin-bottom: 24px;">
             <div>
-              <strong style="font-size: 13px; color: #166534; display: block;">Currículo (CV) Anexado a este E-mail</strong>
-              <span style="font-size: 12px; color: #15803d;">Ficheiro: ${application.cvName} (${cvSizeKB} KB)</span>
+              <strong style="font-size: 13px; color: #0b1329; display: block;">Currículo (CV) Anexado a este E-mail</strong>
+              <span style="font-size: 12px; color: #475569;">Ficheiro: ${application.cvName} (${cvSizeKB} KB)</span>
             </div>
           </div>
 
@@ -598,8 +597,8 @@ export async function sendTestInvitation({
               <div style="font-size: 11px; color: #64748b; margin-top: 8px;">
                 Clique no botão acima para escolher a sua data no sistema.
               </div>
-              <div style="font-size: 11px; color: #92400e; background-color: #fef3c7; border: 1px solid #fde68a; border-radius: 6px; padding: 8px 12px; display: inline-block; margin-top: 10px; font-weight: 600;">
-                ⚠️ O agendamento é de utilização única. Uma vez confirmada a data, a escolha é definitiva e não poderá ser alterada.
+              <div style="font-size: 11px; color: #0b1329; background-color: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; display: inline-block; margin-top: 10px; font-weight: 600;">
+                O agendamento é de utilização única. Uma vez confirmada a data, a escolha é definitiva e não poderá ser alterada.
               </div>
             </div>
 
@@ -770,17 +769,17 @@ export async function sendGatePassEmail({
               }
             </p>
 
-            <!-- MANDATORY ACCESS NOTICE (Amber/Yellow alert card) -->
-            <div style="background-color: #fefce8; border: 1px solid #fef08a; border-left: 4px solid #ca8a04; border-radius: 8px; padding: 16px; margin: 20px 0;">
-              <strong style="font-size: 13px; color: #854d0e; display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.03em;">
-                ⚠️ REGRA OBRIGATÓRIA DE ACESSO À PORTARIA DA OVERWATCH
+            <!-- MANDATORY ACCESS NOTICE (Corporate Specification Card) -->
+            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #0b1329; border-radius: 6px; padding: 16px 20px; margin: 20px 0;">
+              <strong style="font-size: 12px; color: #0b1329; display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 800;">
+                REGRA OBRIGATÓRIA DE ACESSO À PORTARIA DA OVERWATCH
               </strong>
-              <p style="font-size: 13px; color: #713f12; margin: 0 0 8px 0; line-height: 1.55;">
+              <p style="font-size: 13px; color: #334155; margin: 0 0 8px 0; line-height: 1.55;">
                 O controlo de acesso às nossas instalações é estritamente fiscalizado pelo posto de segurança. <strong>Para ter autorização de entrada na sede da empresa, é obrigatório apresentar este Código QR na portaria</strong> ao agente de segurança para validação da sua vaga.
               </p>
-              <div style="font-size: 12px; color: #854d0e; line-height: 1.5; padding-top: 6px; border-top: 1px dashed #fde047;">
-                • <strong>Poderá apresentar uma CÓPIA DIGITAL:</strong> Exibindo o código QR directamente no ecrã do seu telemóvel.<br />
-                • <strong>OU uma CÓPIA IMPRESSA:</strong> Imprimindo em papel este passe ou o ficheiro de imagem anexado a este e-mail.
+              <div style="font-size: 12px; color: #475569; line-height: 1.5; padding-top: 6px; border-top: 1px dashed #cbd5e1;">
+                • <strong>Cópia Digital:</strong> Exibindo o código QR directamente no ecrã do seu telemóvel.<br />
+                • <strong>OU Cópia Impressa:</strong> Imprimindo em papel este passe ou o ficheiro de imagem anexado a este e-mail.
               </div>
             </div>
 
@@ -804,7 +803,7 @@ export async function sendGatePassEmail({
                     : `<div style="width: 220px; height: 220px; background-color: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #64748b;">Consulte no link abaixo</div>`
                 }
                 <div style="font-size: 11px; font-family: monospace; color: #090d16; font-weight: 700; margin-top: 10px; letter-spacing: 0.02em;">
-                  📅 ${activeSlot}
+                  ${activeSlot}
                 </div>
               </div>
 
@@ -817,8 +816,8 @@ export async function sendGatePassEmail({
             <div style="border: 1px solid #cbd5e1; border-left: 4px solid #0b1329; border-radius: 8px; background-color: #f8fafc; padding: 18px 20px; margin: 24px 0;">
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
-                  <td style="padding: 6px 0; font-size: 12px; font-weight: 700; color: #64748b; width: 140px; text-transform: uppercase;">
-                    📅 Data do Teste:
+                  <td style="padding: 6px 0; font-size: 12px; font-weight: 700; color: #64748b; width: 150px; text-transform: uppercase;">
+                    Data do Teste:
                   </td>
                   <td style="padding: 6px 0; font-size: 14px; font-weight: 700; color: #090d16;">
                     ${activeSlot}
@@ -826,7 +825,7 @@ export async function sendGatePassEmail({
                 </tr>
                 <tr>
                   <td style="padding: 6px 0; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase;">
-                    ⏰ Horário do Teste:
+                    Horário do Teste:
                   </td>
                   <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: #090d16;">
                     10h00 às 11h30
@@ -834,7 +833,7 @@ export async function sendGatePassEmail({
                 </tr>
                 <tr>
                   <td style="padding: 6px 0; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase;">
-                    ⏱️ Chegada Obrigatória:
+                    Chegada Obrigatória:
                   </td>
                   <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: #047857;">
                     09h30 (30 minutos antes do início)
@@ -842,7 +841,7 @@ export async function sendGatePassEmail({
                 </tr>
                 <tr>
                   <td style="padding: 6px 0; font-size: 12px; font-weight: 700; color: #b91c1c; text-transform: uppercase;">
-                    🚫 Encerramento Portão:
+                    Encerramento do Portão:
                   </td>
                   <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: #b91c1c;">
                     09h50 impreterivelmente
@@ -850,7 +849,7 @@ export async function sendGatePassEmail({
                 </tr>
                 <tr>
                   <td style="padding: 6px 0; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; vertical-align: top;">
-                    📍 Local:
+                    Local:
                   </td>
                   <td style="padding: 6px 0; font-size: 13px; color: #334155; line-height: 1.45;">
                     <strong>Overwatch Moçambique</strong><br />
@@ -862,8 +861,8 @@ export async function sendGatePassEmail({
 
             <!-- MANDATORY CHECKLIST BOX -->
             <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px 20px; margin-bottom: 24px;">
-              <strong style="font-size: 13px; color: #090d16; display: block; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.03em;">
-                📋 O que deve trazer obrigatoriamente:
+              <strong style="font-size: 12px; color: #090d16; display: block; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 800;">
+                DOCUMENTAÇÃO & MATERIAL OBRIGATÓRIO:
               </strong>
               <div style="font-size: 13px; color: #334155; line-height: 1.6;">
                 • <strong>Passe de Entrada QR Code:</strong> No telemóvel ou cópia impressa.<br />
@@ -1375,51 +1374,80 @@ export async function sendInocioWilsonRebookingEmail({
               Reconhecemos que esta instabilidade no sistema causou constrangimentos à sua deslocação para a realização do teste presencial agendado para hoje. Apresentamos as nossas sinceras desculpas pelo sucedido. A nossa equipa de engenharia trabalha activamente a cada minuto para aprimorar os nossos sistemas de recrutamento.
             </p>
 
-            <!-- EXCLUSIVE EXCEPTION NOTICE CARD -->
-            <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-left: 4px solid #059669; border-radius: 8px; padding: 16px; margin: 20px 0;">
-              <strong style="font-size: 13px; color: #065f46; display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.03em;">
-                ✨ EXCEPÇÃO CONCEDIDA: REAGENDAMENTO AUTORIZADO
+            <!-- FORMAL EXECUTIVE DIRECTIVE (Corporate Slate) -->
+            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #0b1329; border-radius: 6px; padding: 18px 20px; margin: 22px 0;">
+              <strong style="font-size: 12px; color: #0b1329; display: block; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 800;">
+                DELIBERAÇÃO DA DIRECÇÃO DE RECURSOS HUMANOS · CONCESSÃO EXCEPCIONAL
               </strong>
-              <p style="font-size: 13px; color: #047857; margin: 0; line-height: 1.55;">
-                Por decisão expressa da Direcção de RH, foi-lhe atribuída uma autorização excepcional exclusiva. O seu link pessoal foi totalmente reactivado para que possa <strong>escolher uma nova data de teste</strong> que seja mais conveniente para si.
+              <p style="font-size: 13px; color: #334155; margin: 0; line-height: 1.6;">
+                Por deliberação expressa da Direcção de RH, foi-lhe atribuída uma autorização excepcional exclusiva. O seu link pessoal foi reactivado para que possa <strong>escolher uma nova data de realização do teste</strong> de entre as opções ainda disponíveis.
               </p>
             </div>
 
-            <!-- CORRECT ADDRESS CARD (Highlighting 1948) -->
-            <div style="background-color: #fefce8; border: 1px solid #fef08a; border-left: 4px solid #ca8a04; border-radius: 8px; padding: 16px; margin: 20px 0;">
-              <strong style="font-size: 13px; color: #854d0e; display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.03em;">
-                📍 ENDEREÇO EXACTO E RECTIFICADO DAS INSTALAÇÕES:
-              </strong>
-              <p style="font-size: 14px; color: #090d16; font-weight: 700; margin: 0 0 4px 0;">
-                Overwatch Moçambique — Edifício Sede
-              </p>
-              <p style="font-size: 13px; color: #713f12; margin: 0; line-height: 1.5;">
-                <strong>Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo</strong><br />
-                <span style="font-size: 12px; color: #a16207;">(Entre a Av. Vlademir Lenine e a Av. Salvador Allende, antes da esquina com a Av. Filipe Samuel Magaia)</span>
-              </p>
+            <!-- OFFICIAL FACILITY SPECIFICATION (Clean Corporate Table) -->
+            <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 18px 20px; margin: 22px 0;">
+              <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #0b1329; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px;">
+                LOCALIZAÇÃO OFICIAL DAS INSTALAÇÕES
+              </div>
+              <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <tr>
+                  <td style="padding: 6px 0; font-weight: 700; color: #475569; width: 140px; vertical-align: top;">Edifício:</td>
+                  <td style="padding: 6px 0; color: #0f172a; font-weight: 700;">Overwatch Moçambique — Sede Operacional</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; font-weight: 700; color: #475569; vertical-align: top;">Endereço:</td>
+                  <td style="padding: 6px 0; color: #0f172a; font-weight: 700;">Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; font-weight: 700; color: #475569; vertical-align: top;">Ponto de Referência:</td>
+                  <td style="padding: 6px 0; color: #64748b; line-height: 1.5;">Entre a Av. Vladimir Lenine e a Av. Salvador Allende (antes da esquina com a Av. Filipe Samuel Magaia).</td>
+                </tr>
+              </table>
             </div>
 
             <!-- DEDICATED REBOOKING ACTION BUTTON -->
-            <div style="text-align: center; margin: 28px 0 20px 0;">
-              <a href="${bookingUrl}" target="_blank" style="display: inline-block; background-color: #0b1329; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; padding: 14px 30px; border-radius: 8px; box-shadow: 0 4px 14px rgba(11, 19, 41, 0.25); letter-spacing: 0.02em;">
-                Escolher Minha Nova Data de Teste &rarr;
+            <div style="text-align: center; margin: 32px 0 20px 0;">
+              <a href="${bookingUrl}" target="_blank" style="display: inline-block; background-color: #0b1329; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; padding: 15px 36px; border-radius: 6px; box-shadow: 0 4px 12px rgba(11, 19, 41, 0.2);">
+                Seleccionar Nova Data de Teste &rarr;
               </a>
-              <div style="font-size: 11px; color: #64748b; margin-top: 8px;">
-                Clique no botão acima para aceder ao portal e seleccionar o seu novo dia.
+              <div style="font-size: 11px; color: #64748b; margin-top: 10px;">
+                Aceda ao portal oficial para seleccionar o dia mais conveniente.
               </div>
             </div>
 
-            <!-- RULES AND REQUIREMENTS -->
-            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; margin-bottom: 24px;">
-              <strong style="font-size: 12px; color: #090d16; display: block; margin-bottom: 6px; text-transform: uppercase;">
-                Instruções para o Novo Dia Escolhido:
-              </strong>
-              <div style="font-size: 12px; color: #334155; line-height: 1.6;">
-                • <strong>Horário de Chegada:</strong> Apresentar-se às 09h30 na portaria (o portão encerra impreterivelmente às 09h50, teste 10h00–11h30).<br />
-                • <strong>Documentos:</strong> Documento original de identificação (BI / Passaporte / DIRE).<br />
-                • <strong>Material:</strong> Caneta esferográfica de tinta preta ou azul.<br />
-                • <strong>Passe QR:</strong> Após seleccionar a nova data, o seu novo Passe QR será gerado imediatamente no portal.
+            <!-- CLEAN SECURE URL FALLBACK BOX -->
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 16px; margin: 0 0 24px 0;">
+              <div style="font-size: 11px; color: #64748b; margin-bottom: 4px; font-weight: 500;">
+                Em caso de dificuldade com o botão, copie e cole o seguinte endereço seguro no seu navegador:
               </div>
+              <div style="font-family: Consolas, Monaco, monospace; font-size: 11px; color: #334155; word-break: break-all; line-height: 1.45;">
+                ${bookingUrl}
+              </div>
+            </div>
+
+            <!-- RULES AND REQUIREMENTS (Corporate Specification) -->
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 18px 20px; margin-bottom: 24px;">
+              <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #0b1329; margin-bottom: 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px;">
+                DISPOSIÇÕES OBRIGATÓRIAS PARA O NOVO DIA ESCOLHIDO
+              </div>
+              <table style="width: 100%; border-collapse: collapse; font-size: 12px; color: #334155; line-height: 1.6;">
+                <tr>
+                  <td style="padding: 4px 0; font-weight: 700; color: #0f172a; width: 150px; vertical-align: top;">Horário de Chegada:</td>
+                  <td style="padding: 4px 0;">Apresentação rigorosa às <strong>09h30</strong> na portaria de segurança (o portão encerra às 09h50; período de exame: 10h00 às 11h30).</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; font-weight: 700; color: #0f172a; vertical-align: top;">Identificação:</td>
+                  <td style="padding: 4px 0;">Apresentação obrigatória do documento original e válido com fotografia (BI, Passaporte ou DIRE).</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; font-weight: 700; color: #0f172a; vertical-align: top;">Material Permitido:</td>
+                  <td style="padding: 4px 0;">Caneta esferográfica de tinta azul ou preta.</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; font-weight: 700; color: #0f172a; vertical-align: top;">Credencial de Acesso:</td>
+                  <td style="padding: 4px 0;">O novo Passe de Acesso QR Code será emitido e exibido imediatamente no portal após a confirmação da data.</td>
+                </tr>
+              </table>
             </div>
 
             <!-- Formal Sign-Off -->
@@ -1579,51 +1607,80 @@ export async function sendRebookingGraceEmail({
               Reconhecendo o seu manifesto interesse e o esforço de candidatura à vaga de <strong>Operadora de CCO</strong>, a Direcção de Recursos Humanos decidiu conceder-lhe, em regime excepcional, uma <strong>oportunidade final de reagendamento (Período de Graça)</strong> para os dias de teste que ainda dispõem de vagas abertas.
             </p>
 
-            <!-- EXCLUSIVE EXCEPTION NOTICE CARD -->
-            <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-left: 4px solid #059669; border-radius: 8px; padding: 16px; margin: 20px 0;">
-              <strong style="font-size: 13px; color: #065f46; display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.03em;">
-                ✨ AUTORIZAÇÃO EXCEPCIONAL CONCEDIDA
+            <!-- FORMAL EXECUTIVE DIRECTIVE (Corporate Slate) -->
+            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #0b1329; border-radius: 6px; padding: 18px 20px; margin: 22px 0;">
+              <strong style="font-size: 12px; color: #0b1329; display: block; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 800;">
+                DELIBERAÇÃO DA DIRECÇÃO DE RECURSOS HUMANOS · CONCESSÃO EXCEPCIONAL
               </strong>
-              <p style="font-size: 13px; color: #047857; margin: 0; line-height: 1.55;">
-                Foi gerado um <strong>Link de Utilização Única (OTL)</strong> associado à sua candidatura. Através deste link, poderá escolher uma das novas datas disponíveis na próxima semana. Após a escolha, o link expira imediatamente e o agendamento torna-se definitivo.
+              <p style="font-size: 13px; color: #334155; margin: 0; line-height: 1.6;">
+                Nos termos deliberados pela Direcção, foi emitida uma <strong>autorização pessoal de utilização única (One-Time Link)</strong> para a sua candidatura. Esta credencial faculta o acesso exclusivo ao sistema para marcação de uma nova data presencial entre as vagas ainda abertas.
               </p>
             </div>
 
-            <!-- CORRECT ADDRESS CARD (Highlighting 1948) -->
-            <div style="background-color: #fefce8; border: 1px solid #fef08a; border-left: 4px solid #ca8a04; border-radius: 8px; padding: 16px; margin: 20px 0;">
-              <strong style="font-size: 13px; color: #854d0e; display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.03em;">
-                📍 ENDEREÇO EXACTO DAS INSTALAÇÕES DA OVERWATCH:
-              </strong>
-              <p style="font-size: 14px; color: #090d16; font-weight: 700; margin: 0 0 4px 0;">
-                Overwatch Moçambique — Edifício Sede
-              </p>
-              <p style="font-size: 13px; color: #713f12; margin: 0; line-height: 1.5;">
-                <strong>Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo</strong><br />
-                <span style="font-size: 12px; color: #a16207;">(Situado entre a Av. Vladimir Lenine e a Av. Salvador Allende, antes do cruzamento com a Av. Filipe Samuel Magaia)</span>
-              </p>
+            <!-- OFFICIAL FACILITY SPECIFICATION (Clean Corporate Table) -->
+            <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 18px 20px; margin: 22px 0;">
+              <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #0b1329; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px;">
+                LOCALIZAÇÃO OFICIAL DAS INSTALAÇÕES
+              </div>
+              <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <tr>
+                  <td style="padding: 6px 0; font-weight: 700; color: #475569; width: 140px; vertical-align: top;">Edifício:</td>
+                  <td style="padding: 6px 0; color: #0f172a; font-weight: 700;">Overwatch Moçambique — Sede Operacional</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; font-weight: 700; color: #475569; vertical-align: top;">Endereço:</td>
+                  <td style="padding: 6px 0; color: #0f172a; font-weight: 700;">Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; font-weight: 700; color: #475569; vertical-align: top;">Ponto de Referência:</td>
+                  <td style="padding: 6px 0; color: #64748b; line-height: 1.5;">Entre a Av. Vladimir Lenine e a Av. Salvador Allende (antes do cruzamento com a Av. Filipe Samuel Magaia).</td>
+                </tr>
+              </table>
             </div>
 
             <!-- DEDICATED REBOOKING ACTION BUTTON (OTL) -->
-            <div style="text-align: center; margin: 28px 0 20px 0;">
-              <a href="${otlBookingUrl}" target="_blank" style="display: inline-block; background-color: #0b1329; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; padding: 14px 30px; border-radius: 8px; box-shadow: 0 4px 14px rgba(11, 19, 41, 0.25); letter-spacing: 0.02em;">
-                Reagendar Meu Teste de Selecção &rarr;
+            <div style="text-align: center; margin: 32px 0 20px 0;">
+              <a href="${otlBookingUrl}" target="_blank" style="display: inline-block; background-color: #0b1329; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; padding: 15px 36px; border-radius: 6px; box-shadow: 0 4px 12px rgba(11, 19, 41, 0.2);">
+                Seleccionar Nova Data de Teste &rarr;
               </a>
-              <div style="font-size: 11px; color: #64748b; margin-top: 8px;">
-                Link pessoal e intransmissível de uso único (OTL).
+              <div style="font-size: 11px; color: #64748b; margin-top: 10px;">
+                Credencial pessoal e intransmissível · Válida para um único acesso.
               </div>
             </div>
 
-            <!-- RULES AND REQUIREMENTS -->
-            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; margin-bottom: 24px;">
-              <strong style="font-size: 12px; color: #090d16; display: block; margin-bottom: 6px; text-transform: uppercase;">
-                Regras Obrigatórias para o Novo Dia de Teste:
-              </strong>
-              <div style="font-size: 12px; color: #334155; line-height: 1.6;">
-                • <strong>Horário de Chegada:</strong> Apresentar-se às <strong>09h30</strong> na portaria (o portão encerra impreterivelmente às 09h50, teste decorre das 10h00 às 11h30).<br />
-                • <strong>Identificação:</strong> Documento original de identificação com foto (BI, Passaporte ou DIRE).<br />
-                • <strong>Material:</strong> Caneta esferográfica de tinta azul ou preta.<br />
-                • <strong>Passe QR:</strong> Imediatamente após confirmar a sua nova data, o seu novo Passe QR de entrada será emitido no portal.
+            <!-- CLEAN SECURE URL FALLBACK BOX -->
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 16px; margin: 0 0 24px 0;">
+              <div style="font-size: 11px; color: #64748b; margin-bottom: 4px; font-weight: 500;">
+                Em caso de dificuldade com o botão, copie e cole o seguinte endereço seguro no seu navegador:
               </div>
+              <div style="font-family: Consolas, Monaco, monospace; font-size: 11px; color: #334155; word-break: break-all; line-height: 1.45;">
+                ${otlBookingUrl}
+              </div>
+            </div>
+
+            <!-- RULES AND REQUIREMENTS (Corporate Specification) -->
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 18px 20px; margin-bottom: 24px;">
+              <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #0b1329; margin-bottom: 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px;">
+                DISPOSIÇÕES OBRIGATÓRIAS PARA O DIA DO EXAME
+              </div>
+              <table style="width: 100%; border-collapse: collapse; font-size: 12px; color: #334155; line-height: 1.6;">
+                <tr>
+                  <td style="padding: 4px 0; font-weight: 700; color: #0f172a; width: 150px; vertical-align: top;">Horário de Chegada:</td>
+                  <td style="padding: 4px 0;">Apresentação rigorosa às <strong>09h30</strong> na portaria de segurança (o portão encerra impreterivelmente às 09h50; período de exame: 10h00 às 11h30).</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; font-weight: 700; color: #0f172a; vertical-align: top;">Identificação:</td>
+                  <td style="padding: 4px 0;">Apresentação obrigatória do documento original e válido com fotografia (BI, Passaporte ou DIRE).</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; font-weight: 700; color: #0f172a; vertical-align: top;">Material Permitido:</td>
+                  <td style="padding: 4px 0;">Caneta esferográfica de tinta azul ou preta.</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; font-weight: 700; color: #0f172a; vertical-align: top;">Credencial de Acesso:</td>
+                  <td style="padding: 4px 0;">O novo Passe de Acesso QR Code será emitido e exibido imediatamente no portal após a confirmação da data.</td>
+                </tr>
+              </table>
             </div>
 
             <!-- Formal Sign-Off -->
@@ -1809,16 +1866,16 @@ export async function sendAddressCorrectionBroadcastEmail({
               Pedimos as nossas sinceras desculpas por qualquer confusão causada por este lapso do sistema. A nossa equipa técnica monitoriza e aprimora continuamente as nossas infra-estruturas digitais para assegurar a máxima fiabilidade.
             </div>
 
-            <!-- PROMINENT CORRECTED ADDRESS CARD (1948) -->
-            <div style="background-color: #fefce8; border: 2px solid #ca8a04; border-radius: 10px; padding: 20px; margin: 22px 0;">
-              <strong style="font-size: 13px; color: #854d0e; display: block; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em;">
-                📍 ENDEREÇO EXACTO E OFICIAL PARA O DIA DO TESTE:
+            <!-- PROMINENT CORRECTED ADDRESS SPECIFICATION -->
+            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #0b1329; border-radius: 6px; padding: 20px; margin: 22px 0;">
+              <strong style="font-size: 11px; color: #0b1329; display: block; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 800;">
+                ENDEREÇO OFICIAL DAS INSTALAÇÕES DA OVERWATCH
               </strong>
-              <div style="font-size: 17px; font-weight: 800; color: #090d16; margin-bottom: 6px;">
+              <div style="font-size: 16px; font-weight: 800; color: #090d16; margin-bottom: 6px;">
                 Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo
               </div>
-              <p style="font-size: 13px; color: #713f12; margin: 0; line-height: 1.55;">
-                Ponto de referência: Entre a Av. Vlademir Lenine e a Av. Salvador Allende (antes da esquina com a Av. Filipe Samuel Magaia).
+              <p style="font-size: 13px; color: #475569; margin: 0; line-height: 1.55;">
+                Ponto de referência: Entre a Av. Vladimir Lenine e a Av. Salvador Allende (antes da esquina com a Av. Filipe Samuel Magaia).
               </p>
             </div>
 
@@ -1830,7 +1887,7 @@ export async function sendAddressCorrectionBroadcastEmail({
                     Turno Confirmado:
                   </td>
                   <td style="padding: 4px 0; font-size: 14px; font-weight: 700; color: #090d16;">
-                    📅 ${activeSlot}
+                    ${activeSlot}
                   </td>
                 </tr>
                 <tr>
@@ -1871,7 +1928,7 @@ export async function sendAddressCorrectionBroadcastEmail({
                     : `<div style="width: 200px; height: 200px; background-color: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #64748b;">Consulte no link abaixo</div>`
                 }
                 <div style="font-size: 11px; font-family: monospace; color: #090d16; font-weight: 700; margin-top: 8px;">
-                  📅 ${activeSlot}
+                  ${activeSlot}
                 </div>
               </div>
 
