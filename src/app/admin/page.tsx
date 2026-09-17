@@ -2417,7 +2417,7 @@ Overwatch`;
         admin-sidebar fixed inset-y-0 left-0 z-50 w-72 flex flex-col overflow-y-auto
         transition-transform duration-300 ease-in-out
         ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
-        lg:translate-x-0 lg:w-64 lg:z-30 p-5 lg:p-6
+        lg:translate-x-0 lg:w-72 lg:z-30 p-5 lg:p-6
       `}>
         {/* Mobile close button inside sidebar */}
         <div className="lg:hidden flex justify-end mb-2 -mt-1">
@@ -2547,60 +2547,60 @@ Overwatch`;
                         }}
                         className={`w-full flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all cursor-pointer ${
                           isActiveCampaign
-                            ? "bg-sky-500/15 text-white border border-sky-500/30 shadow-sm"
-                            : "text-white/70 hover:bg-white/[0.05] hover:text-white border border-transparent"
+                            ? "bg-white/[0.08] text-white border border-white/[0.14] shadow-sm"
+                            : "text-slate-300 hover:bg-white/[0.04] hover:text-white border border-transparent"
                         }`}
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${
-                            isActiveCampaign ? "bg-sky-500/20 text-sky-400" : "bg-white/[0.06] text-white/50"
+                            isActiveCampaign ? "bg-white/[0.10] text-white" : "bg-white/[0.04] text-slate-400"
                           }`}>
                             <Briefcase size={13} />
                           </div>
-                          <span className="truncate text-[0.72rem]">
+                          <span className="truncate text-[0.74rem] font-medium">
                             {lang === "pt" ? role.pt : role.en}
                           </span>
                           <span className={`px-1.5 py-0.2 rounded text-[0.52rem] font-bold ${
                             role.open
-                              ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
-                              : "bg-amber-500/10 text-amber-300 border border-amber-500/20"
+                              ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                              : "bg-white/[0.05] text-slate-400 border border-white/10"
                           }`}>
                             {role.open ? t("OPEN", "ABERTA") : t("CLOSED", "FECHADA")}
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
                           {rolePending > 0 && (
-                            <span className="rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 text-[0.6rem] font-bold">
+                            <span className="rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 px-1.5 py-0.5 text-[0.6rem] font-mono font-medium">
                               {rolePending}
                             </span>
                           )}
-                          <span className={`rounded-full px-1.5 py-0.5 text-[0.6rem] font-bold ${
-                            isActiveCampaign ? "bg-sky-500/20 text-sky-300" : "bg-white/10 text-white/60"
+                          <span className={`rounded-full px-1.5 py-0.5 text-[0.6rem] font-mono font-medium ${
+                            isActiveCampaign ? "bg-white/15 text-white" : "bg-white/[0.06] text-slate-400"
                           }`}>
                             {roleAppsCount}
                           </span>
-                          <ChevronDown size={12} className={`transition-transform ${isActiveCampaign ? "rotate-180 text-sky-400" : "text-white/40"}`} />
+                          <ChevronDown size={12} className={`transition-transform ${isActiveCampaign ? "rotate-180 text-white/80" : "text-white/30"}`} />
                         </div>
                       </button>
 
                       {/* Sub-navigation (only visible when this campaign is active) */}
                       {isActiveCampaign && (
-                        <div className="mt-1 ml-3 pl-3 border-l border-sky-500/20 space-y-0.5">
+                        <div className="mt-1 ml-3 pl-3 border-l border-white/[0.08] space-y-0.5">
                           {/* Applications sub-tab */}
                           <button
                             onClick={() => { setView("applications"); setSidebarOpen(false); }}
-                            className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[0.72rem] font-semibold transition-all cursor-pointer ${
+                            className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[0.72rem] font-medium transition-all cursor-pointer ${
                               view === "applications"
-                                ? "bg-white/[0.1] text-white border border-white/15"
-                                : "text-white/60 hover:bg-white/[0.05] hover:text-white border border-transparent"
+                                ? "bg-white/[0.08] text-white border border-white/[0.12] font-semibold"
+                                : "text-slate-400 hover:bg-white/[0.04] hover:text-white border border-transparent"
                             }`}
                           >
                             <div className="flex items-center gap-2">
-                              <LayoutDashboard size={13} />
+                              <LayoutDashboard size={13} className={view === "applications" ? "text-white" : "text-slate-400"} />
                               <span>{t("Applications", "Candidaturas")}</span>
                             </div>
-                            <span className={`rounded-full px-1.5 py-0.5 text-[0.6rem] font-bold ${
-                              view === "applications" ? "bg-white/20 text-white" : "bg-white/10 text-white/60"
+                            <span className={`rounded-md px-1.5 py-0.5 text-[0.58rem] font-mono font-medium ${
+                              view === "applications" ? "bg-white/15 text-white" : "bg-white/[0.06] text-slate-400 border border-white/[0.06]"
                             }`}>
                               {roleAppsCount}
                             </span>
@@ -2609,19 +2609,19 @@ Overwatch`;
                           {/* Convocations sub-tab */}
                           <button
                             onClick={() => { setView("broadcast"); setSidebarOpen(false); }}
-                            className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[0.72rem] font-semibold transition-all cursor-pointer ${
+                            className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[0.72rem] font-medium transition-all cursor-pointer ${
                               view === "broadcast"
-                                ? "bg-white/[0.1] text-white border border-white/15"
-                                : "text-white/60 hover:bg-white/[0.05] hover:text-white border border-transparent"
+                                ? "bg-white/[0.08] text-white border border-white/[0.12] font-semibold"
+                                : "text-slate-400 hover:bg-white/[0.04] hover:text-white border border-transparent"
                             }`}
                           >
                             <div className="flex items-center gap-2">
-                              <Mail size={13} />
+                              <Mail size={13} className={view === "broadcast" ? "text-white" : "text-slate-400"} />
                               <span>{t("Convocations", "Convocatórias")}</span>
                             </div>
                             <div className="flex items-center gap-1">
                               {rolePending > 0 && (
-                                <span className="rounded-md bg-white/10 text-white/90 border border-white/10 px-1.5 py-0.5 text-[0.58rem] font-mono font-medium">
+                                <span className="rounded-md bg-white/[0.06] text-slate-300 border border-white/[0.08] px-1.5 py-0.5 text-[0.58rem] font-mono font-medium">
                                   {rolePending}
                                 </span>
                               )}
@@ -2631,18 +2631,18 @@ Overwatch`;
                           {/* Test Schedule sub-tab */}
                           <button
                             onClick={() => { setView("schedule"); setSidebarOpen(false); }}
-                            className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[0.72rem] font-semibold transition-all cursor-pointer ${
+                            className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[0.72rem] font-medium transition-all cursor-pointer ${
                               view === "schedule"
-                                ? "bg-white/[0.1] text-white border border-white/15"
-                                : "text-white/60 hover:bg-white/[0.05] hover:text-white border border-transparent"
+                                ? "bg-white/[0.08] text-white border border-white/[0.12] font-semibold"
+                                : "text-slate-400 hover:bg-white/[0.04] hover:text-white border border-transparent"
                             }`}
                           >
                             <div className="flex items-center gap-2">
-                              <Calendar size={13} className="text-white/70" />
+                              <Calendar size={13} className={view === "schedule" ? "text-white" : "text-slate-400"} />
                               <span>{t("Test Schedule", "Agenda de Testes")}</span>
                             </div>
                             {roleConfirmed > 0 && (
-                              <span className="rounded-md bg-white/10 text-white/80 border border-white/10 px-1.5 py-0.5 text-[0.58rem] font-mono font-medium">
+                              <span className="rounded-md bg-white/[0.06] text-slate-300 border border-white/[0.08] px-1.5 py-0.5 text-[0.58rem] font-mono font-medium">
                                 {roleConfirmed}
                               </span>
                             )}
@@ -2651,23 +2651,23 @@ Overwatch`;
                           {/* Confirmations sub-tab */}
                           <button
                             onClick={() => { setView("confirmations"); setSidebarOpen(false); }}
-                            className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[0.72rem] font-semibold transition-all cursor-pointer ${
+                            className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[0.72rem] font-medium transition-all cursor-pointer ${
                               view === "confirmations"
-                                ? "bg-white/[0.1] text-white border border-white/15"
-                                : "text-white/60 hover:bg-white/[0.05] hover:text-white border border-transparent"
+                                ? "bg-white/[0.08] text-white border border-white/[0.12] font-semibold"
+                                : "text-slate-400 hover:bg-white/[0.04] hover:text-white border border-transparent"
                             }`}
                           >
                             <div className="flex items-center gap-2">
-                              <CheckCircle2 size={13} className="text-white/70" />
+                              <CheckCircle2 size={13} className={view === "confirmations" ? "text-white" : "text-slate-400"} />
                               <span>{t("Confirmations", "Confirmações")}</span>
                             </div>
                             <div className="flex items-center gap-1">
                               {roleConfirmedUnsent > 0 ? (
-                                <span className="rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 text-[0.58rem] font-mono font-medium">
+                                <span className="rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/25 px-1.5 py-0.5 text-[0.58rem] font-mono font-medium">
                                   {roleConfirmedUnsent}
                                 </span>
                               ) : roleConfirmed > 0 ? (
-                                <span className="rounded-md bg-white/10 text-white/60 border border-white/10 px-1.5 py-0.5 text-[0.58rem] font-mono font-medium">
+                                <span className="rounded-md bg-white/[0.06] text-slate-400 border border-white/[0.08] px-1.5 py-0.5 text-[0.58rem] font-mono font-medium">
                                   {roleConfirmed}
                                 </span>
                               ) : null}
@@ -2677,23 +2677,23 @@ Overwatch`;
                           {/* Disqualifications sub-tab */}
                           <button
                             onClick={() => { setView("disqualify"); setSidebarOpen(false); }}
-                            className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[0.72rem] font-semibold transition-all cursor-pointer ${
+                            className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[0.72rem] font-medium transition-all cursor-pointer ${
                               view === "disqualify"
-                                ? "bg-white/[0.1] text-white border border-white/15"
-                                : "text-white/60 hover:bg-white/[0.05] hover:text-white border border-transparent"
+                                ? "bg-white/[0.08] text-white border border-white/[0.12] font-semibold"
+                                : "text-slate-400 hover:bg-white/[0.04] hover:text-white border border-transparent"
                             }`}
                           >
                             <div className="flex items-center gap-2">
-                              <UserX size={13} className={roleDisqualifiedBooked > 0 ? "text-amber-400" : "text-white/70"} />
+                              <UserX size={13} className={view === "disqualify" ? "text-white" : "text-slate-400"} />
                               <span>{t("Disqualifications", "Desqualificações")}</span>
                             </div>
                             <div className="flex items-center gap-1">
                               {roleDisqualifiedBooked > 0 ? (
-                                <span className="rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 text-[0.58rem] font-mono font-medium" title={t("Booked candidates failing criteria", "Agendados sem requisitos")}>
+                                <span className="rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/25 px-1.5 py-0.5 text-[0.58rem] font-mono font-medium" title={t("Booked candidates failing criteria", "Agendados sem requisitos")}>
                                   {roleDisqualifiedBooked} {t("booked", "agendados")}
                                 </span>
                               ) : roleDisqualified > 0 ? (
-                                <span className="rounded-md bg-white/10 text-white/60 border border-white/10 px-1.5 py-0.5 text-[0.58rem] font-mono font-medium">
+                                <span className="rounded-md bg-white/[0.06] text-slate-400 border border-white/[0.08] px-1.5 py-0.5 text-[0.58rem] font-mono font-medium">
                                   {roleDisqualified}
                                 </span>
                               ) : null}
@@ -2703,19 +2703,19 @@ Overwatch`;
                           {/* Targeted Broadcast & Custom Emails sub-tab */}
                           <button
                             onClick={() => { setView("custom_broadcast"); setSidebarOpen(false); }}
-                            className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[0.72rem] font-semibold transition-all cursor-pointer ${
+                            className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[0.72rem] font-medium transition-all cursor-pointer ${
                               view === "custom_broadcast"
-                                ? "bg-white/[0.1] text-white border border-white/15"
-                                : "text-white/60 hover:bg-white/[0.05] hover:text-white border border-transparent"
+                                ? "bg-white/[0.08] text-white border border-white/[0.12] font-semibold"
+                                : "text-slate-400 hover:bg-white/[0.04] hover:text-white border border-transparent"
                             }`}
                           >
                             <div className="flex items-center gap-2">
-                              <Send size={13} className="text-sky-400" />
+                              <Send size={13} className={view === "custom_broadcast" ? "text-white" : "text-slate-400"} />
                               <span>{t("Broadcast & Emails", "Comunicações & Disparos")}</span>
                             </div>
                             <div className="flex items-center gap-1">
                               {roleUnconfirmed > 0 && (
-                                <span className="rounded-md bg-sky-500/20 text-sky-300 border border-sky-500/30 px-1.5 py-0.5 text-[0.58rem] font-mono font-medium" title={t("Unconfirmed invitations", "Convocados sem confirmação")}>
+                                <span className="rounded-md bg-white/[0.08] text-slate-300 border border-white/[0.1] px-1.5 py-0.5 text-[0.58rem] font-mono font-medium" title={t("Unconfirmed invitations", "Convocados sem confirmação")}>
                                   {roleUnconfirmed}
                                 </span>
                               )}
@@ -2725,19 +2725,19 @@ Overwatch`;
                           {/* Rebooking Grace (OTL) sub-tab */}
                           <button
                             onClick={() => { setView("rebooking_grace"); setSidebarOpen(false); }}
-                            className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[0.72rem] font-semibold transition-all cursor-pointer ${
+                            className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[0.72rem] font-medium transition-all cursor-pointer ${
                               view === "rebooking_grace"
-                                ? "bg-white/[0.1] text-white border border-white/15"
-                                : "text-white/60 hover:bg-white/[0.05] hover:text-white border border-transparent"
+                                ? "bg-white/[0.08] text-white border border-white/[0.12] font-semibold"
+                                : "text-slate-400 hover:bg-white/[0.04] hover:text-white border border-transparent"
                             }`}
                           >
                             <div className="flex items-center gap-2">
-                              <RotateCcw size={13} className="text-amber-400" />
+                              <RotateCcw size={13} className={view === "rebooking_grace" ? "text-white" : "text-slate-400"} />
                               <span>{t("Rebooking Grace (OTL)", "Reagendamentos (OTL)")}</span>
                             </div>
                             <div className="flex items-center gap-1">
                               {missedTestCount > 0 && (
-                                <span className="rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 text-[0.58rem] font-mono font-medium" title={t("Missed test candidates", "Candidatos que faltaram")}>
+                                <span className="rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/25 px-1.5 py-0.5 text-[0.58rem] font-mono font-medium" title={t("Missed test candidates", "Candidatos que faltaram")}>
                                   {missedTestCount}
                                 </span>
                               )}
@@ -2808,7 +2808,7 @@ Overwatch`;
       </aside>
 
       {/* ─── MAIN CONTENT AREA ──────────────────────────────────────── */}
-      <main className="flex-1 min-w-0 lg:ml-64 p-4 sm:p-6 lg:p-8 space-y-6">
+      <main className="flex-1 min-w-0 lg:ml-72 p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Top Header Bar */}
         <header className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-white/10">
           <div>
@@ -2925,117 +2925,101 @@ Overwatch`;
 
 
 
-        {/* ─── STATS CARDS WITH GENDER BREAKDOWN ─────────────────────── */}
+        {/* ─── STATS CARDS WITH REFINED METRICS & METADATA ──────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           {/* Total Applicants */}
-          <div className="kpi-card kpi-card-accent-blue">
+          <div className="kpi-card">
             <div className="flex items-start justify-between gap-2 mb-2">
               <p className="admin-label">{t("Total Applicants", "Total Candidatos")}</p>
-              <div className="kpi-icon kpi-icon-blue shrink-0">
+              <div className="kpi-icon shrink-0">
                 <Users size={14} />
               </div>
             </div>
-            <strong className="admin-metric text-xl sm:text-2xl">{totalAppsCount}</strong>
-            <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-white/10 text-[0.65rem]">
-              <span className="inline-flex items-center gap-0.5 text-pink-400 font-semibold bg-pink-500/10 px-1.5 py-0.5 rounded border border-pink-500/20">
-                ♀ {womenTotalCount} {t("women", "mulheres")}
-              </span>
-              <span className="inline-flex items-center gap-0.5 text-sky-400 font-semibold bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">
-                ♂ {menTotalCount} {t("men", "homens")}
-              </span>
+            <strong className="admin-metric text-2xl sm:text-3xl text-white">{totalAppsCount}</strong>
+            <div className="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-white/[0.06] text-[0.68rem] text-slate-400 font-medium">
+              <span className="text-slate-300">{womenTotalCount} {t("women", "mulheres")}</span>
+              <span className="text-slate-600">·</span>
+              <span className="text-slate-300">{menTotalCount} {t("men", "homens")}</span>
             </div>
           </div>
 
           {/* Shortlisted / Eligible for Test */}
-          <div className="kpi-card kpi-card-accent-green">
+          <div className="kpi-card">
             <div className="flex items-start justify-between gap-2 mb-2">
               <p className="admin-label">{t("Shortlisted / Test", "Apurados p/ Teste")}</p>
-              <div className="kpi-icon kpi-icon-green shrink-0">
+              <div className="kpi-icon shrink-0">
                 <UserCheck size={14} />
               </div>
             </div>
-            <strong className="admin-metric text-xl sm:text-2xl" style={{ color: "var(--accent-green)" }}>
+            <strong className="admin-metric text-2xl sm:text-3xl text-white">
               {targetCount}
             </strong>
-            <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-white/10 text-[0.65rem]">
-              <span className="inline-flex items-center gap-0.5 text-pink-400 font-semibold bg-pink-500/10 px-1.5 py-0.5 rounded border border-pink-500/20">
-                ♀ {targetWomenCount} {t("women", "mulheres")}
-              </span>
-              <span className="inline-flex items-center gap-0.5 text-sky-400 font-semibold bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">
-                ♂ {targetMenCount} {t("men", "homens")}
-              </span>
+            <div className="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-white/[0.06] text-[0.68rem] text-slate-400 font-medium">
+              <span className="text-slate-300">{targetWomenCount} {t("women", "mulheres")}</span>
+              <span className="text-slate-600">·</span>
+              <span className="text-slate-300">{targetMenCount} {t("men", "homens")}</span>
             </div>
           </div>
 
           {/* Confirmed Tests */}
-          <div className="kpi-card kpi-card-accent-blue">
+          <div className="kpi-card">
             <div className="flex items-start justify-between gap-2 mb-2">
               <p className="admin-label">{t("Confirmed Tests", "Data Confirmada")}</p>
-              <div className="kpi-icon kpi-icon-blue shrink-0">
+              <div className="kpi-icon shrink-0">
                 <CalendarCheck size={14} />
               </div>
             </div>
-            <strong className="admin-metric text-xl sm:text-2xl" style={{ color: "var(--accent-blue)" }}>
+            <strong className="admin-metric text-2xl sm:text-3xl text-white">
               {confirmedCount}
             </strong>
-            <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-white/10 text-[0.65rem]">
-              <span className="inline-flex items-center gap-0.5 text-pink-400 font-semibold bg-pink-500/10 px-1.5 py-0.5 rounded border border-pink-500/20">
-                ♀ {confirmedWomenCount} {t("women", "mulheres")}
-              </span>
-              <span className="inline-flex items-center gap-0.5 text-sky-400 font-semibold bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">
-                ♂ {confirmedMenCount} {t("men", "homens")}
-              </span>
+            <div className="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-white/[0.06] text-[0.68rem] text-slate-400 font-medium">
+              <span className="text-slate-300">{confirmedWomenCount} {t("women", "mulheres")}</span>
+              <span className="text-slate-600">·</span>
+              <span className="text-slate-300">{confirmedMenCount} {t("men", "homens")}</span>
             </div>
           </div>
 
-          {/* Pending Confirmation (Filipa Target Audience) */}
+          {/* Pending Confirmation */}
           <div
             onClick={() => setView("custom_broadcast")}
-            className="kpi-card kpi-card-accent-amber cursor-pointer hover:border-amber-500/50 hover:bg-white/[0.03] transition-all"
+            className="kpi-card cursor-pointer hover:border-white/20 transition-all"
             title={t("Click to broadcast reminder", "Clique para enviar aviso de confirmação")}
           >
             <div className="flex items-start justify-between gap-2 mb-2">
               <p className="admin-label">{t("Pending Confirmation", "Pendente Confirmação")}</p>
-              <div className="kpi-icon kpi-icon-amber shrink-0">
+              <div className="kpi-icon shrink-0">
                 <Clock size={14} />
               </div>
             </div>
-            <strong className="admin-metric text-xl sm:text-2xl" style={{ color: "var(--accent-amber)" }}>
+            <strong className="admin-metric text-2xl sm:text-3xl text-white">
               {pendingConfirmationCount}
             </strong>
-            <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-white/10 text-[0.65rem]">
-              <span className="inline-flex items-center gap-0.5 text-pink-400 font-semibold bg-pink-500/10 px-1.5 py-0.5 rounded border border-pink-500/20">
-                ♀ {pendingConfirmationWomen} {t("women", "mulheres")}
-              </span>
-              <span className="inline-flex items-center gap-0.5 text-sky-400 font-semibold bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">
-                ♂ {pendingConfirmationMen} {t("men", "homens")}
-              </span>
+            <div className="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-white/[0.06] text-[0.68rem] text-slate-400 font-medium">
+              <span className="text-slate-300">{pendingConfirmationWomen} {t("women", "mulheres")}</span>
+              <span className="text-slate-600">·</span>
+              <span className="text-slate-300">{pendingConfirmationMen} {t("men", "homens")}</span>
             </div>
           </div>
 
           {/* Disqualified / Not Shortlisted */}
           <div
             onClick={() => setView("disqualify")}
-            className="kpi-card cursor-pointer hover:border-rose-500/40 hover:bg-white/[0.03] transition-all"
-            style={{ borderColor: "rgba(244, 63, 94, 0.2)" }}
+            className="kpi-card cursor-pointer hover:border-white/20 transition-all"
             title={t("Click to view disqualified", "Clique para ver não apurados")}
           >
             <div className="flex items-start justify-between gap-2 mb-2">
               <p className="admin-label">{t("Disqualified / No Exp", "Não Apurados")}</p>
-              <div className="kpi-icon shrink-0 bg-rose-500/15 text-rose-400 border border-rose-500/20">
+              <div className="kpi-icon shrink-0">
                 <UserX size={14} />
               </div>
             </div>
-            <strong className="admin-metric text-xl sm:text-2xl text-rose-400">
+            <strong className="admin-metric text-2xl sm:text-3xl text-white">
               {disqualifiedCount}
             </strong>
-            <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-white/10 text-[0.65rem]">
-              <span className="inline-flex items-center gap-0.5 text-pink-400 font-semibold bg-pink-500/10 px-1.5 py-0.5 rounded border border-pink-500/20">
-                ♀ {disqualifiedWomen}
-              </span>
-              <span className="inline-flex items-center gap-0.5 text-sky-400 font-semibold bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">
-                ♂ {disqualifiedMen}
-              </span>
+            <div className="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-white/[0.06] text-[0.68rem] text-slate-400 font-medium">
+              <span className="text-slate-300">{disqualifiedWomen} {t("women", "mulheres")}</span>
+              <span className="text-slate-600">·</span>
+              <span className="text-slate-300">{disqualifiedMen} {t("men", "homens")}</span>
             </div>
           </div>
         </div>
@@ -5045,10 +5029,10 @@ Overwatch`;
                   type="button"
                   onClick={handleSendAddressCorrection}
                   disabled={dispatchingCorrection}
-                  className="flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 px-3 py-1.5 text-xs font-semibold text-amber-300 transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
+                  className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] px-3.5 py-2 text-xs font-medium text-slate-200 transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
                   title={t("Broadcast address correction (No. 1948) to all booked candidates", "Enviar rectificação de endereço (N.º 1948) a todas as candidatas agendadas")}
                 >
-                  <Mail size={13} className={dispatchingCorrection ? "animate-spin" : ""} />
+                  <Mail size={13} className={dispatchingCorrection ? "animate-spin text-white" : "text-slate-400"} />
                   <span>
                     {dispatchingCorrection
                       ? t("Broadcasting...", "A enviar rectificações...")
@@ -5056,15 +5040,13 @@ Overwatch`;
                   </span>
                 </button>
 
-
-
                 <button
                   type="button"
                   onClick={handleDispatchAllGatePasses}
                   disabled={dispatchingPasses}
-                  className="flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-300 transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
+                  className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] px-3.5 py-2 text-xs font-medium text-slate-200 transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
                 >
-                  <QrCode size={13} className={dispatchingPasses ? "animate-spin" : ""} />
+                  <QrCode size={13} className={dispatchingPasses ? "animate-spin text-white" : "text-slate-400"} />
                   <span>
                     {dispatchingPasses
                       ? t("Dispatching Passes...", "A disparar Passes QR...")
@@ -5076,9 +5058,9 @@ Overwatch`;
                   type="button"
                   onClick={handleSendTomorrowReminders}
                   disabled={sendingReminders}
-                  className="flex items-center gap-1.5 rounded-lg border border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/20 px-3 py-1.5 text-xs font-semibold text-purple-300 transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
+                  className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] px-3.5 py-2 text-xs font-medium text-slate-200 transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
                 >
-                  <Clock size={13} className={sendingReminders ? "animate-spin" : ""} />
+                  <Clock size={13} className={sendingReminders ? "animate-spin text-white" : "text-slate-400"} />
                   <span>
                     {sendingReminders
                       ? t("Sending Reminders...", "A enviar Lembretes...")
@@ -5089,9 +5071,9 @@ Overwatch`;
                 <button
                   type="button"
                   onClick={() => setView("broadcast")}
-                  className="flex items-center gap-1.5 rounded-lg border border-white/20 bg-white/[0.05] hover:bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] px-3.5 py-2 text-xs font-medium text-slate-200 transition-colors cursor-pointer shadow-sm"
                 >
-                  <Edit3 size={13} />
+                  <Edit3 size={13} className="text-slate-400" />
                   <span>{t("Configure Test Slots →", "Configurar Datas & Turnos →")}</span>
                 </button>
               </div>
@@ -5138,7 +5120,7 @@ Overwatch`;
               <div className="p-4 border-b border-white/10 bg-white/[0.01] space-y-3.5">
                 {/* ─── TWO TABS: THIS WEEK vs NEXT WEEK ─────────────────────── */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
-                  <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white/[0.04] border border-white/10 flex-wrap">
+                  <div className="flex items-center gap-1 p-1 rounded-xl bg-black/40 border border-white/[0.08] flex-wrap">
                     {/* Tab 1: Esta Semana */}
                     <button
                       type="button"
@@ -5146,19 +5128,19 @@ Overwatch`;
                         setRosterWeekTab("this_week");
                         setSelectedRosterSlot("all_this_week");
                       }}
-                      className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                         rosterWeekTab === "this_week"
-                          ? "bg-sky-500 text-white shadow-md shadow-sky-500/25 ring-1 ring-white/20"
-                          : "text-white/60 hover:text-white hover:bg-white/[0.05]"
+                          ? "bg-white/[0.12] text-white border border-white/15 shadow-sm"
+                          : "text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent"
                       }`}
                     >
-                      <Calendar size={14} className={rosterWeekTab === "this_week" ? "text-white" : "text-sky-400"} />
+                      <Calendar size={13} className={rosterWeekTab === "this_week" ? "text-white" : "text-slate-400"} />
                       <span>{t("This Week (16 – 18 Sept)", "Esta Semana (16 – 18 Set)")}</span>
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[0.65rem] font-bold ${
+                        className={`px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-medium ${
                           rosterWeekTab === "this_week"
-                            ? "bg-black/30 text-white"
-                            : "bg-sky-500/20 text-sky-300 border border-sky-500/30"
+                            ? "bg-white/15 text-white"
+                            : "bg-white/[0.06] text-slate-400"
                         }`}
                       >
                         {thisWeekCount}
@@ -5172,19 +5154,19 @@ Overwatch`;
                         setRosterWeekTab("next_week");
                         setSelectedRosterSlot("all_next_week");
                       }}
-                      className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                         rosterWeekTab === "next_week"
-                          ? "bg-purple-600 text-white shadow-md shadow-purple-600/25 ring-1 ring-white/20"
-                          : "text-white/60 hover:text-white hover:bg-white/[0.05]"
+                          ? "bg-white/[0.12] text-white border border-white/15 shadow-sm"
+                          : "text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent"
                       }`}
                     >
-                      <Calendar size={14} className={rosterWeekTab === "next_week" ? "text-white" : "text-purple-400"} />
+                      <Calendar size={13} className={rosterWeekTab === "next_week" ? "text-white" : "text-slate-400"} />
                       <span>{t("Next Week (21 – 25 Sept)", "Próxima Semana (21 – 25 Set)")}</span>
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[0.65rem] font-bold ${
+                        className={`px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-medium ${
                           rosterWeekTab === "next_week"
-                            ? "bg-black/30 text-white"
-                            : "bg-purple-500/20 text-purple-300 border border-purple-500/30"
+                            ? "bg-white/15 text-white"
+                            : "bg-white/[0.06] text-slate-400"
                         }`}
                       >
                         {nextWeekCount}
@@ -5198,19 +5180,19 @@ Overwatch`;
                         setRosterWeekTab("all");
                         setSelectedRosterSlot("all");
                       }}
-                      className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                         rosterWeekTab === "all"
-                          ? "bg-white text-[#090d16] shadow-md font-bold"
-                          : "text-white/60 hover:text-white hover:bg-white/[0.05]"
+                          ? "bg-white/[0.12] text-white border border-white/15 shadow-sm"
+                          : "text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent"
                       }`}
                     >
-                      <CalendarDays size={14} />
+                      <CalendarDays size={13} className={rosterWeekTab === "all" ? "text-white" : "text-slate-400"} />
                       <span>{t("All Sessions", "Todos os Turnos")}</span>
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[0.65rem] font-bold ${
+                        className={`px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-medium ${
                           rosterWeekTab === "all"
-                            ? "bg-black/20 text-black font-extrabold"
-                            : "bg-white/10 text-white/70"
+                            ? "bg-white/15 text-white"
+                            : "bg-white/[0.06] text-slate-400"
                         }`}
                       >
                         {confirmedCount}
@@ -5220,23 +5202,16 @@ Overwatch`;
 
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div className="text-[0.7rem] flex items-center gap-2">
-                      {rosterWeekTab === "this_week" && (
-                        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-sky-500/10 border border-sky-500/25 text-sky-300 font-semibold">
-                          <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
-                          <span>{t("Showing This Week (Wed 16 – Fri 18 Sept)", "A mostrar Esta Semana (Qua 16 – Sex 18 Set)")}</span>
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-slate-300 font-medium">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        <span>
+                          {rosterWeekTab === "this_week"
+                            ? t("Showing This Week (Wed 16 – Fri 18 Sept)", "A mostrar Esta Semana (Qua 16 – Sex 18 Set)")
+                            : rosterWeekTab === "next_week"
+                              ? t("Showing Next Week (Mon 21 – Fri 25 Sept)", "A mostrar Próxima Semana (Seg 21 – Sex 25 Set)")
+                              : `${rosterSlots.length} ${t("sessions total", "turnos no total")}`}
                         </span>
-                      )}
-                      {rosterWeekTab === "next_week" && (
-                        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/25 text-purple-300 font-semibold">
-                          <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
-                          <span>{t("Showing Next Week (Mon 21 – Fri 25 Sept)", "A mostrar Próxima Semana (Seg 21 – Sex 25 Set)")}</span>
-                        </span>
-                      )}
-                      {rosterWeekTab === "all" && (
-                        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 border border-white/20 text-white/80 font-semibold">
-                          <span>{rosterSlots.length} {t("sessions total", "turnos no total")}</span>
-                        </span>
-                      )}
+                      </span>
                     </div>
                     {/* Navigation Arrows for Horizontal Scrolling */}
                     <div className="flex items-center gap-1">
@@ -5276,8 +5251,8 @@ Overwatch`;
                       <span
                         className={`slot-pill-count rounded-full ${
                           activeRosterSlot === "all_this_week"
-                            ? "bg-sky-500 text-white font-bold"
-                            : "bg-white/15 text-white"
+                            ? "bg-white/20 text-white font-bold"
+                            : "bg-white/[0.08] text-slate-300"
                         }`}
                       >
                         {thisWeekCount}
@@ -5296,8 +5271,8 @@ Overwatch`;
                       <span
                         className={`slot-pill-count rounded-full ${
                           activeRosterSlot === "all_next_week"
-                            ? "bg-purple-600 text-white font-bold"
-                            : "bg-white/15 text-white"
+                            ? "bg-white/20 text-white font-bold"
+                            : "bg-white/[0.08] text-slate-300"
                         }`}
                       >
                         {nextWeekCount}
@@ -5316,8 +5291,8 @@ Overwatch`;
                       <span
                         className={`slot-pill-count rounded-full ${
                           activeRosterSlot === "all"
-                            ? "bg-[var(--accent-blue)] text-white font-bold"
-                            : "bg-white/15 text-white"
+                            ? "bg-white/20 text-white font-bold"
+                            : "bg-white/[0.08] text-slate-300"
                         }`}
                       >
                         {confirmedCount}
@@ -5348,14 +5323,12 @@ Overwatch`;
                         <span
                           className={`slot-pill-count rounded-full ${
                             isFull
-                              ? "bg-red-500/20 text-red-300 border border-red-500/30"
+                              ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
                               : count > 0
                                 ? isSelected
-                                  ? isThisWeek
-                                    ? "bg-sky-500 text-white font-bold"
-                                    : "bg-purple-600 text-white font-bold"
-                                  : "bg-white/15 text-white"
-                                : "bg-white/5 text-white/30"
+                                  ? "bg-white/25 text-white font-bold"
+                                  : "bg-white/10 text-slate-300"
+                                : "bg-white/[0.04] text-slate-500"
                           }`}
                         >
                           {count}
@@ -5897,79 +5870,85 @@ Overwatch`;
             <section className="space-y-6">
               {/* Top KPI Cards for Confirmations */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="rounded-2xl border border-white/10 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
-                  <div className="flex items-center justify-between text-xs font-semibold text-white/60">
+                <div className="rounded-2xl border border-white/[0.08] bg-[#0d121f] p-4 sm:p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-400">
                     <span>{t("Booked Candidates", "Candidatas Agendadas")}</span>
-                    <CalendarCheck size={16} className="text-cyan-400" />
+                    <div className="h-7 w-7 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-300">
+                      <CalendarCheck size={14} />
+                    </div>
                   </div>
-                  <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-white">
+                  <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-white tabular-nums">
                     {confirmedCandidates.length}
                   </strong>
-                  <span className="text-[0.7rem] text-white/40">
+                  <span className="text-[0.7rem] text-slate-400">
                     {t("Slots selected by candidate", "Turno escolhido")}
                   </span>
                 </div>
 
-                <div className="rounded-2xl border border-amber-500/20 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
-                  <div className="flex items-center justify-between text-xs font-semibold text-white/60">
+                <div className="rounded-2xl border border-white/[0.08] bg-[#0d121f] p-4 sm:p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-400">
                     <span>{t("Awaiting Dispatch", "Aguardam Envio")}</span>
-                    <Clock size={16} className="text-amber-400" />
+                    <div className="h-7 w-7 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-300">
+                      <Clock size={14} />
+                    </div>
                   </div>
-                  <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-amber-400">
+                  <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-white tabular-nums">
                     {unsentCandidates.length}
                   </strong>
-                  <span className="text-[0.7rem] text-amber-400/70">
+                  <span className="text-[0.7rem] text-slate-400">
                     {t("Not yet notified with location/rules", "Ainda não notificadas")}
                   </span>
                 </div>
 
-                <div className="rounded-2xl border border-emerald-500/20 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
-                  <div className="flex items-center justify-between text-xs font-semibold text-white/60">
+                <div className="rounded-2xl border border-white/[0.08] bg-[#0d121f] p-4 sm:p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-400">
                     <span>{t("Confirmations Sent", "Já Enviadas")}</span>
-                    <CheckCircle2 size={16} className="text-emerald-400" />
+                    <div className="h-7 w-7 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-300">
+                      <CheckCircle2 size={14} />
+                    </div>
                   </div>
-                  <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-emerald-400">
+                  <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-white tabular-nums">
                     {sentCandidates.length}
                   </strong>
-                  <span className="text-[0.7rem] text-white/40">
+                  <span className="text-[0.7rem] text-slate-400">
                     {t("Official instructions delivered", "Instruções já entregues")}
                   </span>
                 </div>
 
-                <div className="rounded-2xl border border-white/10 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
-                  <div className="flex items-center justify-between text-xs font-semibold text-white/60">
+                <div className="rounded-2xl border border-white/[0.08] bg-[#0d121f] p-4 sm:p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-400">
                     <span>{t("Mozambique Clock", "Relógio Moçambique")}</span>
-                    <Globe size={16} className="text-sky-400" />
+                    <div className="h-7 w-7 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-300">
+                      <Globe size={14} />
+                    </div>
                   </div>
                   <strong className="mt-2 block text-xl sm:text-2xl font-bold text-white tracking-tight">
                     {greetingPt}
                   </strong>
-                  <span className="text-[0.7rem] text-sky-400/80">
+                  <span className="text-[0.7rem] text-slate-400">
                     {t("Live greeting for outgoing emails", "Saudação activa de envio")}
                   </span>
                 </div>
               </div>
 
               {/* Sub-tabs: Aguardam Envio vs Já Enviadas */}
-              <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-black/40 border border-white/[0.08]">
                   <button
                     type="button"
                     onClick={() => setConfirmSubTab("unsent")}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                       confirmSubTab === "unsent"
-                        ? "bg-white text-[#090d16] shadow-sm"
-                        : "text-white/60 hover:text-white hover:bg-white/[0.04]"
+                        ? "bg-white/[0.12] text-white border border-white/15 shadow-sm"
+                        : "text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent"
                     }`}
                   >
                     <span>{t("Awaiting Confirmation Dispatch", "Por Enviar (Aguardam Envio)")}</span>
                     <span
-                      className={`px-1.5 py-0.5 rounded-full text-[0.6rem] font-bold ${
+                      className={`px-1.5 py-0.5 rounded-full text-[0.6rem] font-mono font-medium ${
                         confirmSubTab === "unsent"
-                          ? "bg-[#090d16]/15 text-[#090d16]"
-                          : unsentCandidates.length > 0
-                            ? "bg-amber-500/20 text-amber-300"
-                            : "bg-white/10 text-white/60"
+                          ? "bg-white/15 text-white"
+                          : "bg-white/[0.06] text-slate-400"
                       }`}
                     >
                       {unsentCandidates.length}
@@ -5979,18 +5958,18 @@ Overwatch`;
                   <button
                     type="button"
                     onClick={() => setConfirmSubTab("sent")}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                       confirmSubTab === "sent"
-                        ? "bg-white text-[#090d16] shadow-sm"
-                        : "text-white/60 hover:text-white hover:bg-white/[0.04]"
+                        ? "bg-white/[0.12] text-white border border-white/15 shadow-sm"
+                        : "text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent"
                     }`}
                   >
                     <span>{t("Already Dispatched", "Já Enviadas")}</span>
                     <span
-                      className={`px-1.5 py-0.5 rounded-full text-[0.6rem] font-bold ${
+                      className={`px-1.5 py-0.5 rounded-full text-[0.6rem] font-mono font-medium ${
                         confirmSubTab === "sent"
-                          ? "bg-[#090d16]/15 text-[#090d16]"
-                          : "bg-white/10 text-white/60"
+                          ? "bg-white/15 text-white"
+                          : "bg-white/[0.06] text-slate-400"
                       }`}
                     >
                       {sentCandidates.length}
@@ -6473,60 +6452,70 @@ Overwatch`;
               )}
               {/* Top KPI Cards for Disqualification Compliance */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="rounded-2xl border border-red-500/20 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
-                  <div className="flex items-center justify-between text-xs font-semibold text-white/60">
+                <div className="rounded-2xl border border-white/[0.08] bg-[#0d121f] p-4 sm:p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-400">
                     <span>{t("Total Non-Compliant", "Total Não Conformes")}</span>
-                    <UserX size={16} className="text-red-400" />
+                    <div className="h-7 w-7 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-300">
+                      <UserX size={14} />
+                    </div>
                   </div>
-                  <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-red-400">
+                  <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-white tabular-nums">
                     {nonCompliantList.length}
                   </strong>
-                  <span className="text-[0.7rem] text-white/40">
+                  <span className="text-[0.7rem] text-slate-400">
                     {t("Failed mandatory requirements", "Falharam critérios eliminatórios")}
                   </span>
                 </div>
 
-                <div className="rounded-2xl border border-amber-500/20 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
-                  <div className="flex items-center justify-between text-xs font-semibold text-white/60">
+                <div className="rounded-2xl border border-white/[0.08] bg-[#0d121f] p-4 sm:p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-400">
                     <span>{t("Men w/o CCTV Experience", "Homens sem CCTV")}</span>
-                    <AlertCircle size={16} className="text-amber-400" />
+                    <div className="h-7 w-7 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-300">
+                      <AlertCircle size={14} />
+                    </div>
                   </div>
-                  <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-amber-400">
+                  <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-white tabular-nums">
                     {menWithoutCctv.length}
                   </strong>
-                  <span className="text-[0.7rem] text-amber-400/70">
+                  <span className="text-[0.7rem] text-slate-400">
                     {t("Filipa rule (disqualify & archive)", "Critério Filipa (não realizam teste)")}
                   </span>
                 </div>
 
-                <div className="rounded-2xl border border-white/10 bg-[#121827]/90 p-4 sm:p-5 shadow-sm">
-                  <div className="flex items-center justify-between text-xs font-semibold text-white/60">
+                <div className="rounded-2xl border border-white/[0.08] bg-[#0d121f] p-4 sm:p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-400">
                     <span>{t("Missing Cover Letter", "Sem Carta Apresentação")}</span>
-                    <FileText size={16} className="text-sky-400" />
+                    <div className="h-7 w-7 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-300">
+                      <FileText size={14} />
+                    </div>
                   </div>
-                  <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-white">
+                  <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-white tabular-nums">
                     {missingCoverLetter.length}
                   </strong>
-                  <span className="text-[0.7rem] text-white/40">
+                  <span className="text-[0.7rem] text-slate-400">
                     {t("Mandatory for all genders", "Obrigatória p/ homens e mulheres")}
                   </span>
                 </div>
 
-                <div className={`rounded-2xl border p-4 sm:p-5 shadow-sm ${
+                <div className={`rounded-2xl border p-4 sm:p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] ${
                   bookedNonCompliant.length > 0
-                    ? "border-red-500/40 bg-red-500/10"
-                    : "border-emerald-500/20 bg-[#121827]/90"
+                    ? "border-rose-500/30 bg-rose-500/[0.04]"
+                    : "border-white/[0.08] bg-[#0d121f]"
                 }`}>
-                  <div className="flex items-center justify-between text-xs font-semibold text-white/60">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-400">
                     <span>{t("Scheduled for In-Person Test", "Agendados para Teste")}</span>
-                    <CalendarCheck size={16} className={bookedNonCompliant.length > 0 ? "text-red-400" : "text-emerald-400"} />
+                    <div className={`h-7 w-7 rounded-lg border flex items-center justify-center ${
+                      bookedNonCompliant.length > 0
+                        ? "bg-rose-500/10 border-rose-500/25 text-rose-300"
+                        : "bg-white/[0.04] border-white/[0.08] text-slate-300"
+                    }`}>
+                      <CalendarCheck size={14} />
+                    </div>
                   </div>
-                  <strong className={`mt-2 block text-2xl sm:text-3xl font-bold ${
-                    bookedNonCompliant.length > 0 ? "text-red-300" : "text-emerald-400"
-                  }`}>
+                  <strong className="mt-2 block text-2xl sm:text-3xl font-bold text-white tabular-nums">
                     {bookedNonCompliant.length}
                   </strong>
-                  <span className="text-[0.7rem] text-white/50">
+                  <span className="text-[0.7rem] text-slate-400">
                     {bookedNonCompliant.length > 0
                       ? t("Urgent: cancel before test day!", "Urgente: cancelar antes do teste!")
                       : t("No non-compliant booked", "Nenhum agendamento irregular")}

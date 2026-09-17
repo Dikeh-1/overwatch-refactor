@@ -518,7 +518,7 @@ export function CustomBroadcastView({
       )}
 
       {/* Template Selector Banner with Language Indicator */}
-      <div className="rounded-2xl border border-white/10 bg-[#121827] p-5 space-y-3">
+      <div className="rounded-2xl border border-white/[0.08] bg-[#0d121f] p-5 space-y-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
@@ -534,8 +534,8 @@ export function CustomBroadcastView({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-[0.68rem] text-white/40 flex items-center gap-1">
-              <Languages size={12} className="text-sky-400" />
+            <span className="text-[0.68rem] text-slate-400 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08]">
+              <Languages size={12} className="text-slate-300" />
               {lang === "en" ? "Templates in English" : "Modelos em Português"}
             </span>
           </div>
@@ -554,8 +554,8 @@ export function CustomBroadcastView({
                 onClick={() => handleTemplateSelect(tmpl.id)}
                 className={`text-left p-3.5 rounded-xl border transition-all cursor-pointer ${
                   isSelected
-                    ? "border-white/40 bg-white/[0.08] shadow-md"
-                    : "border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/20"
+                    ? "border-white/30 bg-white/[0.08] shadow-sm ring-1 ring-white/10"
+                    : "border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/20"
                 }`}
               >
                 <div className="flex items-center justify-between gap-2 mb-1.5">
@@ -580,7 +580,7 @@ export function CustomBroadcastView({
         {/* Left Column: Form, Audience, Translation Bar & Controls (7 cols) */}
         <div className="lg:col-span-7 space-y-5">
           {/* 1. Audience Selector */}
-          <div className="rounded-xl border border-white/10 bg-[#121827] p-5 space-y-4">
+          <div className="rounded-2xl border border-white/[0.08] bg-[#0d121f] p-5 space-y-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
             <h4 className="text-xs font-bold uppercase tracking-wider text-white/70 flex items-center gap-2">
               <Filter size={13} className="text-white/60" />
               {t("Recipient Audience Filter", "Filtro de Destinatários")}
@@ -696,7 +696,7 @@ export function CustomBroadcastView({
           </div>
 
           {/* 2. Message Editor with 1-Click Translation Toolbar */}
-          <div className="rounded-xl border border-white/10 bg-[#121827] p-5 space-y-4">
+          <div className="rounded-2xl border border-white/[0.08] bg-[#0d121f] p-5 space-y-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-white/70 flex items-center gap-2">
                 <Mail size={13} className="text-white/60" />
@@ -807,7 +807,7 @@ export function CustomBroadcastView({
           </div>
 
           {/* 3. Test Email Sending (Custom Email Input) */}
-          <div className="rounded-xl border border-white/10 bg-[#121827] p-5 space-y-3">
+          <div className="rounded-2xl border border-white/[0.08] bg-[#0d121f] p-5 space-y-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
             <h4 className="text-xs font-bold uppercase tracking-wider text-white/70 flex items-center gap-2">
               <Eye size={13} className="text-white/60" />
               {t("Send Test Preview", "Envio de Teste Prévio")}

@@ -436,50 +436,50 @@ export default function RebookingGraceView({
 
         {/* ─── METRICS STRIP ─────────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-5 mt-5 border-t border-white/10">
-          <div className="rounded-xl border border-red-500/20 bg-red-500/[0.06] p-3.5">
-            <div className="text-[10px] font-mono uppercase tracking-wider text-red-300 font-bold">
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold">
               {t("Missed Sessions", "Faltaram ao Teste")}
             </div>
-            <div className="text-2xl font-bold text-white mt-1">
+            <div className="text-2xl font-bold text-white mt-1 tabular-nums">
               {missedCandidates.length}
             </div>
-            <div className="text-[11px] text-white/40 mt-0.5">
+            <div className="text-[11px] text-slate-400 mt-0.5">
               {t("Scheduled on past dates", "Agendados para dias anteriores")}
             </div>
           </div>
 
-          <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-3.5">
-            <div className="text-[10px] font-mono uppercase tracking-wider text-amber-300 font-bold">
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold">
               {t("Active Grace OTLs", "Links OTL Emitidos")}
             </div>
-            <div className="text-2xl font-bold text-white mt-1">
+            <div className="text-2xl font-bold text-white mt-1 tabular-nums">
               {activeGraceCandidates.length}
             </div>
-            <div className="text-[11px] text-white/40 mt-0.5">
+            <div className="text-[11px] text-slate-400 mt-0.5">
               {t("Awaiting candidate choice", "A aguardar nova escolha")}
             </div>
           </div>
 
-          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-3.5">
-            <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-300 font-bold">
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold">
               {t("Successfully Re-booked", "Reagendados com Sucesso")}
             </div>
-            <div className="text-2xl font-bold text-white mt-1">
+            <div className="text-2xl font-bold text-white mt-1 tabular-nums">
               {rebookedCandidates.length}
             </div>
-            <div className="text-[11px] text-white/40 mt-0.5">
+            <div className="text-[11px] text-slate-400 mt-0.5">
               {t("OTL consumed & pass issued", "Link utilizado & novo passe emitido")}
             </div>
           </div>
 
-          <div className="rounded-xl border border-sky-500/20 bg-sky-500/[0.06] p-3.5">
-            <div className="text-[10px] font-mono uppercase tracking-wider text-sky-300 font-bold">
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold">
               {t("Open Slots Target", "Turnos Abertos (Próx. Semana)")}
             </div>
-            <div className="text-2xl font-bold text-white mt-1">
+            <div className="text-2xl font-bold text-white mt-1 tabular-nums">
               5 {t("days", "dias")}
             </div>
-            <div className="text-[11px] text-white/40 mt-0.5 font-mono">
+            <div className="text-[11px] text-slate-400 mt-0.5 font-mono">
               21 – 25 {t("Sept (10h00)", "Setembro (10h00)")}
             </div>
           </div>

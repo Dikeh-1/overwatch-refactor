@@ -6,36 +6,36 @@
 
 /* ─── CSS Custom Properties ─────────────────────────────────────── */
 :root {
-  /* Base surfaces */
-  --bg-base:        #07080f;
-  --bg-elevated:    #0d1121;
-  --bg-card:        #111827;
-  --bg-card-hover:  #141d2e;
-  --bg-inset:       #0a0f1a;
+  /* Base surfaces — 2026 Enterprise Obsidian Palette */
+  --bg-base:        #080c14;
+  --bg-elevated:    #0d121f;
+  --bg-card:        #0f1524;
+  --bg-card-hover:  #141b2e;
+  --bg-inset:       #0a0e18;
 
-  /* Borders */
-  --border-subtle:  rgba(255, 255, 255, 0.06);
-  --border-default: rgba(255, 255, 255, 0.10);
-  --border-strong:  rgba(255, 255, 255, 0.16);
+  /* Borders — Refined Hairlines */
+  --border-subtle:  rgba(255, 255, 255, 0.05);
+  --border-default: rgba(255, 255, 255, 0.08);
+  --border-strong:  rgba(255, 255, 255, 0.14);
 
-  /* Accent palette */
-  --accent-blue:    #4f9cf9;
+  /* Accent palette — Disciplined & Subdued */
+  --accent-blue:    #3b82f6;
   --accent-green:   #10b981;
   --accent-amber:   #f59e0b;
   --accent-red:     #ef4444;
   --accent-violet:  #8b5cf6;
 
   /* Text hierarchy */
-  --text-primary:   #f1f5f9;
-  --text-secondary: rgba(241, 245, 249, 0.70);
-  --text-muted:     rgba(241, 245, 249, 0.40);
+  --text-primary:   #f8fafc;
+  --text-secondary: rgba(241, 245, 249, 0.72);
+  --text-muted:     rgba(241, 245, 249, 0.42);
   --text-faint:     rgba(241, 245, 249, 0.22);
 
   /* Shadows */
-  --shadow-card:    0 1px 3px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.3);
-  --shadow-modal:   0 8px 32px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.5);
-  --shadow-sm:      0 1px 4px rgba(0,0,0,0.4);
-  --shadow-focus:   0 0 0 3px rgba(79, 156, 249, 0.25);
+  --shadow-card:    0 1px 3px rgba(0,0,0,0.35), 0 4px 16px rgba(0,0,0,0.25);
+  --shadow-modal:   0 16px 48px rgba(0,0,0,0.7), 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-sm:      0 1px 3px rgba(0,0,0,0.3);
+  --shadow-focus:   0 0 0 3px rgba(255, 255, 255, 0.12);
 
   /* Transitions */
   --transition-ui:  150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -65,14 +65,14 @@ html, body {
 .admin-label {
   font-size: 0.65rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-muted);
 }
 
 .admin-metric {
   font-size: 1.875rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1.1;
   color: var(--text-primary);
@@ -91,11 +91,11 @@ html, body {
   position: relative;
   background: var(--bg-card);
   border: 1px solid var(--border-default);
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 1.25rem 1.375rem;
   overflow: hidden;
-  transition: border-color var(--transition-ui), box-shadow var(--transition-ui);
-  box-shadow: var(--shadow-card);
+  transition: border-color var(--transition-ui), box-shadow var(--transition-ui), transform var(--transition-ui);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
 }
 .kpi-card::before {
   content: '';
@@ -107,27 +107,31 @@ html, body {
 }
 .kpi-card:hover {
   border-color: var(--border-strong);
-  box-shadow: var(--shadow-card), 0 0 0 1px rgba(255,255,255,0.04);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
 }
-.kpi-card-accent-blue { border-left: 3px solid var(--accent-blue); }
-.kpi-card-accent-green { border-left: 3px solid var(--accent-green); }
-.kpi-card-accent-amber { border-left: 3px solid var(--accent-amber); }
-.kpi-card-accent-red { border-left: 3px solid var(--accent-red); }
+/* Neutralized accents: hairline subtle border instead of thick neon */
+.kpi-card-accent-blue  { border-color: rgba(255,255,255,0.09); }
+.kpi-card-accent-green { border-color: rgba(255,255,255,0.09); }
+.kpi-card-accent-amber { border-color: rgba(255,255,255,0.09); }
+.kpi-card-accent-red   { border-color: rgba(255,255,255,0.09); }
 
 .kpi-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2rem;
+  height: 2rem;
   border-radius: 10px;
   flex-shrink: 0;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #94a3b8;
 }
-.kpi-icon-blue  { background: rgba(79,156,249,0.12); color: var(--accent-blue); }
-.kpi-icon-green { background: rgba(16,185,129,0.12); color: var(--accent-green); }
-.kpi-icon-amber { background: rgba(245,158,11,0.12); color: var(--accent-amber); }
-.kpi-icon-red   { background: rgba(239,68,68,0.12);  color: var(--accent-red); }
-.kpi-icon-violet { background: rgba(139,92,246,0.12); color: var(--accent-violet); }
+.kpi-icon-blue  { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: #cbd5e1; }
+.kpi-icon-green { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: #cbd5e1; }
+.kpi-icon-amber { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: #cbd5e1; }
+.kpi-icon-red   { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: #cbd5e1; }
+.kpi-icon-violet{ background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: #cbd5e1; }
 
 /* ─── Data Table ─────────────────────────────────────────────────── */
 .admin-table {
@@ -350,12 +354,12 @@ html, body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  padding: 0.45rem 0.875rem;
   border-radius: 10px;
   border: 1px solid var(--border-default);
-  background: var(--bg-inset);
-  font-size: 0.75rem;
-  font-weight: 600;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.73rem;
+  font-weight: 500;
   color: var(--text-secondary);
   cursor: pointer;
   transition: all var(--transition-ui);
@@ -366,17 +370,17 @@ html, body {
 .slot-pill:hover {
   border-color: var(--border-strong);
   color: var(--text-primary);
-  background: var(--bg-card-hover);
+  background: rgba(255, 255, 255, 0.06);
 }
 .slot-pill.active {
-  background: rgba(79,156,249,0.10);
-  border-color: rgba(79,156,249,0.35);
-  color: var(--accent-blue);
-  box-shadow: 0 0 0 3px rgba(79,156,249,0.08);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 .slot-pill-count {
   font-size: 0.62rem;
-  font-weight: 800;
+  font-weight: 700;
   padding: 0.15rem 0.45rem;
   border-radius: 999px;
   font-variant-numeric: tabular-nums;
