@@ -2428,14 +2428,19 @@ Overwatch`;
         {/* Navigation */}
         <nav className="mt-5 space-y-4">
 
-          {/* ── ACTIVE CAMPAIGN WORKSPACES ─────────────────────────── */}
-          {roles.filter((r) => r.open).length > 0 && (
+          {/* ── CAMPAIGN WORKSPACES (ALL ROLES) ───────────────────── */}
+          {roles.length > 0 && (
             <div>
-              <p className="mb-2 px-1 text-[0.62rem] font-bold uppercase tracking-widest text-white/35">
-                {t("Active Campaigns", "Campanhas Activas")}
-              </p>
+              <div className="flex items-center justify-between mb-2 px-1">
+                <p className="text-[0.62rem] font-bold uppercase tracking-widest text-white/35">
+                  {t("Role Workspaces", "Painéis das Vagas")}
+                </p>
+                <span className="text-[0.6rem] text-white/30 font-mono">
+                  {roles.length} {t("roles", "vagas")}
+                </span>
+              </div>
               <div className="space-y-1">
-                {roles.filter((r) => r.open || applications.some((a) => a.role === r.id)).map((role) => {
+                {roles.map((role) => {
                   const isActiveCampaign = activeCampaignRole === role.id;
                   const roleAppsCount = applications.filter((a) => a.role === role.id).length;
                   const rolePending = applications.filter(
@@ -2652,19 +2657,6 @@ Overwatch`;
                   );
                 })}
               </div>
-            </div>
-          )}
-
-          {/* ── NO OPEN CAMPAIGNS PLACEHOLDER ─────────────────────── */}
-          {roles.filter((r) => r.open).length === 0 && roles.length > 0 && (
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] px-3.5 py-4 text-center">
-              <LockKeyhole size={18} className="mx-auto text-white/25 mb-2" />
-              <p className="text-[0.68rem] text-white/40 leading-relaxed">
-                {t("No roles are currently open.", "Nenhuma vaga está actualmente aberta.")}
-              </p>
-              <p className="text-[0.65rem] text-white/30 mt-1">
-                {t("Toggle a role open below.", "Abra uma vaga em baixo.")}
-              </p>
             </div>
           )}
 
@@ -2997,7 +2989,19 @@ Overwatch`;
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveCampaignRole(r.id);
+                          setView("applications");
+                        }}
+                        className="text-xs font-semibold text-white/80 hover:text-white bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Briefcase size={13} className="text-sky-400" />
+                        <span>{t("Manage Applicants", "Gerir Candidatos")} ({applications.filter((a) => a.role === r.id).length})</span>
+                      </button>
+
                       <span
                         className={`text-xs font-semibold ${
                           r.open ? "text-sky-400" : "text-white/40"
