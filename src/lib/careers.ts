@@ -81,11 +81,28 @@ export const DEFAULT_TEST_SLOTS = [
   "Sexta-feira, 25 de Setembro - 10h00",
 ] as const;
 
+/**
+ * Normalizes a test slot string to canonical form:
+ * - Standardizes day names (e.g. "Segunda-feira")
+ * - Normalizes Unicode en-dashes / em-dashes into standard ASCII hyphen " - "
+ * - Normalizes time prefix and trims extra whitespace
+ */
+export function normalizeSlot(slot?: string | null): string {
+  if (!slot) return "";
+  return slot
+    .replace(/(Segunda|Terça|Quarta|Quinta|Sexta)[\u2013\u2014\-](feira)/gi, "$1-$2")
+    .replace(/\s*[\u2013\u2014]\s*/g, " - ")
+    .replace(/\s*-\s*(\d{1,2}(?:h|:)\d{2})/i, " - $1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function formatSlotDisplay(slot: string, l?: "en" | "pt" | boolean) {
   if (!slot) return "";
+  const normalized = normalizeSlot(slot);
   const isPt = l === "pt" || l === true;
-  if (isPt) return slot;
-  return slot
+  if (isPt) return normalized;
+  return normalized
     .replace("Segunda-feira", "Monday")
     .replace("Terça-feira", "Tuesday")
     .replace("Quarta-feira", "Wednesday")
@@ -111,6 +128,14 @@ export function formatSlotDisplay(slot: string, l?: "en" | "pt" | boolean) {
       const h12 = hour % 12 || 12;
       return `${h12}:${m} ${ampm}`;
     });
+}
+
+/** Extract date-only display string (e.g. "Monday, 21 September" or "Segunda-feira, 21 de Setembro") */
+export function formatSlotDateOnly(slot?: string | null, l?: "en" | "pt" | boolean): string {
+  if (!slot) return "";
+  const norm = normalizeSlot(slot);
+  const datePart = norm.split(/\s+-\s+\d{1,2}(?:h|:)\d{2}/i)[0].trim();
+  return formatSlotDisplay(datePart, l);
 }
 
 /**

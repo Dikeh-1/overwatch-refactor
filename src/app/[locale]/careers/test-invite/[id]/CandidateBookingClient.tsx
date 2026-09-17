@@ -24,7 +24,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { siteContact } from "@/lib/site-config";
-import { DEFAULT_TEST_SLOTS } from "@/lib/careers";
+import { DEFAULT_TEST_SLOTS, normalizeSlot } from "@/lib/careers";
 
 type SlotStat = {
   booked: number;
@@ -52,8 +52,10 @@ type CandidateData = {
 };
 
 function formatSlotDisplay(slot: string, isPt: boolean) {
-  if (isPt) return slot;
-  return slot
+  if (!slot) return "";
+  const normalized = normalizeSlot(slot);
+  if (isPt) return normalized;
+  return normalized
     .replace("Segunda-feira", "Monday")
     .replace("Terça-feira", "Tuesday")
     .replace("Quarta-feira", "Wednesday")

@@ -1,5 +1,5 @@
 import { getApplication, updateApplication, getTestSlots, getApplications } from "@/lib/careers-store";
-import { DEFAULT_TEST_SLOTS } from "@/lib/careers";
+import { DEFAULT_TEST_SLOTS, normalizeSlot } from "@/lib/careers";
 import { sendBookingConfirmation } from "@/lib/careers-email";
 import { siteContact } from "@/lib/site-config";
 
@@ -72,8 +72,9 @@ export async function GET(request: Request) {
     const maxPerDay = 10;
     const slotStats: Record<string, { booked: number; max: number; isFull: boolean; remaining: number }> = {};
     for (const s of candidateSlots) {
+      const normS = normalizeSlot(s);
       const booked = allApps.filter(
-        (a) => a.testSlot === s && a.status !== "rejected" && a.status !== "archived" && a.id !== candidate.id
+        (a) => normalizeSlot(a.testSlot) === normS && a.status !== "rejected" && a.status !== "archived" && a.id !== candidate.id
       ).length;
       slotStats[s] = {
         booked,
@@ -167,10 +168,12 @@ export async function POST(request: Request) {
       );
     }
 
+    const normalizedSlot = normalizeSlot(slot);
+
     // Slot quota safeguard: max 10 candidates per day
     const allApps = await getApplications();
     const currentBookings = allApps.filter(
-      (a) => a.testSlot === slot.trim() && a.status !== "rejected" && a.status !== "archived" && a.id !== id
+      (a) => normalizeSlot(a.testSlot) === normalizedSlot && a.status !== "rejected" && a.status !== "archived" && a.id !== id
     ).length;
 
     if (currentBookings >= 10) {
@@ -186,7 +189,7 @@ export async function POST(request: Request) {
 
     const bookedAt = new Date().toISOString();
     const updates: Record<string, any> = {
-      testSlot: slot.trim(),
+      testSlot: normalizedSlot,
       testBookedAt: bookedAt,
       status: "interview",
       attendedAt: undefined,
@@ -212,7 +215,7 @@ export async function POST(request: Request) {
     try {
       await sendBookingConfirmation({
         application: updated,
-        slot: slot.trim(),
+        slot: normalizedSlot,
         baseUrl: origin,
       });
     } catch (emailErr) {

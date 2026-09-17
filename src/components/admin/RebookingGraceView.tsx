@@ -24,7 +24,7 @@ import {
   Filter,
 } from "lucide-react";
 import type { Application } from "@/lib/careers";
-import { formatSlotDisplay } from "@/lib/careers";
+import { formatSlotDisplay, formatSlotDateOnly } from "@/lib/careers";
 import { siteContact } from "@/lib/site-config";
 
 interface RebookingGraceViewProps {
@@ -781,7 +781,7 @@ export default function RebookingGraceView({
                           <div>
                             <div className="flex items-center gap-1.5 font-medium text-white/90">
                               <Calendar size={12} className="text-white/40 shrink-0" />
-                              <span>{formatSlotDisplay(c.testSlot.split("–")[0].trim(), lang)}</span>
+                              <span>{formatSlotDateOnly(c.testSlot, lang)}</span>
                             </div>
                             {c.attendedAt ? (
                               <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-semibold mt-0.5">

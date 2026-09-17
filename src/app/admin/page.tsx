@@ -70,6 +70,8 @@ import {
   type Role,
   stages,
   DEFAULT_TEST_SLOTS,
+  normalizeSlot,
+  formatSlotDateOnly,
 } from "@/lib/careers";
 import { screenCandidate, type CandidateScreeningResult } from "@/lib/careers-screening";
 import { siteContact } from "@/lib/site-config";
@@ -97,8 +99,10 @@ const stageLabels: Record<"en" | "pt", Record<string, string>> = {
 };
 
 export function formatSlotDisplay(slot: string, l: "en" | "pt") {
-  if (l === "pt") return slot;
-  return slot
+  if (!slot) return "";
+  const normalized = normalizeSlot(slot);
+  if (l === "pt") return normalized;
+  return normalized
     .replace("Segunda-feira", "Monday")
     .replace("Terça-feira", "Tuesday")
     .replace("Quarta-feira", "Wednesday")
@@ -125,6 +129,8 @@ export function formatSlotDisplay(slot: string, l: "en" | "pt") {
       return `${h12}:${m} ${ampm}`;
     });
 }
+
+export { normalizeSlot, formatSlotDateOnly };
 
 /** Extract numeric day of the month from a slot label (e.g. "16", "21") */
 export function getSlotDayNumber(slot: string): number | null {
@@ -295,21 +301,29 @@ export default function AdminPage() {
   const [gatePosterOpen, setGatePosterOpen] = useState(false);
 
   const rosterSlots = useMemo(() => {
-    const list = [...broadcastSlots];
+    const list: string[] = [];
+    const seen = new Set<string>();
+
+    const addSlot = (raw?: string | null) => {
+      const norm = normalizeSlot(raw);
+      if (norm && !seen.has(norm)) {
+        seen.add(norm);
+        list.push(norm);
+      }
+    };
+
     // Guarantee this week's scheduled sessions are present so admin can track them
     const THIS_WEEK_DEFAULTS = [
-      "Quarta-feira, 16 de Setembro – 10h00",
-      "Quinta-feira, 17 de Setembro – 10h00",
-      "Sexta-feira, 18 de Setembro – 10h00",
+      "Quarta-feira, 16 de Setembro - 10h00",
+      "Quinta-feira, 17 de Setembro - 10h00",
+      "Sexta-feira, 18 de Setembro - 10h00",
     ];
-    for (const tw of THIS_WEEK_DEFAULTS) {
-      if (!list.includes(tw)) list.push(tw);
-    }
+    for (const tw of THIS_WEEK_DEFAULTS) addSlot(tw);
+    for (const bs of broadcastSlots) addSlot(bs);
     for (const a of applications) {
-      if (a.testSlot && !list.includes(a.testSlot)) {
-        list.push(a.testSlot);
-      }
+      if (a.testSlot) addSlot(a.testSlot);
     }
+
     // Sort all slots chronologically by day number (16, 17, 18, 21, 22, 23, 24, 25...)
     return list.sort((a, b) => {
       const dayA = getSlotDayNumber(a) ?? 99;
@@ -327,11 +341,11 @@ export default function AdminPage() {
   }, [rosterSlots]);
 
   const thisWeekCount = useMemo(() => {
-    return applications.filter((a) => Boolean(a.testSlot) && getSlotWeekCategory(a.testSlot!) === "this_week").length;
+    return applications.filter((a) => Boolean(a.testSlot) && getSlotWeekCategory(normalizeSlot(a.testSlot)) === "this_week").length;
   }, [applications]);
 
   const nextWeekCount = useMemo(() => {
-    return applications.filter((a) => Boolean(a.testSlot) && getSlotWeekCategory(a.testSlot!) === "next_week").length;
+    return applications.filter((a) => Boolean(a.testSlot) && getSlotWeekCategory(normalizeSlot(a.testSlot)) === "next_week").length;
   }, [applications]);
 
   const missedTestCount = useMemo(() => {
@@ -432,11 +446,12 @@ export default function AdminPage() {
   };
 
   const handleAddSlot = () => {
-    const slotStr = useCustomInput
+    const raw = useCustomInput
       ? newSlotCustom.trim()
-      : `${newSlotDay}, ${newSlotDayNum} de ${newSlotMonth} – ${newSlotTime}`;
+      : `${newSlotDay}, ${newSlotDayNum} de ${newSlotMonth} - ${newSlotTime}`;
+    const slotStr = normalizeSlot(raw);
     if (!slotStr) return;
-    if (broadcastSlots.includes(slotStr)) {
+    if (broadcastSlots.some((s) => normalizeSlot(s) === slotStr)) {
       return;
     }
     const updated = [...broadcastSlots, slotStr];
@@ -472,23 +487,23 @@ export default function AdminPage() {
     let slots: string[] = [];
     if (presetKey === "next_week_5") {
       slots = [
-        "Segunda-feira, 21 de Setembro – 10h00",
-        "Terça-feira, 22 de Setembro – 10h00",
-        "Quarta-feira, 23 de Setembro – 10h00",
-        "Quinta-feira, 24 de Setembro – 10h00",
-        "Sexta-feira, 25 de Setembro – 10h00",
+        "Segunda-feira, 21 de Setembro - 10h00",
+        "Terça-feira, 22 de Setembro - 10h00",
+        "Quarta-feira, 23 de Setembro - 10h00",
+        "Quinta-feira, 24 de Setembro - 10h00",
+        "Sexta-feira, 25 de Setembro - 10h00",
       ];
     } else if (presetKey === "next_week_3") {
       slots = [
-        "Segunda-feira, 21 de Setembro – 10h00",
-        "Terça-feira, 22 de Setembro – 10h00",
-        "Quarta-feira, 23 de Setembro – 10h00",
+        "Segunda-feira, 21 de Setembro - 10h00",
+        "Terça-feira, 22 de Setembro - 10h00",
+        "Quarta-feira, 23 de Setembro - 10h00",
       ];
     } else if (presetKey === "current_week") {
       slots = [
-        "Quarta-feira, 16 de Setembro – 10h00",
-        "Quinta-feira, 17 de Setembro – 10h00",
-        "Sexta-feira, 18 de Setembro – 10h00",
+        "Quarta-feira, 16 de Setembro - 10h00",
+        "Quinta-feira, 17 de Setembro - 10h00",
+        "Sexta-feira, 18 de Setembro - 10h00",
       ];
     }
     setBroadcastSlots(slots);
@@ -987,7 +1002,7 @@ Overwatch`;
             (a) => a.testSlot && prevBookedMap.current!.get(a.id) !== a.testSlot,
           );
           if (newlyBooked && (!brandNew.length || newlyBooked.id !== brandNew[0].id)) {
-            const slotShort = formatSlotDisplay(newlyBooked.testSlot?.split("–")[0]?.trim() || "", lang);
+            const slotShort = formatSlotDateOnly(newlyBooked.testSlot, lang);
             setLiveNotification({
               id: `book_${Date.now()}_${newlyBooked.id}`,
               title: lang === "pt" ? "📅 Novo Agendamento Confirmado!" : "📅 Test Booking Confirmed!",
@@ -2074,9 +2089,9 @@ Overwatch`;
     const targetApps = applications.filter((a) => {
       if (!a.testSlot) return false;
       if (!slotFilter || slotFilter === "all") return true;
-      if (slotFilter === "all_this_week") return getSlotWeekCategory(a.testSlot) === "this_week";
-      if (slotFilter === "all_next_week") return getSlotWeekCategory(a.testSlot) === "next_week";
-      return a.testSlot === slotFilter;
+      if (slotFilter === "all_this_week") return getSlotWeekCategory(normalizeSlot(a.testSlot)) === "this_week";
+      if (slotFilter === "all_next_week") return getSlotWeekCategory(normalizeSlot(a.testSlot)) === "next_week";
+      return normalizeSlot(a.testSlot) === normalizeSlot(slotFilter);
     });
     if (!targetApps.length) {
       alert(t("No confirmed candidates found for this slot filter.", "Nenhum candidato com teste confirmado para este filtro."));
@@ -3782,7 +3797,7 @@ Overwatch`;
 
                             {hasBooked ? (
                               <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] font-medium bg-indigo-500/15 text-indigo-300 border border-indigo-500/25">
-                                {t("Booked:", "Agendado:")} {formatSlotDisplay(a.testSlot?.split("–")[0].trim() || "", lang)}
+                                {t("Booked:", "Agendado:")} {formatSlotDateOnly(a.testSlot, lang)}
                               </span>
                             ) : isAlreadyInvited ? (
                               <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] font-medium bg-white/[0.06] text-white/70 border border-white/10 flex items-center gap-1">
@@ -5300,15 +5315,14 @@ Overwatch`;
                     </button>
                   )}
 
-                  {/* Individual slot pills */}
                   {(rosterWeekTab === "this_week"
                     ? thisWeekSlots
                     : rosterWeekTab === "next_week"
                       ? nextWeekSlots
                       : rosterSlots
                   ).map((slot) => {
-                    const count = applications.filter((a) => a.testSlot === slot).length;
-                    const isSelected = activeRosterSlot === slot;
+                    const count = applications.filter((a) => normalizeSlot(a.testSlot) === normalizeSlot(slot)).length;
+                    const isSelected = normalizeSlot(activeRosterSlot) === normalizeSlot(slot);
                     const isFull = count >= 10;
                     const isThisWeek = getSlotWeekCategory(slot) === "this_week";
 
@@ -5319,7 +5333,7 @@ Overwatch`;
                         onClick={() => setSelectedRosterSlot(slot)}
                         className={`slot-pill shrink-0 ${isSelected ? "active" : ""}`}
                       >
-                        <span>{formatSlotDisplay(slot.split("–")[0].trim(), lang)}</span>
+                        <span>{formatSlotDisplay(normalizeSlot(slot), lang)}</span>
                         <span
                           className={`slot-pill-count rounded-full ${
                             isFull
@@ -5345,10 +5359,10 @@ Overwatch`;
                 const candidatesInSlot = activeRosterSlot === "all"
                   ? applications.filter((a) => Boolean(a.testSlot))
                   : activeRosterSlot === "all_this_week"
-                    ? applications.filter((a) => Boolean(a.testSlot) && getSlotWeekCategory(a.testSlot!) === "this_week")
+                    ? applications.filter((a) => Boolean(a.testSlot) && getSlotWeekCategory(normalizeSlot(a.testSlot!)) === "this_week")
                     : activeRosterSlot === "all_next_week"
-                      ? applications.filter((a) => Boolean(a.testSlot) && getSlotWeekCategory(a.testSlot!) === "next_week")
-                      : applications.filter((a) => a.testSlot === activeRosterSlot);
+                      ? applications.filter((a) => Boolean(a.testSlot) && getSlotWeekCategory(normalizeSlot(a.testSlot!)) === "next_week")
+                      : applications.filter((a) => normalizeSlot(a.testSlot) === normalizeSlot(activeRosterSlot));
                 const attendedCount = candidatesInSlot.filter((c) => Boolean(c.attendedAt)).length;
                 const isFull = !isConsolidated && candidatesInSlot.length >= 10;
                 const remaining = !isConsolidated ? Math.max(0, 10 - candidatesInSlot.length) : 0;
@@ -5569,7 +5583,7 @@ Overwatch`;
                                             }`}
                                           >
                                             <span className={`w-1.5 h-1.5 rounded-full ${isTw ? "bg-sky-400" : "bg-purple-400"}`} />
-                                            <span>{formatSlotDisplay(c.testSlot?.split("–")[0].trim() || c.testSlot || "", lang)}</span>
+                                            <span>{formatSlotDateOnly(c.testSlot, lang)}</span>
                                           </span>
                                         );
                                       })()}
@@ -7481,7 +7495,7 @@ Overwatch`;
                             {a.testSlot ? (
                               <span className="inline-flex items-center gap-1 rounded-full bg-indigo-500/15 border border-indigo-500/25 px-2.5 py-0.5 text-[0.68rem] font-medium text-indigo-300">
                                 <CalendarCheck size={11} className="text-indigo-400" />
-                                {formatSlotDisplay(a.testSlot.split("–")[0].trim(), lang)}
+                                {formatSlotDateOnly(a.testSlot, lang)}
                               </span>
                             ) : a.invitedAt ? (
                               <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/25 px-2.5 py-0.5 text-[0.68rem] font-medium text-amber-300">
