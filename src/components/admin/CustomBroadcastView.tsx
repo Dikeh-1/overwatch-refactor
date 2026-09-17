@@ -8,14 +8,12 @@ import {
   AlertTriangle,
   Mail,
   RefreshCw,
-  FileText,
   Eye,
   Filter,
   Check,
   ChevronDown,
-  ExternalLink,
-  Shield,
-  Sparkles,
+  Phone,
+  ShieldCheck,
 } from "lucide-react";
 import type { Application } from "@/lib/careers";
 
@@ -84,7 +82,7 @@ Overwatch`,
   },
   {
     id: "custom_blank",
-    name: "Mensagem Personalizada em Branco",
+    name: "Mensagem Livre em Branco",
     audience: "all_invited" as const,
     subject: "",
     includeButton: false,
@@ -111,22 +109,25 @@ export function CustomBroadcastView({
   const [includeButton, setIncludeButton] = useState(TEMPLATES[0].includeButton);
   const [buttonText, setButtonText] = useState(TEMPLATES[0].buttonText);
 
+  // Test send state with user-entered custom email
+  const [testEmailInput, setTestEmailInput] = useState("");
+  const [isSendingTest, setIsSendingTest] = useState(false);
+
+  // Main dispatch state
   const [showRecipientList, setShowRecipientList] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [isSendingTest, setIsSendingTest] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [statusFeedback, setStatusFeedback] = useState<{
     type: "success" | "error";
     message: string;
   } | null>(null);
 
-  // Filter applications by role and selected audience filters
+  // Filter applications by active role and audience cohort
   const targetCandidates = useMemo(() => {
     let pool = activeCampaignRole
       ? applications.filter((a) => a.role === activeCampaignRole)
       : applications;
 
-    // Audience filter
     if (audienceFilter === "invited_unconfirmed") {
       pool = pool.filter(
         (a) => Boolean(a.invitedAt) && !a.testSlot && a.status !== "archived"
@@ -145,12 +146,11 @@ export function CustomBroadcastView({
       pool = pool.filter((a) => a.status !== "archived");
     }
 
-    // Gender filter
     if (genderFilter !== "all") {
       pool = pool.filter((a) => a.sex === genderFilter);
     }
 
-    // Deduplicate by email and remove Inocio Wilson
+    // Deduplicate by email address and exclude deactivated candidate
     const seen = new Set<string>();
     const result: Application[] = [];
     for (const c of pool) {
@@ -186,15 +186,28 @@ export function CustomBroadcastView({
   };
 
   const handleSendTest = async () => {
-    if (!subject.trim() || !message.trim()) {
+    const targetEmail = testEmailInput.trim();
+    if (!targetEmail || !targetEmail.includes("@")) {
       setStatusFeedback({
         type: "error",
-        message: t("Please specify subject and message.", "Por favor preencha o assunto e a mensagem."),
+        message: t(
+          "Please enter a valid email address for the test send.",
+          "Por favor introduza um endereço de e-mail válido para o envio de teste."
+        ),
       });
       return;
     }
+    if (!subject.trim() || !message.trim()) {
+      setStatusFeedback({
+        type: "error",
+        message: t("Please specify a subject and message.", "Por favor preencha o assunto e a mensagem."),
+      });
+      return;
+    }
+
     setIsSendingTest(true);
     setStatusFeedback(null);
+
     try {
       const res = await fetch("/api/admin/careers/custom-broadcast", {
         method: "POST",
@@ -208,16 +221,18 @@ export function CustomBroadcastView({
           includeBookingButton: includeButton,
           buttonText,
           testOnly: true,
-          testEmail: "ebube.michael@overwatchmoz.com",
+          testEmail: targetEmail,
         }),
       });
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to send test email");
+
       setStatusFeedback({
         type: "success",
         message: t(
-          "Test preview dispatched successfully to ebube.michael@overwatchmoz.com!",
-          "E-mail de teste enviado com sucesso para ebube.michael@overwatchmoz.com!"
+          `Test preview dispatched successfully to ${targetEmail}!`,
+          `E-mail de teste enviado com sucesso para ${targetEmail}!`
         ),
       });
     } catch (err) {
@@ -251,14 +266,15 @@ export function CustomBroadcastView({
           testOnly: false,
         }),
       });
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Broadcast dispatch failed");
 
       setStatusFeedback({
         type: "success",
         message: t(
-          `Broadcast successfully sent to ${data.sentCount} of ${data.totalTargeted} candidates!`,
-          `Comunicação enviada com sucesso para ${data.sentCount} de ${data.totalTargeted} candidatos!`
+          `Official communication successfully dispatched to ${data.sentCount} candidate(s)!`,
+          `Comunicação oficial enviada com sucesso para ${data.sentCount} candidato(s)!`
         ),
       });
       await onRefresh();
@@ -274,10 +290,10 @@ export function CustomBroadcastView({
 
   return (
     <section className="space-y-6">
-      {/* Top Banner Alert / Feedback */}
+      {/* Status Feedback Banner */}
       {statusFeedback && (
         <div
-          className={`rounded-2xl border p-4 flex items-center justify-between gap-3 ${
+          className={`rounded-xl border p-4 flex items-center justify-between gap-3 ${
             statusFeedback.type === "success"
               ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
               : "border-rose-500/30 bg-rose-500/10 text-rose-300"
@@ -285,13 +301,14 @@ export function CustomBroadcastView({
         >
           <div className="flex items-center gap-3">
             {statusFeedback.type === "success" ? (
-              <CheckCircle2 size={20} className="text-emerald-400 shrink-0" />
+              <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
             ) : (
-              <AlertTriangle size={20} className="text-rose-400 shrink-0" />
+              <AlertTriangle size={18} className="text-rose-400 shrink-0" />
             )}
             <p className="text-xs font-semibold">{statusFeedback.message}</p>
           </div>
           <button
+            type="button"
             onClick={() => setStatusFeedback(null)}
             className="text-white/60 hover:text-white text-xs px-2 py-1 rounded"
           >
@@ -300,29 +317,20 @@ export function CustomBroadcastView({
         </div>
       )}
 
-      {/* Template Selector Bar */}
-      <div className="rounded-2xl border border-white/10 bg-[#121827]/95 p-5 shadow-sm space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Sparkles size={16} className="text-sky-400" />
-              {t("Communication Templates", "Modelos de Comunicação Prontos")}
-            </h3>
-            <p className="text-xs text-white/50">
-              {t(
-                "Choose a pre-configured template or compose a customized outreach message",
-                "Escolha um modelo pré-formatado ou escreva uma mensagem personalizada"
-              )}
-            </p>
-          </div>
+      {/* Template Selector */}
+      <div className="rounded-xl border border-white/10 bg-[#121827] p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-white/70">
+            {t("Pre-Configured Message Templates", "Modelos de Mensagem Prontos")}
+          </h3>
           {activeCampaignRole && (
-            <span className="text-xs font-semibold text-sky-400 bg-sky-500/10 border border-sky-500/20 rounded-lg px-3 py-1">
+            <span className="text-[0.68rem] font-medium text-white/50">
               {roleLabel(activeCampaignRole)}
             </span>
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           {TEMPLATES.map((tmpl) => {
             const isSelected = selectedTemplate === tmpl.id;
             return (
@@ -330,17 +338,17 @@ export function CustomBroadcastView({
                 key={tmpl.id}
                 type="button"
                 onClick={() => handleTemplateSelect(tmpl.id)}
-                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                className={`p-3 rounded-lg border text-left transition-all cursor-pointer ${
                   isSelected
-                    ? "border-sky-500/50 bg-sky-500/10 shadow-md ring-1 ring-sky-500/30"
-                    : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06] text-white/70"
+                    ? "border-white/30 bg-white/[0.08] text-white"
+                    : "border-white/10 bg-white/[0.02] hover:bg-white/[0.05] text-white/60 hover:text-white"
                 }`}
               >
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-bold text-white truncate">{tmpl.name}</span>
-                  {isSelected && <Check size={14} className="text-sky-400 shrink-0" />}
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-semibold text-white">{tmpl.name}</span>
+                  {isSelected && <Check size={13} className="text-white shrink-0" />}
                 </div>
-                <p className="text-[0.68rem] text-white/50 line-clamp-2">
+                <p className="text-[0.68rem] text-white/40 line-clamp-1">
                   {tmpl.subject || t("Blank custom message", "Mensagem livre sem modelo")}
                 </p>
               </button>
@@ -349,27 +357,26 @@ export function CustomBroadcastView({
         </div>
       </div>
 
-      {/* Main Two-Column Layout: Form & Preview */}
+      {/* Main Two-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Audience & Composer (7 cols) */}
-        <div className="lg:col-span-7 space-y-6">
-          {/* 1. Audience Targeter */}
-          <div className="rounded-2xl border border-white/10 bg-[#121827]/95 p-5 shadow-sm space-y-4">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-sky-400 flex items-center gap-2">
-              <Filter size={13} />
-              {t("Target Audience Segment", "Segmento de Destinatários")}
+        {/* Left Column: Form & Settings (7 cols) */}
+        <div className="lg:col-span-7 space-y-5">
+          {/* 1. Audience Selector */}
+          <div className="rounded-xl border border-white/10 bg-[#121827] p-5 space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-white/70 flex items-center gap-2">
+              <Filter size={13} className="text-white/60" />
+              {t("Recipient Audience", "Público Alvo")}
             </h4>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Audience Dropdown */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-[0.68rem] font-semibold text-white/60 block mb-1.5">
-                  {t("Audience Group:", "Grupo Alvo:")}
+                <label className="text-[0.68rem] font-semibold text-white/60 block mb-1">
+                  {t("Audience Filter:", "Filtro de Destinatários:")}
                 </label>
                 <select
                   value={audienceFilter}
                   onChange={(e) => setAudienceFilter(e.target.value as any)}
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500"
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-white focus:outline-none focus:border-white/30"
                 >
                   <option value="invited_unconfirmed" className="bg-[#121827]">
                     {t(
@@ -392,15 +399,14 @@ export function CustomBroadcastView({
                 </select>
               </div>
 
-              {/* Gender Filter Dropdown */}
               <div>
-                <label className="text-[0.68rem] font-semibold text-white/60 block mb-1.5">
-                  {t("Gender Filter:", "Filtro de Género:")}
+                <label className="text-[0.68rem] font-semibold text-white/60 block mb-1">
+                  {t("Gender:", "Género:")}
                 </label>
                 <select
                   value={genderFilter}
                   onChange={(e) => setGenderFilter(e.target.value as any)}
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500"
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-white focus:outline-none focus:border-white/30"
                 >
                   <option value="all" className="bg-[#121827]">
                     {t("All Genders (Male & Female)", "Todos os Géneros (Ambos)")}
@@ -415,77 +421,51 @@ export function CustomBroadcastView({
               </div>
             </div>
 
-            {/* Audience Summary Banner */}
-            <div className="rounded-xl border border-sky-500/20 bg-sky-500/[0.06] p-3.5 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0 font-bold text-sm">
-                  {targetCandidates.length}
+            {/* Audience Summary Box */}
+            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-xs font-semibold text-white">
+                  {targetCandidates.length} {t("candidates selected", "candidatos seleccionados")}
                 </div>
-                <div>
-                  <div className="text-xs font-bold text-white">
-                    {t("Selected Recipients", "Destinatários Seleccionados")}
-                  </div>
-                  <div className="text-[0.68rem] text-white/50 flex items-center gap-2 mt-0.5">
-                    <span className="text-pink-400 font-medium">♀ {womenCount} {t("women", "mulheres")}</span>
-                    <span>•</span>
-                    <span className="text-sky-400 font-medium">♂ {menCount} {t("men", "homens")}</span>
-                  </div>
+                <div className="text-[0.68rem] text-white/40 mt-0.5">
+                  <span className="text-pink-400">♀ {womenCount} {t("women", "mulheres")}</span>
+                  {" · "}
+                  <span className="text-sky-400">♂ {menCount} {t("men", "homens")}</span>
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={() => setShowRecipientList(!showRecipientList)}
-                className="flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 font-semibold px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/10"
+                className="text-xs text-white/70 hover:text-white font-medium px-2.5 py-1 rounded border border-white/10 hover:bg-white/[0.05] transition-colors"
               >
-                <span>{showRecipientList ? t("Hide List", "Ocultar Lista") : t("View Candidates", "Ver Candidatos")}</span>
-                <ChevronDown
-                  size={14}
-                  className={`transition-transform ${showRecipientList ? "rotate-180" : ""}`}
-                />
+                {showRecipientList ? t("Hide", "Ocultar") : t("View list", "Ver lista")}
               </button>
             </div>
 
-            {/* Collapsible Candidate List Table */}
+            {/* Collapsible Table */}
             {showRecipientList && (
-              <div className="max-h-60 overflow-y-auto rounded-xl border border-white/10 bg-black/40 text-xs divide-y divide-white/5">
+              <div className="max-h-52 overflow-y-auto rounded-lg border border-white/10 bg-black/40 text-xs divide-y divide-white/5">
                 {targetCandidates.length === 0 ? (
-                  <div className="p-4 text-center text-white/40">
-                    {t("No candidates match this criteria.", "Nenhum candidato corresponde a este filtro.")}
+                  <div className="p-3 text-center text-white/40">
+                    {t("No candidates match this filter.", "Nenhum candidato corresponde a este filtro.")}
                   </div>
                 ) : (
                   targetCandidates.map((c, idx) => (
                     <div
                       key={c.id}
-                      className="px-3.5 py-2 flex items-center justify-between gap-3 hover:bg-white/[0.02]"
+                      className="px-3 py-1.5 flex items-center justify-between gap-2 hover:bg-white/[0.02]"
                     >
                       <div className="min-w-0 flex items-center gap-2">
-                        <span className="text-[0.65rem] text-white/30 font-mono w-5">
+                        <span className="text-[0.62rem] text-white/30 font-mono w-4">
                           {idx + 1}.
                         </span>
-                        <span className="font-semibold text-white truncate">{c.name}</span>
-                        <span className="text-white/40 truncate text-[0.7rem]">&lt;{c.email}&gt;</span>
+                        <span className="font-medium text-white truncate">{c.name}</span>
+                        <span className="text-white/40 truncate text-[0.68rem]">&lt;{c.email}&gt;</span>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span
-                          className={`px-1.5 py-0.5 rounded text-[0.6rem] font-bold ${
-                            c.sex === "female"
-                              ? "bg-pink-500/10 text-pink-400 border border-pink-500/20"
-                              : "bg-sky-500/10 text-sky-400 border border-sky-500/20"
-                          }`}
-                        >
-                          {c.sex === "female" ? "♀ F" : "♂ M"}
-                        </span>
-                        {c.testSlot ? (
-                          <span className="text-[0.65rem] text-emerald-400 font-mono">
-                            {c.testSlot.split("–")[0]}
-                          </span>
-                        ) : (
-                          <span className="text-[0.65rem] text-amber-400">
-                            {t("Unconfirmed", "Pendente")}
-                          </span>
-                        )}
-                      </div>
+                      <span className="text-[0.62rem] font-bold px-1.5 py-0.5 rounded bg-white/10 text-white/70 shrink-0">
+                        {c.sex === "female" ? "♀ F" : "♂ M"}
+                      </span>
                     </div>
                   ))
                 )}
@@ -493,52 +473,50 @@ export function CustomBroadcastView({
             )}
           </div>
 
-          {/* 2. Message Composer */}
-          <div className="rounded-2xl border border-white/10 bg-[#121827]/95 p-5 shadow-sm space-y-4">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-sky-400 flex items-center gap-2">
-              <Mail size={13} />
-              {t("Email Composition", "Redacção da Mensagem")}
+          {/* 2. Message Editor */}
+          <div className="rounded-xl border border-white/10 bg-[#121827] p-5 space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-white/70 flex items-center gap-2">
+              <Mail size={13} className="text-white/60" />
+              {t("Message Content", "Conteúdo da Comunicação")}
             </h4>
 
-            {/* Subject */}
             <div>
               <label className="text-[0.68rem] font-semibold text-white/60 block mb-1">
-                {t("Subject Line:", "Assunto do E-mail:")}
+                {t("Subject:", "Assunto:")}
               </label>
               <input
                 type="text"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                placeholder={t("Enter email subject...", "Introduza o assunto do e-mail...")}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500 font-medium"
+                placeholder={t("Subject line...", "Assunto do e-mail...")}
+                className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-white focus:outline-none focus:border-white/30 font-medium"
               />
             </div>
 
-            {/* Message Body */}
             <div>
               <label className="text-[0.68rem] font-semibold text-white/60 block mb-1">
-                {t("Message Body (Supports paragraph breaks & bullet points):", "Corpo da Mensagem (Suporta parágrafos e marcadores):")}
+                {t("Message Body:", "Corpo da Mensagem:")}
               </label>
               <textarea
-                rows={11}
+                rows={10}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder={t("Write your message here...", "Escreva a mensagem aqui...")}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.05] p-3 text-xs text-white focus:outline-none focus:border-sky-500 font-sans leading-relaxed resize-y"
+                className="w-full rounded-lg border border-white/10 bg-white/[0.04] p-3 text-xs text-white focus:outline-none focus:border-white/30 font-sans leading-relaxed resize-y"
               />
             </div>
 
-            {/* Call to Action Button Toggle */}
-            <div className="pt-2 border-t border-white/10 space-y-3">
+            {/* CTA Button Settings */}
+            <div className="pt-2 border-t border-white/10 space-y-2.5">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-xs font-semibold text-white">
-                    {t("Include Direct Booking Link Button", "Incluir Botão de Agendamento Directo")}
+                    {t("Include Direct Booking Button", "Incluir Botão de Agendamento Directo")}
                   </div>
-                  <div className="text-[0.68rem] text-white/50">
+                  <div className="text-[0.68rem] text-white/40">
                     {t(
-                      "Inserts a secure 1-click booking button tailored to each candidate's profile",
-                      "Insere um botão que leva o candidato directamente ao portal de agendamento"
+                      "Direct link to candidate's personal booking page",
+                      "Link directo para o portal de agendamento do candidato"
                     )}
                   </div>
                 </div>
@@ -546,7 +524,7 @@ export function CustomBroadcastView({
                   type="checkbox"
                   checked={includeButton}
                   onChange={(e) => setIncludeButton(e.target.checked)}
-                  className="h-4 w-4 rounded border-white/20 bg-white/10 text-sky-500 cursor-pointer"
+                  className="h-4 w-4 rounded border-white/20 bg-white/10 text-white cursor-pointer"
                 />
               </div>
 
@@ -559,105 +537,172 @@ export function CustomBroadcastView({
                     type="text"
                     value={buttonText}
                     onChange={(e) => setButtonText(e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-white focus:outline-none"
+                    className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-white focus:outline-none focus:border-white/30"
                   />
                 </div>
               )}
             </div>
+          </div>
 
-            {/* Action Buttons */}
-            <div className="pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+          {/* 3. Test Email Sending (Custom Email Input) */}
+          <div className="rounded-xl border border-white/10 bg-[#121827] p-5 space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-white/70 flex items-center gap-2">
+              <Eye size={13} className="text-white/60" />
+              {t("Send Test Preview", "Envio de Teste Prévio")}
+            </h4>
+            <p className="text-[0.68rem] text-white/50">
+              {t(
+                "Enter any email address to receive an exact copy of the official letterhead before broadcasting.",
+                "Introduza qualquer endereço de e-mail para receber uma cópia exacta do comunicado antes do disparo geral."
+              )}
+            </p>
+
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+              <input
+                type="email"
+                value={testEmailInput}
+                onChange={(e) => setTestEmailInput(e.target.value)}
+                placeholder="exemplo@overwatchmoz.com"
+                className="flex-1 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-white focus:outline-none focus:border-white/30"
+              />
               <button
                 type="button"
                 onClick={handleSendTest}
-                disabled={isSendingTest || isSending || !subject.trim()}
-                className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-white/80 hover:bg-white/[0.08] hover:text-white transition-all disabled:opacity-50 cursor-pointer"
+                disabled={isSendingTest || isSending || !testEmailInput.trim()}
+                className="px-4 py-2 rounded-lg border border-white/15 bg-white/[0.06] hover:bg-white/[0.12] text-xs font-semibold text-white transition-colors disabled:opacity-50 cursor-pointer shrink-0 flex items-center gap-1.5"
               >
                 {isSendingTest ? (
-                  <RefreshCw size={14} className="animate-spin text-sky-400" />
+                  <RefreshCw size={13} className="animate-spin text-white" />
                 ) : (
-                  <Eye size={14} className="text-sky-400" />
+                  <Send size={13} className="text-white" />
                 )}
-                <span>{t("Send Test Preview to Ebube", "Enviar Prévia p/ Ebube")}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowConfirmModal(true)}
-                disabled={isSending || isSendingTest || targetCandidates.length === 0 || !subject.trim()}
-                className="flex items-center gap-2 rounded-xl bg-sky-500 hover:bg-sky-400 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-sky-500/20 transition-all disabled:opacity-50 cursor-pointer"
-              >
-                {isSending ? (
-                  <RefreshCw size={14} className="animate-spin text-white" />
-                ) : (
-                  <Send size={14} className="text-white" />
-                )}
-                <span>
-                  {t(
-                    `Dispatch to ${targetCandidates.length} Candidates`,
-                    `Disparar para ${targetCandidates.length} Candidatos`
-                  )}
-                </span>
+                <span>{t("Send Test", "Enviar Teste")}</span>
               </button>
             </div>
+          </div>
+
+          {/* 4. Primary Dispatch Button */}
+          <div className="pt-2 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setShowConfirmModal(true)}
+              disabled={isSending || isSendingTest || targetCandidates.length === 0 || !subject.trim()}
+              className="px-6 py-2.5 rounded-xl bg-white text-[#090d16] hover:bg-white/90 font-bold text-xs shadow-md transition-all disabled:opacity-50 cursor-pointer flex items-center gap-2"
+            >
+              {isSending ? (
+                <RefreshCw size={14} className="animate-spin text-[#090d16]" />
+              ) : (
+                <Send size={14} className="text-[#090d16]" />
+              )}
+              <span>
+                {t(
+                  `Dispatch to ${targetCandidates.length} Candidates`,
+                  `Disparar para ${targetCandidates.length} Candidatos`
+                )}
+              </span>
+            </button>
           </div>
         </div>
 
-        {/* Right Column: Live Email Preview (5 cols) */}
-        <div className="lg:col-span-5 space-y-4">
+        {/* Right Column: Authentic Overwatch Letterhead Preview (5 cols) */}
+        <div className="lg:col-span-5 space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-sky-400 flex items-center gap-2">
-              <Eye size={13} />
-              {t("Live Email Letterhead Preview", "Pré-visualização Oficial (Letterhead)")}
+            <h4 className="text-xs font-bold uppercase tracking-wider text-white/70 flex items-center gap-2">
+              <Eye size={13} className="text-white/60" />
+              {t("Official Letterhead Preview", "Pré-visualização Oficial")}
             </h4>
-            <span className="text-[0.65rem] text-white/40">
-              {t("Simulated Candidate View", "Vista do Candidato")}
+            <span className="text-[0.62rem] text-white/40">
+              {t("Exact Email Layout", "Layout Exacto do E-mail")}
             </span>
           </div>
 
-          {/* Rendered Email Container (Light Theme Letterhead) */}
-          <div className="rounded-2xl border border-white/10 bg-slate-100 text-slate-800 shadow-xl overflow-hidden text-xs">
-            {/* Dark Brand Header */}
-            <div className="bg-[#0b0f19] p-5 text-center border-b-2 border-sky-600">
-              <span className="text-lg font-extrabold tracking-widest text-white uppercase">
-                OVERWATCH
-              </span>
-              <div className="text-[0.62rem] tracking-wider text-sky-400 uppercase font-semibold mt-0.5">
-                Direcção de Recursos Humanos & Operações
+          {/* Email Frame */}
+          <div className="rounded-xl border border-slate-300 bg-[#f1f5f9] p-3 text-slate-800 shadow-xl overflow-hidden text-xs">
+            <div className="bg-white rounded-lg border border-[#cbd5e1] overflow-hidden shadow-sm">
+              
+              {/* Official Letterhead Header (Dark Navy #0b1329) */}
+              <div className="bg-[#0b1329] px-4 py-3 border-b-2 border-white/15">
+                <table className="w-full border-collapse">
+                  <tbody>
+                    <tr>
+                      <td className="align-middle">
+                        <img
+                          src="/logo-white.png"
+                          alt="Overwatch"
+                          height="20"
+                          style={{ height: "20px", width: "auto", display: "block" }}
+                        />
+                      </td>
+                      <td className="align-middle text-right">
+                        <span className="inline-block bg-white/10 text-white font-mono text-[9px] font-bold px-2 py-0.5 rounded border border-white/20 tracking-wider">
+                          REF: COM-2026/MAPUTO
+                        </span>
+                        <div className="text-[10px] text-slate-300 font-medium mt-0.5">
+                          Departamento de Recursos Humanos
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-            </div>
 
-            {/* Email Body Content */}
-            <div className="p-5 sm:p-6 space-y-4">
-              <div className="font-bold text-slate-900 text-sm">
-                Prezada(o) [Nome do Candidato],
+              {/* Subheading Bar */}
+              <div className="bg-[#f8fafc] px-4 py-2 border-b border-[#e2e8f0] text-[10px] text-slate-600">
+                <table className="w-full border-collapse">
+                  <tbody>
+                    <tr>
+                      <td className="font-bold uppercase tracking-wide text-[#0b1329]">
+                        COMUNICAÇÃO OFICIAL · RECRUTAMENTO OVERWATCH
+                      </td>
+                      <td className="text-right text-slate-500">
+                        Maputo, Moçambique
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
 
-              <div className="text-slate-700 leading-relaxed whitespace-pre-line text-xs font-sans">
-                {message || t("Message body preview will appear here...", "O texto da mensagem aparecerá aqui...")}
-              </div>
+              {/* Body Content */}
+              <div className="p-5 bg-white space-y-3.5">
+                <div className="font-bold text-slate-900 text-sm">
+                  Prezada(o) [Nome do Candidato],
+                </div>
 
-              {includeButton && (
-                <div className="pt-2 pb-1 text-center">
-                  <div className="inline-block bg-sky-600 text-white font-bold px-5 py-2.5 rounded-lg shadow-sm text-xs">
-                    {buttonText || "Confirmar Data do Teste Presencial"} &rarr;
+                <div className="text-slate-700 leading-relaxed whitespace-pre-line text-xs font-sans">
+                  {message || t("Message preview...", "O texto da mensagem aparecerá aqui...")}
+                </div>
+
+                {includeButton && (
+                  <div className="py-2 text-center">
+                    <div className="inline-block bg-[#0b1329] text-white font-bold px-5 py-2.5 rounded-lg shadow-sm text-xs cursor-default">
+                      {buttonText || "Confirmar Data do Teste Presencial"} &rarr;
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Official Address Box */}
-              <div className="bg-slate-50 border-l-4 border-sky-600 p-3 rounded-r-lg text-[0.68rem] text-slate-600 leading-relaxed">
-                <div className="font-bold text-slate-900 uppercase text-[0.65rem] mb-0.5">
-                  📍 Endereço Oficial das Instalações
+                {/* Premises & Address Box */}
+                <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-lg p-3 text-[11px] text-slate-600 leading-relaxed">
+                  <strong className="text-slate-900 uppercase text-[10px] block mb-1">
+                    📍 Endereço Oficial das Instalações
+                  </strong>
+                  <strong>Overwatch Moçambique:</strong> Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo.<br />
+                  <span className="text-[10px] text-slate-500">(Acesso estritamente sujeito a confirmação prévia e apresentação de documento de identificação).</span>
                 </div>
-                <strong>Overwatch Moçambique:</strong> Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo.
+
+                {/* Sign-Off */}
+                <div className="pt-2 text-xs text-slate-600 leading-relaxed">
+                  Com os melhores cumprimentos,<br />
+                  <strong className="text-slate-900">Equipa de Recrutamento</strong><br />
+                  Overwatch Moçambique
+                </div>
               </div>
-            </div>
 
-            {/* Email Footer */}
-            <div className="bg-slate-50 p-4 border-t border-slate-200 text-center text-[0.65rem] text-slate-400">
-              Esta é uma comunicação oficial da Equipa de Recrutamento da Overwatch Moçambique.
-              <br />© 2026 Overwatch Moçambique. Todos os direitos reservados.
+              {/* Formal Footer */}
+              <div className="bg-[#f8fafc] px-5 py-3.5 border-t border-[#e2e8f0] text-[10px] text-slate-500 leading-relaxed">
+                <strong className="text-slate-800">Overwatch Moçambique, Lda.</strong><br />
+                Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo, Moçambique<br />
+                Telefone / WhatsApp: +258 84 287 0793 · Email: info@overwatchmoz.com
+              </div>
             </div>
           </div>
         </div>
@@ -666,31 +711,31 @@ export function CustomBroadcastView({
       {/* Confirmation Modal */}
       {showConfirmModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#121827] p-6 shadow-2xl space-y-4">
+          <div className="w-full max-w-md rounded-xl border border-white/15 bg-[#121827] p-6 shadow-2xl space-y-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0">
-                <Send size={20} />
+              <div className="h-10 w-10 rounded-xl bg-white/10 text-white flex items-center justify-center shrink-0">
+                <Send size={18} />
               </div>
               <div>
                 <h4 className="text-sm font-bold text-white">
-                  {t("Confirm Email Broadcast", "Confirmar Disparo de E-mails")}
+                  {t("Confirm Email Dispatch", "Confirmar Disparo de E-mails")}
                 </h4>
                 <p className="text-xs text-white/50">
                   {t(
-                    `You are about to dispatch this email to ${targetCandidates.length} candidate(s).`,
-                    `Está prestes a enviar este comunicado para ${targetCandidates.length} candidato(s).`
+                    `Dispatch this official email to ${targetCandidates.length} candidate(s)?`,
+                    `Enviar este comunicado oficial para ${targetCandidates.length} candidato(s)?`
                   )}
                 </p>
               </div>
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs space-y-1.5">
+            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-xs space-y-1">
               <div className="text-white/40">{t("Subject:", "Assunto:")}</div>
               <div className="font-semibold text-white truncate">{subject}</div>
-              <div className="text-white/40 mt-2">{t("Demographics:", "Demografia:")}</div>
-              <div className="flex items-center gap-2 text-white/80 font-medium">
+              <div className="text-white/40 mt-2">{t("Audience Breakdown:", "Detalhamento:")}</div>
+              <div className="text-white/80 font-medium">
                 <span className="text-pink-400">♀ {womenCount} {t("women", "mulheres")}</span>
-                <span>•</span>
+                {" · "}
                 <span className="text-sky-400">♂ {menCount} {t("men", "homens")}</span>
               </div>
             </div>
@@ -699,7 +744,7 @@ export function CustomBroadcastView({
               <button
                 type="button"
                 onClick={() => setShowConfirmModal(false)}
-                className="px-4 py-2 rounded-xl text-xs text-white/70 hover:text-white border border-white/10"
+                className="px-4 py-2 rounded-lg text-xs text-white/70 hover:text-white border border-white/10"
               >
                 {t("Cancel", "Cancelar")}
               </button>
@@ -707,9 +752,9 @@ export function CustomBroadcastView({
                 type="button"
                 onClick={handleBroadcastDispatch}
                 disabled={isSending}
-                className="px-5 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-bold text-xs shadow-lg shadow-sky-500/20"
+                className="px-5 py-2 rounded-lg bg-white text-[#090d16] hover:bg-white/90 font-bold text-xs"
               >
-                {isSending ? t("Sending...", "A enviar...") : t("Yes, Dispatch Now", "Sim, Disparar Agora")}
+                {isSending ? t("Sending...", "A enviar...") : t("Confirm & Send", "Confirmar & Enviar")}
               </button>
             </div>
           </div>
