@@ -441,6 +441,8 @@ export default function AdminPage() {
     }
   };
 
+  const [slotQuota, setSlotQuota] = useState<number>(15);
+
   useEffect(() => {
     async function loadTestSlots() {
       try {
@@ -450,6 +452,9 @@ export default function AdminPage() {
           if (Array.isArray(data.slots) && data.slots.length > 0) {
             setBroadcastSlots(data.slots);
           }
+          if (typeof data.quota === "number" && data.quota > 0) {
+            setSlotQuota(data.quota);
+          }
         }
       } catch (err) {
         console.error("Failed to load test slots:", err);
@@ -458,20 +463,24 @@ export default function AdminPage() {
     loadTestSlots();
   }, []);
 
-  const handleSaveSlotsToServer = async (slotsToSave: string[]) => {
+  const handleSaveSlotsToServer = async (slotsToSave: string[], quotaToSave?: number) => {
     const valid = slotsToSave.map((s) => s.trim()).filter(Boolean);
     if (valid.length === 0) return;
+    const effectiveQuota = typeof quotaToSave === "number" && quotaToSave > 0 ? quotaToSave : slotQuota;
     setSavingSlots(true);
     try {
       const res = await fetch("/api/admin/careers/test-slots", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slots: valid }),
+        body: JSON.stringify({ slots: valid, quota: effectiveQuota }),
       });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.slots)) {
           setBroadcastSlots(data.slots);
+        }
+        if (typeof data.quota === "number" && data.quota > 0) {
+          setSlotQuota(data.quota);
         }
         setSlotsSavedFeedback(true);
         setTimeout(() => setSlotsSavedFeedback(false), 3000);
@@ -4436,11 +4445,82 @@ Overwatch`;
                         </div>
                       )}
 
+                      {/* ─── SLOT QUOTA CONFIGURATION (15 CANDIDATES/DAY DEFAULT & MANUAL ENTRY) ─── */}
+                      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 space-y-2.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Users size={14} className="text-cyan-400 shrink-0" />
+                            <div>
+                              <span className="font-bold text-white text-xs block">
+                                {t("Daily Candidate Quota per Slot", "Vagas Diárias por Turno (Quota)")}
+                              </span>
+                              <span className="text-[0.68rem] text-white/50">
+                                {t(
+                                  "Maximum bookings allowed per session before showing 'Full'.",
+                                  "Limite máximo de marcações permitidas por turno antes de ficar 'Esgotado'.",
+                                )}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className="text-[0.68rem] text-cyan-300 font-mono bg-cyan-500/10 border border-cyan-500/25 px-2 py-0.5 rounded-full font-bold">
+                              {slotQuota * broadcastSlots.length} {t("Total Slots Pool", "Vagas Totais")}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Presets + Manual Number Input */}
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          <span className="text-[0.68rem] text-white/40 font-medium">
+                            {t("Quota:", "Quota:")}
+                          </span>
+                          {[10, 15, 20, 25].map((q) => (
+                            <button
+                              key={q}
+                              type="button"
+                              onClick={() => {
+                                setSlotQuota(q);
+                                handleSaveSlotsToServer(broadcastSlots, q);
+                              }}
+                              className={`px-2.5 py-1 rounded-md text-[0.68rem] font-bold transition-all cursor-pointer border ${
+                                slotQuota === q
+                                  ? "bg-cyan-500 text-slate-950 border-cyan-400 shadow-sm"
+                                  : "bg-white/[0.04] text-white/70 border-white/10 hover:bg-white/[0.08] hover:text-white"
+                              }`}
+                            >
+                              {q} {t("Candidates", "Vagas")}{q === 15 ? " ★" : ""}
+                            </button>
+                          ))}
+
+                          <div className="flex items-center gap-1.5 ml-auto">
+                            <span className="text-[0.68rem] text-white/50">
+                              {t("Manual entry:", "Entrada manual:")}
+                            </span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={100}
+                              value={slotQuota}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                if (!isNaN(val) && val > 0) {
+                                  setSlotQuota(val);
+                                }
+                              }}
+                              onBlur={() => handleSaveSlotsToServer(broadcastSlots, slotQuota)}
+                              className="w-16 rounded-md bg-white/[0.08] border border-white/20 px-2 py-1 text-xs text-white font-mono text-center font-bold focus:border-cyan-400 focus:outline-none"
+                            />
+                            <span className="text-[0.68rem] text-white/40">/ {t("day", "dia")}</span>
+                          </div>
+                        </div>
+                      </div>
+
                       {/* Save Changes Button & Feedback */}
                       <div className="pt-2 border-t border-white/10 flex items-center justify-between flex-wrap gap-2">
                         <button
                           type="button"
-                          onClick={() => handleSaveSlotsToServer(broadcastSlots)}
+                          onClick={() => handleSaveSlotsToServer(broadcastSlots, slotQuota)}
                           disabled={savingSlots}
                           className="flex items-center gap-2 rounded-lg bg-white/[0.08] hover:bg-white/[0.14] border border-white/20 px-3 py-1.5 text-xs font-semibold text-white transition-all cursor-pointer disabled:opacity-40"
                         >
@@ -4452,7 +4532,7 @@ Overwatch`;
                           ) : (
                             <>
                               <Save size={13} className="text-cyan-400" />
-                              <span>{t("Save Slots to System", "Gravar Turnos no Sistema")}</span>
+                              <span>{t("Save Slots & Quota to System", "Gravar Turnos & Quota no Sistema")}</span>
                             </>
                           )}
                         </button>
@@ -5417,7 +5497,7 @@ Overwatch`;
                   ).map((slot) => {
                     const count = applications.filter((a) => normalizeSlot(a.testSlot) === normalizeSlot(slot)).length;
                     const isSelected = normalizeSlot(activeRosterSlot) === normalizeSlot(slot);
-                    const isFull = count >= 10;
+                    const isFull = count >= slotQuota;
                     const isThisWeek = getSlotWeekCategory(slot) === "this_week";
 
                     return (

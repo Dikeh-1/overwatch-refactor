@@ -1,5 +1,5 @@
-﻿import { authenticated, sameOrigin } from "@/lib/careers-auth";
-import { getTestSlots, saveTestSlots } from "@/lib/careers-store";
+import { authenticated, sameOrigin } from "@/lib/careers-auth";
+import { getTestSlotConfig, saveTestSlotConfig } from "@/lib/careers-store";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +12,8 @@ export async function GET() {
   }
 
   try {
-    const slots = await getTestSlots();
-    return Response.json({ slots });
+    const config = await getTestSlotConfig();
+    return Response.json({ slots: config.slots, quota: config.quota });
   } catch (error) {
     console.error("Failed to retrieve test slots:", error);
     return Response.json(
@@ -51,8 +51,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const saved = await saveTestSlots(cleanSlots);
-    return Response.json({ success: true, slots: saved });
+    const quota = typeof body.quota === "number" && body.quota > 0 ? body.quota : 15;
+    const saved = await saveTestSlotConfig({ slots: cleanSlots, quota });
+    return Response.json({ success: true, slots: saved.slots, quota: saved.quota });
   } catch (error) {
     console.error("Failed to save test slots:", error);
     return Response.json(
@@ -61,3 +62,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

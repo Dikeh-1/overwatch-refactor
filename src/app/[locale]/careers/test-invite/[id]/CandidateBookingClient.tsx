@@ -149,9 +149,9 @@ export default function CandidateBookingClient({
             setSelectedSlot(data.testSlot);
           } else if (data.slots && data.slots.length > 0) {
             const available = data.slots.find((s) => !data.slotStats?.[s]?.isFull);
-            setSelectedSlot(available || data.slots[0]);
+            setSelectedSlot(available || "");
           } else {
-            setSelectedSlot(DEFAULT_TEST_SLOTS[0]);
+            setSelectedSlot("");
           }
         }
       } catch (err) {
@@ -179,7 +179,12 @@ export default function CandidateBookingClient({
 
   async function handleConfirmSlot() {
     if (!selectedSlot) {
-      setError(isPt ? "Por favor seleccione uma data para o teste." : "Please select a test slot.");
+      setError(isPt ? "Por favor seleccione uma data disponível para o teste." : "Please select an available test slot.");
+      return;
+    }
+
+    if (candidate?.slotStats?.[selectedSlot]?.isFull) {
+      setError(isPt ? "As vagas para esta data já se encontram esgotadas. Por favor seleccione outra data disponível." : "This slot is full. Please choose another available date.");
       return;
     }
 
@@ -618,8 +623,8 @@ export default function CandidateBookingClient({
                       </p>
                       <p className="text-xs text-blue-700 leading-relaxed">
                         {isPt
-                          ? "Abrimos novas sessões para a próxima semana (Segunda a Sexta, 10h00). Limitadas a 10 vagas por dia — reserve já a sua."
-                          : "New sessions are open for next week (Mon–Fri, 10:00 AM). Limited to 10 per day — reserve yours now."}
+                          ? "Abrimos novas sessões para a próxima semana. Reserve a sua data entre os turnos disponíveis abaixo."
+                          : "New sessions are open for next week. Reserve your date from the available slots below."}
                       </p>
                     </div>
                   </div>
@@ -633,7 +638,9 @@ export default function CandidateBookingClient({
                       <span>{isPt ? "Seleccione a sua data" : "Select your date"}</span>
                     </h2>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {isPt ? "Cada sessão está limitada a 10 candidatas." : "Each session is limited to 10 candidates."}
+                      {isPt
+                        ? "Turnos presenciais limitados por dia. Seleccione uma data aberta abaixo."
+                        : "In-person test sessions with limited daily capacity. Select an open date below."}
                     </p>
                   </div>
 
@@ -644,61 +651,78 @@ export default function CandidateBookingClient({
                       const isFull = Boolean(stat?.isFull);
                       const remaining = stat ? Math.max(0, stat.remaining) : undefined;
 
+                      if (isFull) {
+                        return (
+                          <div
+                            key={slot}
+                            aria-disabled="true"
+                            className="w-full text-left rounded-xl border border-gray-200/90 bg-gray-50/90 px-4 py-3.5 flex items-center justify-between gap-3 opacity-55 cursor-not-allowed select-none pointer-events-none"
+                          >
+                            <div className="flex items-center gap-3">
+                              {/* Radio indicator */}
+                              <div className="h-4 w-4 rounded-full border-2 border-gray-300 bg-gray-200/80 flex items-center justify-center shrink-0">
+                                <Lock size={8} className="text-gray-500" strokeWidth={2.5} />
+                              </div>
+
+                              <div>
+                                <p className="text-sm font-semibold text-gray-500 line-through">
+                                  {formatSlotDisplay(slot, isPt)}
+                                </p>
+                                <p className="text-xs mt-0.5 text-gray-400">
+                                  {isPt ? "Vagas esgotadas · Não disponível" : "No spots available · Full"}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Status badge */}
+                            <span className="flex items-center gap-1 text-[0.65rem] font-semibold text-red-600 bg-red-100/90 border border-red-200 px-2 py-0.5 rounded-full shrink-0">
+                              <Lock size={9} />
+                              <span>{isPt ? "Esgotado" : "Full"}</span>
+                            </span>
+                          </div>
+                        );
+                      }
+
                       return (
                         <button
                           key={slot}
                           type="button"
-                          disabled={isFull}
-                          onClick={() => { if (!isFull) setSelectedSlot(slot); }}
-                          className={`w-full text-left rounded-xl border px-4 py-3.5 transition-all flex items-center justify-between gap-3 ${
-                            isFull
-                              ? "border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed"
-                              : isSelected
-                              ? "border-[#07080f] bg-[#07080f] shadow-md cursor-pointer"
-                              : "border-gray-200 bg-white hover:border-gray-400 hover:shadow-sm cursor-pointer"
+                          onClick={() => setSelectedSlot(slot)}
+                          className={`w-full text-left rounded-xl border px-4 py-3.5 transition-all flex items-center justify-between gap-3 cursor-pointer ${
+                            isSelected
+                              ? "border-[#07080f] bg-[#07080f] shadow-md ring-1 ring-[#07080f]"
+                              : "border-gray-200 bg-white hover:border-gray-400 hover:shadow-sm"
                           }`}
                         >
                           <div className="flex items-center gap-3">
                             {/* Radio indicator */}
                             <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                              isFull
-                                ? "border-gray-300 bg-gray-100"
-                                : isSelected
+                              isSelected
                                 ? "border-white bg-white"
                                 : "border-gray-300 bg-white"
                             }`}>
-                              {isFull ? (
-                                <Lock size={8} className="text-gray-400" strokeWidth={2.5} />
-                              ) : isSelected ? (
+                              {isSelected ? (
                                 <div className="h-2 w-2 rounded-full bg-[#07080f]" />
                               ) : null}
                             </div>
 
                             <div>
                               <p className={`text-sm font-semibold ${
-                                isFull ? "text-gray-400 line-through" : isSelected ? "text-white" : "text-gray-900"
+                                isSelected ? "text-white" : "text-gray-900"
                               }`}>
                                 {formatSlotDisplay(slot, isPt)}
                               </p>
                               <p className={`text-xs mt-0.5 ${
-                                isFull ? "text-gray-400" : isSelected ? "text-white/60" : "text-gray-400"
+                                isSelected ? "text-white/60" : "text-gray-400"
                               }`}>
-                                {isFull
-                                  ? isPt ? "Vagas esgotadas" : "No spots available"
-                                  : isPt ? "10h00–11h30 · Chegada às 09h30 · Maputo" : "10:00–11:30 · Arrive 09:30 · Maputo"
-                                }
+                                {isPt ? "10h00–11h30 · Chegada às 09h30 · Maputo" : "10:00–11:30 · Arrive 09:30 · Maputo"}
                               </p>
                             </div>
                           </div>
 
                           {/* Status badge */}
-                          {isFull ? (
-                            <span className="flex items-center gap-1 text-[0.65rem] font-semibold text-red-500 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full shrink-0">
-                              <Lock size={9} />
-                              <span>{isPt ? "Esgotado" : "Full"}</span>
-                            </span>
-                          ) : isSelected ? (
-                            <span className="flex items-center gap-1 text-[0.65rem] font-semibold text-white/80 bg-white/10 border border-white/20 px-2 py-0.5 rounded-full shrink-0">
+                          {isSelected ? (
+                            <span className="flex items-center gap-1 text-[0.65rem] font-semibold text-white/90 bg-white/15 border border-white/25 px-2.5 py-0.5 rounded-full shrink-0">
                               <Check size={9} />
                               <span>{isPt ? "Selecionada" : "Selected"}</span>
                             </span>
@@ -707,8 +731,8 @@ export default function CandidateBookingClient({
                               {isPt ? `Só ${remaining} vaga${remaining !== 1 ? "s" : ""}` : `Only ${remaining} left`}
                             </span>
                           ) : remaining !== undefined ? (
-                            <span className="text-[0.65rem] text-gray-400 shrink-0">
-                              {isPt ? `${remaining} vagas` : `${remaining} spots`}
+                            <span className="text-[0.65rem] text-gray-500 font-medium shrink-0">
+                              {isPt ? `${remaining} vagas abertas` : `${remaining} spots left`}
                             </span>
                           ) : null}
                         </button>
@@ -729,8 +753,8 @@ export default function CandidateBookingClient({
                     <button
                       type="button"
                       onClick={handleConfirmSlot}
-                      disabled={submitting || !selectedSlot}
-                      className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-[#07080f] text-white text-sm font-bold py-3.5 hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+                      disabled={submitting || !selectedSlot || Boolean(candidate?.slotStats?.[selectedSlot]?.isFull)}
+                      className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-[#07080f] text-white text-sm font-bold py-3.5 hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm cursor-pointer"
                     >
                       {submitting ? (
                         <>

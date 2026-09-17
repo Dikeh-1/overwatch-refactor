@@ -251,34 +251,74 @@ export async function deleteApplication(id: string): Promise<void> {
   await deleteApplications([id]);
 }
 
-export async function getTestSlots(): Promise<string[]> {
+export type TestSlotConfig = {
+  slots: string[];
+  quota: number;
+};
+
+export const DEFAULT_SLOT_QUOTA = 15;
+
+export async function getTestSlotConfig(): Promise<TestSlotConfig> {
+  const fallback: TestSlotConfig = {
+    slots: [...DEFAULT_TEST_SLOTS],
+    quota: DEFAULT_SLOT_QUOTA,
+  };
+
   if (isRemote()) {
     try {
       const res = await api("/storage/v1/object/career-cvs/test-slots.json");
       const text = await res.text();
       const parsed = JSON.parse(text);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map((s) => String(s).trim()).filter(Boolean);
+        return {
+          slots: parsed.map((s) => String(s).trim()).filter(Boolean),
+          quota: DEFAULT_SLOT_QUOTA,
+        };
+      }
+      if (parsed && typeof parsed === "object") {
+        const slots = Array.isArray(parsed.slots) && parsed.slots.length > 0
+          ? parsed.slots.map((s: unknown) => String(s).trim()).filter(Boolean)
+          : [...DEFAULT_TEST_SLOTS];
+        const quota = typeof parsed.quota === "number" && parsed.quota > 0 ? parsed.quota : DEFAULT_SLOT_QUOTA;
+        return { slots, quota };
       }
     } catch {
-      // If file not yet present in Supabase storage, return defaults
+      // Storage file not found or parse error
     }
-    return [...DEFAULT_TEST_SLOTS];
+    return fallback;
   }
+
   try {
-    return await read<string[]>("test-slots.json", [...DEFAULT_TEST_SLOTS]);
+    const raw = await read<any>("test-slots.json", fallback);
+    if (Array.isArray(raw)) {
+      return { slots: raw, quota: DEFAULT_SLOT_QUOTA };
+    }
+    if (raw && typeof raw === "object") {
+      return {
+        slots: Array.isArray(raw.slots) ? raw.slots : [...DEFAULT_TEST_SLOTS],
+        quota: typeof raw.quota === "number" && raw.quota > 0 ? raw.quota : DEFAULT_SLOT_QUOTA,
+      };
+    }
+    return fallback;
   } catch {
-    return [...DEFAULT_TEST_SLOTS];
+    return fallback;
   }
 }
 
-export async function saveTestSlots(slots: string[]): Promise<string[]> {
-  const cleanSlots = Array.isArray(slots)
-    ? slots.map((s) => String(s).trim()).filter(Boolean)
+export async function getTestSlots(): Promise<string[]> {
+  const config = await getTestSlotConfig();
+  return config.slots;
+}
+
+export async function saveTestSlotConfig(config: { slots: string[]; quota?: number }): Promise<TestSlotConfig> {
+  const cleanSlots = Array.isArray(config.slots)
+    ? config.slots.map((s) => String(s).trim()).filter(Boolean)
     : [...DEFAULT_TEST_SLOTS];
+  const quota = typeof config.quota === "number" && config.quota > 0 ? config.quota : DEFAULT_SLOT_QUOTA;
+  const payload: TestSlotConfig = { slots: cleanSlots, quota };
 
   if (isRemote()) {
-    const jsonBody = Buffer.from(JSON.stringify(cleanSlots), "utf8");
+    const jsonBody = Buffer.from(JSON.stringify(payload), "utf8");
     await api("/storage/v1/object/career-cvs/test-slots.json", {
       method: "POST",
       headers: {
@@ -287,13 +327,19 @@ export async function saveTestSlots(slots: string[]): Promise<string[]> {
       },
       body: new Uint8Array(jsonBody),
     });
-    return cleanSlots;
+    return payload;
   }
 
   await exclusive(async () => {
-    await write("test-slots.json", cleanSlots);
+    await write("test-slots.json", payload);
   });
-  return cleanSlots;
+  return payload;
 }
+
+export async function saveTestSlots(slots: string[], quota?: number): Promise<string[]> {
+  const saved = await saveTestSlotConfig({ slots, quota });
+  return saved.slots;
+}
+
 
 

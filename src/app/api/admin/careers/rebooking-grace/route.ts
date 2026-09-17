@@ -1,5 +1,5 @@
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
-import { getApplications, getApplication, updateApplication, getTestSlots } from "@/lib/careers-store";
+import { getApplications, getApplication, updateApplication, getTestSlotConfig } from "@/lib/careers-store";
 import { DEFAULT_TEST_SLOTS, type Application } from "@/lib/careers";
 import { sendRebookingGraceEmail } from "@/lib/careers-email";
 
@@ -25,13 +25,13 @@ export async function GET() {
 
   try {
     const allApps = await getApplications();
-    const activeSlots = await getTestSlots();
+    const { slots: activeSlots, quota = 15 } = await getTestSlotConfig();
 
     // Only future open slots (Sept 21-25)
     const openFutureSlots = activeSlots.filter((s) => !isPastSlot(s));
     const effectiveSlots = openFutureSlots.length > 0 ? openFutureSlots : [...DEFAULT_TEST_SLOTS];
 
-    // Compute slot stats for future dates
+    // Compute slot stats for future dates using dynamic quota
     const slotStats: Record<string, { booked: number; max: number; isFull: boolean; remaining: number }> = {};
     for (const s of effectiveSlots) {
       const booked = allApps.filter(
@@ -39,9 +39,9 @@ export async function GET() {
       ).length;
       slotStats[s] = {
         booked,
-        max: 10,
-        isFull: booked >= 10,
-        remaining: Math.max(0, 10 - booked),
+        max: quota,
+        isFull: booked >= quota,
+        remaining: Math.max(0, quota - booked),
       };
     }
 

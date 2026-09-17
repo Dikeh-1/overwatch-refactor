@@ -1,4 +1,4 @@
-import { getApplication, updateApplication, getTestSlots, getApplications } from "@/lib/careers-store";
+import { getApplication, updateApplication, getTestSlotConfig, getApplications } from "@/lib/careers-store";
 import { DEFAULT_TEST_SLOTS, normalizeSlot } from "@/lib/careers";
 import { sendBookingConfirmation } from "@/lib/careers-email";
 import { siteContact } from "@/lib/site-config";
@@ -55,7 +55,7 @@ export async function GET(request: Request) {
     }
 
     const allApps = await getApplications();
-    const activeSlots = await getTestSlots();
+    const { slots: activeSlots, quota = 15 } = await getTestSlotConfig();
     const hasActiveGrace = Boolean(candidate.rebookingGrace && !candidate.rebookingGrace.usedAt);
 
     // If candidate has active grace rebooking, restrict to open future dates (e.g. Sept 21-25)
@@ -69,7 +69,7 @@ export async function GET(request: Request) {
       }
     }
 
-    const maxPerDay = 10;
+    const maxPerDay = quota;
     const slotStats: Record<string, { booked: number; max: number; isFull: boolean; remaining: number }> = {};
     for (const s of candidateSlots) {
       const normS = normalizeSlot(s);
@@ -170,17 +170,18 @@ export async function POST(request: Request) {
 
     const normalizedSlot = normalizeSlot(slot);
 
-    // Slot quota safeguard: max 10 candidates per day
+    // Slot quota safeguard: enforce dynamic quota (default 15 candidates per day)
+    const { quota = 15 } = await getTestSlotConfig();
     const allApps = await getApplications();
     const currentBookings = allApps.filter(
       (a) => normalizeSlot(a.testSlot) === normalizedSlot && a.status !== "rejected" && a.status !== "archived" && a.id !== id
     ).length;
 
-    if (currentBookings >= 10) {
+    if (currentBookings >= quota) {
       return Response.json(
         {
           error:
-            "As vagas para este dia já se encontram esgotadas (limite de 10 candidatas por dia atingido). Por favor seleccione outra data disponível.",
+            `As vagas para este dia já se encontram esgotadas (limite de ${quota} candidatas por dia atingido). Por favor seleccione outra data disponível.`,
           slotFull: true,
         },
         { status: 409 },
