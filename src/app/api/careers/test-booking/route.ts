@@ -56,7 +56,18 @@ export async function GET(request: Request) {
 
     const allApps = await getApplications();
     const activeSlots = await getTestSlots();
-    const candidateSlots = activeSlots;
+    const hasActiveGrace = Boolean(candidate.rebookingGrace && !candidate.rebookingGrace.usedAt);
+
+    // If candidate has active grace rebooking, restrict to open future dates (e.g. Sept 21-25)
+    let candidateSlots = activeSlots;
+    if (hasActiveGrace) {
+      candidateSlots = candidateSlots.filter((s) => {
+        return !s.includes("16 de Setembro") && !s.includes("17 de Setembro") && !s.includes("18 de Setembro");
+      });
+      if (candidateSlots.length === 0) {
+        candidateSlots = [...DEFAULT_TEST_SLOTS];
+      }
+    }
 
     const maxPerDay = 10;
     const slotStats: Record<string, { booked: number; max: number; isFull: boolean; remaining: number }> = {};
@@ -76,7 +87,10 @@ export async function GET(request: Request) {
       id: candidate.id,
       name: candidate.name,
       role: candidate.role,
-      testSlot: candidate.testSlot || null,
+      testSlot: hasActiveGrace ? null : candidate.testSlot || null,
+      previousTestSlot: candidate.rebookingGrace?.previousSlot || candidate.testSlot || null,
+      rebookingGraceActive: hasActiveGrace,
+      rebookingGrace: candidate.rebookingGrace || null,
       testBookedAt: candidate.testBookedAt || null,
       invitedAt: candidate.invitedAt || null,
       slots: candidateSlots,
@@ -138,8 +152,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Single-use booking safeguard: block repeat booking
-    if (candidate.testSlot) {
+    // Single-use booking safeguard: block repeat booking unless active rebooking grace was authorized
+    const hasActiveGrace = Boolean(candidate.rebookingGrace && !candidate.rebookingGrace.usedAt);
+
+    if (candidate.testSlot && !hasActiveGrace) {
       return Response.json(
         {
           error:
@@ -169,11 +185,23 @@ export async function POST(request: Request) {
     }
 
     const bookedAt = new Date().toISOString();
-    const updated = await updateApplication(id, {
+    const updates: Record<string, any> = {
       testSlot: slot.trim(),
       testBookedAt: bookedAt,
       status: "interview",
-    });
+      attendedAt: undefined,
+      attendanceStatus: undefined,
+    };
+
+    if (hasActiveGrace && candidate.rebookingGrace) {
+      updates.previousTestSlot = candidate.rebookingGrace.previousSlot || candidate.testSlot || undefined;
+      updates.rebookingGrace = {
+        ...candidate.rebookingGrace,
+        usedAt: bookedAt,
+      };
+    }
+
+    const updated = await updateApplication(id, updates);
 
     const origin =
       request.headers.get("origin") ||

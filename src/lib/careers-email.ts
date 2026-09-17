@@ -1494,6 +1494,215 @@ Overwatch Moçambique`;
 }
 
 /**
+ * Concessão Excepcional de Reagendamento (OTL - One Time Link)
+ * Sent to candidates who missed their test interview (e.g. trouble finding the building,
+ * transport issues, or other complications) granting a final grace opportunity to select an open date.
+ */
+export async function sendRebookingGraceEmail({
+  application,
+  token,
+  previousSlot,
+  baseUrl,
+}: {
+  application: Application;
+  token: string;
+  previousSlot?: string;
+  baseUrl?: string;
+}) {
+  if (
+    (!process.env.BREVO_API_KEY && !process.env.FALLBACK_SMTP_PASS) ||
+    application.email.endsWith(".invalid") ||
+    process.env.CAREERS_TEST_MODE === "true"
+  ) {
+    return { success: true, mocked: true };
+  }
+
+  const origin = (
+    baseUrl ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "https://www.overwatchmoz.com"
+  ).replace(/\/+$/, "");
+
+  const logoWhiteUrl = `${origin}/logo-white.png`;
+  const otlBookingUrl = `${origin}/pt/careers/test-invite/${application.id}?otl=${encodeURIComponent(token)}`;
+  const correctedAddress = "Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo";
+  const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent(correctedAddress)}`;
+  const isFemale = application.sex === "female";
+  const salutation = isFemale ? "Prezada" : application.sex === "male" ? "Prezado" : "Prezada(o)";
+  const subject = "Concessão Excepcional de Reagendamento: Teste Presencial — Overwatch Moçambique";
+
+  const prevSlotText = previousSlot ? `agendado para ${previousSlot}` : "anteriormente agendado";
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="pt">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${subject}</title>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; -webkit-font-smoothing: antialiased;">
+      <div style="background-color: #f1f5f9; padding: 32px 14px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08); overflow: hidden;">
+          
+          <!-- Official Letterhead Header (Dark Navy #0b1329) -->
+          <div style="background-color: #0b1329; padding: 18px 24px; border-bottom: 2px solid rgba(255, 255, 255, 0.15);">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="vertical-align: middle;">
+                  <img src="${logoWhiteUrl}" alt="Overwatch" height="22" width="147" style="height: 22px; width: auto; max-width: 145px; display: block; border: 0;" />
+                </td>
+                <td style="vertical-align: middle; text-align: right;">
+                  <span style="display: inline-block; background-color: rgba(255, 255, 255, 0.12); color: #ffffff; font-family: monospace; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.2); letter-spacing: 0.04em;">
+                    REF: CCO-2026/OTL-GRACA
+                  </span>
+                  <div style="font-size: 11px; color: #cbd5e1; margin-top: 4px; font-weight: 500;">
+                    Direcção de Recursos Humanos
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Official Subheading Bar -->
+          <div style="background-color: #f8fafc; padding: 12px 24px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #334155;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #0b1329;">
+                  PERÍODO DE GRAÇA · REAGENDAMENTO DE TESTE PRESENCIAL
+                </td>
+                <td style="text-align: right; color: #64748b;">
+                  Maputo, Moçambique
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Body Content -->
+          <div style="padding: 28px 24px; background-color: #ffffff;">
+            <h1 style="font-size: 18px; font-weight: 700; color: #090d16; margin: 0 0 14px 0;">
+              ${salutation} ${application.name.trim()},
+            </h1>
+            
+            <p style="font-size: 14px; color: #334155; margin: 0 0 14px 0; line-height: 1.65;">
+              Tomámos conhecimento de que não lhe foi possível comparecer ao seu teste técnico presencial ${prevSlotText}, devido a constrangimentos de deslocação ou dificuldades na localização exacta do edifício sede da Overwatch em Maputo.
+            </p>
+
+            <p style="font-size: 14px; color: #334155; margin: 0 0 16px 0; line-height: 1.65;">
+              Reconhecendo o seu manifesto interesse e o esforço de candidatura à vaga de <strong>Operadora de CCO</strong>, a Direcção de Recursos Humanos decidiu conceder-lhe, em regime excepcional, uma <strong>oportunidade final de reagendamento (Período de Graça)</strong> para os dias de teste que ainda dispõem de vagas abertas.
+            </p>
+
+            <!-- EXCLUSIVE EXCEPTION NOTICE CARD -->
+            <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-left: 4px solid #059669; border-radius: 8px; padding: 16px; margin: 20px 0;">
+              <strong style="font-size: 13px; color: #065f46; display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.03em;">
+                ✨ AUTORIZAÇÃO EXCEPCIONAL CONCEDIDA
+              </strong>
+              <p style="font-size: 13px; color: #047857; margin: 0; line-height: 1.55;">
+                Foi gerado um <strong>Link de Utilização Única (OTL)</strong> associado à sua candidatura. Através deste link, poderá escolher uma das novas datas disponíveis na próxima semana. Após a escolha, o link expira imediatamente e o agendamento torna-se definitivo.
+              </p>
+            </div>
+
+            <!-- CORRECT ADDRESS CARD (Highlighting 1948) -->
+            <div style="background-color: #fefce8; border: 1px solid #fef08a; border-left: 4px solid #ca8a04; border-radius: 8px; padding: 16px; margin: 20px 0;">
+              <strong style="font-size: 13px; color: #854d0e; display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.03em;">
+                📍 ENDEREÇO EXACTO DAS INSTALAÇÕES DA OVERWATCH:
+              </strong>
+              <p style="font-size: 14px; color: #090d16; font-weight: 700; margin: 0 0 4px 0;">
+                Overwatch Moçambique — Edifício Sede
+              </p>
+              <p style="font-size: 13px; color: #713f12; margin: 0 0 8px 0; line-height: 1.5;">
+                <strong>Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo</strong><br />
+                <span style="font-size: 12px; color: #a16207;">(Situado entre a Av. Vladimir Lenine e a Av. Salvador Allende, antes do cruzamento com a Av. Filipe Samuel Magaia)</span>
+              </p>
+              <a href="${mapsUrl}" target="_blank" style="display: inline-block; color: #0284c7; font-weight: 700; font-size: 12px; text-decoration: underline;">
+                Abrir localização no Google Maps &rarr;
+              </a>
+            </div>
+
+            <!-- DEDICATED REBOOKING ACTION BUTTON (OTL) -->
+            <div style="text-align: center; margin: 28px 0 20px 0;">
+              <a href="${otlBookingUrl}" target="_blank" style="display: inline-block; background-color: #0b1329; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; padding: 14px 30px; border-radius: 8px; box-shadow: 0 4px 14px rgba(11, 19, 41, 0.25); letter-spacing: 0.02em;">
+                Reagendar Meu Teste de Selecção &rarr;
+              </a>
+              <div style="font-size: 11px; color: #64748b; margin-top: 8px;">
+                Link pessoal e intransmissível de uso único (OTL).
+              </div>
+            </div>
+
+            <!-- RULES AND REQUIREMENTS -->
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; margin-bottom: 24px;">
+              <strong style="font-size: 12px; color: #090d16; display: block; margin-bottom: 6px; text-transform: uppercase;">
+                Regras Obrigatórias para o Novo Dia de Teste:
+              </strong>
+              <div style="font-size: 12px; color: #334155; line-height: 1.6;">
+                • <strong>Horário de Chegada:</strong> Apresentar-se às <strong>09h30</strong> na portaria (o portão encerra impreterivelmente às 09h50, teste decorre das 10h00 às 11h30).<br />
+                • <strong>Identificação:</strong> Documento original de identificação com foto (BI, Passaporte ou DIRE).<br />
+                • <strong>Material:</strong> Caneta esferográfica de tinta azul ou preta.<br />
+                • <strong>Passe QR:</strong> Imediatamente após confirmar a sua nova data, o seu novo Passe QR de entrada será emitido no portal.
+              </div>
+            </div>
+
+            <!-- Formal Sign-Off -->
+            <div style="margin-top: 24px; font-size: 14px; color: #334155; line-height: 1.5;">
+              Aproveite esta oportunidade final para garantir a sua participação no processo de selecção.<br /><br />
+              Com os melhores cumprimentos,<br />
+              <strong style="color: #090d16;">Direcção de Recursos Humanos & Recrutamento</strong><br />
+              Overwatch Moçambique
+            </div>
+          </div>
+
+          <!-- Formal Legal & Contact Footer -->
+          <div style="background-color: #f8fafc; padding: 22px 32px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6;">
+            <strong style="color: #090d16;">Overwatch Moçambique, Lda.</strong><br />
+            ${correctedAddress}<br />
+            Telefone / WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #0284c7; text-decoration: none; font-weight: 600;">+258 84 287 0793</a> · Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none;">${siteContact.email}</a> · Website: <a href="${origin}" style="color: #64748b; text-decoration: none;">www.overwatchmoz.com</a>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const textContent = `${salutation} ${application.name.trim()},
+
+Tomámos conhecimento de que não lhe foi possível comparecer ao seu teste técnico presencial ${prevSlotText}, devido a constrangimentos de deslocação ou dificuldades na localização exacta das instalações da Overwatch em Maputo.
+
+Reconhecendo o seu interesse e o esforço de candidatura à vaga de Operadora de CCO, a Direcção de RH decidiu conceder-lhe uma oportunidade final de reagendamento (Período de Graça) para os dias que ainda dispõem de vagas abertas.
+
+AUTORIZAÇÃO EXCEPCIONAL CONCEDIDA (LINK ÚNICO):
+Aceda ao seguinte link para escolher a sua nova data de teste:
+${otlBookingUrl}
+
+ENDEREÇO EXACTO DAS INSTALAÇÕES DA OVERWATCH:
+Overwatch Moçambique — Edifício Sede
+Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo
+(Localização Google Maps: ${mapsUrl})
+
+INSTRUÇÕES OBRIGATÓRIAS:
+- Horário de Chegada: 09h30 na portaria (o portão encerra às 09h50, teste 10h00–11h30)
+- Trazer documento original de identificação (BI / Passaporte / DIRE)
+- Trazer caneta esferográfica azul ou preta
+- O seu novo Passe QR será gerado imediatamente no portal após confirmar a nova data
+
+Com os melhores cumprimentos,
+Direcção de Recursos Humanos
+Overwatch Moçambique`;
+
+  const sender = {
+    name: "Overwatch Recrutamento",
+    email: "noreply@overwatchmoz.com",
+  };
+
+  return sendTransactionalEmail({
+    sender,
+    to: [{ email: application.email, name: application.name }],
+    subject,
+    htmlContent,
+    textContent,
+  });
+}
+
+/**
  * Address Correction Broadcast Email to ALL Booked Candidates
  * Clarifies official building number 1948 (due to automated system sync glitch),
  * apologizes, reconfirms their slot, and includes the updated QR Gate Pass.

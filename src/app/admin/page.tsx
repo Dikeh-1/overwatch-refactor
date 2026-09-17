@@ -63,6 +63,7 @@ import LazyVideo from "@/components/ui/LazyVideo";
 import DocxViewer from "@/components/admin/DocxViewer";
 import GateCheckInModal from "@/components/admin/GateCheckInModal";
 import { CustomBroadcastView } from "@/components/admin/CustomBroadcastView";
+import RebookingGraceView from "@/components/admin/RebookingGraceView";
 import { IMAGES } from "@/lib/constants";
 import {
   type Application,
@@ -201,7 +202,7 @@ export default function AdminPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [view, setView] = useState<
-    "applications" | "roles" | "broadcast" | "confirmations" | "schedule" | "disqualify" | "custom_broadcast"
+    "applications" | "roles" | "broadcast" | "confirmations" | "schedule" | "disqualify" | "custom_broadcast" | "rebooking_grace"
   >("applications");
   // ─── Per-Role Campaign Workspace ──────────────────────────────────
   const [activeCampaignRole, setActiveCampaignRole] = useState<string | null>(null);
@@ -331,6 +332,24 @@ export default function AdminPage() {
 
   const nextWeekCount = useMemo(() => {
     return applications.filter((a) => Boolean(a.testSlot) && getSlotWeekCategory(a.testSlot!) === "next_week").length;
+  }, [applications]);
+
+  const missedTestCount = useMemo(() => {
+    return applications.filter((a) => {
+      if (a.status === "archived" || a.status === "rejected") return false;
+      if (
+        a.id === "6548b28d-9e3b-41c0-bfcf-47c992fa0956" ||
+        a.email?.toLowerCase() === "inociowilson7@gmail.com"
+      ) {
+        return false;
+      }
+      const wasPast =
+        a.testSlot &&
+        (a.testSlot.includes("16 de Setembro") ||
+          a.testSlot.includes("17 de Setembro") ||
+          a.testSlot.includes("18 de Setembro"));
+      return (wasPast && !a.attendedAt) || (Boolean(a.rebookingGrace) && !a.rebookingGrace?.usedAt);
+    }).length;
   }, [applications]);
 
   const [rosterWeekTab, setRosterWeekTab] = useState<"this_week" | "next_week" | "all">("this_week");
@@ -2702,6 +2721,28 @@ Overwatch`;
                               )}
                             </div>
                           </button>
+
+                          {/* Rebooking Grace (OTL) sub-tab */}
+                          <button
+                            onClick={() => { setView("rebooking_grace"); setSidebarOpen(false); }}
+                            className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[0.72rem] font-semibold transition-all cursor-pointer ${
+                              view === "rebooking_grace"
+                                ? "bg-white/[0.1] text-white border border-white/15"
+                                : "text-white/60 hover:bg-white/[0.05] hover:text-white border border-transparent"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <RotateCcw size={13} className="text-amber-400" />
+                              <span>{t("Rebooking Grace (OTL)", "Reagendamentos (OTL)")}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {missedTestCount > 0 && (
+                                <span className="rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 text-[0.58rem] font-mono font-medium" title={t("Missed test candidates", "Candidatos que faltaram")}>
+                                  {missedTestCount}
+                                </span>
+                              )}
+                            </div>
+                          </button>
                         </div>
                       )}
                     </div>
@@ -2790,7 +2831,9 @@ Overwatch`;
                           ? t("Disqualifications", "Desqualificações")
                           : view === "custom_broadcast"
                             ? t("Broadcast & Emails", "Comunicações & Disparos")
-                            : t("Applications", "Candidaturas")}
+                            : view === "rebooking_grace"
+                              ? t("Rebooking Grace (OTL)", "Reagendamentos (OTL)")
+                              : t("Applications", "Candidaturas")}
                 </span>
               </div>
             )}
@@ -2807,7 +2850,9 @@ Overwatch`;
                         ? t("Disqualification & Compliance", "Desqualificação & Conformidade")
                         : view === "custom_broadcast"
                           ? t("Targeted Broadcasts & Direct Outreach", "Comunicações Personalizadas & Broadcast")
-                          : t("Applications", "Candidaturas")}
+                          : view === "rebooking_grace"
+                            ? t("Rebooking Grace & One-Time Links (OTL)", "Período de Graça & Reagendamento (OTL)")
+                            : t("Applications", "Candidaturas")}
             </h1>
             <p className="mt-0.5 text-xs text-white/50">
               {view === "roles"
@@ -2822,7 +2867,9 @@ Overwatch`;
                         ? t("Manage candidate screening compliance, preview rejection letters, and cancel booked slots for non-compliant candidates", "Gestão de conformidade de critérios, pré-visualização de modelo de desqualificação e cancelamento de testes")
                         : view === "custom_broadcast"
                           ? t("Dispatch targeted emails, urgent notices, and reminders to selected candidate segments", "Envio de comunicados direccionados, avisos urgentes e lembretes a grupos de candidatos")
-                          : t("Review and manage candidate applications", "Rever e gerir candidaturas recebidas")}
+                          : view === "rebooking_grace"
+                            ? t("Grant exceptional rebooking opportunities with single-use links (OTL) to candidates who missed their test", "Concessão de nova oportunidade de agendamento com links de uso único (OTL) para candidatos ausentes")
+                            : t("Review and manage candidate applications", "Rever e gerir candidaturas recebidas")}
             </p>
           </div>
 
@@ -6940,6 +6987,16 @@ Overwatch`;
           />
         )}
 
+        {/* ─── TAB 7: REBOOKING GRACE & OTL VIEW ──────────────────── */}
+        {view === "rebooking_grace" && (
+          <RebookingGraceView
+            applications={applications}
+            lang={lang}
+            t={t}
+            onRefresh={() => load(true)}
+          />
+        )}
+
         {/* ─── TAB 4: APPLICATIONS PIPELINE VIEW ──────────────────── */}
         {view === "applications" && (
           <section className="space-y-4">
@@ -8091,6 +8148,19 @@ Overwatch`;
                 <ExternalLink size={13} />
                 <span>{t("Open Candidate Booking Page ↗", "Ver Página de Agendamento ↗")}</span>
               </a>
+
+              {/* Manage Rebooking Grace (OTL) */}
+              <button
+                type="button"
+                onClick={() => {
+                  setSelected(null);
+                  setView("rebooking_grace");
+                }}
+                className="w-full flex items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 py-2.5 text-xs font-semibold text-amber-300 hover:bg-amber-500/20 transition-all cursor-pointer"
+              >
+                <RotateCcw size={13} />
+                <span>{t("Manage Rebooking Grace (OTL) →", "Gerir Período de Graça / Reagendar (OTL) →")}</span>
+              </button>
             </div>
 
             {/* Cover Letter Section with 1-Click English Translation */}

@@ -21,6 +21,7 @@ import {
   Printer,
   ShieldCheck,
   Sparkles,
+  RotateCcw,
 } from "lucide-react";
 import { siteContact, getGoogleMapsUrl } from "@/lib/site-config";
 import { DEFAULT_TEST_SLOTS } from "@/lib/careers";
@@ -37,6 +38,8 @@ type CandidateData = {
   name: string;
   role: string;
   testSlot: string | null;
+  previousTestSlot?: string | null;
+  rebookingGraceActive?: boolean;
   testBookedAt: string | null;
   invitedAt: string | null;
   attendedAt?: string | null;
@@ -314,15 +317,21 @@ export default function CandidateBookingClient({
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[0.7rem] font-semibold uppercase tracking-widest text-white/40 mb-1">
-                      {isAlreadyBooked
-                        ? isPt ? "Presença confirmada" : "Attendance confirmed"
-                        : isPt ? "Convocatória oficial" : "Official convocation"}
+                      {candidate.rebookingGraceActive
+                        ? isPt ? "Período de Graça · Reagendamento Excepcional" : "Grace Period · Exceptional Rebooking"
+                        : isAlreadyBooked
+                          ? isPt ? "Presença confirmada" : "Attendance confirmed"
+                          : isPt ? "Convocatória oficial" : "Official convocation"}
                     </p>
                     <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight leading-tight">
                       {candidate.name}
                     </h1>
                   </div>
-                  {isAlreadyBooked ? (
+                  {candidate.rebookingGraceActive ? (
+                    <div className="shrink-0 h-10 w-10 rounded-full bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-400">
+                      <RotateCcw size={18} />
+                    </div>
+                  ) : isAlreadyBooked ? (
                     <div className="shrink-0 h-10 w-10 rounded-full bg-emerald-400/20 border border-emerald-400/30 flex items-center justify-center">
                       <CheckCircle2 size={20} className="text-emerald-400" />
                     </div>
@@ -335,13 +344,17 @@ export default function CandidateBookingClient({
               </div>
               <div className="px-6 py-4">
                 <p className="text-sm text-gray-500 leading-relaxed">
-                  {isAlreadyBooked
+                  {candidate.rebookingGraceActive
                     ? isPt
-                      ? "A sua confirmação foi registada com sucesso. Abaixo encontram-se todos os detalhes do seu teste presencial."
-                      : "Your confirmation has been successfully registered. All details for your in-person test are shown below."
-                    : isPt
-                      ? "Foi seleccionada para a fase de teste presencial de selecção técnica para a vaga de Operadora de CCO. Escolha a data mais conveniente abaixo."
-                      : "You have been selected for the in-person technical assessment for the CCTV Operator position. Choose your preferred date below."}
+                      ? "Foi-lhe autorizada uma oportunidade final de reagendamento para a vaga de Operadora de CCO. Escolha a sua nova data entre os turnos disponíveis abaixo."
+                      : "You have been granted an exceptional rebooking opportunity for the CCTV Operator position. Choose your new date from the open slots below."
+                    : isAlreadyBooked
+                      ? isPt
+                        ? "A sua confirmação foi registada com sucesso. Abaixo encontram-se todos os detalhes do seu teste presencial."
+                        : "Your confirmation has been successfully registered. All details for your in-person test are shown below."
+                      : isPt
+                        ? "Foi seleccionada para a fase de teste presencial de selecção técnica para a vaga de Operadora de CCO. Escolha a data mais conveniente abaixo."
+                        : "You have been selected for the in-person technical assessment for the CCTV Operator position. Choose your preferred date below."}
                 </p>
               </div>
             </div>
@@ -542,6 +555,38 @@ export default function CandidateBookingClient({
             /* ── YET TO BOOK VIEW ── */
             ) : (
               <div className="space-y-4">
+                {/* Rebooking Grace Notice Banner */}
+                {candidate.rebookingGraceActive && (
+                  <div className="rounded-2xl border-2 border-emerald-500/40 bg-emerald-950/20 p-5 text-emerald-900 dark:text-emerald-100 shadow-sm">
+                    <div className="flex items-start gap-3.5">
+                      <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-600 dark:text-emerald-300 shrink-0 mt-0.5">
+                        <RotateCcw size={18} />
+                      </div>
+                      <div className="space-y-1.5 flex-1">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                            {isPt ? "Período de Graça · Reagendamento Autorizado" : "Grace Period · Rebooking Authorized"}
+                          </span>
+                          <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-700 dark:text-emerald-200 font-bold uppercase">
+                            {isPt ? "Link de Uso Único (OTL)" : "Single-Use Link (OTL)"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-700 dark:text-gray-200 leading-relaxed">
+                          {isPt
+                            ? "Em virtude de constrangimentos na localização ou deslocação para a sua data anterior, a Direcção de RH concedeu autorização para escolher uma nova data entre os turnos ainda disponíveis na próxima semana. Uma vez confirmada a escolha, este link é invalidado e o agendamento torna-se definitivo."
+                            : "Due to location or transport constraints on your previous date, HR has authorized you to pick a new test date among the remaining open slots next week. Once confirmed, this link is consumed and your booking is final."}
+                        </p>
+                        {candidate.previousTestSlot && (
+                          <div className="text-[11px] text-gray-600 dark:text-gray-300 pt-1 flex items-center gap-1.5 font-medium">
+                            <span>{isPt ? "Data anterior não comparecida:" : "Previously missed date:"}</span>
+                            <span className="line-through font-mono text-gray-500">{candidate.previousTestSlot}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Gate Pass Generation Notice */}
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 py-3.5 flex items-start gap-3">
                   <QrCode size={18} className="text-emerald-600 shrink-0 mt-0.5" />

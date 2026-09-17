@@ -57,7 +57,20 @@ export type Application = {
   reminderSentAt?: string;
   attendedAt?: string;
   attendanceStatus?: "present" | "absent" | "late";
+  previousTestSlot?: string;
+  rebookingGrace?: {
+    token: string;
+    grantedAt: string;
+    expiresAt?: string;
+    usedAt?: string | null;
+    previousSlot?: string;
+    reason?: string;
+    emailSentAt?: string;
+    grantedBy?: string;
+  };
 };
+
+export type RebookingGrace = NonNullable<Application["rebookingGrace"]>;
 export const MAX_CV = 3 * 1024 * 1024;
 
 export const DEFAULT_TEST_SLOTS = [
