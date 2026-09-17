@@ -185,8 +185,8 @@ export default function RebookingGraceView({
   const handleCopyLink = async (candidate: Application) => {
     let url = getOtlUrl(candidate);
 
-    // If candidate doesn't have an active token yet, grant one first silently
-    if (!candidate.rebookingGrace?.token) {
+    // If candidate doesn't have an active token yet and hasn't completed rebooking, grant one first silently
+    if (!candidate.rebookingGrace?.token && !candidate.rebookingGrace?.usedAt) {
       try {
         setBusyCandidateId(candidate.id);
         const res = await fetch("/api/admin/careers/rebooking-grace", {
@@ -234,9 +234,18 @@ export default function RebookingGraceView({
   const handleOpenWhatsApp = (candidate: Application) => {
     const url = getOtlUrl(candidate);
     const phoneDigits = candidate.whatsapp.replace(/\D/g, "");
-    const msg = isPt
-      ? `Olá ${candidate.name}, daqui é dos Recursos Humanos da Overwatch Moçambique. Em virtude das dificuldades reportadas na localização das nossas instalações ou deslocação para o seu teste presencial anterior, foi-lhe concedida uma autorização excepcional para reagendar o seu teste para uma das vagas abertas na próxima semana.\n\nAceda ao seu link de uso único para escolher a sua nova data:\n${url}\n\nEndereço exacto: Av. Paulo Samuel Kankhomba, N.º 1948, Maputo.\nQualquer dúvida estamos à disposição.`
-      : `Hello ${candidate.name}, this is Overwatch Mozambique HR. Due to reported transit or building location difficulties on your previous test date, an exceptional rebooking window has been granted for next week's open sessions.\n\nSelect your new date using your single-use link:\n${url}\n\nExact Address: Av. Paulo Samuel Kankhomba, N.º 1948, Maputo.`;
+    const isAlreadyCompleted = Boolean(candidate.rebookingGrace?.usedAt);
+
+    let msg = "";
+    if (isAlreadyCompleted) {
+      msg = isPt
+        ? `Olá ${candidate.name}, confirmamos que o seu teste presencial na Overwatch Moçambique foi reagendado com sucesso para ${candidate.testSlot}.\n\nEndereço exacto: Av. Paulo Samuel Kankhomba, N.º 1948, Maputo.\nComprovativo de convocatória: ${url}\nQualquer dúvida estamos à disposição.`
+        : `Hello ${candidate.name}, we confirm that your in-person test at Overwatch Mozambique is confirmed for ${candidate.testSlot}.\n\nExact Address: Av. Paulo Samuel Kankhomba, N.º 1948, Maputo.\nConfirmation link: ${url}`;
+    } else {
+      msg = isPt
+        ? `Olá ${candidate.name}, daqui é dos Recursos Humanos da Overwatch Moçambique. Em virtude das dificuldades reportadas na localização das nossas instalações ou deslocação para o seu teste presencial anterior, foi-lhe concedida uma autorização excepcional para reagendar o seu teste para uma das vagas abertas na próxima semana.\n\nAceda ao seu link de uso único para escolher a sua nova data:\n${url}\n\nEndereço exacto: Av. Paulo Samuel Kankhomba, N.º 1948, Maputo.\nQualquer dúvida estamos à disposição.`
+        : `Hello ${candidate.name}, this is Overwatch Mozambique HR. Due to reported transit or building location difficulties on your previous test date, an exceptional rebooking window has been granted for next week's open sessions.\n\nSelect your new date using your single-use link:\n${url}\n\nExact Address: Av. Paulo Samuel Kankhomba, N.º 1948, Maputo.`;
+    }
 
     window.open(
       `https://wa.me/${phoneDigits}?text=${encodeURIComponent(msg)}`,
@@ -857,33 +866,39 @@ export default function RebookingGraceView({
                       {/* Actions */}
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* Send / Re-send Grace Email Button */}
-                          <button
-                            type="button"
-                            onClick={() => handleGrantSingle(c)}
-                            disabled={isBusy}
-                            title={t("Grant Rebooking Grace & Send Email", "Conceder Graça & Enviar Email OTL")}
-                            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 ${
-                              hasGrace && !isUsed
-                                ? "bg-white/[0.06] hover:bg-white/15 text-white/90 border border-white/10"
-                                : isUsed
-                                  ? "bg-white/[0.04] text-white/40 border border-white/5 cursor-not-allowed"
-                                  : "bg-amber-500 hover:bg-amber-400 text-slate-950 shadow"
-                            }`}
-                          >
-                            {isBusy ? (
-                              <RefreshCw size={12} className="animate-spin" />
-                            ) : (
-                              <Send size={12} />
-                            )}
-                            <span className="hidden sm:inline">
-                              {hasGrace && !isUsed
-                                ? t("Re-send Email", "Reenviar Email")
-                                : isUsed
-                                  ? t("Completed", "Concluído")
-                                  : t("Grant Grace & Email", "Conceder Graça")}
+                          {/* Send / Re-send Grace Email Button or Completed Badge */}
+                          {isUsed ? (
+                            <span
+                              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 flex items-center gap-1.5 cursor-default select-none shadow-sm"
+                              title={t("Re-booking successfully completed. OTL is consumed.", "Reagendamento concluído com sucesso. OTL consumido.")}
+                            >
+                              <CheckCircle2 size={12} className="text-emerald-400" />
+                              <span>{t("Completed", "Concluído")}</span>
                             </span>
-                          </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleGrantSingle(c)}
+                              disabled={isBusy}
+                              title={hasGrace ? t("Re-send Grace Email", "Reenviar Email OTL") : t("Grant Rebooking Grace & Send Email", "Conceder Graça & Enviar Email OTL")}
+                              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 ${
+                                hasGrace
+                                  ? "bg-white/[0.06] hover:bg-white/15 text-white/90 border border-white/10"
+                                  : "bg-amber-500 hover:bg-amber-400 text-slate-950 shadow"
+                              }`}
+                            >
+                              {isBusy ? (
+                                <RefreshCw size={12} className="animate-spin" />
+                              ) : (
+                                <Send size={12} />
+                              )}
+                              <span className="hidden sm:inline">
+                                {hasGrace
+                                  ? t("Re-send Email", "Reenviar Email")
+                                  : t("Grant Grace & Email", "Conceder Graça")}
+                              </span>
+                            </button>
+                          )}
 
                           {/* Copy Link Button */}
                           <button

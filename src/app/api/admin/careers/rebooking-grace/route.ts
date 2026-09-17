@@ -119,6 +119,19 @@ export async function POST(request: Request) {
         return Response.json({ error: "Candidatura não encontrada." }, { status: 404 });
       }
 
+      // Single-use safeguard: If candidate has already completed their grace rebooking, block reissuing
+      if (candidate.rebookingGrace?.usedAt && !body.force) {
+        return Response.json(
+          {
+            error: "Este candidato já concluiu o seu reagendamento de uso único (OTL) e tem o turno confirmado. Não pode ser reemitido outro OTL.",
+            alreadyCompleted: true,
+            usedAt: candidate.rebookingGrace.usedAt,
+            currentSlot: candidate.testSlot,
+          },
+          { status: 400 }
+        );
+      }
+
       const token = crypto.randomUUID();
       const grantedAt = new Date().toISOString();
       const previousSlot = candidate.testSlot || candidate.previousTestSlot || undefined;
@@ -199,6 +212,17 @@ export async function POST(request: Request) {
 
           // Skip Inocio Wilson
           if (candidate.id === "6548b28d-9e3b-41c0-bfcf-47c992fa0956" || candidate.email?.toLowerCase() === "inociowilson7@gmail.com") {
+            continue;
+          }
+
+          // Skip candidates who have already completed their grace rebooking
+          if (candidate.rebookingGrace?.usedAt) {
+            results.push({
+              id,
+              name: candidate.name,
+              success: false,
+              error: "Reagendamento já concluído anteriormente",
+            });
             continue;
           }
 
