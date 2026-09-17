@@ -55,6 +55,7 @@ import {
   UserX,
   QrCode,
   Camera,
+  Languages,
 } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 import TechGrid from "@/components/ui/TechGrid";
@@ -249,6 +250,34 @@ export default function AdminPage() {
   const [isDraftDirty, setIsDraftDirty] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   const [previewLang, setPreviewLang] = useState<"pt" | "en">("pt");
+  const [translatedCoverLetter, setTranslatedCoverLetter] = useState<{ [id: string]: string }>({});
+  const [translatingCoverLetterId, setTranslatingCoverLetterId] = useState<string | null>(null);
+  const [showCoverLetterEn, setShowCoverLetterEn] = useState<{ [id: string]: boolean }>({});
+
+  const handleTranslateCoverLetter = async (candidateId: string, text?: string) => {
+    if (!text || !text.trim()) return;
+    if (translatedCoverLetter[candidateId]) {
+      setShowCoverLetterEn((prev) => ({ ...prev, [candidateId]: !prev[candidateId] }));
+      return;
+    }
+    setTranslatingCoverLetterId(candidateId);
+    try {
+      const res = await fetch("/api/admin/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, from: "pt", to: "en" }),
+      });
+      const data = await res.json();
+      if (data?.translated) {
+        setTranslatedCoverLetter((prev) => ({ ...prev, [candidateId]: data.translated }));
+        setShowCoverLetterEn((prev) => ({ ...prev, [candidateId]: true }));
+      }
+    } catch (err) {
+      console.error("Cover letter translation failed:", err);
+    } finally {
+      setTranslatingCoverLetterId(null);
+    }
+  };
   const [broadcastSlots, setBroadcastSlots] = useState<string[]>([...DEFAULT_TEST_SLOTS]);
   const [savingSlots, setSavingSlots] = useState(false);
   const [slotsSavedFeedback, setSlotsSavedFeedback] = useState(false);
@@ -8018,14 +8047,43 @@ Overwatch`;
               </a>
             </div>
 
-            {/* Cover Letter Section */}
-            <div className="rounded-2xl border border-white/15 bg-white/[0.04] p-5 space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white/90">
-                <FileText size={15} />
-                <span>{t("Cover Letter", "Carta de Apresentação")}</span>
+            {/* Cover Letter Section with 1-Click English Translation */}
+            <div className="rounded-2xl border border-white/15 bg-white/[0.04] p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white/90">
+                  <FileText size={15} />
+                  <span>{t("Cover Letter", "Carta de Apresentação")}</span>
+                </div>
+
+                {current.coverLetter && (
+                  <button
+                    type="button"
+                    onClick={() => handleTranslateCoverLetter(current.id, current.coverLetter)}
+                    disabled={translatingCoverLetterId === current.id}
+                    className="inline-flex items-center gap-1.5 text-[0.68rem] font-semibold text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 px-2.5 py-1 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {translatingCoverLetterId === current.id ? (
+                      <Loader2 size={11} className="animate-spin text-sky-300" />
+                    ) : (
+                      <Languages size={11} className="text-sky-300" />
+                    )}
+                    <span>
+                      {showCoverLetterEn[current.id]
+                        ? t("Show Original (PT)", "Ver Original (PT)")
+                        : t("Translate to English", "Traduzir para Inglês")}
+                    </span>
+                  </button>
+                )}
               </div>
+
+              {showCoverLetterEn[current.id] && translatedCoverLetter[current.id] && (
+                <div className="text-[0.62rem] text-sky-400 font-medium bg-sky-500/[0.08] border border-sky-500/20 rounded px-2 py-0.5 inline-block">
+                  ✓ {t("Translated to English", "Traduzido para Inglês")}
+                </div>
+              )}
+
               <p className="text-xs leading-relaxed text-white/80 whitespace-pre-wrap">
-                {current.coverLetter || (
+                {(showCoverLetterEn[current.id] ? translatedCoverLetter[current.id] : current.coverLetter) || (
                   <span className="italic text-white/40">
                     {t("No cover letter was submitted with this application.", "Nenhuma carta de apresentação foi submetida com esta candidatura.")}
                   </span>

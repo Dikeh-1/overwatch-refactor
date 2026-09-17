@@ -53,18 +53,24 @@ export async function POST(request: Request) {
         );
       }
 
+      const allApps = await getApplications();
+      const matchedCandidate = allApps.find(
+        (a) => a.email.trim().toLowerCase() === recipient.toLowerCase(),
+      );
+      const firstCandidate = allApps.find((a) => a.sex === "female" && a.status !== "archived");
+
       const sampleCandidate: Application = {
-        id: "preview-sample-id",
-        name: "Candidato de Teste",
+        id: matchedCandidate?.id || firstCandidate?.id || "preview-sample-id",
+        name: matchedCandidate?.name || firstCandidate?.name || "Arminda Martins Guambe",
         email: recipient,
-        whatsapp: "+258 84 000 0000",
+        whatsapp: matchedCandidate?.whatsapp || "+258 84 000 0000",
         role: roleId || "cctv",
         locale: "pt",
         grade12: "yes",
-        sex: "female",
+        sex: (matchedCandidate?.sex || firstCandidate?.sex || "female") as "female" | "male",
         ai: "no",
         experience: "yes",
-        lastProfession: "Operadora de CCTV",
+        lastProfession: matchedCandidate?.lastProfession || "Operadora de CCTV",
         shifts: "yes",
         cvName: "curriculo.pdf",
         cvType: "application/pdf",
@@ -84,7 +90,7 @@ export async function POST(request: Request) {
       await sendTransactionalEmail({
         sender: { name: "Overwatch Recrutamento", email: "carreiras@overwatchmoz.com" },
         to: [{ email: recipient, name: sampleCandidate.name }],
-        subject: `[TESTE PREVIEW] ${subject.trim()}`,
+        subject: `[TEST PREVIEW] ${subject.trim()}`,
         htmlContent: html,
         textContent: message.trim(),
       });
@@ -93,6 +99,7 @@ export async function POST(request: Request) {
         success: true,
         testMode: true,
         recipient,
+        samplePersonalizedName: sampleCandidate.name,
       });
     }
 
@@ -209,8 +216,20 @@ function generateOfficialBroadcastHtml(params: {
   const bookingUrl = `${origin}/pt/careers/test-invite/${candidate.id}`;
 
   const isFemale = candidate.sex === "female";
-  const firstName = candidate.name.split(" ")[0].trim();
-  const greeting = isFemale ? `Prezada ${firstName}` : `Prezado ${firstName}`;
+  const candidateFullName = candidate.name.trim();
+  const isEnglish =
+    /Dear\s+/i.test(message) ||
+    /Kind regards/i.test(message) ||
+    /Please be reminded/i.test(message) ||
+    /recruitment process/i.test(message);
+
+  const greeting = isEnglish
+    ? `Dear ${candidateFullName}`
+    : isFemale
+      ? `Prezada ${candidateFullName}`
+      : candidate.sex === "male"
+        ? `Prezado ${candidateFullName}`
+        : `Prezada(o) ${candidateFullName}`;
 
   // Format message paragraphs and lists cleanly
   const paragraphs = message

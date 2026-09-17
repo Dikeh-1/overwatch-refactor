@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Send,
   Users,
@@ -14,6 +14,10 @@ import {
   ChevronDown,
   Phone,
   ShieldCheck,
+  Languages,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import type { Application } from "@/lib/careers";
 
@@ -26,15 +30,62 @@ interface CustomBroadcastViewProps {
   onRefresh: () => Promise<void>;
 }
 
-const TEMPLATES = [
+interface TemplateDef {
+  id: string;
+  name: { en: string; pt: string };
+  description: { en: string; pt: string };
+  audience: "invited_unconfirmed" | "booked_confirmed" | "all_invited" | "all_applied" | "disqualified";
+  subject: { en: string; pt: string };
+  includeButton: boolean;
+  buttonText: { en: string; pt: string };
+  body: { en: string; pt: string };
+}
+
+const TEMPLATES: TemplateDef[] = [
   {
     id: "filipa_unconfirmed",
-    name: "Aviso de Confirmação Obrigatória (Filipa)",
-    audience: "invited_unconfirmed" as const,
-    subject: "Aviso Urgente: Confirmação Obrigatória da Data do Teste Presencial — Overwatch",
+    name: {
+      en: "Mandatory Test Confirmation Notice (Filipa)",
+      pt: "Aviso de Confirmação Obrigatória (Filipa)",
+    },
+    description: {
+      en: "Notice for invited candidates who must confirm test date to enter premises",
+      pt: "Aviso urgente para convocados que têm de confirmar data para aceder às instalações",
+    },
+    audience: "invited_unconfirmed",
+    subject: {
+      en: "Urgent Notice: Mandatory Confirmation of Technical Test Date — Overwatch",
+      pt: "Aviso Urgente: Confirmação Obrigatória da Data do Teste Presencial — Overwatch",
+    },
     includeButton: true,
-    buttonText: "Confirmar Data do Teste Presencial",
-    body: `Recordamos que a recepção de um convite para o teste presencial não significa que a sua presença esteja automaticamente confirmada.
+    buttonText: {
+      en: "Confirm In-Person Test Date",
+      pt: "Confirmar Data do Teste Presencial",
+    },
+    body: {
+      en: `Please be reminded that receiving an invitation for the in-person test does not mean that your attendance is automatically confirmed.
+
+To participate in the test, it is mandatory to:
+1. Respond and confirm your intended test date via the link below.
+2. Receive the respective confirmation.
+3. Attend only on the confirmed date.
+
+Candidates who have not previously confirmed their date will not appear on the attendance roster and will not be permitted to enter to take the test.
+
+On the test day, it is equally mandatory to bring:
+• A physical copy of your identification document (ID or Passport);
+• A ballpoint pen.
+
+Anyone arriving without a copy of their ID or without a pen will not be authorized to take the test.
+
+Please do not travel to the Overwatch premises without having previously completed your date confirmation.
+
+These rules apply to all candidates, without exception, to ensure organization and fairness in the recruitment process.
+
+Kind regards,
+Recruitment Team
+Overwatch Mozambique`,
+      pt: `Recordamos que a recepção de um convite para o teste presencial não significa que a sua presença esteja automaticamente confirmada.
 
 Para participar no teste, é obrigatório:
 1. Responder/confirmar no link abaixo a data em que pretende realizar o teste.
@@ -55,16 +106,46 @@ Estas regras aplicam-se a todas as candidatas, sem excepção, para garantir a o
 
 Com os melhores cumprimentos,
 Equipa de Recrutamento
-Overwatch`,
+Overwatch Moçambique`,
+    },
   },
   {
     id: "reminder_documents",
-    name: "Lembrete: Documentos & Regras de Acesso",
-    audience: "booked_confirmed" as const,
-    subject: "Lembrete Importante: Requisitos de Acesso ao Teste Presencial — Overwatch",
+    name: {
+      en: "Reminder: Required Documents & Access Rules",
+      pt: "Lembrete: Documentos & Regras de Acesso",
+    },
+    description: {
+      en: "Instructions for booked candidates regarding physical ID, pen, and QR code",
+      pt: "Instruções para candidatos com data confirmada sobre BI físico, caneta e QR code",
+    },
+    audience: "booked_confirmed",
+    subject: {
+      en: "Important Reminder: Access Requirements for In-Person Test — Overwatch",
+      pt: "Lembrete Importante: Requisitos de Acesso ao Teste Presencial — Overwatch",
+    },
     includeButton: false,
-    buttonText: "Ver Detalhes do Teste",
-    body: `Este é um lembrete relativo ao seu teste presencial agendado nas instalações da Overwatch Moçambique.
+    buttonText: {
+      en: "View Test Details",
+      pt: "Ver Detalhes do Teste",
+    },
+    body: {
+      en: `This is a reminder regarding your scheduled in-person test at the Overwatch Mozambique premises.
+
+Please note that entry to the premises is strictly conditional upon complying with the following rules:
+• You must present a physical copy of your identification document (ID or Passport);
+• You must bring a ballpoint pen to write the test;
+• Present your access QR Code (digitally on your mobile phone or printed).
+
+Anyone arriving without a copy of their identification document or without a pen will not be authorized to enter the premises.
+
+Premises Address: Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo.
+Please arrive 15 minutes before your scheduled test time.
+
+Kind regards,
+Recruitment Team
+Overwatch Mozambique`,
+      pt: `Este é um lembrete relativo ao seu teste presencial agendado nas instalações da Overwatch Moçambique.
 
 Lembramos que o acesso às instalações é estritamente condicionado ao cumprimento das seguintes regras:
 • É obrigatório apresentar uma cópia física do documento de identificação (BI ou Passaporte);
@@ -78,16 +159,33 @@ Por favor, compareça com 15 minutos de antecedência em relação ao horário m
 
 Com os melhores cumprimentos,
 Equipa de Recrutamento
-Overwatch`,
+Overwatch Moçambique`,
+    },
   },
   {
     id: "custom_blank",
-    name: "Mensagem Livre em Branco",
-    audience: "all_invited" as const,
-    subject: "",
+    name: {
+      en: "Blank Custom Message",
+      pt: "Mensagem Livre em Branco",
+    },
+    description: {
+      en: "Write an official communication from scratch",
+      pt: "Escrever uma comunicação oficial a partir do zero",
+    },
+    audience: "all_invited",
+    subject: {
+      en: "",
+      pt: "",
+    },
     includeButton: false,
-    buttonText: "Aceder ao Portal",
-    body: "",
+    buttonText: {
+      en: "Access Careers Portal",
+      pt: "Aceder ao Portal",
+    },
+    body: {
+      en: "",
+      pt: "",
+    },
   },
 ];
 
@@ -104,10 +202,19 @@ export function CustomBroadcastView({
     "invited_unconfirmed" | "booked_confirmed" | "all_invited" | "all_applied" | "disqualified"
   >("invited_unconfirmed");
   const [genderFilter, setGenderFilter] = useState<"all" | "female" | "male">("all");
-  const [subject, setSubject] = useState(TEMPLATES[0].subject);
-  const [message, setMessage] = useState(TEMPLATES[0].body);
-  const [includeButton, setIncludeButton] = useState(TEMPLATES[0].includeButton);
-  const [buttonText, setButtonText] = useState(TEMPLATES[0].buttonText);
+
+  // Default to English text if admin preferred language is 'en', otherwise 'pt'
+  const initialTmpl = TEMPLATES[0];
+  const [subject, setSubject] = useState(lang === "en" ? initialTmpl.subject.en : initialTmpl.subject.pt);
+  const [message, setMessage] = useState(lang === "en" ? initialTmpl.body.en : initialTmpl.body.pt);
+  const [includeButton, setIncludeButton] = useState(initialTmpl.includeButton);
+  const [buttonText, setButtonText] = useState(lang === "en" ? initialTmpl.buttonText.en : initialTmpl.buttonText.pt);
+
+  // Preview index to cycle through real candidates
+  const [previewIndex, setPreviewIndex] = useState(0);
+
+  // Translation state
+  const [isTranslating, setIsTranslating] = useState(false);
 
   // Test send state with user-entered custom email
   const [testEmailInput, setTestEmailInput] = useState("");
@@ -172,16 +279,105 @@ export function CustomBroadcastView({
   const womenCount = targetCandidates.filter((c) => c.sex === "female").length;
   const menCount = targetCandidates.filter((c) => c.sex === "male").length;
 
+  // Safe current preview candidate
+  const safeIndex = targetCandidates.length > 0 ? Math.min(previewIndex, targetCandidates.length - 1) : 0;
+  const currentPreviewCandidate = targetCandidates[safeIndex] || null;
+  const sampleCandidateName = currentPreviewCandidate?.name || "Arminda Martins Guambe";
+  const isFemaleCandidate = currentPreviewCandidate ? currentPreviewCandidate.sex === "female" : true;
+
+  // Detect whether current composed message is in English or Portuguese
+  const isEnglishMessage = useMemo(() => {
+    return (
+      /Dears+/i.test(message) ||
+      /Kind regards/i.test(message) ||
+      /Please be reminded/i.test(message) ||
+      /recruitment process/i.test(message) ||
+      (lang === "en" && !/Prezada|Prezado|Agradecemos/i.test(message))
+    );
+  }, [message, lang]);
+
+  // Preview greeting: dynamic with actual candidate name
+  const previewGreeting = useMemo(() => {
+    if (isEnglishMessage) {
+      return `Dear ${sampleCandidateName},`;
+    }
+    if (isFemaleCandidate) {
+      return `Prezada ${sampleCandidateName},`;
+    }
+    if (currentPreviewCandidate?.sex === "male") {
+      return `Prezado ${sampleCandidateName},`;
+    }
+    return `Prezada(o) ${sampleCandidateName},`;
+  }, [isEnglishMessage, isFemaleCandidate, currentPreviewCandidate, sampleCandidateName]);
+
   const handleTemplateSelect = (templateId: string) => {
     setSelectedTemplate(templateId);
     const tmpl = TEMPLATES.find((t) => t.id === templateId);
     if (tmpl) {
       setAudienceFilter(tmpl.audience);
-      setSubject(tmpl.subject);
-      setMessage(tmpl.body);
+      const isEn = lang === "en";
+      setSubject(isEn ? tmpl.subject.en : tmpl.subject.pt);
+      setMessage(isEn ? tmpl.body.en : tmpl.body.pt);
       setIncludeButton(tmpl.includeButton);
-      setButtonText(tmpl.buttonText);
+      setButtonText(isEn ? tmpl.buttonText.en : tmpl.buttonText.pt);
       setStatusFeedback(null);
+    }
+  };
+
+  // 1-Click Translation via /api/admin/translate
+  const handleTranslate = async (toLang: "en" | "pt") => {
+    if (!subject.trim() && !message.trim()) return;
+    setIsTranslating(true);
+    setStatusFeedback(null);
+
+    try {
+      const fromLang = toLang === "en" ? "pt" : "en";
+      let translatedSub = subject;
+      let translatedMsg = message;
+
+      if (subject.trim()) {
+        const resSub = await fetch("/api/admin/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: subject, from: fromLang, to: toLang }),
+        });
+        const dataSub = await resSub.json();
+        if (dataSub?.translated) translatedSub = dataSub.translated;
+      }
+
+      if (message.trim()) {
+        const resMsg = await fetch("/api/admin/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: message, from: fromLang, to: toLang }),
+        });
+        const dataMsg = await resMsg.json();
+        if (dataMsg?.translated) translatedMsg = dataMsg.translated;
+      }
+
+      setSubject(translatedSub);
+      setMessage(translatedMsg);
+
+      if (toLang === "en" && buttonText.includes("Confirmar")) {
+        setButtonText("Confirm In-Person Test Date");
+      } else if (toLang === "pt" && buttonText.includes("Confirm")) {
+        setButtonText("Confirmar Data do Teste Presencial");
+      }
+
+      setStatusFeedback({
+        type: "success",
+        message:
+          toLang === "en"
+            ? t("Message successfully translated to English!", "Mensagem traduzida para Inglês com sucesso!")
+            : t("Message successfully translated to Portuguese!", "Mensagem traduzida para Português com sucesso!"),
+      });
+    } catch (err) {
+      setStatusFeedback({
+        type: "error",
+        message: (err as Error).message || "Translation service error.",
+      });
+    } finally {
+      setIsTranslating(false);
     }
   };
 
@@ -231,8 +427,8 @@ export function CustomBroadcastView({
       setStatusFeedback({
         type: "success",
         message: t(
-          `Test preview dispatched successfully to ${targetEmail}!`,
-          `E-mail de teste enviado com sucesso para ${targetEmail}!`
+          `Test preview dispatched successfully to ${targetEmail}! Check your inbox.`,
+          `E-mail de teste enviado com sucesso para ${targetEmail}! Verifique a sua caixa de entrada.`
         ),
       });
     } catch (err) {
@@ -273,8 +469,8 @@ export function CustomBroadcastView({
       setStatusFeedback({
         type: "success",
         message: t(
-          `Official communication successfully dispatched to ${data.sentCount} candidate(s)!`,
-          `Comunicação oficial enviada com sucesso para ${data.sentCount} candidato(s)!`
+          `Official communication successfully dispatched to ${data.sentCount} candidate(s)! Each email addressed personally by name.`,
+          `Comunicação oficial enviada com sucesso para ${data.sentCount} candidato(s)! Cada e-mail personalizado com o nome real.`
         ),
       });
       await onRefresh();
@@ -317,39 +513,57 @@ export function CustomBroadcastView({
         </div>
       )}
 
-      {/* Template Selector */}
-      <div className="rounded-xl border border-white/10 bg-[#121827] p-5 space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-white/70">
-            {t("Pre-Configured Message Templates", "Modelos de Mensagem Prontos")}
-          </h3>
-          {activeCampaignRole && (
-            <span className="text-[0.68rem] font-medium text-white/50">
-              {roleLabel(activeCampaignRole)}
+      {/* Template Selector Banner with Language Indicator */}
+      <div className="rounded-2xl border border-white/10 bg-[#121827] p-5 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <Mail size={16} className="text-white/80" />
+              <span>{t("Select Communication Template", "Seleccionar Modelo de Comunicação")}</span>
+            </h3>
+            <p className="text-xs text-white/50 mt-0.5">
+              {t(
+                "Choose an official pre-approved template or draft your custom message.",
+                "Escolha um modelo oficial pré-aprovado ou redija a sua mensagem personalizada."
+              )}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-[0.68rem] text-white/40 flex items-center gap-1">
+              <Languages size={12} className="text-sky-400" />
+              {lang === "en" ? "Templates in English" : "Modelos em Português"}
             </span>
-          )}
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
           {TEMPLATES.map((tmpl) => {
             const isSelected = selectedTemplate === tmpl.id;
+            const tmplTitle = lang === "en" ? tmpl.name.en : tmpl.name.pt;
+            const tmplDesc = lang === "en" ? tmpl.description.en : tmpl.description.pt;
+
             return (
               <button
                 key={tmpl.id}
                 type="button"
                 onClick={() => handleTemplateSelect(tmpl.id)}
-                className={`p-3 rounded-lg border text-left transition-all cursor-pointer ${
+                className={`text-left p-3.5 rounded-xl border transition-all cursor-pointer ${
                   isSelected
-                    ? "border-white/30 bg-white/[0.08] text-white"
-                    : "border-white/10 bg-white/[0.02] hover:bg-white/[0.05] text-white/60 hover:text-white"
+                    ? "border-white/40 bg-white/[0.08] shadow-md"
+                    : "border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/20"
                 }`}
               >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-semibold text-white">{tmpl.name}</span>
-                  {isSelected && <Check size={13} className="text-white shrink-0" />}
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <span className="font-semibold text-xs text-white">{tmplTitle}</span>
+                  {isSelected && (
+                    <span className="h-4 w-4 rounded-full bg-white text-[#090d16] flex items-center justify-center shrink-0">
+                      <Check size={10} strokeWidth={3} />
+                    </span>
+                  )}
                 </div>
-                <p className="text-[0.68rem] text-white/40 line-clamp-1">
-                  {tmpl.subject || t("Blank custom message", "Mensagem livre sem modelo")}
+                <p className="text-[0.68rem] text-white/50 line-clamp-2 leading-relaxed">
+                  {tmplDesc}
                 </p>
               </button>
             );
@@ -359,19 +573,19 @@ export function CustomBroadcastView({
 
       {/* Main Two-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Form & Settings (7 cols) */}
+        {/* Left Column: Form, Audience, Translation Bar & Controls (7 cols) */}
         <div className="lg:col-span-7 space-y-5">
           {/* 1. Audience Selector */}
           <div className="rounded-xl border border-white/10 bg-[#121827] p-5 space-y-4">
             <h4 className="text-xs font-bold uppercase tracking-wider text-white/70 flex items-center gap-2">
               <Filter size={13} className="text-white/60" />
-              {t("Recipient Audience", "Público Alvo")}
+              {t("Recipient Audience Filter", "Filtro de Destinatários")}
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-[0.68rem] font-semibold text-white/60 block mb-1">
-                  {t("Audience Filter:", "Filtro de Destinatários:")}
+                  {t("Audience Cohort:", "Coorte de Candidatos:")}
                 </label>
                 <select
                   value={audienceFilter}
@@ -401,7 +615,7 @@ export function CustomBroadcastView({
 
               <div>
                 <label className="text-[0.68rem] font-semibold text-white/60 block mb-1">
-                  {t("Gender:", "Género:")}
+                  {t("Gender Filter:", "Filtro de Género:")}
                 </label>
                 <select
                   value={genderFilter}
@@ -424,13 +638,17 @@ export function CustomBroadcastView({
             {/* Audience Summary Box */}
             <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 flex items-center justify-between gap-3">
               <div>
-                <div className="text-xs font-semibold text-white">
-                  {targetCandidates.length} {t("candidates selected", "candidatos seleccionados")}
+                <div className="text-xs font-semibold text-white flex items-center gap-1.5">
+                  <span>{targetCandidates.length} {t("candidates selected", "candidatos seleccionados")}</span>
+                  <span className="text-white/30 font-normal">|</span>
+                  <span className="text-[0.68rem] text-white/50">
+                    {t("Real name personalized per recipient", "Nome real personalizado por destinatário")}
+                  </span>
                 </div>
                 <div className="text-[0.68rem] text-white/40 mt-0.5">
-                  <span className="text-pink-400">♀ {womenCount} {t("women", "mulheres")}</span>
+                  <span className="text-pink-400 font-medium">♀ {womenCount} {t("women", "mulheres")}</span>
                   {" · "}
-                  <span className="text-sky-400">♂ {menCount} {t("men", "homens")}</span>
+                  <span className="text-sky-400 font-medium">♂ {menCount} {t("men", "homens")}</span>
                 </div>
               </div>
 
@@ -473,17 +691,52 @@ export function CustomBroadcastView({
             )}
           </div>
 
-          {/* 2. Message Editor */}
+          {/* 2. Message Editor with 1-Click Translation Toolbar */}
           <div className="rounded-xl border border-white/10 bg-[#121827] p-5 space-y-4">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-white/70 flex items-center gap-2">
-              <Mail size={13} className="text-white/60" />
-              {t("Message Content", "Conteúdo da Comunicação")}
-            </h4>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-white/70 flex items-center gap-2">
+                <Mail size={13} className="text-white/60" />
+                {t("Message Content", "Conteúdo da Comunicação")}
+              </h4>
+
+              {/* Translation Toolbar */}
+              <div className="flex items-center gap-1.5 bg-white/[0.04] p-1 rounded-lg border border-white/10">
+                <span className="text-[0.65rem] font-semibold text-white/50 px-1.5 flex items-center gap-1">
+                  <Languages size={11} className="text-sky-400" />
+                  {t("Translation:", "Tradução:")}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleTranslate("en")}
+                  disabled={isTranslating}
+                  title="Translate current message to English so you can read and edit comfortably"
+                  className="px-2 py-0.5 rounded text-[0.68rem] font-medium border border-white/10 bg-white/[0.06] hover:bg-white/[0.15] text-white transition-colors flex items-center gap-1 disabled:opacity-50 cursor-pointer"
+                >
+                  {isTranslating ? <RefreshCw size={10} className="animate-spin" /> : null}
+                  <span>&rarr; EN (English)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleTranslate("pt")}
+                  disabled={isTranslating}
+                  title="Translate current message to Portuguese for Mozambican candidates"
+                  className="px-2 py-0.5 rounded text-[0.68rem] font-medium border border-white/10 bg-white/[0.06] hover:bg-white/[0.15] text-white transition-colors flex items-center gap-1 disabled:opacity-50 cursor-pointer"
+                >
+                  {isTranslating ? <RefreshCw size={10} className="animate-spin" /> : null}
+                  <span>&rarr; PT (Português)</span>
+                </button>
+              </div>
+            </div>
 
             <div>
-              <label className="text-[0.68rem] font-semibold text-white/60 block mb-1">
-                {t("Subject:", "Assunto:")}
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[0.68rem] font-semibold text-white/60">
+                  {t("Subject:", "Assunto:")}
+                </label>
+                <span className="text-[0.62rem] text-white/40">
+                  {isEnglishMessage ? "Language: English" : "Idioma: Português"}
+                </span>
+              </div>
               <input
                 type="text"
                 value={subject}
@@ -494,9 +747,14 @@ export function CustomBroadcastView({
             </div>
 
             <div>
-              <label className="text-[0.68rem] font-semibold text-white/60 block mb-1">
-                {t("Message Body:", "Corpo da Mensagem:")}
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[0.68rem] font-semibold text-white/60">
+                  {t("Message Body:", "Corpo da Mensagem:")}
+                </label>
+                <span className="text-[0.62rem] text-emerald-400 font-mono">
+                  {t("Personal greeting automatically injected", "Saudação pessoal injectada automaticamente")}
+                </span>
+              </div>
               <textarea
                 rows={10}
                 value={message}
@@ -604,16 +862,54 @@ export function CustomBroadcastView({
           </div>
         </div>
 
-        {/* Right Column: Authentic Overwatch Letterhead Preview (5 cols) */}
+        {/* Right Column: Authentic Overwatch Letterhead Preview with Dynamic Candidate Name (5 cols) */}
         <div className="lg:col-span-5 space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-bold uppercase tracking-wider text-white/70 flex items-center gap-2">
               <Eye size={13} className="text-white/60" />
               {t("Official Letterhead Preview", "Pré-visualização Oficial")}
             </h4>
-            <span className="text-[0.62rem] text-white/40">
-              {t("Exact Email Layout", "Layout Exacto do E-mail")}
+            <span className="text-[0.62rem] text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+              {t("Dynamic Personalization Active", "Personalização Dinâmica Activa")}
             </span>
+          </div>
+
+          {/* Candidate Pager in Preview */}
+          <div className="rounded-lg border border-white/10 bg-white/[0.03] p-2.5 flex items-center justify-between text-xs">
+            <div className="min-w-0 flex items-center gap-2">
+              <span className="text-[0.68rem] text-white/50">{t("Viewing Candidate:", "Candidato:")}</span>
+              <strong className="text-white font-semibold truncate text-[0.72rem]">
+                {sampleCandidateName}
+              </strong>
+              {targetCandidates.length > 0 && (
+                <span className="text-[0.62rem] text-white/40 font-mono">
+                  ({safeIndex + 1}/{targetCandidates.length})
+                </span>
+              )}
+            </div>
+
+            {targetCandidates.length > 1 && (
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  disabled={safeIndex <= 0}
+                  onClick={() => setPreviewIndex((i) => Math.max(0, i - 1))}
+                  title={t("Previous candidate", "Candidato anterior")}
+                  className="p-1 rounded border border-white/10 bg-white/[0.04] hover:bg-white/[0.1] text-white disabled:opacity-30 cursor-pointer"
+                >
+                  <ChevronLeft size={13} />
+                </button>
+                <button
+                  type="button"
+                  disabled={safeIndex >= targetCandidates.length - 1}
+                  onClick={() => setPreviewIndex((i) => Math.min(targetCandidates.length - 1, i + 1))}
+                  title={t("Next candidate", "Próximo candidato")}
+                  className="p-1 rounded border border-white/10 bg-white/[0.04] hover:bg-white/[0.1] text-white disabled:opacity-30 cursor-pointer"
+                >
+                  <ChevronRight size={13} />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Email Frame */}
@@ -662,10 +958,21 @@ export function CustomBroadcastView({
                 </table>
               </div>
 
-              {/* Body Content */}
+              {/* Body Content with Dynamic Candidate Greeting */}
               <div className="p-5 bg-white space-y-3.5">
-                <div className="font-bold text-slate-900 text-sm">
-                  Prezada(o) [Nome do Candidato],
+                <div className="space-y-1">
+                  <div className="font-bold text-slate-900 text-sm">
+                    {previewGreeting}
+                  </div>
+                  <div className="inline-flex items-center gap-1 text-[9px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded font-medium">
+                    <CheckCircle2 size={10} className="text-emerald-600 shrink-0" />
+                    <span>
+                      {t(
+                        `Automatically personalized with recipient's real name`,
+                        `Personalizado automaticamente com o nome real do candidato`
+                      )}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="text-slate-700 leading-relaxed whitespace-pre-line text-xs font-sans">
@@ -718,33 +1025,46 @@ export function CustomBroadcastView({
               </div>
               <div>
                 <h4 className="text-sm font-bold text-white">
-                  {t("Confirm Email Dispatch", "Confirmar Disparo de E-mails")}
+                  {t("Confirm Broadcast Dispatch", "Confirmar Disparo Geral")}
                 </h4>
                 <p className="text-xs text-white/50">
                   {t(
-                    `Dispatch this official email to ${targetCandidates.length} candidate(s)?`,
-                    `Enviar este comunicado oficial para ${targetCandidates.length} candidato(s)?`
+                    `You are about to dispatch this official communication to ${targetCandidates.length} candidate(s).`,
+                    `Está prestes a enviar este comunicado oficial a ${targetCandidates.length} candidato(s).`
                   )}
                 </p>
               </div>
             </div>
 
-            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-xs space-y-1">
-              <div className="text-white/40">{t("Subject:", "Assunto:")}</div>
-              <div className="font-semibold text-white truncate">{subject}</div>
-              <div className="text-white/40 mt-2">{t("Audience Breakdown:", "Detalhamento:")}</div>
-              <div className="text-white/80 font-medium">
-                <span className="text-pink-400">♀ {womenCount} {t("women", "mulheres")}</span>
-                {" · "}
-                <span className="text-sky-400">♂ {menCount} {t("men", "homens")}</span>
+            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-xs space-y-1.5">
+              <div className="flex justify-between text-white/70">
+                <span>{t("Total Recipients:", "Total de Destinatários:")}</span>
+                <strong className="text-white">{targetCandidates.length}</strong>
+              </div>
+              <div className="flex justify-between text-white/70">
+                <span>{t("Audience Cohort:", "Coorte de Público:")}</span>
+                <span className="text-white capitalize">{audienceFilter.replace("_", " ")}</span>
+              </div>
+              <div className="flex justify-between text-white/70">
+                <span>{t("Gender Distribution:", "Distribuição por Género:")}</span>
+                <span className="text-white">♀ {womenCount} / ♂ {menCount}</span>
+              </div>
+              <div className="flex justify-between text-white/70">
+                <span>{t("Subject:", "Assunto:")}</span>
+                <span className="text-white truncate max-w-[200px] font-medium">{subject}</span>
+              </div>
+              <div className="flex justify-between text-emerald-400 font-medium pt-1 border-t border-white/10">
+                <span>{t("Personalization:", "Personalização:")}</span>
+                <span>{t("Each recipient addressed by real name", "Cada candidato tratado pelo nome real")}</span>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-2">
+            <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setShowConfirmModal(false)}
-                className="px-4 py-2 rounded-lg text-xs text-white/70 hover:text-white border border-white/10"
+                disabled={isSending}
+                className="px-4 py-2 rounded-lg border border-white/10 text-xs text-white/70 hover:text-white transition-colors cursor-pointer"
               >
                 {t("Cancel", "Cancelar")}
               </button>
@@ -752,9 +1072,14 @@ export function CustomBroadcastView({
                 type="button"
                 onClick={handleBroadcastDispatch}
                 disabled={isSending}
-                className="px-5 py-2 rounded-lg bg-white text-[#090d16] hover:bg-white/90 font-bold text-xs"
+                className="px-5 py-2 rounded-lg bg-white text-[#090d16] hover:bg-white/90 font-bold text-xs shadow transition-all cursor-pointer flex items-center gap-1.5"
               >
-                {isSending ? t("Sending...", "A enviar...") : t("Confirm & Send", "Confirmar & Enviar")}
+                {isSending ? (
+                  <RefreshCw size={13} className="animate-spin text-[#090d16]" />
+                ) : (
+                  <Send size={13} className="text-[#090d16]" />
+                )}
+                <span>{t("Confirm & Dispatch Now", "Confirmar e Disparar Agora")}</span>
               </button>
             </div>
           </div>
