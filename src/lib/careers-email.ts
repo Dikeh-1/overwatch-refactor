@@ -69,21 +69,23 @@ async function sendViaGmailSmtp(payload: SendEmailOptions) {
   return { success: true, provider: "gmail-smtp", messageId: info.messageId };
 }
 
-let cachedBrevoHasCredits: boolean | null = null;
-let lastBrevoCheck = 0;
+const brevoCreditsCache = new Map<string, { hasCredits: boolean; checkedAt: number }>();
 
-async function checkBrevoHasCredits(): Promise<boolean> {
+async function checkBrevoAccountCredits(apiKey: string): Promise<boolean> {
   const now = Date.now();
-  if (cachedBrevoHasCredits !== null && now - lastBrevoCheck < 3 * 60 * 1000) {
-    return cachedBrevoHasCredits;
+  const cached = brevoCreditsCache.get(apiKey);
+  if (cached && now - cached.checkedAt < 3 * 60 * 1000) {
+    return cached.hasCredits;
   }
-  if (!process.env.BREVO_API_KEY) return false;
   try {
     const res = await fetch("https://api.brevo.com/v3/account", {
-      headers: { "api-key": process.env.BREVO_API_KEY },
+      headers: { "api-key": apiKey },
       signal: AbortSignal.timeout(3000),
     });
-    if (!res.ok) return false;
+    if (!res.ok) {
+      brevoCreditsCache.set(apiKey, { hasCredits: false, checkedAt: now });
+      return false;
+    }
     const data = await res.json();
     const sendLimitPlan = data?.plan?.find(
       (p: { creditsType?: string; type?: string }) =>
@@ -91,17 +93,43 @@ async function checkBrevoHasCredits(): Promise<boolean> {
     );
     const credits =
       typeof sendLimitPlan?.credits === "number" ? sendLimitPlan.credits : 0;
-    cachedBrevoHasCredits = credits > 0;
-    lastBrevoCheck = now;
-    if (!cachedBrevoHasCredits) {
-      console.warn(
-        `[Email Provider] Brevo account has ${credits} credits remaining. Automatically routing through Gmail SMTP.`,
-      );
+    const hasCredits = credits > 0;
+    brevoCreditsCache.set(apiKey, { hasCredits, checkedAt: now });
+    if (!hasCredits) {
+      console.warn(`[Email Provider] Brevo key ending ...${apiKey.slice(-6)} has ${credits} credits remaining.`);
     }
-    return cachedBrevoHasCredits;
+    return hasCredits;
   } catch {
     return false;
   }
+}
+
+async function sendViaBrevo(
+  apiKey: string,
+  payload: SendEmailOptions,
+  outgoingSender: { name: string; email: string },
+) {
+  const brevoPayload: Record<string, unknown> = {
+    ...payload,
+    sender: outgoingSender,
+  };
+  if (ADMIN_BCC_EMAIL) {
+    brevoPayload.bcc = [{ email: ADMIN_BCC_EMAIL, name: "Overwatch Admin" }];
+  }
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "api-key": apiKey,
+    },
+    body: JSON.stringify(brevoPayload),
+    signal: AbortSignal.timeout(4000),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    throw new Error(`Brevo API error ${res.status}: ${errText}`);
+  }
+  return { success: true, provider: "brevo" };
 }
 
 export async function sendTransactionalEmail(payload: SendEmailOptions) {
@@ -115,51 +143,37 @@ export async function sendTransactionalEmail(payload: SendEmailOptions) {
   };
   const outgoingSender = payload.sender?.email ? payload.sender : defaultSender;
 
-  // Check whether Brevo is available and actually has send credits
-  const brevoUsable =
-    Boolean(process.env.BREVO_API_KEY) &&
-    process.env.EMAIL_PROVIDER !== "gmail" &&
-    process.env.EMAIL_PROVIDER !== "fallback" &&
-    (await checkBrevoHasCredits());
+  const primaryBrevoKey = process.env.BREVO_API_KEY?.trim();
+  const secondaryBrevoKey = (
+    process.env.BREVO_API_KEY_BACKUP ||
+    process.env.BREVO_API_KEY_SECONDARY ||
+    ""
+  ).trim();
 
-  // If Gmail SMTP is preferred or Brevo has 0 credits, deliver immediately via Gmail SMTP
-  if (hasGmailSmtp && (!brevoUsable || process.env.EMAIL_PROVIDER === "gmail")) {
+  // If Gmail SMTP is explicitly forced via EMAIL_PROVIDER=gmail
+  if (hasGmailSmtp && process.env.EMAIL_PROVIDER === "gmail") {
     return sendViaGmailSmtp({ ...payload, sender: outgoingSender });
   }
 
-  // Attempt Brevo if credits exist
-  if (brevoUsable && process.env.BREVO_API_KEY) {
+  // ─── TIER 1: Primary Brevo Account ──────────────────────────────────
+  if (primaryBrevoKey && (await checkBrevoAccountCredits(primaryBrevoKey))) {
     try {
-      const brevoPayload: Record<string, unknown> = {
-        ...payload,
-        sender: outgoingSender,
-      };
-
-      if (ADMIN_BCC_EMAIL) {
-        brevoPayload.bcc = [{ email: ADMIN_BCC_EMAIL, name: "Overwatch Admin" }];
-      }
-
-      const res = await fetch("https://api.brevo.com/v3/smtp/email", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "api-key": process.env.BREVO_API_KEY,
-        },
-        body: JSON.stringify(brevoPayload),
-        signal: AbortSignal.timeout(4000),
-      });
-
-      if (res.ok) {
-        return { success: true, provider: "brevo" };
-      }
-      const errText = await res.text().catch(() => "");
-      console.warn(`Brevo returned status ${res.status}: ${errText}. Falling back to Gmail SMTP...`);
+      return await sendViaBrevo(primaryBrevoKey, payload, outgoingSender);
     } catch (err) {
-      console.warn("Brevo request failed or timed out, falling back to Gmail SMTP:", err);
+      console.warn("[Failover] Tier 1 Primary Brevo failed. Attempting Tier 2 Secondary Brevo:", err);
     }
   }
 
-  // Auto-failover to Gmail SMTP if Brevo fails or runs out of credits
+  // ─── TIER 2: Secondary Brevo Account (New Backup) ───────────────────
+  if (secondaryBrevoKey && (await checkBrevoAccountCredits(secondaryBrevoKey))) {
+    try {
+      return await sendViaBrevo(secondaryBrevoKey, payload, outgoingSender);
+    } catch (err) {
+      console.warn("[Failover] Tier 2 Secondary Brevo failed. Falling back to Tier 3 Gmail SMTP:", err);
+    }
+  }
+
+  // ─── TIER 3: Gmail SMTP (Final High-Reliability Failover) ───────────
   if (hasGmailSmtp) {
     return sendViaGmailSmtp({ ...payload, sender: outgoingSender });
   }
