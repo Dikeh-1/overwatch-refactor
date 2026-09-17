@@ -61,6 +61,7 @@ import TechGrid from "@/components/ui/TechGrid";
 import LazyVideo from "@/components/ui/LazyVideo";
 import DocxViewer from "@/components/admin/DocxViewer";
 import GateCheckInModal from "@/components/admin/GateCheckInModal";
+import { CustomBroadcastView } from "@/components/admin/CustomBroadcastView";
 import { IMAGES } from "@/lib/constants";
 import {
   type Application,
@@ -199,7 +200,7 @@ export default function AdminPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [view, setView] = useState<
-    "applications" | "roles" | "broadcast" | "confirmations" | "schedule" | "disqualify"
+    "applications" | "roles" | "broadcast" | "confirmations" | "schedule" | "disqualify" | "custom_broadcast"
   >("applications");
   // ─── Per-Role Campaign Workspace ──────────────────────────────────
   const [activeCampaignRole, setActiveCampaignRole] = useState<string | null>(null);
@@ -997,16 +998,18 @@ Overwatch`;
     };
   }, [auth, load]);
 
-  // Auto-select first open campaign role when roles first load
+  // Auto-select first open or populated campaign role when roles first load
   useEffect(() => {
     if (roles.length > 0 && activeCampaignRole === null) {
-      const firstOpen = roles.find((r) => r.open);
-      if (firstOpen) {
-        setActiveCampaignRole(firstOpen.id);
-        setView("applications");
+      const firstRole =
+        roles.find((r) => r.open) ||
+        roles.find((r) => applications.some((a) => a.role === r.id)) ||
+        roles[0];
+      if (firstRole) {
+        setActiveCampaignRole(firstRole.id);
       }
     }
-  }, [roles, activeCampaignRole]);
+  }, [roles, activeCampaignRole, applications]);
 
   // Auto-dismiss live arrival notification toast after 6 seconds
   useEffect(() => {
@@ -2247,10 +2250,40 @@ Overwatch`;
     ? applications.filter((a) => a.role === activeCampaignRole)
     : applications;
 
+  const totalAppsCount = campaignApps.length;
+  const womenTotalCount = campaignApps.filter((a) => a.sex === "female").length;
+  const menTotalCount = campaignApps.filter((a) => a.sex === "male").length;
+
   const confirmedCount = campaignApps.filter((a) => Boolean(a.testSlot)).length;
+  const confirmedWomenCount = campaignApps.filter((a) => Boolean(a.testSlot) && a.sex === "female").length;
+  const confirmedMenCount = campaignApps.filter((a) => Boolean(a.testSlot) && a.sex === "male").length;
+
   const targetCount = campaignApps.filter(
     (a) => a.sex === "female" || (a.sex === "male" && a.experience === "yes"),
   ).length;
+  const targetWomenCount = campaignApps.filter((a) => a.sex === "female").length;
+  const targetMenCount = campaignApps.filter((a) => a.sex === "male" && a.experience === "yes").length;
+
+  const pendingConfirmationCount = campaignApps.filter(
+    (a) => Boolean(a.invitedAt) && !a.testSlot && a.status !== "archived",
+  ).length;
+  const pendingConfirmationWomen = campaignApps.filter(
+    (a) => Boolean(a.invitedAt) && !a.testSlot && a.status !== "archived" && a.sex === "female",
+  ).length;
+  const pendingConfirmationMen = campaignApps.filter(
+    (a) => Boolean(a.invitedAt) && !a.testSlot && a.status !== "archived" && a.sex === "male",
+  ).length;
+
+  const disqualifiedCount = campaignApps.filter(
+    (a) => a.status === "archived" || (a.sex === "male" && a.experience !== "yes"),
+  ).length;
+  const disqualifiedWomen = campaignApps.filter(
+    (a) => (a.status === "archived" || (a.sex === "male" && a.experience !== "yes")) && a.sex === "female",
+  ).length;
+  const disqualifiedMen = campaignApps.filter(
+    (a) => (a.status === "archived" || (a.sex === "male" && a.experience !== "yes")) && a.sex === "male",
+  ).length;
+
   const pendingConvocationsCount = campaignApps.filter(
     (a) =>
       (a.sex === "female" || (a.sex === "male" && a.experience === "yes")) &&
@@ -2402,7 +2435,7 @@ Overwatch`;
                 {t("Active Campaigns", "Campanhas Activas")}
               </p>
               <div className="space-y-1">
-                {roles.filter((r) => r.open).map((role) => {
+                {roles.filter((r) => r.open || applications.some((a) => a.role === r.id)).map((role) => {
                   const isActiveCampaign = activeCampaignRole === role.id;
                   const roleAppsCount = applications.filter((a) => a.role === role.id).length;
                   const rolePending = applications.filter(
@@ -2414,6 +2447,9 @@ Overwatch`;
                   ).length;
                   const roleConfirmed = applications.filter(
                     (a) => a.role === role.id && Boolean(a.testSlot),
+                  ).length;
+                  const roleUnconfirmed = applications.filter(
+                    (a) => a.role === role.id && Boolean(a.invitedAt) && !a.testSlot && a.status !== "archived",
                   ).length;
                   const roleConfirmedUnsent = applications.filter(
                     (a) => a.role === role.id && Boolean(a.testSlot) && !a.confirmationSentAt,
@@ -2448,6 +2484,13 @@ Overwatch`;
                           </div>
                           <span className="truncate text-[0.72rem]">
                             {lang === "pt" ? role.pt : role.en}
+                          </span>
+                          <span className={`px-1.5 py-0.2 rounded text-[0.52rem] font-bold ${
+                            role.open
+                              ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
+                              : "bg-amber-500/10 text-amber-300 border border-amber-500/20"
+                          }`}>
+                            {role.open ? t("OPEN", "ABERTA") : t("CLOSED", "FECHADA")}
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
@@ -2581,6 +2624,28 @@ Overwatch`;
                               ) : null}
                             </div>
                           </button>
+
+                          {/* Targeted Broadcast & Custom Emails sub-tab */}
+                          <button
+                            onClick={() => { setView("custom_broadcast"); setSidebarOpen(false); }}
+                            className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[0.72rem] font-semibold transition-all cursor-pointer ${
+                              view === "custom_broadcast"
+                                ? "bg-white/[0.1] text-white border border-white/15"
+                                : "text-white/60 hover:bg-white/[0.05] hover:text-white border border-transparent"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Send size={13} className="text-sky-400" />
+                              <span>{t("Broadcast & Emails", "Comunicações & Disparos")}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {roleUnconfirmed > 0 && (
+                                <span className="rounded-md bg-sky-500/20 text-sky-300 border border-sky-500/30 px-1.5 py-0.5 text-[0.58rem] font-mono font-medium" title={t("Unconfirmed invitations", "Convocados sem confirmação")}>
+                                  {roleUnconfirmed}
+                                </span>
+                              )}
+                            </div>
+                          </button>
                         </div>
                       )}
                     </div>
@@ -2680,7 +2745,9 @@ Overwatch`;
                         ? t("Confirmations", "Confirmações")
                         : view === "disqualify"
                           ? t("Disqualifications", "Desqualificações")
-                          : t("Applications", "Candidaturas")}
+                          : view === "custom_broadcast"
+                            ? t("Broadcast & Emails", "Comunicações & Disparos")
+                            : t("Applications", "Candidaturas")}
                 </span>
               </div>
             )}
@@ -2695,7 +2762,9 @@ Overwatch`;
                       ? t("Booking Confirmations", "Confirmações de Agendamento")
                       : view === "disqualify"
                         ? t("Disqualification & Compliance", "Desqualificação & Conformidade")
-                        : t("Applications", "Candidaturas")}
+                        : view === "custom_broadcast"
+                          ? t("Targeted Broadcasts & Direct Outreach", "Comunicações Personalizadas & Broadcast")
+                          : t("Applications", "Candidaturas")}
             </h1>
             <p className="mt-0.5 text-xs text-white/50">
               {view === "roles"
@@ -2708,7 +2777,9 @@ Overwatch`;
                       ? t("Dispatch official test instructions to confirmed candidates", "Envio de instruções oficiais às candidatas que já agendaram turno")
                       : view === "disqualify"
                         ? t("Manage candidate screening compliance, preview rejection letters, and cancel booked slots for non-compliant candidates", "Gestão de conformidade de critérios, pré-visualização de modelo de desqualificação e cancelamento de testes")
-                        : t("Review and manage candidate applications", "Rever e gerir candidaturas recebidas")}
+                        : view === "custom_broadcast"
+                          ? t("Dispatch targeted emails, urgent notices, and reminders to selected candidate segments", "Envio de comunicados direccionados, avisos urgentes e lembretes a grupos de candidatos")
+                          : t("Review and manage candidate applications", "Rever e gerir candidaturas recebidas")}
             </p>
           </div>
 
@@ -2764,70 +2835,118 @@ Overwatch`;
 
 
 
-        {/* ─── STATS CARDS ──────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* ─── STATS CARDS WITH GENDER BREAKDOWN ─────────────────────── */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           {/* Total Applicants */}
           <div className="kpi-card kpi-card-accent-blue">
-            <div className="flex items-start justify-between gap-2 mb-3">
-              <p className="admin-label">{t("Total Applicants", "Total de Candidatos")}</p>
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <p className="admin-label">{t("Total Applicants", "Total Candidatos")}</p>
               <div className="kpi-icon kpi-icon-blue shrink-0">
-                <Users size={15} />
+                <Users size={14} />
               </div>
             </div>
-            <strong className="admin-metric">{campaignApps.length}</strong>
-            <p className="mt-1.5 text-[0.7rem] text-white/40">
-              {activeCampaignRole && applications.length !== campaignApps.length
-                ? t(`${applications.length} total across all roles`, `${applications.length} no total de todas as vagas`)
-                : t("All registered candidates", "Todos os candidatos inscritos")}
-            </p>
+            <strong className="admin-metric text-xl sm:text-2xl">{totalAppsCount}</strong>
+            <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-white/10 text-[0.65rem]">
+              <span className="inline-flex items-center gap-0.5 text-pink-400 font-semibold bg-pink-500/10 px-1.5 py-0.5 rounded border border-pink-500/20">
+                ♀ {womenTotalCount} {t("women", "mulheres")}
+              </span>
+              <span className="inline-flex items-center gap-0.5 text-sky-400 font-semibold bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">
+                ♂ {menTotalCount} {t("men", "homens")}
+              </span>
+            </div>
           </div>
 
-          {/* Eligible for Test */}
+          {/* Shortlisted / Eligible for Test */}
           <div className="kpi-card kpi-card-accent-green">
-            <div className="flex items-start justify-between gap-2 mb-3">
-              <p className="admin-label">{t("Eligible for Test", "Elegíveis para Teste")}</p>
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <p className="admin-label">{t("Shortlisted / Test", "Apurados p/ Teste")}</p>
               <div className="kpi-icon kpi-icon-green shrink-0">
-                <UserCheck size={15} />
+                <UserCheck size={14} />
               </div>
             </div>
-            <strong className="admin-metric" style={{ color: "var(--accent-green)" }}>
+            <strong className="admin-metric text-xl sm:text-2xl" style={{ color: "var(--accent-green)" }}>
               {targetCount}
             </strong>
-            <p className="mt-1.5 text-[0.7rem] text-white/40">
-              {t("Women + Men w/ relevant exp.", "Mulheres + Homens c/ exp. relevante")}
-            </p>
+            <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-white/10 text-[0.65rem]">
+              <span className="inline-flex items-center gap-0.5 text-pink-400 font-semibold bg-pink-500/10 px-1.5 py-0.5 rounded border border-pink-500/20">
+                ♀ {targetWomenCount} {t("women", "mulheres")}
+              </span>
+              <span className="inline-flex items-center gap-0.5 text-sky-400 font-semibold bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">
+                ♂ {targetMenCount} {t("men", "homens")}
+              </span>
+            </div>
           </div>
 
           {/* Confirmed Tests */}
           <div className="kpi-card kpi-card-accent-blue">
-            <div className="flex items-start justify-between gap-2 mb-3">
-              <p className="admin-label">{t("Confirmed Tests", "Testes Confirmados")}</p>
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <p className="admin-label">{t("Confirmed Tests", "Data Confirmada")}</p>
               <div className="kpi-icon kpi-icon-blue shrink-0">
-                <CalendarCheck size={15} />
+                <CalendarCheck size={14} />
               </div>
             </div>
-            <strong className="admin-metric" style={{ color: "var(--accent-blue)" }}>
+            <strong className="admin-metric text-xl sm:text-2xl" style={{ color: "var(--accent-blue)" }}>
               {confirmedCount}
             </strong>
-            <p className="mt-1.5 text-[0.7rem] text-white/40">
-              {t("Date selected by candidate", "Presença marcada pelo candidato")}
-            </p>
+            <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-white/10 text-[0.65rem]">
+              <span className="inline-flex items-center gap-0.5 text-pink-400 font-semibold bg-pink-500/10 px-1.5 py-0.5 rounded border border-pink-500/20">
+                ♀ {confirmedWomenCount} {t("women", "mulheres")}
+              </span>
+              <span className="inline-flex items-center gap-0.5 text-sky-400 font-semibold bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">
+                ♂ {confirmedMenCount} {t("men", "homens")}
+              </span>
+            </div>
           </div>
 
-          {/* Open Roles */}
-          <div className="kpi-card kpi-card-accent-amber">
-            <div className="flex items-start justify-between gap-2 mb-3">
-              <p className="admin-label">{t("Open Roles", "Vagas Abertas")}</p>
+          {/* Pending Confirmation (Filipa Target Audience) */}
+          <div
+            onClick={() => setView("custom_broadcast")}
+            className="kpi-card kpi-card-accent-amber cursor-pointer hover:border-amber-500/50 hover:bg-white/[0.03] transition-all"
+            title={t("Click to broadcast reminder", "Clique para enviar aviso de confirmação")}
+          >
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <p className="admin-label">{t("Pending Confirmation", "Pendente Confirmação")}</p>
               <div className="kpi-icon kpi-icon-amber shrink-0">
-                <UnlockKeyhole size={15} />
+                <Clock size={14} />
               </div>
             </div>
-            <strong className="admin-metric" style={{ color: "var(--accent-amber)" }}>
-              {roles.filter((r) => r.open).length}
+            <strong className="admin-metric text-xl sm:text-2xl" style={{ color: "var(--accent-amber)" }}>
+              {pendingConfirmationCount}
             </strong>
-            <p className="mt-1.5 text-[0.7rem] text-white/40">
-              {t(`Of ${roles.length} total roles`, `De ${roles.length} vagas no total`)}
-            </p>
+            <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-white/10 text-[0.65rem]">
+              <span className="inline-flex items-center gap-0.5 text-pink-400 font-semibold bg-pink-500/10 px-1.5 py-0.5 rounded border border-pink-500/20">
+                ♀ {pendingConfirmationWomen} {t("women", "mulheres")}
+              </span>
+              <span className="inline-flex items-center gap-0.5 text-sky-400 font-semibold bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">
+                ♂ {pendingConfirmationMen} {t("men", "homens")}
+              </span>
+            </div>
+          </div>
+
+          {/* Disqualified / Not Shortlisted */}
+          <div
+            onClick={() => setView("disqualify")}
+            className="kpi-card cursor-pointer hover:border-rose-500/40 hover:bg-white/[0.03] transition-all"
+            style={{ borderColor: "rgba(244, 63, 94, 0.2)" }}
+            title={t("Click to view disqualified", "Clique para ver não apurados")}
+          >
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <p className="admin-label">{t("Disqualified / No Exp", "Não Apurados")}</p>
+              <div className="kpi-icon shrink-0 bg-rose-500/15 text-rose-400 border border-rose-500/20">
+                <UserX size={14} />
+              </div>
+            </div>
+            <strong className="admin-metric text-xl sm:text-2xl text-rose-400">
+              {disqualifiedCount}
+            </strong>
+            <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-white/10 text-[0.65rem]">
+              <span className="inline-flex items-center gap-0.5 text-pink-400 font-semibold bg-pink-500/10 px-1.5 py-0.5 rounded border border-pink-500/20">
+                ♀ {disqualifiedWomen}
+              </span>
+              <span className="inline-flex items-center gap-0.5 text-sky-400 font-semibold bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">
+                ♂ {disqualifiedMen}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -2898,14 +3017,15 @@ Overwatch`;
                             id: r.id,
                             open: opening,
                           });
-                          // When opening a role, auto-navigate to its campaign workspace
+                          // When toggling a role, keep the workspace active so the team can continue processing applicants
                           if (opening) {
                             setActiveCampaignRole(r.id);
                             setView("applications");
-                          } else if (activeCampaignRole === r.id) {
-                            // If the currently active campaign is being closed, clear it
-                            const nextOpen = roles.find((ro) => ro.id !== r.id && ro.open);
-                            setActiveCampaignRole(nextOpen?.id ?? null);
+                          } else {
+                            // When closing role, do NOT clear activeCampaignRole. Keep managing current applicants!
+                            if (!activeCampaignRole) {
+                              setActiveCampaignRole(r.id);
+                            }
                           }
                         }}
                         className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
@@ -6728,6 +6848,18 @@ Overwatch`;
             </section>
           );
         })()}
+
+        {/* ─── TAB 6: TARGETED BROADCASTS & OUTREACH VIEW ───────── */}
+        {view === "custom_broadcast" && (
+          <CustomBroadcastView
+            applications={applications}
+            activeCampaignRole={activeCampaignRole}
+            roleLabel={roleLabel}
+            lang={lang}
+            t={t}
+            onRefresh={() => load(true)}
+          />
+        )}
 
         {/* ─── TAB 4: APPLICATIONS PIPELINE VIEW ──────────────────── */}
         {view === "applications" && (
