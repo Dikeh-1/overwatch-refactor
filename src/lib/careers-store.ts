@@ -252,6 +252,19 @@ export async function deleteApplication(id: string): Promise<void> {
 }
 
 export async function getTestSlots(): Promise<string[]> {
+  if (isRemote()) {
+    try {
+      const res = await api("/storage/v1/object/career-cvs/test-slots.json");
+      const text = await res.text();
+      const parsed = JSON.parse(text);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((s) => String(s).trim()).filter(Boolean);
+      }
+    } catch {
+      // If file not yet present in Supabase storage, return defaults
+    }
+    return [...DEFAULT_TEST_SLOTS];
+  }
   try {
     return await read<string[]>("test-slots.json", [...DEFAULT_TEST_SLOTS]);
   } catch {
@@ -263,9 +276,24 @@ export async function saveTestSlots(slots: string[]): Promise<string[]> {
   const cleanSlots = Array.isArray(slots)
     ? slots.map((s) => String(s).trim()).filter(Boolean)
     : [...DEFAULT_TEST_SLOTS];
+
+  if (isRemote()) {
+    const jsonBody = Buffer.from(JSON.stringify(cleanSlots), "utf8");
+    await api("/storage/v1/object/career-cvs/test-slots.json", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-upsert": "true",
+      },
+      body: new Uint8Array(jsonBody),
+    });
+    return cleanSlots;
+  }
+
   await exclusive(async () => {
     await write("test-slots.json", cleanSlots);
   });
   return cleanSlots;
 }
+
 

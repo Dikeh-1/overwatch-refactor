@@ -89,12 +89,28 @@ export const DEFAULT_TEST_SLOTS = [
  */
 export function normalizeSlot(slot?: string | null): string {
   if (!slot) return "";
-  return slot
+  let clean = slot
     .replace(/(Segunda|Terça|Quarta|Quinta|Sexta)[\u2013\u2014\-](feira)/gi, "$1-$2")
     .replace(/\s*[\u2013\u2014]\s*/g, " - ")
     .replace(/\s*-\s*(\d{1,2}(?:h|:)\d{2})/i, " - $1")
     .replace(/\s+/g, " ")
     .trim();
+
+  // Safeguard: If somehow a day prefix was stripped or malformed (e.g. "-, 21 de Setembro" or ", 21 de Setembro")
+  clean = clean.replace(/^[,\-\s]+(\d{1,2}\s+de\s+[a-zA-ZçÇ]+)/i, (match, p1) => {
+    const day = parseInt(p1, 10);
+    if (day === 21 || day === 28) return `Segunda-feira, ${p1}`;
+    if (day === 22 || day === 29) return `Terça-feira, ${p1}`;
+    if (day === 23 || day === 30) return `Quarta-feira, ${p1}`;
+    if (day === 24) return `Quinta-feira, ${p1}`;
+    if (day === 25) return `Sexta-feira, ${p1}`;
+    if (day === 16) return `Quarta-feira, ${p1}`;
+    if (day === 17) return `Quinta-feira, ${p1}`;
+    if (day === 18) return `Sexta-feira, ${p1}`;
+    return match;
+  });
+
+  return clean;
 }
 
 export function formatSlotDisplay(slot: string, l?: "en" | "pt" | boolean) {

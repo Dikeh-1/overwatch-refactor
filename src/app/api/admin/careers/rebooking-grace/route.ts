@@ -51,6 +51,12 @@ export async function GET() {
       if (a.status === "archived" || a.status === "rejected") return false;
       if (a.id === "6548b28d-9e3b-41c0-bfcf-47c992fa0956" || a.email?.toLowerCase() === "inociowilson7@gmail.com") return false;
 
+      // Candidates who already successfully rebooked
+      const isRebooked =
+        Boolean(a.rebookingGrace?.usedAt) ||
+        (Boolean(a.previousTestSlot) && Boolean(a.testSlot) && a.testSlot !== a.previousTestSlot && !isPastSlot(a.testSlot || ""));
+      if (isRebooked) return false;
+
       // Has booked a past slot and did not attend
       const wasBookedPast = a.testSlot && isPastSlot(a.testSlot);
       const notAttended = !a.attendedAt;
@@ -64,7 +70,9 @@ export async function GET() {
     );
 
     const rebookedCandidates = allApps.filter(
-      (a) => a.rebookingGrace && a.rebookingGrace.usedAt
+      (a) =>
+        Boolean(a.rebookingGrace?.usedAt) ||
+        (Boolean(a.previousTestSlot) && Boolean(a.testSlot) && a.testSlot !== a.previousTestSlot)
     );
 
     return Response.json({

@@ -34,7 +34,7 @@ interface RebookingGraceViewProps {
   onRefresh: () => Promise<void>;
 }
 
-function isPastDateSlot(slot: string): boolean {
+function isPastDateSlot(slot?: string | null): boolean {
   if (!slot) return false;
   return (
     slot.includes("16 de Setembro") ||
@@ -89,6 +89,11 @@ export default function RebookingGraceView({
   // Candidates who missed their past scheduled test (and haven't used rebooking yet)
   const missedCandidates = useMemo(() => {
     return validApplications.filter((a) => {
+      const isRebooked =
+        Boolean(a.rebookingGrace?.usedAt) ||
+        (Boolean(a.previousTestSlot) && Boolean(a.testSlot) && a.testSlot !== a.previousTestSlot && !isPastDateSlot(a.testSlot));
+      if (isRebooked) return false;
+
       const wasPast = a.testSlot && isPastDateSlot(a.testSlot);
       const notAttended = !a.attendedAt;
       const graceNotUsed = !a.rebookingGrace?.usedAt;
@@ -106,7 +111,9 @@ export default function RebookingGraceView({
   // Candidates who successfully re-booked through grace OTL
   const rebookedCandidates = useMemo(() => {
     return validApplications.filter(
-      (a) => a.rebookingGrace && Boolean(a.rebookingGrace.usedAt)
+      (a) =>
+        Boolean(a.rebookingGrace?.usedAt) ||
+        (Boolean(a.previousTestSlot) && Boolean(a.testSlot) && a.testSlot !== a.previousTestSlot)
     );
   }, [validApplications]);
 
