@@ -20,6 +20,156 @@ import TechGrid from "@/components/ui/TechGrid";
 import LazyVideo from "@/components/ui/LazyVideo";
 import { IMAGES } from "@/lib/constants";
 
+interface RoleConfig {
+  grade12Question: { en: string; pt: string };
+  aiQuestion: { en: string; pt: string };
+  experienceQuestion: { en: string; pt: string };
+  shiftsQuestion: { en: string; pt: string };
+  lastProfessionLabel: { en: string; pt: string };
+  lastProfessionPlaceholder: { en: string; pt: string };
+  coverLetterPlaceholder: { en: string; pt: string };
+  sidebarDescription: { en: string; pt: string };
+}
+
+const ROLE_FORM_CONFIGS: Record<string, RoleConfig> = {
+  cctv: {
+    grade12Question: {
+      en: "Have you completed Grade 12?",
+      pt: "Concluiu a 12.ª classe?",
+    },
+    aiQuestion: {
+      en: "Do you know how to use Artificial Intelligence?",
+      pt: "Sabe usar inteligência artificial?",
+    },
+    experienceQuestion: {
+      en: "Do you have CCTV or security experience?",
+      pt: "Tem experiência em CCTV ou segurança?",
+    },
+    shiftsQuestion: {
+      en: "Available for 2 days, 2 nights, 2 days off shifts?",
+      pt: "Disponível para escala 2 dias, 2 noites, 2 folgas?",
+    },
+    lastProfessionLabel: {
+      en: "Most recent profession",
+      pt: "Última profissão exercida",
+    },
+    lastProfessionPlaceholder: {
+      en: "e.g. CCTV Operator, Security Guard, or 'No previous experience'",
+      pt: "ex: Operadora de CCTV, Vigilante, ou 'Sem experiência prévia'",
+    },
+    coverLetterPlaceholder: {
+      en: "Write a brief introduction about your career, vigilance skills, and why you believe you are a great fit for this CCTV Operator position...",
+      pt: "Escreva uma breve apresentação sobre o seu percurso, as suas qualidades de atenção e vigilância, e por que razão considera ser a pessoa certa para esta função de Operadora de CCTV...",
+    },
+    sidebarDescription: {
+      en: "Surveillance & Incident Monitoring · 2 Days, 2 Nights, 2 Days Off rotation",
+      pt: "Monitorização CCTV e Despacho de Incidentes · Escala 2 Dias, 2 Noites e 2 Folgas",
+    },
+  },
+  operations: {
+    grade12Question: {
+      en: "Do you hold a Higher Education Degree or Security Management qualification?",
+      pt: "Possui licenciatura ou qualificação em Gestão de Segurança / Áreas Afins?",
+    },
+    aiQuestion: {
+      en: "Experienced with AI dispatch platforms and operations management software?",
+      pt: "Tem experiência com plataformas de despacho com IA e software de operações?",
+    },
+    experienceQuestion: {
+      en: "Do you have 3+ years of security control room or operational management experience?",
+      pt: "Tem mais de 3 anos de experiência em gestão operacional ou salas de controlo?",
+    },
+    shiftsQuestion: {
+      en: "Available for 24/7 operational oversight and emergency escalation management?",
+      pt: "Disponível para supervisão operacional 24/7 e gestão de escalonamentos urgentes?",
+    },
+    lastProfessionLabel: {
+      en: "Most recent leadership role",
+      pt: "Último cargo de liderança / gestão",
+    },
+    lastProfessionPlaceholder: {
+      en: "e.g. Operations Supervisor, Control Room Manager, Security Lead",
+      pt: "ex: Supervisor de Operações, Gestor de Sala de Controlo, Chefe de Segurança",
+    },
+    coverLetterPlaceholder: {
+      en: "Detail your operational leadership experience, incident escalation track record, and how you manage high-performing security teams...",
+      pt: "Descreva a sua experiência em liderança operacional, histórico de resolução de incidentes e como gere equipas de segurança de alto desempenho...",
+    },
+    sidebarDescription: {
+      en: "Operations Management · Control Room & Incident Response Leadership",
+      pt: "Gestão de Operações · Liderança de Sala de Controlo e Resposta a Incidentes",
+    },
+  },
+  technical: {
+    grade12Question: {
+      en: "Do you have formal IT, Electronics, or Telecommunications qualifications?",
+      pt: "Possui formação técnica em TI, Eletrónica ou Telecomunicações?",
+    },
+    aiQuestion: {
+      en: "Familiar with AI camera analytics, network diagnostics, and smart IoT devices?",
+      pt: "Familiarizado(a) com analítica de IA em câmaras, diagnósticos de rede e IoT?",
+    },
+    experienceQuestion: {
+      en: "Do you have hands-on experience installing and troubleshooting IP CCTV & NVR systems?",
+      pt: "Tem experiência prática na instalação e resolução de problemas de CCTV IP e NVRs?",
+    },
+    shiftsQuestion: {
+      en: "Available for on-site technical interventions and scheduled maintenance shifts?",
+      pt: "Disponível para intervenções técnicas no terreno e escalas de manutenção programadas?",
+    },
+    lastProfessionLabel: {
+      en: "Most recent technical role",
+      pt: "Última função técnica exercida",
+    },
+    lastProfessionPlaceholder: {
+      en: "e.g. CCTV Technician, IT Support Specialist, Network Installer",
+      pt: "ex: Técnico de CCTV, Especialista de Suporte TI, Instalador de Redes",
+    },
+    coverLetterPlaceholder: {
+      en: "Highlight your technical certifications, hands-on hardware/network troubleshooting experience, and field capabilities...",
+      pt: "Destaque as suas certificações técnicas, experiência prática em diagnóstico de redes/hardware e capacidades de intervenção em campo...",
+    },
+    sidebarDescription: {
+      en: "Technical Systems · IP CCTV, NVR, Alarms & On-Site Diagnostics",
+      pt: "Sistemas Técnicos · CCTV IP, NVR, Alarmes e Diagnóstico no Terreno",
+    },
+  },
+  sales: {
+    grade12Question: {
+      en: "Do you hold a Commercial, Business, or Marketing qualification?",
+      pt: "Possui formação académica em Gestão Comercial, Negócios ou Marketing?",
+    },
+    aiQuestion: {
+      en: "Proficient with CRM systems, AI proposal generation, and sales pipeline tools?",
+      pt: "Domina sistemas de CRM, ferramentas de IA para propostas e gestão de pipeline?",
+    },
+    experienceQuestion: {
+      en: "Do you have a proven track record in B2B corporate security or technology sales?",
+      pt: "Tem experiência comprovada em vendas B2B de segurança corporativa ou tecnologia?",
+    },
+    shiftsQuestion: {
+      en: "Available for in-person corporate client meetings and rapid contract negotiations?",
+      pt: "Disponível para reuniões presenciais com clientes corporativos e negociação de contratos?",
+    },
+    lastProfessionLabel: {
+      en: "Most recent commercial role",
+      pt: "Última função comercial exercida",
+    },
+    lastProfessionPlaceholder: {
+      en: "e.g. B2B Sales Executive, Account Manager, Business Development Specialist",
+      pt: "ex: Executivo(a) de Vendas B2B, Gestor(a) de Contas, Comercial de Serviços",
+    },
+    coverLetterPlaceholder: {
+      en: "Describe your sales achievements, corporate client portfolio growth, and how you approach enterprise security solution selling...",
+      pt: "Descreva os seus sucessos comerciais, crescimento de carteira de clientes corporativos e abordagem a vendas de soluções de segurança...",
+    },
+    sidebarDescription: {
+      en: "Business Development · B2B Corporate Security & Client Growth",
+      pt: "Desenvolvimento de Negócios · Segurança Corporativa B2B e Clientes",
+    },
+  },
+};
+
 export default function CareersForm({
   initialLocale,
 }: {
@@ -75,6 +225,15 @@ export default function CareersForm({
         if (active && Array.isArray(data.roles)) {
           setRoles(data.roles);
           setConnection(true);
+          // If current selectedRoleId is closed, switch to the first open role if one exists
+          setSelectedRoleId((prev) => {
+            const current = data.roles.find((r: Role) => r.id === prev);
+            if (!current || !current.open) {
+              const firstOpen = data.roles.find((r: Role) => r.open);
+              return firstOpen ? firstOpen.id : prev;
+            }
+            return prev;
+          });
         }
       } catch {
         if (active) setConnection(false);
@@ -90,12 +249,14 @@ export default function CareersForm({
     };
   }, []);
 
+  const openRoles = roles.filter((r) => r.open);
   const selectedRole = roles.find((r) => r.id === selectedRoleId) || roles[0];
   const isSelectedRoleClosed = roles.length > 0 && !selectedRole?.open;
+  const currentConfig = ROLE_FORM_CONFIGS[selectedRoleId] || ROLE_FORM_CONFIGS.cctv;
 
   const closedText = t(
-    "This position is currently closed for applications. Please choose an open role like CCTV Operator.",
-    "Esta função não se encontra aberta a candidaturas no momento. Por favor, selecione uma vaga aberta como Operadora de CCTV.",
+    `This position is currently closed for applications. Please choose an open position.`,
+    `Esta função não se encontra aberta a candidaturas no momento. Por favor, selecione uma vaga aberta.`,
   );
 
   function handleSelectRole(roleItem: Role) {
@@ -277,17 +438,32 @@ export default function CareersForm({
                 <ArrowDown size={17} aria-hidden="true" />
               </a>
 
-              <div className="inline-flex items-center gap-2.5 rounded-xl border border-white/12 bg-white/[0.05] px-4 py-3 text-xs font-medium text-white/80 backdrop-blur-sm">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                </span>
-                <span>
-                  {t(
-                    "Accepting applications: CCTV Operator",
-                    "A receber candidaturas: Operadora de CCTV",
-                  )}
-                </span>
+              {/* Dynamic live badge based on open roles */}
+              <div className="inline-flex items-center gap-2.5 rounded-xl border border-white/12 bg-white/[0.05] px-4 py-3 text-xs font-medium text-white/80 backdrop-blur-sm shadow-sm">
+                {openRoles.length > 0 ? (
+                  <>
+                    <span className="relative flex h-2.5 w-2.5 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    </span>
+                    <span>
+                      {t("Accepting applications: ", "A receber candidaturas: ")}
+                      <strong className="font-semibold text-white">
+                        {openRoles.map((r) => (pt ? r.pt : r.en)).join(", ")}
+                      </strong>
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80 shrink-0" />
+                    <span>
+                      {t(
+                        "No positions currently accepting applications",
+                        "Nenhuma vaga aberta no momento",
+                      )}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -360,15 +536,9 @@ export default function CareersForm({
                     </div>
 
                     <p className="text-xs text-muted leading-relaxed">
-                      {r.id === "cctv"
-                        ? t(
-                            "Surveillance & Incident Monitoring · 2 Days, 2 Nights, 2 Days Off rotation",
-                            "Monitorização CCTV e Despacho de Incidentes · Escala 2 Dias, 2 Noites e 2 Folgas",
-                          )
-                        : t(
-                            "Integrated security and virtual guarding operations across Mozambique",
-                            "Operações de proteção integrada e monitorização em Moçambique",
-                          )}
+                      {pt
+                        ? (ROLE_FORM_CONFIGS[r.id] || ROLE_FORM_CONFIGS.cctv).sidebarDescription.pt
+                        : (ROLE_FORM_CONFIGS[r.id] || ROLE_FORM_CONFIGS.cctv).sidebarDescription.en}
                     </p>
                   </button>
                 );
@@ -614,40 +784,36 @@ export default function CareersForm({
                       </select>
                     </label>
 
-                    {/* Specific Assessment Questions */}
+                    {/* Specific Assessment Questions (Dynamic based on selected role) */}
                     <div className="grid gap-4 sm:grid-cols-2 pt-2">
                       {renderYesNo(
-                        t(
-                          "Have you completed Grade 12?",
-                          "Concluiu a 12.ª classe?",
-                        ),
+                        pt
+                          ? currentConfig.grade12Question.pt
+                          : currentConfig.grade12Question.en,
                         grade12,
                         setGrade12,
                       )}
 
                       {renderYesNo(
-                        t(
-                          "Do you know how to use Artificial Intelligence?",
-                          "Sabe usar inteligência artificial?",
-                        ),
+                        pt
+                          ? currentConfig.aiQuestion.pt
+                          : currentConfig.aiQuestion.en,
                         ai,
                         setAi,
                       )}
 
                       {renderYesNo(
-                        t(
-                          "Do you have CCTV or security experience?",
-                          "Tem experiência em CCTV ou segurança?",
-                        ),
+                        pt
+                          ? currentConfig.experienceQuestion.pt
+                          : currentConfig.experienceQuestion.en,
                         experience,
                         setExperience,
                       )}
 
                       {renderYesNo(
-                        t(
-                          "Available for 2 days, 2 nights, 2 days off shifts?",
-                          "Disponível para escala 2 dias, 2 noites, 2 folgas?",
-                        ),
+                        pt
+                          ? currentConfig.shiftsQuestion.pt
+                          : currentConfig.shiftsQuestion.en,
                         shifts,
                         setShifts,
                       )}
@@ -655,17 +821,20 @@ export default function CareersForm({
                       {/* Last Profession */}
                       <label className="space-y-1.5 block sm:col-span-2">
                         <span className="text-xs font-semibold text-foreground/90 flex items-center gap-1">
-                          {t("Most recent profession", "Última profissão exercida")}{" "}
+                          {pt
+                            ? currentConfig.lastProfessionLabel.pt
+                            : currentConfig.lastProfessionLabel.en}{" "}
                           <span className="text-foreground/40">*</span>
                         </span>
                         <input
                           name="lastProfession"
                           required
                           maxLength={200}
-                          placeholder={t(
-                            "e.g. CCTV Operator, Security Guard, or 'No previous experience'",
-                            "ex: Operadora de CCTV, Vigilante, ou 'Sem experiência prévia'",
-                          )}
+                          placeholder={
+                            pt
+                              ? currentConfig.lastProfessionPlaceholder.pt
+                              : currentConfig.lastProfessionPlaceholder.en
+                          }
                           className="min-h-12 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground placeholder:text-muted/60 focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 transition-colors"
                         />
                       </label>
@@ -695,10 +864,11 @@ export default function CareersForm({
                         name="coverLetter"
                         rows={4}
                         maxLength={3000}
-                        placeholder={t(
-                          "Write a brief introduction about your career, personal qualities, and why you believe you are a great fit for this position...",
-                          "Escreva uma breve apresentação sobre o seu percurso, as suas qualidades de atenção e vigilância, e por que razão considera ser a pessoa certa para esta função...",
-                        )}
+                        placeholder={
+                          pt
+                            ? currentConfig.coverLetterPlaceholder.pt
+                            : currentConfig.coverLetterPlaceholder.en
+                        }
                         className="w-full rounded-xl border border-border bg-background p-4 text-sm text-foreground placeholder:text-muted/60 focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 leading-relaxed transition-colors"
                       />
                     </label>

@@ -732,9 +732,11 @@ export default function RebookingGraceView({
                   const isSelected = selectedIds.includes(c.id);
                   const isBusy = busyCandidateId === c.id;
                   const isCopied = copiedId === c.id;
-                  const hasGrace = Boolean(c.rebookingGrace);
-                  const isUsed = Boolean(c.rebookingGrace?.usedAt);
-                  const isMissed = Boolean(c.testSlot && isPastDateSlot(c.testSlot) && !c.attendedAt);
+                  const isRebooked =
+                    Boolean(c.rebookingGrace?.usedAt) ||
+                    (Boolean(c.previousTestSlot) && Boolean(c.testSlot) && c.testSlot !== c.previousTestSlot && !isPastDateSlot(c.testSlot));
+                  const isPendingGrace = Boolean(c.rebookingGrace && !c.rebookingGrace.usedAt && !isRebooked);
+                  const isMissed = Boolean(c.testSlot && isPastDateSlot(c.testSlot) && !c.attendedAt && !isRebooked);
 
                   return (
                     <tr
@@ -834,38 +836,41 @@ export default function RebookingGraceView({
 
                       {/* Grace / OTL Status */}
                       <td className="py-3.5 px-4">
-                        {hasGrace ? (
-                          isUsed ? (
-                            <div className="space-y-0.5">
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-bold text-[10px] uppercase">
-                                <Check size={11} />
-                                <span>{t("Re-booked", "Reagendado")}</span>
-                              </span>
-                              <div className="text-[10px] text-white/40 font-mono">
-                                {new Date(c.rebookingGrace!.usedAt!).toLocaleDateString(isPt ? "pt-MZ" : "en-GB")}
+                        {isRebooked ? (
+                          <div className="space-y-0.5">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-bold text-[10px] uppercase">
+                              <Check size={11} />
+                              <span>{t("Re-booked", "Reagendado")}</span>
+                            </span>
+                            <div className="text-[10px] text-white/40 font-mono">
+                              {c.rebookingGrace?.usedAt
+                                ? new Date(c.rebookingGrace.usedAt).toLocaleDateString(isPt ? "pt-MZ" : "en-GB")
+                                : c.testBookedAt
+                                  ? new Date(c.testBookedAt).toLocaleDateString(isPt ? "pt-MZ" : "en-GB")
+                                  : t("Confirmed", "Confirmado")}
+                            </div>
+                          </div>
+                        ) : isPendingGrace ? (
+                          <div className="space-y-1">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold text-[10px] uppercase">
+                              <Clock size={11} />
+                              <span>{t("OTL Active · Pending", "OTL Activo · Pendente")}</span>
+                            </span>
+                            {c.rebookingGrace?.emailSentAt && (
+                              <div className="text-[10px] text-white/40 flex items-center gap-1">
+                                <Mail size={10} />
+                                <span>{t("Email sent", "Email enviado")}</span>
                               </div>
-                            </div>
-                          ) : (
-                            <div className="space-y-1">
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold text-[10px] uppercase">
-                                <Clock size={11} />
-                                <span>{t("OTL Active · Pending", "OTL Activo · Pendente")}</span>
-                              </span>
-                              {c.rebookingGrace?.emailSentAt && (
-                                <div className="text-[10px] text-white/40 flex items-center gap-1">
-                                  <Mail size={10} />
-                                  <span>{t("Email sent", "Email enviado")}</span>
-                                </div>
-                              )}
-                            </div>
-                          )
+                            )}
+                          </div>
                         ) : isMissed ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-300 font-bold text-[10px] uppercase">
-                            {t("Needs Grace Link", "Precisa de Graça")}
+                            <AlertCircle size={10} />
+                            <span>{t("Needs Grace Link", "Precisa de Graça")}</span>
                           </span>
                         ) : (
                           <span className="text-white/30 text-[11px]">
-                            {t("No exception needed", "Sem excepção")}
+                            {t("Up to date", "Em conformidade")}
                           </span>
                         )}
                       </td>
@@ -874,7 +879,7 @@ export default function RebookingGraceView({
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           {/* Send / Re-send Grace Email Button or Completed Badge */}
-                          {isUsed ? (
+                          {isRebooked ? (
                             <span
                               className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 flex items-center gap-1.5 cursor-default select-none shadow-sm"
                               title={t("Re-booking successfully completed. OTL is consumed.", "Reagendamento concluído com sucesso. OTL consumido.")}
@@ -882,17 +887,13 @@ export default function RebookingGraceView({
                               <CheckCircle2 size={12} className="text-emerald-400" />
                               <span>{t("Completed", "Concluído")}</span>
                             </span>
-                          ) : (
+                          ) : isPendingGrace ? (
                             <button
                               type="button"
                               onClick={() => handleGrantSingle(c)}
                               disabled={isBusy}
-                              title={hasGrace ? t("Re-send Grace Email", "Reenviar Email OTL") : t("Grant Rebooking Grace & Send Email", "Conceder Graça & Enviar Email OTL")}
-                              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 ${
-                                hasGrace
-                                  ? "bg-white/[0.06] hover:bg-white/15 text-white/90 border border-white/10"
-                                  : "bg-amber-500 hover:bg-amber-400 text-slate-950 shadow"
-                              }`}
+                              title={t("Re-send Grace Email", "Reenviar Email OTL")}
+                              className="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-white/[0.06] hover:bg-white/15 text-white/90 border border-white/10 cursor-pointer disabled:opacity-50"
                             >
                               {isBusy ? (
                                 <RefreshCw size={12} className="animate-spin" />
@@ -900,12 +901,27 @@ export default function RebookingGraceView({
                                 <Send size={12} />
                               )}
                               <span className="hidden sm:inline">
-                                {hasGrace
-                                  ? t("Re-send Email", "Reenviar Email")
-                                  : t("Grant Grace & Email", "Conceder Graça")}
+                                {t("Re-send Email", "Reenviar Email")}
                               </span>
                             </button>
-                          )}
+                          ) : isMissed ? (
+                            <button
+                              type="button"
+                              onClick={() => handleGrantSingle(c)}
+                              disabled={isBusy}
+                              title={t("Grant Rebooking Grace & Send Email", "Conceder Graça & Enviar Email OTL")}
+                              className="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 shadow cursor-pointer disabled:opacity-50"
+                            >
+                              {isBusy ? (
+                                <RefreshCw size={12} className="animate-spin" />
+                              ) : (
+                                <Send size={12} />
+                              )}
+                              <span className="hidden sm:inline">
+                                {t("Grant Grace & Email", "Conceder Graça")}
+                              </span>
+                            </button>
+                          ) : null}
 
                           {/* Copy Link Button */}
                           <button
@@ -943,7 +959,7 @@ export default function RebookingGraceView({
                           </button>
 
                           {/* Revoke Grace (if active & not used) */}
-                          {hasGrace && !isUsed && (
+                          {isPendingGrace && (
                             <button
                               type="button"
                               onClick={() => handleRevokeGrace(c)}
