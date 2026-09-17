@@ -15,7 +15,7 @@ import Button from "@/components/ui/Button";
 import { darkEyebrowClassName } from "@/components/ui/eyebrow";
 import ContactForm from "@/components/shared/ContactForm";
 import { WHATSAPP_URL } from "@/lib/constants";
-import { getGoogleMapsUrl, getSiteAddress, siteContact } from "@/lib/site-config";
+import { getSiteAddress, siteContact } from "@/lib/site-config";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -68,9 +68,8 @@ export default async function ContactPage({ params }: Props) {
     {
       label: t("details.location"),
       value: address,
-      href: getGoogleMapsUrl(locale),
       icon: MapPin,
-      external: true,
+      external: false,
     },
   ];
 
@@ -150,14 +149,8 @@ export default async function ContactPage({ params }: Props) {
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 {contactDetails.map((detail) => {
                   const Icon = detail.icon;
-                  return (
-                    <a
-                      key={detail.label}
-                      href={detail.href}
-                      target={detail.external ? "_blank" : undefined}
-                      rel={detail.external ? "noopener noreferrer" : undefined}
-                      className="group flex min-h-24 items-start gap-3 rounded-2xl border border-white/[0.085] bg-white/[0.045] p-4 transition-[transform,border-color,background-color] hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/55"
-                    >
+                  const content = (
+                    <>
                       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/12 bg-white/[0.065] text-white/75">
                         <Icon size={18} aria-hidden="true" />
                       </span>
@@ -172,7 +165,30 @@ export default async function ContactPage({ params }: Props) {
                           ) : null}
                         </span>
                       </span>
-                    </a>
+                    </>
+                  );
+
+                  if (detail.href) {
+                    return (
+                      <a
+                        key={detail.label}
+                        href={detail.href}
+                        target={detail.external ? "_blank" : undefined}
+                        rel={detail.external ? "noopener noreferrer" : undefined}
+                        className="group flex min-h-24 items-start gap-3 rounded-2xl border border-white/[0.085] bg-white/[0.045] p-4 transition-[transform,border-color,background-color] hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/55"
+                      >
+                        {content}
+                      </a>
+                    );
+                  }
+
+                  return (
+                    <div
+                      key={detail.label}
+                      className="flex min-h-24 items-start gap-3 rounded-2xl border border-white/[0.085] bg-white/[0.045] p-4"
+                    >
+                      {content}
+                    </div>
                   );
                 })}
               </div>

@@ -46,7 +46,6 @@ async function run() {
   const slot = 'Quarta-feira, 16 de Setembro – 10h00';
   const logoWhiteUrl = 'https://raw.githubusercontent.com/horuswave/overwatch-refactor/main/public/logo-white.png';
   const addressPt = 'Av. Paulo Samuel Khankhomba nº 1948, antes da esquina com a Av. Filipe Samuel Magaia, Maputo';
-  const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent('Av. Paulo Samuel Khankhomba nº 1948, Maputo')}`;
 
   const greetingPt = getMozambiqueGreeting();
   console.log(`Current Mozambique greeting: ${greetingPt}`);
@@ -148,7 +147,6 @@ O seu teste de selecção para a vaga de Operadora de CCO da Overwatch ficou age
               <strong style="display: block; margin-bottom: 8px; color: #854d0e; font-size: 12px;">Instruções para o Dia do Teste:</strong>
               <div style="margin-bottom: 8px;">
                 • <strong>Local:</strong> Overwatch — Av. Paulo Samuel Khankhomba nº 1948, antes da esquina com a Av. Filipe Samuel Magaia, Maputo
-                (<a href="${mapsUrl}" target="_blank" style="color: #0284c7; text-decoration: underline; font-weight: 600;">Ver no Google Maps &rarr;</a>)
               </div>
               <div style="margin-bottom: 8px;">
                 • <strong>Horário &amp; Pontualidade:</strong> Estar no local às 09h30 (30 minutos antes). O portão encerra impreterivelmente às 09h50.

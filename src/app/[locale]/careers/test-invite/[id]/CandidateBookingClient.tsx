@@ -23,7 +23,7 @@ import {
   Sparkles,
   RotateCcw,
 } from "lucide-react";
-import { siteContact, getGoogleMapsUrl } from "@/lib/site-config";
+import { siteContact } from "@/lib/site-config";
 import { DEFAULT_TEST_SLOTS } from "@/lib/careers";
 
 type SlotStat = {
@@ -223,7 +223,6 @@ export default function CandidateBookingClient({
     }
   }
 
-  const mapsUrl = getGoogleMapsUrl(activeLang);
   const slotsList =
     candidate?.slots && candidate.slots.length > 0 ? candidate.slots : DEFAULT_TEST_SLOTS;
   const isAlreadyBooked = Boolean(candidate?.testSlot);
@@ -490,16 +489,6 @@ export default function CandidateBookingClient({
                         </p>
                         <p className="text-sm font-semibold text-gray-900">Overwatch Moçambique</p>
                         <p className="text-xs text-gray-500 mt-0.5 leading-snug">{siteContact.address.pt}</p>
-                        <a
-                          href={mapsUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium mt-2"
-                        >
-                          <MapPin size={11} />
-                          <span>{isPt ? "Ver no Google Maps" : "Open in Google Maps"}</span>
-                          <ExternalLink size={10} />
-                        </a>
                       </div>
                       <div>
                         <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-emerald-600 mb-1.5">
@@ -770,16 +759,6 @@ export default function CandidateBookingClient({
                 <p className="text-xs text-gray-400 mt-0.5">{siteContact.address.pt}</p>
               </div>
               <div className="flex items-center gap-3">
-                <a
-                  href={mapsUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  <MapPin size={12} />
-                  <span>{isPt ? "Mapa" : "Map"}</span>
-                </a>
-                <span className="text-gray-200">·</span>
                 <a
                   href={`https://wa.me/${siteContact.whatsappNumber}`}
                   target="_blank"

@@ -124,7 +124,6 @@ async function run() {
   const bookingUrl = `${origin}/pt/careers/test-invite/${candidateId}`;
   const logoWhiteUrl = 'https://raw.githubusercontent.com/horuswave/overwatch-refactor/main/public/logo-white.png';
   const addressPt = 'Av. Paulo Samuel Khankhomba nº 1948, antes da esquina com a Av. Filipe Samuel Magaia, Maputo';
-  const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent('Av. Paulo Samuel Khankhomba nº 1948, Maputo')}`;
 
   const greetingPt = getMozambiqueGreeting();
   console.log(`Current Mozambique greeting: ${greetingPt}`);
@@ -246,7 +245,6 @@ Por favor, escolha uma das seguintes opções de data e confirme a sua presença
               <strong style="display: block; margin-bottom: 6px; color: #854d0e; font-size: 12px;">Nota de Segurança &amp; Requisitos do Teste:</strong>
               <div style="margin-bottom: 5px;">
                 • <strong>Local:</strong> Overwatch — ${addressPt}
-                (<a href="${mapsUrl}" target="_blank" style="color: #0284c7; text-decoration: underline; font-weight: 600;">Ver no Google Maps &rarr;</a>)
               </div>
               <div style="margin-bottom: 5px;">
                 • <strong>Horário &amp; Tolerância:</strong> O teste inicia pontualmente às 10h00. Pedimos a comparência às 09h30. Por motivos de organização e segurança, o portão encerra impreterivelmente às 09h50.

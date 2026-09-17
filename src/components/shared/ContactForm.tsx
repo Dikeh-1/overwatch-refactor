@@ -14,7 +14,7 @@ import {
 import PhoneInput from "react-phone-input-2";
 import phoneLocalePt from "react-phone-input-2/lang/pt.json";
 import "react-phone-input-2/lib/style.css";
-import { getGoogleMapsUrl, getSiteAddress, siteContact } from "@/lib/site-config";
+import { getSiteAddress, siteContact } from "@/lib/site-config";
 
 type FormStatus = "idle" | "submitting" | "success" | "error";
 
@@ -79,9 +79,8 @@ export default function ContactForm() {
     {
       label: t("details.location"),
       value: getSiteAddress(locale),
-      href: getGoogleMapsUrl(locale),
       icon: MapPin,
-      external: true,
+      external: false,
     },
   ];
 
@@ -104,14 +103,8 @@ export default function ContactForm() {
           <div className="mt-8 space-y-3">
             {contactItems.map((item) => {
               const Icon = item.icon;
-              return (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  target={item.external ? "_blank" : undefined}
-                  rel={item.external ? "noopener noreferrer" : undefined}
-                  className="group flex min-h-16 items-start gap-3 rounded-2xl border border-white/[0.085] bg-white/[0.04] p-3.5 transition-[border-color,background-color] hover:border-white/20 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/55"
-                >
+              const content = (
+                <>
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/12 bg-white/[0.06] text-white/75">
                     <Icon size={18} aria-hidden="true" />
                   </span>
@@ -126,7 +119,30 @@ export default function ContactForm() {
                       ) : null}
                     </span>
                   </span>
-                </a>
+                </>
+              );
+
+              if (item.href) {
+                return (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    target={item.external ? "_blank" : undefined}
+                    rel={item.external ? "noopener noreferrer" : undefined}
+                    className="group flex min-h-16 items-start gap-3 rounded-2xl border border-white/[0.085] bg-white/[0.04] p-3.5 transition-[border-color,background-color] hover:border-white/20 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/55"
+                  >
+                    {content}
+                  </a>
+                );
+              }
+
+              return (
+                <div
+                  key={item.label}
+                  className="flex min-h-16 items-start gap-3 rounded-2xl border border-white/[0.085] bg-white/[0.04] p-3.5"
+                >
+                  {content}
+                </div>
               );
             })}
           </div>

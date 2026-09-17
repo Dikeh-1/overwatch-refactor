@@ -737,7 +737,7 @@
     "form": {
       "detailsEyebrow": "Direct contact",
       "detailsTitle": "Contact details",
-      "detailsDescription": "Prefer to speak directly? Reach our team by email or phone, or open our Maputo location in Google Maps.",
+      "detailsDescription": "Prefer to speak directly? Reach our team by email or phone, or visit our Maputo office.",
       "messageEyebrow": "Assessment request",
       "messageTitle": "Send us a message",
       "messageDescription": "Give us enough context to prepare for the first conversation. We will follow up using the contact details you provide.",
@@ -780,7 +780,7 @@
     "description": "Integrated Security Solutions",
     "quickLinks": "Quick Links",
     "contact": "Contact",
-    "openMap": "Open location in Google Maps",
+    "openMap": "Location",
     "homeLabel": "Overwatch home",
     "navigationLabel": "Footer navigation",
     "rights": "All rights reserved.",

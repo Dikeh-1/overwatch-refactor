@@ -6283,15 +6283,7 @@ Overwatch`;
                             Instruções para o Dia do Teste:
                           </strong>
                           <div className="mb-1">
-                            • <strong>Local:</strong> Overwatch — Av. Paulo Samuel Khankhomba nº 1948, antes da esquina com a Av. Filipe Samuel Magaia, Maputo{" "}
-                            <a
-                              href="https://maps.google.com/?q=Av.+Paulo+Samuel+Khankhomba+1948+Maputo"
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-sky-600 underline font-semibold"
-                            >
-                              (Ver no Google Maps &rarr;)
-                            </a>
+                            • <strong>Local:</strong> Overwatch — Av. Paulo Samuel Khankhomba nº 1948, antes da esquina com a Av. Filipe Samuel Magaia, Maputo
                           </div>
                           <div className="mb-1">
                             • <strong>Horário &amp; Pontualidade:</strong> Estar no local às 09h30 (30 minutos antes). O portão encerra impreterivelmente às 09h50.

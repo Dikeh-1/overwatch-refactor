@@ -489,7 +489,6 @@ export async function sendTestInvitation({
   ).replace(/\/+$/, "");
   const bookingUrl = `${origin}/pt/careers/test-invite/${application.id}`;
   const logoWhiteUrl = `${origin}/logo-white.png`;
-  const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent(siteContact.address.pt)}`;
 
   const sender = {
     name: "Overwatch Recrutamento",
@@ -672,9 +671,6 @@ export async function sendGatePassEmail({
   ).replace(/\/+$/, "");
 
   const logoWhiteUrl = `${origin}/logo-white.png`;
-  const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent(
-    "Av. Paulo Samuel Kankhomba nº 1948, Maputo"
-  )}`;
   const bookingUrl = `${origin}/pt/careers/test-invite/${application.id}`;
   const checkInUrl = `${origin}/gate?id=${application.id}`;
   const rawSlot = slot || application.testSlot || "Quarta-feira, 16 de Setembro – 10h00";
@@ -858,10 +854,7 @@ export async function sendGatePassEmail({
                   </td>
                   <td style="padding: 6px 0; font-size: 13px; color: #334155; line-height: 1.45;">
                     <strong>Overwatch Moçambique</strong><br />
-                    ${siteContact.address.pt}<br />
-                    <a href="${mapsUrl}" target="_blank" style="color: #0284c7; text-decoration: underline; font-weight: 600; font-size: 12px; display: inline-block; margin-top: 4px;">
-                      Ver localização no Google Maps &rarr;
-                    </a>
+                    ${siteContact.address.pt}
                   </td>
                 </tr>
               </table>
@@ -1319,7 +1312,6 @@ export async function sendInocioWilsonRebookingEmail({
   const logoWhiteUrl = `${origin}/logo-white.png`;
   const bookingUrl = `${origin}/pt/careers/test-invite/${application.id}`;
   const correctedAddress = "Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo";
-  const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent(correctedAddress)}`;
   const greeting = getMozambiqueGreeting("pt");
 
   const subject = "Excepção Concedida & Novo Agendamento: Teste Presencial — Overwatch Moçambique";
@@ -1401,13 +1393,10 @@ export async function sendInocioWilsonRebookingEmail({
               <p style="font-size: 14px; color: #090d16; font-weight: 700; margin: 0 0 4px 0;">
                 Overwatch Moçambique — Edifício Sede
               </p>
-              <p style="font-size: 13px; color: #713f12; margin: 0 0 8px 0; line-height: 1.5;">
+              <p style="font-size: 13px; color: #713f12; margin: 0; line-height: 1.5;">
                 <strong>Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo</strong><br />
                 <span style="font-size: 12px; color: #a16207;">(Entre a Av. Vlademir Lenine e a Av. Salvador Allende, antes da esquina com a Av. Filipe Samuel Magaia)</span>
               </p>
-              <a href="${mapsUrl}" target="_blank" style="display: inline-block; color: #0284c7; font-weight: 700; font-size: 12px; text-decoration: underline;">
-                Abrir localização exacta no Google Maps &rarr;
-              </a>
             </div>
 
             <!-- DEDICATED REBOOKING ACTION BUTTON -->
@@ -1467,7 +1456,6 @@ ${bookingUrl}
 ENDEREÇO EXACTO E RECTIFICADO DAS INSTALAÇÕES:
 Overwatch Moçambique
 Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo
-(Localização Google Maps: ${mapsUrl})
 
 INSTRUÇÕES PARA O DIA ESCOLHIDO:
 - Horário de Chegada: 09h30 (portão encerra às 09h50, teste 10h00–11h30)
@@ -1526,7 +1514,6 @@ export async function sendRebookingGraceEmail({
   const logoWhiteUrl = `${origin}/logo-white.png`;
   const otlBookingUrl = `${origin}/pt/careers/test-invite/${application.id}?otl=${encodeURIComponent(token)}`;
   const correctedAddress = "Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo";
-  const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent(correctedAddress)}`;
   const isFemale = application.sex === "female";
   const salutation = isFemale ? "Prezada" : application.sex === "male" ? "Prezado" : "Prezada(o)";
   const subject = "Concessão Excepcional de Reagendamento: Teste Presencial — Overwatch Moçambique";
@@ -1610,13 +1597,10 @@ export async function sendRebookingGraceEmail({
               <p style="font-size: 14px; color: #090d16; font-weight: 700; margin: 0 0 4px 0;">
                 Overwatch Moçambique — Edifício Sede
               </p>
-              <p style="font-size: 13px; color: #713f12; margin: 0 0 8px 0; line-height: 1.5;">
+              <p style="font-size: 13px; color: #713f12; margin: 0; line-height: 1.5;">
                 <strong>Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo</strong><br />
                 <span style="font-size: 12px; color: #a16207;">(Situado entre a Av. Vladimir Lenine e a Av. Salvador Allende, antes do cruzamento com a Av. Filipe Samuel Magaia)</span>
               </p>
-              <a href="${mapsUrl}" target="_blank" style="display: inline-block; color: #0284c7; font-weight: 700; font-size: 12px; text-decoration: underline;">
-                Abrir localização no Google Maps &rarr;
-              </a>
             </div>
 
             <!-- DEDICATED REBOOKING ACTION BUTTON (OTL) -->
@@ -1676,7 +1660,6 @@ ${otlBookingUrl}
 ENDEREÇO EXACTO DAS INSTALAÇÕES DA OVERWATCH:
 Overwatch Moçambique — Edifício Sede
 Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo
-(Localização Google Maps: ${mapsUrl})
 
 INSTRUÇÕES OBRIGATÓRIAS:
 - Horário de Chegada: 09h30 na portaria (o portão encerra às 09h50, teste 10h00–11h30)
@@ -1732,7 +1715,6 @@ export async function sendAddressCorrectionBroadcastEmail({
 
   const logoWhiteUrl = `${origin}/logo-white.png`;
   const correctedAddress = "Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo";
-  const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent(correctedAddress)}`;
   const bookingUrl = `${origin}/pt/careers/test-invite/${application.id}`;
   const checkInUrl = `${origin}/gate?id=${application.id}`;
   const rawSlot = slot || application.testSlot || "Quinta-feira, 17 de Setembro – 10h00";
@@ -1835,12 +1817,9 @@ export async function sendAddressCorrectionBroadcastEmail({
               <div style="font-size: 17px; font-weight: 800; color: #090d16; margin-bottom: 6px;">
                 Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo
               </div>
-              <p style="font-size: 13px; color: #713f12; margin: 0 0 12px 0; line-height: 1.55;">
+              <p style="font-size: 13px; color: #713f12; margin: 0; line-height: 1.55;">
                 Ponto de referência: Entre a Av. Vlademir Lenine e a Av. Salvador Allende (antes da esquina com a Av. Filipe Samuel Magaia).
               </p>
-              <a href="${mapsUrl}" target="_blank" style="display: inline-block; background-color: #ca8a04; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 12px; padding: 10px 18px; border-radius: 6px;">
-                Ver Localização Exacta no Google Maps &rarr;
-              </a>
             </div>
 
             <!-- RECONFIRMATION OF SLOT -->
@@ -1941,7 +1920,6 @@ Pedimos sinceras desculpas por este lapso do sistema.
 ENDEREÇO OFICIAL E CORRECTO:
 Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo
 (Ponto de referência: Entre a Av. Vlademir Lenine e a Av. Salvador Allende, antes da esquina com a Av. Filipe Samuel Magaia)
-Link Google Maps: ${mapsUrl}
 
 A SUA VAGA E DATA CONTINUAM 100% CONFIRMADAS:
 - Turno: ${activeSlot}

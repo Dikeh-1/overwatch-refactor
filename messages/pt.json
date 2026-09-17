@@ -737,7 +737,7 @@
     "form": {
       "detailsEyebrow": "Contacto directo",
       "detailsTitle": "Detalhes de contacto",
-      "detailsDescription": "Prefere falar directamente? Contacte a nossa equipa por e-mail ou telefone, ou abra a nossa localização em Maputo no Google Maps.",
+      "detailsDescription": "Prefere falar directamente? Contacte a nossa equipa por e-mail ou telefone, ou visite o nosso escritório em Maputo.",
       "messageEyebrow": "Pedido de avaliação",
       "messageTitle": "Envie-nos uma mensagem",
       "messageDescription": "Partilhe contexto suficiente para prepararmos a primeira conversa. Entraremos em contacto através dos dados que indicar.",
@@ -780,7 +780,7 @@
     "description": "Soluções Integradas de Segurança",
     "quickLinks": "Links Rápidos",
     "contact": "Contacto",
-    "openMap": "Abrir localização no Google Maps",
+    "openMap": "Localização",
     "homeLabel": "Página inicial da Overwatch",
     "navigationLabel": "Navegação do rodapé",
     "rights": "Todos os direitos reservados.",
