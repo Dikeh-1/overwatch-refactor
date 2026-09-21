@@ -24,12 +24,13 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { siteContact } from "@/lib/site-config";
-import { DEFAULT_TEST_SLOTS, normalizeSlot } from "@/lib/careers";
+import { DEFAULT_TEST_SLOTS, normalizeSlot, isPastDateSlot } from "@/lib/careers";
 
 type SlotStat = {
   booked: number;
   max: number;
   isFull: boolean;
+  isPast?: boolean;
   remaining: number;
 };
 
@@ -553,29 +554,29 @@ export default function CandidateBookingClient({
               <div className="space-y-4">
                 {/* Rebooking Grace Notice Banner */}
                 {candidate.rebookingGraceActive && (
-                  <div className="rounded-2xl border-2 border-emerald-500/40 bg-emerald-950/20 p-5 text-emerald-900 dark:text-emerald-100 shadow-sm">
+                  <div className="rounded-2xl border-2 border-emerald-500/50 bg-emerald-50 dark:bg-emerald-950/40 p-5 text-emerald-950 dark:text-emerald-100 shadow-md">
                     <div className="flex items-start gap-3.5">
-                      <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-600 dark:text-emerald-300 shrink-0 mt-0.5">
+                      <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
                         <RotateCcw size={18} />
                       </div>
                       <div className="space-y-1.5 flex-1">
                         <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                          <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-900 dark:text-emerald-200">
                             {isPt ? "Período de Graça · Reagendamento Autorizado" : "Grace Period · Rebooking Authorized"}
                           </span>
-                          <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-700 dark:text-emerald-200 font-bold uppercase">
+                          <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-200/80 dark:bg-emerald-500/20 border border-emerald-400 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-200 font-bold uppercase">
                             {isPt ? "Link de Uso Único (OTL)" : "Single-Use Link (OTL)"}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-700 dark:text-gray-200 leading-relaxed">
+                        <p className="text-xs text-emerald-950 dark:text-emerald-100 font-medium leading-relaxed">
                           {isPt
-                            ? "Em virtude de constrangimentos na localização ou deslocação para a sua data anterior, a Direcção de RH concedeu autorização para escolher uma nova data entre os turnos ainda disponíveis na próxima semana. Uma vez confirmada a escolha, este link é invalidado e o agendamento torna-se definitivo."
-                            : "Due to location or transport constraints on your previous date, HR has authorized you to pick a new test date among the remaining open slots next week. Once confirmed, this link is consumed and your booking is final."}
+                            ? "Em virtude de constrangimentos na localização ou deslocação para a sua data anterior, a Direcção de RH concedeu autorização para escolher uma nova data entre os turnos ainda disponíveis. Uma vez confirmada a escolha, este link é invalidado e o agendamento torna-se definitivo."
+                            : "Due to location or transport constraints on your previous date, HR has authorized you to pick a new test date among the remaining open sessions. Once confirmed, this link is consumed and your booking is final."}
                         </p>
                         {candidate.previousTestSlot && (
-                          <div className="text-[11px] text-gray-600 dark:text-gray-300 pt-1 flex items-center gap-1.5 font-medium">
+                          <div className="text-[11px] text-emerald-900/80 dark:text-emerald-200/80 pt-1 flex items-center gap-1.5 font-medium">
                             <span>{isPt ? "Data anterior não comparecida:" : "Previously missed date:"}</span>
-                            <span className="line-through font-mono text-gray-500">{candidate.previousTestSlot}</span>
+                            <span className="line-through font-mono font-bold text-emerald-800 dark:text-emerald-300">{candidate.previousTestSlot}</span>
                           </div>
                         )}
                       </div>
@@ -619,12 +620,12 @@ export default function CandidateBookingClient({
                     <AlertCircle size={16} className="text-blue-500 shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs font-semibold text-blue-800 mb-0.5">
-                        {isPt ? "Sessões desta semana esgotadas" : "This week's sessions are full"}
+                        {isPt ? "Turnos Anteriores Concluídos" : "Past Test Sessions Concluded"}
                       </p>
                       <p className="text-xs text-blue-700 leading-relaxed">
                         {isPt
-                          ? "Abrimos novas sessões para a próxima semana. Reserve a sua data entre os turnos disponíveis abaixo."
-                          : "New sessions are open for next week. Reserve your date from the available slots below."}
+                          ? "Consulte os turnos de avaliação presenciais abertos e reserve a sua data entre as opções disponíveis abaixo."
+                          : "Review the open evaluation sessions and reserve your date from the available slots below."}
                       </p>
                     </div>
                   </div>
@@ -648,7 +649,8 @@ export default function CandidateBookingClient({
                     {slotsList.map((slot) => {
                       const isSelected = selectedSlot === slot;
                       const stat = candidate?.slotStats?.[slot];
-                      const isFull = Boolean(stat?.isFull);
+                      const isPast = Boolean(stat?.isPast) || isPastDateSlot(slot);
+                      const isFull = Boolean(stat?.isFull) || isPast;
                       const remaining = stat ? Math.max(0, stat.remaining) : undefined;
 
                       if (isFull) {
@@ -669,15 +671,21 @@ export default function CandidateBookingClient({
                                   {formatSlotDisplay(slot, isPt)}
                                 </p>
                                 <p className="text-xs mt-0.5 text-gray-400">
-                                  {isPt ? "Vagas esgotadas · Não disponível" : "No spots available · Full"}
+                                  {isPast
+                                    ? (isPt ? "Sessão encerrada · Data passada" : "Session concluded · Past date")
+                                    : (isPt ? "Vagas esgotadas · Não disponível" : "No spots available · Full")}
                                 </p>
                               </div>
                             </div>
 
                             {/* Status badge */}
-                            <span className="flex items-center gap-1 text-[0.65rem] font-semibold text-red-600 bg-red-100/90 border border-red-200 px-2 py-0.5 rounded-full shrink-0">
+                            <span className={`flex items-center gap-1 text-[0.65rem] font-semibold px-2 py-0.5 rounded-full shrink-0 ${
+                              isPast
+                                ? "text-gray-600 bg-gray-200/80 border border-gray-300"
+                                : "text-red-600 bg-red-100/90 border border-red-200"
+                            }`}>
                               <Lock size={9} />
-                              <span>{isPt ? "Esgotado" : "Full"}</span>
+                              <span>{isPast ? (isPt ? "Encerrado" : "Concluded") : (isPt ? "Esgotado" : "Full")}</span>
                             </span>
                           </div>
                         );

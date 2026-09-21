@@ -1,5 +1,5 @@
 import { getApplication, updateApplication, getTestSlotConfig, getApplications } from "@/lib/careers-store";
-import { DEFAULT_TEST_SLOTS, normalizeSlot } from "@/lib/careers";
+import { DEFAULT_TEST_SLOTS, normalizeSlot, isPastDateSlot } from "@/lib/careers";
 import { sendBookingConfirmation } from "@/lib/careers-email";
 import { siteContact } from "@/lib/site-config";
 
@@ -58,29 +58,37 @@ export async function GET(request: Request) {
     const { slots: activeSlots, quota = 15 } = await getTestSlotConfig();
     const hasActiveGrace = Boolean(candidate.rebookingGrace && !candidate.rebookingGrace.usedAt);
 
-    // If candidate has active grace rebooking, restrict to open future dates (e.g. Sept 21-25)
+    // Filter available candidate booking slots:
+    // If candidate has not booked yet or is using Grace OTL, only provide future open slots.
+    // If all configured slots are in the past, fallback to DEFAULT_TEST_SLOTS filtered for future.
     let candidateSlots = activeSlots;
-    if (hasActiveGrace) {
-      candidateSlots = candidateSlots.filter((s) => {
-        return !s.includes("16 de Setembro") && !s.includes("17 de Setembro") && !s.includes("18 de Setembro");
-      });
-      if (candidateSlots.length === 0) {
-        candidateSlots = [...DEFAULT_TEST_SLOTS];
+    if (hasActiveGrace || !candidate.testSlot) {
+      const futureSlots = candidateSlots.filter((s) => !isPastDateSlot(s));
+      if (futureSlots.length > 0) {
+        candidateSlots = futureSlots;
+      } else {
+        candidateSlots = DEFAULT_TEST_SLOTS.filter((s) => !isPastDateSlot(s));
+        if (candidateSlots.length === 0) {
+          candidateSlots = [...DEFAULT_TEST_SLOTS];
+        }
       }
     }
 
     const maxPerDay = quota;
-    const slotStats: Record<string, { booked: number; max: number; isFull: boolean; remaining: number }> = {};
+    const slotStats: Record<string, { booked: number; max: number; isFull: boolean; remaining: number; isPast: boolean }> = {};
     for (const s of candidateSlots) {
       const normS = normalizeSlot(s);
+      const isPast = isPastDateSlot(s);
       const booked = allApps.filter(
         (a) => normalizeSlot(a.testSlot) === normS && a.status !== "rejected" && a.status !== "archived" && a.id !== candidate.id
       ).length;
+      const isFull = isPast || booked >= maxPerDay;
       slotStats[s] = {
         booked,
         max: maxPerDay,
-        isFull: booked >= maxPerDay,
-        remaining: Math.max(0, maxPerDay - booked),
+        isFull,
+        isPast,
+        remaining: isPast ? 0 : Math.max(0, maxPerDay - booked),
       };
     }
 
@@ -169,6 +177,18 @@ export async function POST(request: Request) {
     }
 
     const normalizedSlot = normalizeSlot(slot);
+
+    // Past slot safeguard: block booking for dates/times that have already concluded
+    if (isPastDateSlot(normalizedSlot)) {
+      return Response.json(
+        {
+          error:
+            "A data seleccionada já passou. Por favor escolha um turno disponível futuro.",
+          slotExpired: true,
+        },
+        { status: 400 },
+      );
+    }
 
     // Slot quota safeguard: enforce dynamic quota (default 15 candidates per day)
     const { quota = 15 } = await getTestSlotConfig();

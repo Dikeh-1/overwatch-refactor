@@ -1,19 +1,9 @@
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
 import { getApplications, getApplication, updateApplication, getTestSlotConfig } from "@/lib/careers-store";
-import { DEFAULT_TEST_SLOTS, type Application } from "@/lib/careers";
+import { DEFAULT_TEST_SLOTS, type Application, isPastDateSlot } from "@/lib/careers";
 import { sendRebookingGraceEmail } from "@/lib/careers-email";
 
 export const dynamic = "force-dynamic";
-
-/** Helper to check if a slot corresponds to a past date */
-function isPastSlot(slot: string): boolean {
-  if (!slot) return false;
-  // Slots on 16, 17, or 18 September 2026 are considered past/current week
-  if (slot.includes("16 de Setembro") || slot.includes("17 de Setembro") || slot.includes("18 de Setembro")) {
-    return true;
-  }
-  return false;
-}
 
 export async function GET() {
   if (!(await authenticated())) {
@@ -28,7 +18,7 @@ export async function GET() {
     const { slots: activeSlots, quota = 15 } = await getTestSlotConfig();
 
     // Only future open slots (Sept 21-25)
-    const openFutureSlots = activeSlots.filter((s) => !isPastSlot(s));
+    const openFutureSlots = activeSlots.filter((s) => !isPastDateSlot(s));
     const effectiveSlots = openFutureSlots.length > 0 ? openFutureSlots : [...DEFAULT_TEST_SLOTS];
 
     // Compute slot stats for future dates using dynamic quota
@@ -54,11 +44,11 @@ export async function GET() {
       // Candidates who already successfully rebooked
       const isRebooked =
         Boolean(a.rebookingGrace?.usedAt) ||
-        (Boolean(a.previousTestSlot) && Boolean(a.testSlot) && a.testSlot !== a.previousTestSlot && !isPastSlot(a.testSlot || ""));
+        (Boolean(a.previousTestSlot) && Boolean(a.testSlot) && a.testSlot !== a.previousTestSlot && !isPastDateSlot(a.testSlot || ""));
       if (isRebooked) return false;
 
       // Has booked a past slot and did not attend
-      const wasBookedPast = a.testSlot && isPastSlot(a.testSlot);
+      const wasBookedPast = a.testSlot && isPastDateSlot(a.testSlot);
       const notAttended = !a.attendedAt;
       const hasUnusedGrace = a.rebookingGrace && !a.rebookingGrace.usedAt;
 

@@ -72,6 +72,9 @@ import {
   DEFAULT_TEST_SLOTS,
   normalizeSlot,
   formatSlotDateOnly,
+  getSlotWeekCategory,
+  getSlotDayNumber,
+  isPastDateSlot,
 } from "@/lib/careers";
 import { screenCandidate, type CandidateScreeningResult } from "@/lib/careers-screening";
 import { siteContact } from "@/lib/site-config";
@@ -128,43 +131,6 @@ export function formatSlotDisplay(slot: string, l: "en" | "pt") {
       const h12 = hour % 12 || 12;
       return `${h12}:${m} ${ampm}`;
     });
-}
-
-export { normalizeSlot, formatSlotDateOnly };
-
-/** Extract numeric day of the month from a slot label (e.g. "16", "21") */
-export function getSlotDayNumber(slot: string): number | null {
-  if (!slot) return null;
-  const s = slot.trim();
-  const iso = s.match(/^\d{4}-\d{2}-(\d{2})/);
-  if (iso) return parseInt(iso[1], 10);
-  const dmy = s.match(/^(\d{1,2})[\/\-](\d{1,2})/);
-  if (dmy) return parseInt(dmy[1], 10);
-  const dayMonth = s.match(
-    /(\d{1,2})(?:st|nd|rd|th)?\s*(?:de\s*)?(?:Setembro|September|Outubro|October|Novembro|November|Dezembro|December|Janeiro|January|Fevereiro|February|Março|March|Abril|April|Maio|May|Junho|June|Julho|July|Agosto|August)/i
-  );
-  if (dayMonth) return parseInt(dayMonth[1], 10);
-  const monthDay = s.match(
-    /(?:Setembro|September|Outubro|October|Novembro|November|Dezembro|December|Janeiro|January|Fevereiro|February|Março|March|Abril|April|Maio|May|Junho|June|Julho|July|Agosto|August)\s*(\d{1,2})/i
-  );
-  if (monthDay) return parseInt(monthDay[1], 10);
-  const generic = s.match(/(?:^|[^\d])(\d{1,2})(?:\s*de\s*|\s+[-–—]|\s+|$)/);
-  if (generic) {
-    const num = parseInt(generic[1], 10);
-    if (!isNaN(num) && num >= 1 && num <= 31) return num;
-  }
-  return null;
-}
-
-/** Classify slot into This Week (16 – 18 Sept) or Next Week (21 – 25 Sept) */
-export function getSlotWeekCategory(slot: string): "this_week" | "next_week" {
-  const day = getSlotDayNumber(slot);
-  // September 2026: Days 14 to 20 are This Week (tests on 16, 17, 18).
-  // Days 21 and above are Next Week (tests on 21, 22, 23, 24, 25).
-  if (day !== null && day <= 20) {
-    return "this_week";
-  }
-  return "next_week";
 }
 
 const PT_DAYS = [
@@ -374,12 +340,20 @@ export default function AdminPage() {
     return rosterSlots.filter((s) => getSlotWeekCategory(s) === "this_week");
   }, [rosterSlots]);
 
+  const pastWeekSlots = useMemo(() => {
+    return rosterSlots.filter((s) => getSlotWeekCategory(s) === "past_week");
+  }, [rosterSlots]);
+
   const nextWeekSlots = useMemo(() => {
     return rosterSlots.filter((s) => getSlotWeekCategory(s) === "next_week");
   }, [rosterSlots]);
 
   const thisWeekCount = useMemo(() => {
     return applications.filter((a) => Boolean(a.testSlot) && getSlotWeekCategory(normalizeSlot(a.testSlot)) === "this_week").length;
+  }, [applications]);
+
+  const pastWeekCount = useMemo(() => {
+    return applications.filter((a) => Boolean(a.testSlot) && getSlotWeekCategory(normalizeSlot(a.testSlot)) === "past_week").length;
   }, [applications]);
 
   const nextWeekCount = useMemo(() => {
@@ -395,26 +369,40 @@ export default function AdminPage() {
       ) {
         return false;
       }
-      const wasPast =
-        a.testSlot &&
-        (a.testSlot.includes("16 de Setembro") ||
-          a.testSlot.includes("17 de Setembro") ||
-          a.testSlot.includes("18 de Setembro"));
+      const wasPast = a.testSlot && isPastDateSlot(a.testSlot);
       return (wasPast && !a.attendedAt) || (Boolean(a.rebookingGrace) && !a.rebookingGrace?.usedAt);
     }).length;
   }, [applications]);
 
-  const [rosterWeekTab, setRosterWeekTab] = useState<"this_week" | "next_week" | "all">("this_week");
+  const getSlotRangeText = (slots: string[], fallbackEn: string, fallbackPt: string) => {
+    if (slots.length === 0) return { en: fallbackEn, pt: fallbackPt };
+    const days = slots.map(getSlotDayNumber).filter((d): d is number => d !== null);
+    if (days.length === 0) return { en: fallbackEn, pt: fallbackPt };
+    const minDay = Math.min(...days);
+    const maxDay = Math.max(...days);
+    if (minDay === maxDay) {
+      return { en: `Day ${minDay} Sept`, pt: `Dia ${minDay} Set` };
+    }
+    return { en: `${minDay} – ${maxDay} Sept`, pt: `${minDay} – ${maxDay} Set` };
+  };
+
+  const thisWeekRange = useMemo(() => getSlotRangeText(thisWeekSlots, "21 – 25 Sept", "21 – 25 Set"), [thisWeekSlots]);
+  const pastWeekRange = useMemo(() => getSlotRangeText(pastWeekSlots, "16 – 18 Sept", "16 – 18 Set"), [pastWeekSlots]);
+  const nextWeekRange = useMemo(() => getSlotRangeText(nextWeekSlots, "Next Week", "Próx. Semana"), [nextWeekSlots]);
+
+  const [rosterWeekTab, setRosterWeekTab] = useState<"this_week" | "past_week" | "next_week" | "all">("this_week");
   const [selectedRosterSlot, setSelectedRosterSlot] = useState<string>("all_this_week");
 
   const activeRosterSlot = useMemo(() => {
     if (selectedRosterSlot === "all") return "all";
     if (selectedRosterSlot === "all_this_week") return "all_this_week";
+    if (selectedRosterSlot === "all_past_week") return "all_past_week";
     if (selectedRosterSlot === "all_next_week") return "all_next_week";
     if (selectedRosterSlot && rosterSlots.includes(selectedRosterSlot)) {
       return selectedRosterSlot;
     }
     if (rosterWeekTab === "this_week") return "all_this_week";
+    if (rosterWeekTab === "past_week") return "all_past_week";
     if (rosterWeekTab === "next_week") return "all_next_week";
     return "all";
   }, [selectedRosterSlot, rosterSlots, rosterWeekTab]);
@@ -5307,10 +5295,10 @@ Overwatch`;
             <div className="rounded-2xl border border-white/10 bg-[#121827]/95 overflow-hidden shadow-sm">
               {/* Date Navigation Bar with Week Sections */}
               <div className="p-4 border-b border-white/10 bg-white/[0.01] space-y-3.5">
-                {/* ─── TWO TABS: THIS WEEK vs NEXT WEEK ─────────────────────── */}
+                {/* ─── DYNAMIC WEEK TABS: THIS WEEK, PAST WEEK, NEXT WEEK, ALL ─────── */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
                   <div className="flex items-center gap-1 p-1 rounded-xl bg-black/40 border border-white/[0.08] flex-wrap">
-                    {/* Tab 1: Esta Semana */}
+                    {/* Tab 1: Esta Semana (Current Week) */}
                     <button
                       type="button"
                       onClick={() => {
@@ -5324,7 +5312,7 @@ Overwatch`;
                       }`}
                     >
                       <Calendar size={13} className={rosterWeekTab === "this_week" ? "text-white" : "text-slate-400"} />
-                      <span>{t("This Week (16 – 18 Sept)", "Esta Semana (16 – 18 Set)")}</span>
+                      <span>{t(`This Week (${thisWeekRange.en})`, `Esta Semana (${thisWeekRange.pt})`)}</span>
                       <span
                         className={`px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-medium ${
                           rosterWeekTab === "this_week"
@@ -5336,33 +5324,63 @@ Overwatch`;
                       </span>
                     </button>
 
-                    {/* Tab 2: Próxima Semana */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRosterWeekTab("next_week");
-                        setSelectedRosterSlot("all_next_week");
-                      }}
-                      className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                        rosterWeekTab === "next_week"
-                          ? "bg-white/[0.12] text-white border border-white/15 shadow-sm"
-                          : "text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent"
-                      }`}
-                    >
-                      <Calendar size={13} className={rosterWeekTab === "next_week" ? "text-white" : "text-slate-400"} />
-                      <span>{t("Next Week (21 – 25 Sept)", "Próxima Semana (21 – 25 Set)")}</span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-medium ${
-                          rosterWeekTab === "next_week"
-                            ? "bg-white/15 text-white"
-                            : "bg-white/[0.06] text-slate-400"
+                    {/* Tab 2: Semana Anterior (Past Week - if any) */}
+                    {(pastWeekSlots.length > 0 || pastWeekCount > 0) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRosterWeekTab("past_week");
+                          setSelectedRosterSlot("all_past_week");
+                        }}
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                          rosterWeekTab === "past_week"
+                            ? "bg-white/[0.12] text-white border border-white/15 shadow-sm"
+                            : "text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent"
                         }`}
                       >
-                        {nextWeekCount}
-                      </span>
-                    </button>
+                        <Clock size={13} className={rosterWeekTab === "past_week" ? "text-amber-400" : "text-slate-400"} />
+                        <span>{t(`Past Week (${pastWeekRange.en})`, `Semana Anterior (${pastWeekRange.pt})`)}</span>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-medium ${
+                            rosterWeekTab === "past_week"
+                              ? "bg-white/15 text-white"
+                              : "bg-white/[0.06] text-slate-400"
+                          }`}
+                        >
+                          {pastWeekCount}
+                        </span>
+                      </button>
+                    )}
 
-                    {/* Tab 3: Todos os Turnos */}
+                    {/* Tab 3: Próxima Semana (Next Week - if any) */}
+                    {(nextWeekSlots.length > 0 || nextWeekCount > 0) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRosterWeekTab("next_week");
+                          setSelectedRosterSlot("all_next_week");
+                        }}
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                          rosterWeekTab === "next_week"
+                            ? "bg-white/[0.12] text-white border border-white/15 shadow-sm"
+                            : "text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent"
+                        }`}
+                      >
+                        <Calendar size={13} className={rosterWeekTab === "next_week" ? "text-white" : "text-slate-400"} />
+                        <span>{t(`Next Week (${nextWeekRange.en})`, `Próxima Semana (${nextWeekRange.pt})`)}</span>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-medium ${
+                            rosterWeekTab === "next_week"
+                              ? "bg-white/15 text-white"
+                              : "bg-white/[0.06] text-slate-400"
+                          }`}
+                        >
+                          {nextWeekCount}
+                        </span>
+                      </button>
+                    )}
+
+                    {/* Tab 4: Todos os Turnos */}
                     <button
                       type="button"
                       onClick={() => {
@@ -5395,10 +5413,12 @@ Overwatch`;
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                         <span>
                           {rosterWeekTab === "this_week"
-                            ? t("Showing This Week (Wed 16 – Fri 18 Sept)", "A mostrar Esta Semana (Qua 16 – Sex 18 Set)")
-                            : rosterWeekTab === "next_week"
-                              ? t("Showing Next Week (Mon 21 – Fri 25 Sept)", "A mostrar Próxima Semana (Seg 21 – Sex 25 Set)")
-                              : `${rosterSlots.length} ${t("sessions total", "turnos no total")}`}
+                            ? t(`Showing This Week (${thisWeekRange.en})`, `A mostrar Esta Semana (${thisWeekRange.pt})`)
+                            : rosterWeekTab === "past_week"
+                              ? t(`Showing Past Week (${pastWeekRange.en})`, `A mostrar Semana Anterior (${pastWeekRange.pt})`)
+                              : rosterWeekTab === "next_week"
+                                ? t(`Showing Next Week (${nextWeekRange.en})`, `A mostrar Próxima Semana (${nextWeekRange.pt})`)
+                                : `${rosterSlots.length} ${t("sessions total", "turnos no total")}`}
                         </span>
                       </span>
                     </div>
@@ -5449,6 +5469,26 @@ Overwatch`;
                     </button>
                   )}
 
+                  {/* Consolidated pill for "Past Week" */}
+                  {rosterWeekTab === "past_week" && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRosterSlot("all_past_week")}
+                      className={`slot-pill shrink-0 ${activeRosterSlot === "all_past_week" ? "active" : ""}`}
+                    >
+                      <span>{t("All Past Week", "Todos da Semana Passada")}</span>
+                      <span
+                        className={`slot-pill-count rounded-full ${
+                          activeRosterSlot === "all_past_week"
+                            ? "bg-white/20 text-white font-bold"
+                            : "bg-white/[0.08] text-slate-300"
+                        }`}
+                      >
+                        {pastWeekCount}
+                      </span>
+                    </button>
+                  )}
+
                   {/* Consolidated pill for "Next Week" */}
                   {rosterWeekTab === "next_week" && (
                     <button
@@ -5491,14 +5531,15 @@ Overwatch`;
 
                   {(rosterWeekTab === "this_week"
                     ? thisWeekSlots
-                    : rosterWeekTab === "next_week"
-                      ? nextWeekSlots
-                      : rosterSlots
+                    : rosterWeekTab === "past_week"
+                      ? pastWeekSlots
+                      : rosterWeekTab === "next_week"
+                        ? nextWeekSlots
+                        : rosterSlots
                   ).map((slot) => {
                     const count = applications.filter((a) => normalizeSlot(a.testSlot) === normalizeSlot(slot)).length;
                     const isSelected = normalizeSlot(activeRosterSlot) === normalizeSlot(slot);
                     const isFull = count >= slotQuota;
-                    const isThisWeek = getSlotWeekCategory(slot) === "this_week";
 
                     return (
                       <button
@@ -5529,17 +5570,19 @@ Overwatch`;
 
               {/* Active Day Console Header & Table */}
               {activeRosterSlot && (() => {
-                const isConsolidated = ["all", "all_this_week", "all_next_week"].includes(activeRosterSlot);
+                const isConsolidated = ["all", "all_this_week", "all_past_week", "all_next_week"].includes(activeRosterSlot);
                 const candidatesInSlot = activeRosterSlot === "all"
                   ? applications.filter((a) => Boolean(a.testSlot))
                   : activeRosterSlot === "all_this_week"
                     ? applications.filter((a) => Boolean(a.testSlot) && getSlotWeekCategory(normalizeSlot(a.testSlot!)) === "this_week")
-                    : activeRosterSlot === "all_next_week"
-                      ? applications.filter((a) => Boolean(a.testSlot) && getSlotWeekCategory(normalizeSlot(a.testSlot!)) === "next_week")
-                      : applications.filter((a) => normalizeSlot(a.testSlot) === normalizeSlot(activeRosterSlot));
+                    : activeRosterSlot === "all_past_week"
+                      ? applications.filter((a) => Boolean(a.testSlot) && getSlotWeekCategory(normalizeSlot(a.testSlot!)) === "past_week")
+                      : activeRosterSlot === "all_next_week"
+                        ? applications.filter((a) => Boolean(a.testSlot) && getSlotWeekCategory(normalizeSlot(a.testSlot!)) === "next_week")
+                        : applications.filter((a) => normalizeSlot(a.testSlot) === normalizeSlot(activeRosterSlot));
                 const attendedCount = candidatesInSlot.filter((c) => Boolean(c.attendedAt)).length;
-                const isFull = !isConsolidated && candidatesInSlot.length >= 10;
-                const remaining = !isConsolidated ? Math.max(0, 10 - candidatesInSlot.length) : 0;
+                const isFull = !isConsolidated && candidatesInSlot.length >= slotQuota;
+                const remaining = !isConsolidated ? Math.max(0, slotQuota - candidatesInSlot.length) : 0;
 
                 return (
                   <div className="p-5 sm:p-6 space-y-5">
@@ -5550,18 +5593,22 @@ Overwatch`;
                             className={`text-xs font-bold uppercase tracking-wider ${
                               activeRosterSlot === "all_this_week"
                                 ? "text-sky-400"
-                                : activeRosterSlot === "all_next_week"
-                                  ? "text-purple-400"
-                                  : "text-sky-400"
+                                : activeRosterSlot === "all_past_week"
+                                  ? "text-amber-400"
+                                  : activeRosterSlot === "all_next_week"
+                                    ? "text-purple-400"
+                                    : "text-sky-400"
                             }`}
                           >
                             {activeRosterSlot === "all"
                               ? t("Consolidated Roster (All Sessions)", "Lista Consolidada de Todos os Turnos")
                               : activeRosterSlot === "all_this_week"
-                                ? t("This Week Roster (16 - 18 Sept)", "Escala Desta Semana (16 - 18 Set)")
-                                : activeRosterSlot === "all_next_week"
-                                  ? t("Next Week Roster (21 - 25 Sept)", "Escala da Próxima Semana (21 - 25 Set)")
-                                  : t("Active Session Roster", "Escala do Turno Ativo")}
+                                ? t(`This Week Roster (${thisWeekRange.en})`, `Escala Desta Semana (${thisWeekRange.pt})`)
+                                : activeRosterSlot === "all_past_week"
+                                  ? t(`Past Week Roster (${pastWeekRange.en})`, `Escala da Semana Passada (${pastWeekRange.pt})`)
+                                  : activeRosterSlot === "all_next_week"
+                                    ? t(`Next Week Roster (${nextWeekRange.en})`, `Escala da Próxima Semana (${nextWeekRange.pt})`)
+                                    : t("Active Session Roster", "Escala do Turno Ativo")}
                           </span>
                           <span
                             className={`px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold border ${
@@ -5573,7 +5620,7 @@ Overwatch`;
                             }`}
                           >
                             {candidatesInSlot.length} {t("candidates confirmed", "candidatas confirmadas")}
-                            {!isConsolidated && (isFull ? ` · ${t("Full (10/10)", "Lotação Esgotada")}` : ` (${remaining} ${t("spots free", "vagas livres")})`)}
+                            {!isConsolidated && (isFull ? ` · ${t(`Full (${slotQuota}/${slotQuota})`, "Lotação Esgotada")}` : ` (${remaining} ${t("spots free", "vagas livres")})`)}
                           </span>
                           <span className="px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold border bg-emerald-500/15 border-emerald-500/30 text-emerald-300 flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -5587,10 +5634,12 @@ Overwatch`;
                           {activeRosterSlot === "all"
                             ? t("All Confirmed Candidates (All Sessions)", "Todas as Candidatas Confirmadas (Todos os Turnos)")
                             : activeRosterSlot === "all_this_week"
-                              ? t("All Confirmed Candidates - This Week (16 - 18 September)", "Todas as Candidatas Desta Semana (16 - 18 de Setembro)")
-                              : activeRosterSlot === "all_next_week"
-                                ? t("All Confirmed Candidates - Next Week (21 - 25 September)", "Todas as Candidatas da Próxima Semana (21 - 25 de Setembro)")
-                                : formatSlotDisplay(activeRosterSlot, lang)}
+                              ? t(`All Confirmed Candidates - This Week (${thisWeekRange.en})`, `Todas as Candidatas Desta Semana (${thisWeekRange.pt})`)
+                              : activeRosterSlot === "all_past_week"
+                                ? t(`All Confirmed Candidates - Past Week (${pastWeekRange.en})`, `Todas as Candidatas da Semana Passada (${pastWeekRange.pt})`)
+                                : activeRosterSlot === "all_next_week"
+                                  ? t(`All Confirmed Candidates - Next Week (${nextWeekRange.en})`, `Todas as Candidatas da Próxima Semana (${nextWeekRange.pt})`)
+                                  : formatSlotDisplay(activeRosterSlot, lang)}
                         </h3>
 
                         <div className="flex flex-wrap items-center gap-3 text-xs text-white/50 mt-1">
@@ -5598,10 +5647,12 @@ Overwatch`;
                             <Clock size={12} className="text-sky-400" />
                             <span>
                               {activeRosterSlot === "all_this_week"
-                                ? t("In-person test sessions: Wednesday 16, Thursday 17 & Friday 18 Sept (10:00 AM · Arrival 09:30)", "Sessões presenciais: Quarta 16, Quinta 17 e Sexta 18 de Setembro (10h00 · Chegada 09h30)")
-                                : activeRosterSlot === "all_next_week"
-                                  ? t("In-person test sessions: Monday 21 to Friday 25 Sept (10:00 AM · Arrival 09:30)", "Sessões presenciais: Segunda 21 a Sexta 25 de Setembro (10h00 · Chegada 09h30)")
-                                  : t("10:00 to 11:30 (Arrival 09:30 · Gates lock at 09:50)", "10h00 às 11h30 (Chegada 09h30 · Portão fecha às 09h50)")}
+                                ? t(`In-person test sessions: This Week (${thisWeekRange.en}) · 10:00 AM (Arrival 09:30)`, `Sessões presenciais: Esta Semana (${thisWeekRange.pt}) · 10h00 (Chegada 09h30)`)
+                                : activeRosterSlot === "all_past_week"
+                                  ? t(`Concluded test sessions: Past Week (${pastWeekRange.en})`, `Sessões concluídas: Semana Passada (${pastWeekRange.pt})`)
+                                  : activeRosterSlot === "all_next_week"
+                                    ? t(`In-person test sessions: Next Week (${nextWeekRange.en}) · 10:00 AM (Arrival 09:30)`, `Sessões presenciais: Próxima Semana (${nextWeekRange.pt}) · 10h00 (Chegada 09h30)`)
+                                    : t("10:00 to 11:30 (Arrival 09:30 · Gates lock at 09:50)", "10h00 às 11h30 (Chegada 09h30 · Portão fecha às 09h50)")}
                             </span>
                           </span>
                           <span>•</span>
@@ -5633,7 +5684,7 @@ Overwatch`;
 
                         <button
                           type="button"
-                          onClick={() => exportAttendanceCSV(isConsolidated ? activeRosterSlot : activeRosterSlot)}
+                          onClick={() => exportAttendanceCSV(activeRosterSlot)}
                           disabled={candidatesInSlot.length === 0}
                           className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.05] hover:bg-white/10 px-3.5 py-2 text-xs font-semibold text-white transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
                         >

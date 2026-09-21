@@ -24,7 +24,7 @@ import {
   Filter,
 } from "lucide-react";
 import type { Application } from "@/lib/careers";
-import { formatSlotDisplay, formatSlotDateOnly } from "@/lib/careers";
+import { formatSlotDisplay, formatSlotDateOnly, isPastDateSlot } from "@/lib/careers";
 import { siteContact } from "@/lib/site-config";
 
 interface RebookingGraceViewProps {
@@ -32,15 +32,6 @@ interface RebookingGraceViewProps {
   lang: "en" | "pt";
   t: (en: string, pt: string) => string;
   onRefresh: () => Promise<void>;
-}
-
-function isPastDateSlot(slot?: string | null): boolean {
-  if (!slot) return false;
-  return (
-    slot.includes("16 de Setembro") ||
-    slot.includes("17 de Setembro") ||
-    slot.includes("18 de Setembro")
-  );
 }
 
 export default function RebookingGraceView({
@@ -250,8 +241,8 @@ export default function RebookingGraceView({
         : `Hello ${candidate.name}, we confirm that your in-person test at Overwatch Mozambique is confirmed for ${candidate.testSlot}.\n\nExact Address: Av. Paulo Samuel Kankhomba, N.º 1948, Maputo.\nConfirmation link: ${url}`;
     } else {
       msg = isPt
-        ? `Olá ${candidate.name}, daqui é dos Recursos Humanos da Overwatch Moçambique. Em virtude das dificuldades reportadas na localização das nossas instalações ou deslocação para o seu teste presencial anterior, foi-lhe concedida uma autorização excepcional para reagendar o seu teste para uma das vagas abertas na próxima semana.\n\nAceda ao seu link de uso único para escolher a sua nova data:\n${url}\n\nEndereço exacto: Av. Paulo Samuel Kankhomba, N.º 1948, Maputo.\nQualquer dúvida estamos à disposição.`
-        : `Hello ${candidate.name}, this is Overwatch Mozambique HR. Due to reported transit or building location difficulties on your previous test date, an exceptional rebooking window has been granted for next week's open sessions.\n\nSelect your new date using your single-use link:\n${url}\n\nExact Address: Av. Paulo Samuel Kankhomba, N.º 1948, Maputo.`;
+        ? `Olá ${candidate.name}, daqui é dos Recursos Humanos da Overwatch Moçambique. Em virtude das dificuldades reportadas na localização das nossas instalações ou deslocação para o seu teste presencial anterior, foi-lhe concedida uma autorização excepcional para reagendar o seu teste para uma das vagas abertas disponíveis.\n\nAceda ao seu link de uso único para escolher a sua nova data:\n${url}\n\nEndereço exacto: Av. Paulo Samuel Kankhomba, N.º 1948, Maputo.\nQualquer dúvida estamos à disposição.`
+        : `Hello ${candidate.name}, this is Overwatch Mozambique HR. Due to reported transit or building location difficulties on your previous test date, an exceptional rebooking window has been granted for the available open evaluation sessions.\n\nSelect your new date using your single-use link:\n${url}\n\nExact Address: Av. Paulo Samuel Kankhomba, N.º 1948, Maputo.`;
     }
 
     window.open(
@@ -490,13 +481,16 @@ export default function RebookingGraceView({
 
           <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
             <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold">
-              {t("Open Slots Target", "Turnos Abertos (Próx. Semana)")}
+              {t("Active Future Sessions", "Turnos Futuros Abertos")}
             </div>
             <div className="text-2xl font-bold text-white mt-1 tabular-nums">
-              5 {t("days", "dias")}
+              {applications.filter((a) => a.testSlot && !isPastDateSlot(a.testSlot)).length > 0
+                ? Array.from(new Set(applications.filter((a) => a.testSlot && !isPastDateSlot(a.testSlot)).map((a) => a.testSlot))).length
+                : 5}{" "}
+              {t("sessions", "turnos")}
             </div>
             <div className="text-[11px] text-slate-400 mt-0.5 font-mono">
-              21 – 25 {t("Sept (10h00)", "Setembro (10h00)")}
+              {t("Ready for candidate booking", "Disponíveis para agendamento")}
             </div>
           </div>
         </div>
