@@ -112,14 +112,13 @@ export function normalizeSlot(slot?: string | null): string {
   return clean;
 }
 
-/** Check if a given slot is on Friday, 25 September (National Public Holiday in Mozambique) */
+/** Check if a given slot is specifically on Friday, 25 September (National Public Holiday in Mozambique) */
 export function isFriday25Sept(slot?: string | null): boolean {
   if (!slot) return false;
   const norm = normalizeSlot(slot).toLowerCase();
-  return (
-    (norm.includes("sexta") || norm.includes("friday")) &&
-    (norm.includes("25") || norm.includes("setembro") || norm.includes("september"))
-  );
+  const isFriday = norm.includes("sexta") || norm.includes("friday");
+  const has25 = /\b25\b/.test(norm);
+  return isFriday && has25;
 }
 
 export function formatSlotDisplay(slot: string, l?: "en" | "pt" | boolean) {

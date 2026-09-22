@@ -33,7 +33,9 @@ export async function GET(request: Request) {
 
   try {
     const allApps = await getApplications();
-    const fridayCandidates = allApps.filter((a) => isFriday25Sept(a.testSlot));
+    const fridayCandidates = allApps.filter(
+      (a) => a.status !== "archived" && a.status !== "rejected" && isFriday25Sept(a.testSlot)
+    );
     const wedCount = allApps.filter((a) => normalizeSlot(a.testSlot) === normalizeSlot(WEDNESDAY_SLOT)).length;
     const thuCount = allApps.filter((a) => normalizeSlot(a.testSlot) === normalizeSlot(THURSDAY_SLOT)).length;
 
@@ -140,7 +142,9 @@ export async function POST(request: Request) {
     }
 
     const allApps = await getApplications();
-    const fridayCandidates = allApps.filter((a) => isFriday25Sept(a.testSlot));
+    const fridayCandidates = allApps.filter(
+      (a) => a.status !== "archived" && a.status !== "rejected" && isFriday25Sept(a.testSlot)
+    );
 
     if (fridayCandidates.length === 0) {
       return Response.json({

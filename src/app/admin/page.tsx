@@ -394,7 +394,7 @@ export default function AdminPage() {
   const nextWeekRange = useMemo(() => getSlotRangeText(nextWeekSlots, "Next Week", "Próx. Semana"), [nextWeekSlots]);
 
   const fridayHolidayCandidates = useMemo(() => {
-    return applications.filter((a) => isFriday25Sept(a.testSlot));
+    return applications.filter((a) => a.status !== "archived" && a.status !== "rejected" && isFriday25Sept(a.testSlot));
   }, [applications]);
 
   const [rosterWeekTab, setRosterWeekTab] = useState<"this_week" | "past_week" | "next_week" | "all">("this_week");
