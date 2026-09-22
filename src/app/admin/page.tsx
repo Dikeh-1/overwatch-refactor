@@ -56,6 +56,8 @@ import {
   QrCode,
   Camera,
   Languages,
+  AlertTriangle,
+  Zap,
 } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 import TechGrid from "@/components/ui/TechGrid";
@@ -75,6 +77,7 @@ import {
   getSlotWeekCategory,
   getSlotDayNumber,
   isPastDateSlot,
+  isFriday25Sept,
 } from "@/lib/careers";
 import { screenCandidate, type CandidateScreeningResult } from "@/lib/careers-screening";
 import { siteContact } from "@/lib/site-config";
@@ -386,9 +389,13 @@ export default function AdminPage() {
     return { en: `${minDay} – ${maxDay} Sept`, pt: `${minDay} – ${maxDay} Set` };
   };
 
-  const thisWeekRange = useMemo(() => getSlotRangeText(thisWeekSlots, "21 – 25 Sept", "21 – 25 Set"), [thisWeekSlots]);
+  const thisWeekRange = useMemo(() => getSlotRangeText(thisWeekSlots, "21 – 24 Sept", "21 – 24 Set"), [thisWeekSlots]);
   const pastWeekRange = useMemo(() => getSlotRangeText(pastWeekSlots, "16 – 18 Sept", "16 – 18 Set"), [pastWeekSlots]);
   const nextWeekRange = useMemo(() => getSlotRangeText(nextWeekSlots, "Next Week", "Próx. Semana"), [nextWeekSlots]);
+
+  const fridayHolidayCandidates = useMemo(() => {
+    return applications.filter((a) => isFriday25Sept(a.testSlot));
+  }, [applications]);
 
   const [rosterWeekTab, setRosterWeekTab] = useState<"this_week" | "past_week" | "next_week" | "all">("this_week");
   const [selectedRosterSlot, setSelectedRosterSlot] = useState<string>("all_this_week");
@@ -535,7 +542,6 @@ export default function AdminPage() {
         "Terça-feira, 22 de Setembro - 10h00",
         "Quarta-feira, 23 de Setembro - 10h00",
         "Quinta-feira, 24 de Setembro - 10h00",
-        "Sexta-feira, 25 de Setembro - 10h00",
       ];
     } else if (presetKey === "next_week_3") {
       slots = [
@@ -646,6 +652,18 @@ Overwatch`;
   // ─── Address Rectification ──────────────────────────────────────────
   const [dispatchingCorrection, setDispatchingCorrection] = useState(false);
   const [correctionResult, setCorrectionResult] = useState<{ success: boolean; count: number; failed: number } | null>(null);
+
+  // ─── Friday 25 Sept Public Holiday Reschedule State ───────────────
+  const [fridayModalOpen, setFridayModalOpen] = useState(false);
+  const [fridayRescheduling, setFridayRescheduling] = useState(false);
+  const [fridayRescheduleResult, setFridayRescheduleResult] = useState<{
+    count: number;
+    emailsSent: number;
+    results: Array<{ id: string; name: string; email: string; oldSlot: string; newSlot: string; emailSent: boolean }>;
+  } | null>(null);
+  const [testHolidayEmail, setTestHolidayEmail] = useState("");
+  const [testHolidaySending, setTestHolidaySending] = useState(false);
+  const [testHolidayStatus, setTestHolidayStatus] = useState<"idle" | "success" | "error">("idle");
 
   // ─── Live Admin Presence Tracking ─────────────────────────────────
   const [onlineCount, setOnlineCount] = useState<number>(1);
@@ -1490,6 +1508,64 @@ Overwatch`;
       setError((err as Error).message);
     } finally {
       setRestoreBusy(false);
+    }
+  };
+
+  // ─── Friday Holiday (25 Sept) Redistribution Handlers ─────────────
+  const handleRescheduleFridayHoliday = async () => {
+    if (fridayHolidayCandidates.length === 0) return;
+    setFridayRescheduling(true);
+    try {
+      const res = await fetch("/api/admin/careers/reschedule-friday", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ execute: true }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setFridayRescheduleResult({
+          count: data.rescheduledCount,
+          emailsSent: data.emailsSentCount,
+          results: data.results || [],
+        });
+        setFridayModalOpen(false);
+        await load(true);
+      } else {
+        alert(data.error || "Falha ao redistribuir candidatas de sexta-feira.");
+      }
+    } catch (err) {
+      console.error("Error executing holiday reschedule:", err);
+      alert("Erro de conexão ao redistribuir candidatas.");
+    } finally {
+      setFridayRescheduling(false);
+    }
+  };
+
+  const handleSendTestHolidayEmail = async () => {
+    if (!testHolidayEmail.trim()) return;
+    setTestHolidaySending(true);
+    setTestHolidayStatus("idle");
+    try {
+      const res = await fetch("/api/admin/careers/reschedule-friday", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          testEmail: testHolidayEmail.trim(),
+          testName: "Candidata (Teste Feriado 25 Set)",
+          testSlot: "Quarta-feira, 23 de Setembro - 10h00",
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setTestHolidayStatus("success");
+      } else {
+        setTestHolidayStatus("error");
+      }
+    } catch (err) {
+      console.error("Test holiday email error:", err);
+      setTestHolidayStatus("error");
+    } finally {
+      setTestHolidaySending(false);
     }
   };
 
@@ -5245,6 +5321,18 @@ Overwatch`;
                   </span>
                 </button>
 
+                {fridayHolidayCandidates.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setFridayModalOpen(true)}
+                    className="flex items-center gap-1.5 rounded-xl border border-amber-500/50 bg-amber-500/20 hover:bg-amber-500/30 px-3.5 py-2 text-xs font-bold text-amber-300 transition-colors cursor-pointer shadow-sm animate-pulse"
+                    title={t("Reschedule Friday 25 Sept (Public Holiday) candidates to Wed/Thu", "Ajustar candidatas de Sexta 25 Set (Feriado Nacional) para Quarta/Quinta")}
+                  >
+                    <AlertTriangle size={13} className="text-amber-400" />
+                    <span>{t(`Adjust Friday Holiday (${fridayHolidayCandidates.length})`, `Ajustar Feriado 25 Set (${fridayHolidayCandidates.length})`)}</span>
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={() => setView("broadcast")}
@@ -5255,6 +5343,55 @@ Overwatch`;
                 </button>
               </div>
             </div>
+
+            {/* ─── NATIONAL PUBLIC HOLIDAY ALERT BANNER (25 SEPT) ─────────── */}
+            {fridayHolidayCandidates.length > 0 && (
+              <div className="rounded-2xl border-2 border-amber-500/40 bg-amber-500/10 p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-lg">
+                <div className="flex items-start gap-3">
+                  <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-300 shrink-0 mt-0.5">
+                    <Calendar size={20} />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                        {t("National Holiday Notice · 25 September (Armed Forces Day)", "Aviso de Feriado Nacional · 25 de Setembro (Dia das Forças Armadas)")}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-[0.68rem] font-bold bg-amber-500/20 border border-amber-500/40 text-amber-200">
+                        {fridayHolidayCandidates.length} {t("candidates to redistribute", "candidatas a redistribuir")}
+                      </span>
+                    </div>
+                    <p className="text-xs text-amber-100/90 leading-relaxed">
+                      {t(
+                        "Friday 25 September is a national public holiday in Mozambique. You can automatically redistribute these candidates evenly to Wednesday (23 Sept) and Thursday (24 Sept) and dispatch an official notification email informing them that their new date is guaranteed without needing to re-book.",
+                        "Sexta-feira, 25 de Setembro, é feriado nacional em Moçambique. Pode redistribuir automaticamente estas candidatas equitativamente para Quarta (23 Set) e Quinta (24 Set) e disparar o email oficial informando que a sua nova data está confirmada sem necessidade de novo agendamento."
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+                  <button
+                    type="button"
+                    onClick={() => setFridayModalOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md transition-all cursor-pointer"
+                  >
+                    <Zap size={14} />
+                    <span>{t("Review & Redistribute Now →", "Rever & Redistribuir Agora →")}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {fridayRescheduleResult && (
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-xs text-emerald-300 flex items-center justify-between">
+                <span>
+                  ✓ {t(
+                    `Holiday Redistribution Completed: ${fridayRescheduleResult.count} candidates moved from Friday to Wed/Thu. ${fridayRescheduleResult.emailsSent} official notification emails dispatched. Friday 25 Sept removed from test slot options.`,
+                    `Redistribuição de Feriado Concluída: ${fridayRescheduleResult.count} candidatas transferidas de Sexta para Quarta/Quinta. ${fridayRescheduleResult.emailsSent} emails de aviso oficial disparados. Sexta 25 Set removida das opções de agendamento.`
+                  )}
+                </span>
+                <button type="button" onClick={() => setFridayRescheduleResult(null)} className="text-emerald-400 hover:text-white ml-3 cursor-pointer">✕</button>
+              </div>
+            )}
 
             {correctionResult && (
               <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-300 flex items-center justify-between">
@@ -6061,7 +6198,7 @@ Overwatch`;
                     <p className="text-[0.68rem] text-white/50">
                       {t(
                         `${campaignApps.filter((a) => Boolean(a.testSlot) && !a.confirmationSentAt).length} candidates with confirmed slots are awaiting confirmation dispatch.`,
-                        `${campaignApps.filter((a) => Boolean(a.testSlot) && !a.confirmationSentAt).length} candidatas agendadas aguardam o envio de instruções oficiais.`
+                        `${campaignApps.filter((a) => Boolean(a.testSlot) && !a.confirmationSentAt).length} candidatas com turno confirmado aguardam envio de confirmação formal.`,
                       )}
                     </p>
                   </div>
@@ -6069,11 +6206,165 @@ Overwatch`;
                 <button
                   type="button"
                   onClick={() => setView("confirmations")}
-                  className="flex items-center gap-2 rounded-xl bg-sky-600 hover:bg-sky-500 px-4 py-2 text-xs font-bold text-white transition-all cursor-pointer shadow-sm"
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs transition-colors cursor-pointer shadow"
                 >
-                  <CheckCircle2 size={13} />
-                  <span>{t("Open Confirmations Tab →", "Abrir Separador de Confirmações →")}</span>
+                  <span>{t("Go to Confirmations Workspace →", "Ir para Confirmações de Presença →")}</span>
                 </button>
+              </div>
+            )}
+
+            {/* ─── FRIDAY 25 SEPT PUBLIC HOLIDAY REDISTRIBUTION MODAL ──────── */}
+            {fridayModalOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                <div className="w-full max-w-xl rounded-2xl border border-amber-500/30 bg-[#121827] p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-300">
+                        <Calendar size={22} />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-white">
+                          {t("25 September National Holiday Redistribution", "Redistribuição · Feriado Nacional de 25 de Setembro")}
+                        </h3>
+                        <p className="text-xs text-white/60">
+                          {t(
+                            `Move ${fridayHolidayCandidates.length} candidate(s) from Friday to Wed/Thu ahead of time`,
+                            `Antecipar ${fridayHolidayCandidates.length} candidata(s) de Sexta-feira para Quarta e Quinta`,
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setFridayModalOpen(false)}
+                      className="text-white/50 hover:text-white cursor-pointer"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  {/* Context Notice */}
+                  <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 text-xs text-amber-200/90 space-y-2">
+                    <p className="font-semibold text-amber-300">
+                      ℹ️ {t("Armed Forces Day (National Public Holiday in Mozambique)", "Dia das Forças Armadas de Moçambique (Feriado Nacional)")}
+                    </p>
+                    <p className="leading-relaxed">
+                      {t(
+                        "As per management instructions, Friday 25 September is closed. Candidates will be balanced evenly across Wednesday 23 and Thursday 24 Sept. Each candidate will receive a personalized official email with their new guaranteed date and time.",
+                        "Conforme orientações da Direção, na Sexta-feira 25 de Setembro não haverá testes presenciais. As candidatas serão distribuídas de forma equilibrada entre Quarta (23) e Quinta (24). Cada candidata receberá um comunicado oficial com a sua nova data garantida.",
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Candidates List with Target Slots */}
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-white/70">
+                      {t("Candidates to be Rescheduled:", "Candidatas a Transferir:")}
+                    </span>
+                    <div className="space-y-2">
+                      {fridayHolidayCandidates.map((c, idx) => {
+                        const targetDay = idx % 2 === 0 ? "Quarta-feira, 23 de Setembro - 10h00" : "Quinta-feira, 24 de Setembro - 10h00";
+                        return (
+                          <div
+                            key={c.id}
+                            className="rounded-xl border border-white/10 bg-white/[0.03] p-3 flex flex-wrap items-center justify-between gap-2"
+                          >
+                            <div>
+                              <strong className="text-white text-xs font-medium block">{c.name}</strong>
+                              <span className="text-[0.68rem] text-white/40">{c.email}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[0.65rem] text-rose-300 line-through opacity-70">
+                                Sexta 25 Set
+                              </span>
+                              <span className="text-[0.65rem] text-white/40">→</span>
+                              <span className="px-2.5 py-1 rounded-lg text-[0.7rem] font-bold bg-emerald-500/20 border border-emerald-500/35 text-emerald-300">
+                                {idx % 2 === 0 ? "Quarta 23 Set · 10h00" : "Quinta 24 Set · 10h00"}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* No Re-booking highlight */}
+                  <div className="rounded-xl border border-sky-500/20 bg-sky-500/10 p-3 text-xs text-sky-200 flex items-start gap-2">
+                    <CheckCircle2 size={16} className="text-sky-400 shrink-0 mt-0.5" />
+                    <p className="leading-relaxed">
+                      <strong>{t("No Re-booking Required:", "Sem Necessidade de Novo Agendamento:")}</strong>{" "}
+                      {t(
+                        "The email explicitly states that their spot is 100% confirmed and they do not need to re-book or access any link.",
+                        "O comunicado informa explicitamente que a vaga está 100% confirmada e que não necessitam de remarcar ou aceder a links.",
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Test Email Preview Tool */}
+                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 space-y-2">
+                    <span className="text-[0.72rem] font-bold uppercase tracking-wider text-white/60 block">
+                      {t("Send Test Preview Email (Optional)", "Enviar Email de Teste (Opcional)")}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="email"
+                        placeholder="seu-email@exemplo.com"
+                        value={testHolidayEmail}
+                        onChange={(e) => setTestHolidayEmail(e.target.value)}
+                        className="flex-1 rounded-xl border border-white/15 bg-black/40 px-3 py-2 text-xs text-white placeholder-white/30 focus:border-amber-400 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSendTestHolidayEmail}
+                        disabled={testHolidaySending || !testHolidayEmail.trim()}
+                        className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-40"
+                      >
+                        {testHolidaySending ? (
+                          <RefreshCw size={12} className="animate-spin" />
+                        ) : (
+                          t("Send Test", "Enviar Teste")
+                        )}
+                      </button>
+                    </div>
+                    {testHolidayStatus === "success" && (
+                      <p className="text-[0.68rem] text-emerald-400">✓ {t("Test email sent successfully!", "Email de teste enviado com sucesso!")}</p>
+                    )}
+                    {testHolidayStatus === "error" && (
+                      <p className="text-[0.68rem] text-rose-400">✕ {t("Failed to send test email.", "Falha ao enviar email de teste.")}</p>
+                    )}
+                  </div>
+
+                  {/* Modal Action Buttons */}
+                  <div className="flex items-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setFridayModalOpen(false)}
+                      disabled={fridayRescheduling}
+                      className="flex-1 rounded-xl border border-white/10 bg-white/[0.05] py-2.5 text-xs font-semibold text-white hover:bg-white/[0.1] transition-colors cursor-pointer"
+                    >
+                      {t("Cancel", "Cancelar")}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleRescheduleFridayHoliday}
+                      disabled={fridayRescheduling || fridayHolidayCandidates.length === 0}
+                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 py-2.5 text-xs font-bold text-slate-950 shadow-lg transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      {fridayRescheduling ? (
+                        <>
+                          <RefreshCw className="animate-spin" size={14} />
+                          <span>{t("Processing & Sending Emails...", "A processar & enviar emails...")}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Zap size={14} />
+                          <span>{t("Confirm & Notify Candidates", "Confirmar & Notificar Candidatas")}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </section>

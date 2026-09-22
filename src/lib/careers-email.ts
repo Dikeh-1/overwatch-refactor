@@ -2015,3 +2015,267 @@ Overwatch Moçambique`;
 
   return sendTransactionalEmail(payload);
 }
+
+/**
+ * Sends official notification to candidates whose Friday (Sept 25) session was shifted
+ * due to the national public holiday (Dia das Forças Armadas).
+ * Emphasizes that NO re-booking is needed and provides their exact new confirmed date.
+ */
+export async function sendHolidayRescheduleEmail({
+  application,
+  oldSlot,
+  newSlot,
+  baseUrl,
+}: {
+  application: Application;
+  oldSlot: string;
+  newSlot: string;
+  baseUrl?: string;
+}) {
+  if (
+    (!process.env.BREVO_API_KEY && !process.env.FALLBACK_SMTP_PASS) ||
+    application.email.endsWith(".invalid") ||
+    process.env.CAREERS_TEST_MODE === "true"
+  ) {
+    return { success: true, mocked: true };
+  }
+
+  const origin = (
+    baseUrl ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "https://www.overwatchmoz.com"
+  ).replace(/\/+$/, "");
+  const logoWhiteUrl = `${origin}/logo-white.png`;
+  const bookingUrl = `${origin}/careers/test-invite/${application.id}`;
+
+  const greeting = getMozambiqueGreeting("pt");
+  const formattedNewSlot = formatSlotDisplay(newSlot, "pt");
+  const formattedOldSlot = formatSlotDisplay(oldSlot, "pt");
+
+  // Generate QR Code with updated pass info
+  let qrBase64 = "";
+  try {
+    const qrPayload = JSON.stringify({
+      v: 2,
+      id: application.id,
+      name: application.name,
+      role: "CCO Operator",
+      slot: newSlot,
+      status: "CONFIRMED",
+      holidayRescheduled: true,
+      ts: Date.now(),
+      checkInUrl: `${origin}/api/careers/check-in?id=${application.id}`,
+    });
+    const qrDataUrl = await QRCode.toDataURL(qrPayload, {
+      errorCorrectionLevel: "H",
+      margin: 2,
+      scale: 8,
+      color: {
+        dark: "#0b1329",
+        light: "#ffffff",
+      },
+    });
+    qrBase64 = qrDataUrl.replace(/^data:image\/png;base64,/, "");
+  } catch (err) {
+    console.error("[QR Generation Error - Holiday Reschedule]:", err);
+  }
+
+  const subject = `[Overwatch] Actualização do Teste de Selecção — Feriado Nacional de 25 de Setembro`;
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="pt">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Actualização de Agendamento — Overwatch Moçambique</title>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; -webkit-font-smoothing: antialiased;">
+      <div style="background-color: #f1f5f9; padding: 32px 16px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08); overflow: hidden;">
+          
+          <!-- Official Letterhead Header (Dark Navy) -->
+          <div style="background-color: #0b1329; padding: 18px 24px; border-bottom: 2px solid rgba(255, 255, 255, 0.15);">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="vertical-align: middle;">
+                  <img src="${logoWhiteUrl}" alt="Overwatch" height="22" width="147" style="height: 22px; width: auto; max-width: 145px; display: block; border: 0;" />
+                </td>
+                <td style="vertical-align: middle; text-align: right;">
+                  <span style="display: inline-block; background-color: rgba(255, 255, 255, 0.12); color: #ffffff; font-family: monospace; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.2); letter-spacing: 0.04em;">
+                    REF: FERIADO-25SET/CCO
+                  </span>
+                  <div style="font-size: 11px; color: #cbd5e1; margin-top: 4px; font-weight: 500;">
+                    Comissão de Recrutamento & Selecção
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Official Subheading Bar -->
+          <div style="background-color: #f8fafc; padding: 10px 24px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #334155;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #334155;">
+                  COMUNICADO OFICIAL · ANTECIPAÇÃO DE TESTE PRESENCIAL
+                </td>
+                <td style="text-align: right; color: #64748b;">
+                  Maputo, Moçambique
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Body Content -->
+          <div style="padding: 28px 24px; background-color: #ffffff;">
+            <h1 style="font-size: 18px; font-weight: 700; color: #090d16; margin: 0 0 12px 0;">
+              ${greeting} ${application.name},
+            </h1>
+
+            <p style="font-size: 14px; color: #334155; margin: 0 0 16px 0; line-height: 1.6;">
+              Vimos por este meio comunicar que, em virtude do feriado nacional de <strong>25 de Setembro</strong> (Dia das Forças Armadas e da Revolução em Moçambique), a sua sessão presencial de Teste de Selecção para a vaga de <strong>Operadora de CCO</strong> foi antecipada com antecedência pela nossa direcção.
+            </p>
+
+            <!-- Prominent New Slot Card -->
+            <div style="background-color: #f0fdf4; border: 2px solid #22c55e; border-radius: 10px; padding: 18px 20px; margin-bottom: 20px;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td>
+                    <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #166534; display: block; margin-bottom: 4px;">
+                      ✓ A SUA NOVA DATA CONFIRMADA
+                    </span>
+                    <div style="font-size: 18px; font-weight: 800; color: #14532d; line-height: 1.3;">
+                      ${formattedNewSlot}
+                    </div>
+                    <div style="font-size: 12px; color: #15803d; margin-top: 4px;">
+                      (Data anterior: <span style="text-decoration: line-through; opacity: 0.8;">${formattedOldSlot}</span>)
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+            <!-- Crucial No Re-booking Banner -->
+            <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #2563eb; border-radius: 8px; padding: 14px 16px; margin-bottom: 20px;">
+              <strong style="font-size: 13px; color: #1e40af; display: block; margin-bottom: 4px;">
+                ℹ️ NÃO É NECESSÁRIO FAZER NENHUM NOVO AGENDAMENTO
+              </strong>
+              <div style="font-size: 13px; color: #1e3a8a; line-height: 1.5;">
+                O seu lugar e a sua vaga já se encontram <strong>automaticamente confirmados e garantidos</strong> no nosso sistema para a nova data indicada acima. Não precisa de aceder a nenhum link de marcação nem de efectuar qualquer acção.
+              </div>
+            </div>
+
+            <!-- Session Details -->
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+              <h2 style="font-size: 13px; font-weight: 700; color: #090d16; text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 12px 0;">
+                INSTRUÇÕES IMPORTANTES PARA O DIA DO TESTE
+              </h2>
+              <table style="width: 100%; border-collapse: collapse; font-size: 13px; line-height: 1.6; color: #334155;">
+                <tr>
+                  <td style="padding: 4px 0; width: 140px; font-weight: 600; color: #475569;">Hora de Chegada:</td>
+                  <td style="padding: 4px 0; font-weight: 700; color: #090d16;">09h30 pontualmente</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; font-weight: 600; color: #475569;">Início do Teste:</td>
+                  <td style="padding: 4px 0; font-weight: 700; color: #090d16;">10h00</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; font-weight: 600; color: #475569;">Fecho dos Portões:</td>
+                  <td style="padding: 4px 0; color: #dc2626; font-weight: 700;">09h50 (sem tolerância por razões de segurança)</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; vertical-align: top; font-weight: 600; color: #475569;">Local:</td>
+                  <td style="padding: 4px 0; font-weight: 600; color: #090d16;">
+                    Overwatch Moçambique<br />
+                    Av. Paulo Samuel Khankhomba nº 1948, antes da esquina com a Av. Filipe Samuel Magaia, Maputo
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; vertical-align: top; font-weight: 600; color: #475569;">O que Trazer:</td>
+                  <td style="padding: 4px 0; color: #334155;">
+                    • Uma caneta esferográfica azul ou preta<br />
+                    • Cópia do documento de identificação (BI / Passaporte / DIRE)
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+            <!-- View Pass Online Button -->
+            <div style="text-align: center; margin: 24px 0;">
+              <a href="${bookingUrl}" style="display: inline-block; background-color: #0b1329; color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 700; padding: 12px 28px; border-radius: 8px; box-shadow: 0 2px 6px rgba(11, 19, 41, 0.2);">
+                Ver o Meu Passe Actualizado Online →
+              </a>
+            </div>
+
+            <!-- Sign-Off -->
+            <div style="margin-top: 24px; font-size: 13px; color: #475569; line-height: 1.6;">
+              Por favor, planeie a sua deslocação com a devida antecedência.<br /><br />
+              Com os melhores cumprimentos,<br />
+              <strong style="color: #090d16;">Equipa de Recursos Humanos & Recrutamento</strong><br />
+              Overwatch Moçambique
+            </div>
+          </div>
+
+          <!-- Formal Legal & Contact Footer -->
+          <div style="background-color: #f8fafc; padding: 22px 32px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6;">
+            <strong style="color: #090d16;">Overwatch Moçambique, Lda.</strong><br />
+            Av. Paulo Samuel Khankhomba nº 1948, Maputo, Moçambique<br />
+            Telefone / WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #0284c7; text-decoration: none; font-weight: 600;">+258 84 287 0793</a> · Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none;">${siteContact.email}</a> · Website: <a href="${origin}" style="color: #64748b; text-decoration: none;">www.overwatchmoz.com</a>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const textContent = `${greeting} ${application.name},
+
+COMUNICADO OFICIAL · ANTECIPAÇÃO DE TESTE PRESENCIAL (FERIADO NACIONAL DE 25 DE SETEMBRO)
+Vimos por este meio comunicar que, em virtude do feriado nacional de 25 de Setembro (Dia das Forças Armadas e da Revolução), a sua sessão presencial de Teste de Selecção para a vaga de Operadora de CCO da Overwatch Moçambique foi antecipada.
+
+A SUA NOVA DATA CONFIRMADA:
+- Nova Data: ${formattedNewSlot}
+- Data Anterior: ${formattedOldSlot}
+
+IMPORTANTE — NÃO É NECESSÁRIO NOVO AGENDAMENTO:
+O seu lugar e a sua vaga já se encontram automaticamente confirmados e garantidos no nosso sistema para a nova data acima. Não necessita de efectuar nenhuma nova marcação.
+
+INSTRUÇÕES PARA O DIA DO TESTE:
+- Hora de Chegada Obrigatória: 09h30 pontualmente (Início às 10h00)
+- Fecho dos Portões: 09h50 (sem tolerância por motivos de organização e segurança)
+- Local: Overwatch — Av. Paulo Samuel Khankhomba nº 1948, antes da esquina com a Av. Filipe Samuel Magaia, Maputo
+- O que Trazer: Caneta esferográfica e cópia do documento de identificação (BI/Passaporte/DIRE)
+
+Consulte o seu passe online: ${bookingUrl}
+
+Com os melhores cumprimentos,
+Equipa de Recursos Humanos & Recrutamento
+Overwatch Moçambique`;
+
+  const sender = {
+    name: "Overwatch Recrutamento",
+    email: "noreply@overwatchmoz.com",
+  };
+
+  const payload: SendEmailOptions = {
+    sender,
+    to: [{ email: application.email, name: application.name }],
+    subject,
+    htmlContent,
+    textContent,
+  };
+
+  if (qrBase64) {
+    const safeName = application.name.replace(/[^a-zA-Z0-9_-]/g, "_");
+    payload.attachment = [
+      {
+        name: `Passe-Acesso-Overwatch-${safeName}.png`,
+        content: qrBase64,
+      },
+    ];
+  }
+
+  return sendTransactionalEmail(payload);
+}
+

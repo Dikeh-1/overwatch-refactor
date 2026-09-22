@@ -78,7 +78,6 @@ export const DEFAULT_TEST_SLOTS = [
   "Terça-feira, 22 de Setembro - 10h00",
   "Quarta-feira, 23 de Setembro - 10h00",
   "Quinta-feira, 24 de Setembro - 10h00",
-  "Sexta-feira, 25 de Setembro - 10h00",
 ] as const;
 
 /**
@@ -111,6 +110,16 @@ export function normalizeSlot(slot?: string | null): string {
   });
 
   return clean;
+}
+
+/** Check if a given slot is on Friday, 25 September (National Public Holiday in Mozambique) */
+export function isFriday25Sept(slot?: string | null): boolean {
+  if (!slot) return false;
+  const norm = normalizeSlot(slot).toLowerCase();
+  return (
+    (norm.includes("sexta") || norm.includes("friday")) &&
+    (norm.includes("25") || norm.includes("setembro") || norm.includes("september"))
+  );
 }
 
 export function formatSlotDisplay(slot: string, l?: "en" | "pt" | boolean) {
