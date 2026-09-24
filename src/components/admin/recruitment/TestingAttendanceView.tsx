@@ -96,13 +96,15 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
 
   // Export CSV
   const handleExportAttendanceCSV = () => {
-    const headers = ["Nome", "Email", "WhatsApp", "Turno", "Presença", "Hora de Entrada"];
+    const headers = lang === "en"
+      ? ["Name", "Email", "WhatsApp", "Session Slot", "Attendance", "Check-in Time"]
+      : ["Nome", "Email", "WhatsApp", "Turno", "Presença", "Hora de Entrada"];
     const rows = slotCandidates.map((c) => [
       `"${c.name}"`,
       `"${c.email}"`,
       `"${c.whatsapp}"`,
       `"${c.testSlot || ""}"`,
-      c.attendedAt ? '"PRESENTE"' : '"AGUARDADO"',
+      c.attendedAt ? (lang === "en" ? '"PRESENT"' : '"PRESENTE"') : (lang === "en" ? '"AWAITING"' : '"AGUARDADO"'),
       c.attendedAt ? `"${new Date(c.attendedAt).toLocaleTimeString("pt-MZ")}"` : '""',
     ]);
     const csv = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\r\n");

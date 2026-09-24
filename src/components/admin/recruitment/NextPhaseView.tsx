@@ -262,7 +262,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang }) => {
       <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-0.5">
           <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-            <Sparkles size={14} className="text-sky-600" />
+            <Mail size={14} className="text-sky-600" />
             <span>{t("Step 1: Send Sample Preview to Admin", "Passo 1: Enviar Pré-visualização de Teste")}</span>
           </h3>
           <p className="text-[0.7rem] text-slate-500">
@@ -347,7 +347,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang }) => {
                   </td>
 
                   <td className="px-4 py-3 font-mono">
-                    <span className="font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
+                    <span className="font-semibold text-slate-900">
                       {cand.score}%
                     </span>
                   </td>
@@ -451,53 +451,118 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang }) => {
         </div>
       )}
 
-      {/* Template Modal */}
+      {/* Template Modal with Realistic Overwatch Letterhead & Device Switcher */}
       {templateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="w-full max-w-2xl bg-white rounded-lg p-6 shadow-xl border border-slate-200 space-y-4 max-h-[85vh] overflow-y-auto admin-scrollbar">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-bold text-slate-900">
-                {t("Next Phase Invitation Template", "Modelo de Convocatória — Próxima Fase")}
-              </h3>
+          <div className="w-full max-w-2xl bg-white rounded-lg shadow-xl border border-slate-200 space-y-0 max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <div>
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                  {t("Email Letterhead Preview", "Pré-visualização do Modelo de Email")}
+                </h3>
+                <p className="text-[0.7rem] text-slate-500">
+                  {t("Next Phase Conditions Notice • Mozambique Portuguese (PT-MZ)", "Notificação de Condições da Próxima Fase • Português (Moçambique)")}
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => setTemplateModalOpen(false)}
-                className="p-1 rounded text-slate-400 hover:text-slate-600"
+                className="p-1 rounded text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
               >
                 <X size={16} />
               </button>
             </div>
 
-            <div className="p-4 rounded-md bg-slate-50 border border-slate-200 text-xs text-slate-800 space-y-3 leading-relaxed">
-              <p>Prezada Candidata,</p>
-              <p>Agradecemos a sua participação no processo de selecção para a função de Operadora de CCO da Overwatch.</p>
-              <p>O seu resultado no teste (mais de 80%) permitiu-lhe avançar para consideração na próxima fase do processo.</p>
-              <p>Antes de prosseguirmos, gostaríamos de assegurar que compreende e aceita as condições previstas para esta etapa:</p>
+            {/* Email Letterhead Viewer */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#f8fafc] admin-scrollbar">
+              <div className="max-w-xl mx-auto bg-white rounded-lg border border-slate-200 overflow-hidden shadow-xs">
+                {/* Brand Bar */}
+                <div className="h-1 bg-[#0b1329]" />
 
-              <div className="pl-4 border-l-2 border-slate-400 space-y-1 text-slate-700">
-                <p>• 10 dias de formação inicial, sem remuneração;</p>
-                <p>• Caso seja seleccionada após essa formação, seguirá para um período de 3 meses de formação prática, com uma remuneração mensal de 9.000 MZN;</p>
-                <p>• Após a conclusão satisfatória desse período, a remuneração mensal poderá chegar a 12.000 MZN, de acordo com o desempenho e enquadramento na função;</p>
-                <p>• O regime de trabalho previsto é de 12 horas por turno, numa rotação de: 2 turnos de dia + 2 turnos de noite + 2 dias de folga.</p>
-              </div>
-
-              <p>Neste momento, gostaríamos apenas de saber se, tendo conhecimento destas condições, continua interessada em ser considerada para a próxima fase do processo de selecção.</p>
-
-              <div className="pt-2 space-y-2">
-                <div className="p-2.5 rounded bg-slate-900 text-white font-semibold text-center text-xs">
-                  Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas.
+                {/* Email Header */}
+                <div className="p-6 border-b border-slate-100 bg-white">
+                  <span className="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400 block mb-1">
+                    Overwatch • Recrutamento CCO 2026
+                  </span>
+                  <h2 className="text-base font-bold text-[#0b1329] tracking-tight">
+                    Próxima Fase do Processo de Selecção
+                  </h2>
                 </div>
-                <div className="text-center text-xs text-slate-500 underline">
-                  Não tenho interesse
+
+                {/* Email Body */}
+                <div className="p-6 text-xs text-slate-700 space-y-3.5 leading-relaxed">
+                  <p className="font-semibold text-slate-900">
+                    Prezada Candidata <span className="text-sky-700">[Nome da Candidata]</span>,
+                  </p>
+
+                  <p>
+                    Agradecemos a sua participação no processo de selecção para a função de <strong>Operadora de CCO</strong> da Overwatch.
+                  </p>
+
+                  <p>
+                    O seu resultado no teste (<strong className="text-slate-900">mais de 80%</strong>) permitiu-lhe avançar para consideração na próxima fase do processo.
+                  </p>
+
+                  <p>
+                    Antes de prosseguirmos, gostaríamos de assegurar que compreende e aceita as condições previstas para esta etapa:
+                  </p>
+
+                  <div className="bg-slate-50 border-l-2 border-[#0b1329] p-3.5 rounded-r space-y-2 text-[0.72rem] text-slate-800">
+                    <div>• <strong>10 dias de formação inicial</strong>, sem remuneração;</div>
+                    <div>• Caso seja seleccionada após essa formação, seguirá para um período de <strong>3 meses de formação prática</strong>, com uma remuneração mensal de <strong>9.000 MZN</strong>;</div>
+                    <div>• Após a conclusão satisfatória desse período, a remuneração mensal poderá chegar a <strong>12.000 MZN</strong>, de acordo com o desempenho e enquadramento na função;</div>
+                    <div>• O regime de trabalho previsto é de <strong>12 horas por turno</strong>, numa rotação de: <span className="font-semibold text-slate-900">2 turnos de dia + 2 turnos de noite + 2 dias de folga</span>.</div>
+                  </div>
+
+                  <p className="text-slate-500 text-[0.7rem]">
+                    A progressão para cada fase dependerá do desempenho, disciplina, capacidade de aprendizagem, cumprimento dos procedimentos e adequação à função.
+                  </p>
+
+                  <p className="font-medium text-slate-900 pt-1">
+                    Neste momento, gostaríamos apenas de saber se, tendo conhecimento destas condições, continua interessada em ser considerada para a próxima fase do processo de selecção.
+                  </p>
+
+                  {/* Buttons */}
+                  <div className="pt-2 space-y-2">
+                    <div className="w-full text-center py-2.5 px-4 rounded bg-[#0b1329] text-white font-semibold text-xs shadow-xs">
+                      Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas.
+                    </div>
+                    <div className="text-center">
+                      <span className="text-[0.7rem] text-slate-400 hover:text-slate-600 underline cursor-pointer">
+                        Não tenho interesse
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="text-[0.68rem] text-slate-400 italic pt-2">
+                    As candidatas que confirmarem o interesse receberão posteriormente informação sobre datas, horários e organização da formação.
+                  </p>
+
+                  <div className="pt-4 border-t border-slate-100 text-xs">
+                    <p className="text-slate-500">Com os melhores cumprimentos,</p>
+                    <p className="font-bold text-[#0b1329] mt-0.5">Overwatch</p>
+                  </div>
+                </div>
+
+                {/* Email Footer */}
+                <div className="bg-slate-50 px-6 py-3 border-t border-slate-200 text-center">
+                  <p className="text-[0.65rem] text-slate-400">
+                    © 2026 Overwatch Moçambique. Todos os direitos reservados.
+                  </p>
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end pt-2">
+            {/* Modal Footer */}
+            <div className="px-5 py-3 border-t border-slate-200 flex items-center justify-between bg-white">
+              <span className="text-[0.7rem] text-slate-400">
+                {t("Template body is official PT-MZ copy", "O corpo do modelo utiliza a redação oficial em PT-MZ")}
+              </span>
               <button
                 type="button"
                 onClick={() => setTemplateModalOpen(false)}
-                className="px-3 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-800"
+                className="px-3.5 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-800 transition-colors cursor-pointer"
               >
                 {t("Close", "Fechar")}
               </button>

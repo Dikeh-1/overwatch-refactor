@@ -157,7 +157,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         {/* Brand Header */}
         <div className="p-4 border-b border-white/[0.08] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <Logo />
+            <Logo variant="light" size="xs" />
             <div className="flex flex-col">
               <span className="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400">
                 Overwatch
