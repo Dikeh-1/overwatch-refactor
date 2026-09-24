@@ -265,7 +265,7 @@ export default function NextPhaseCandidatePage() {
                           className="w-4 h-4 text-[#0b1329] border-slate-300 focus:ring-[#0b1329] focus:ring-offset-0 cursor-pointer shrink-0"
                         />
                         <span className="text-sm text-slate-800 leading-snug">
-                          Sim, tenho interesse e estou disponível para cumprir as condições indicadas
+                          Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas.
                         </span>
                       </label>
 

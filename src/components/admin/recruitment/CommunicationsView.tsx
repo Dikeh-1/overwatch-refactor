@@ -1124,6 +1124,9 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
                       <p className="font-medium text-slate-900 pt-1">
                         Neste momento, gostaríamos apenas de saber se, tendo conhecimento destas condições, continua interessada em ser considerada para a próxima fase do processo de selecção.
                       </p>
+                      <p className="text-slate-600 text-[0.72rem]">
+                        Caso tenha interesse, pedimos que indique carregando no botão abaixo:
+                      </p>
                       <div className="pt-2 space-y-2">
                         <a
                           href="/pt/careers/next-phase/preview_sample?choice=yes"

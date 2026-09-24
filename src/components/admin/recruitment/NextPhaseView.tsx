@@ -1166,6 +1166,10 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                     Neste momento, gostaríamos apenas de saber se, tendo conhecimento destas condições, continua interessada em ser considerada para a próxima fase do processo de selecção.
                   </p>
 
+                  <p className="text-slate-600 text-[0.72rem]">
+                    Caso tenha interesse, pedimos que indique carregando no botão abaixo:
+                  </p>
+
                   {/* Bulletproof action buttons with direct preview links */}
                   <div className="pt-2 space-y-2">
                     <a
@@ -1194,8 +1198,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
 
                   <div className="pt-4 border-t border-slate-100 text-xs">
                     <p className="text-slate-500">Com os melhores cumprimentos,</p>
-                    <p className="font-bold text-[#090d16] mt-0.5">Equipa de Recrutamento &amp; Selecção</p>
-                    <p className="text-slate-600">Overwatch Moçambique</p>
+                    <p className="font-bold text-[#090d16] mt-0.5">Overwatch</p>
                   </div>
                 </div>
 
