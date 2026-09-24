@@ -16,7 +16,7 @@ export async function GET(request: Request) {
       valid: true,
       preview: true,
       candidate: {
-        name: "Candidata (Exemplo de Pré-visualização)",
+        name: "Maria Exemplo",
         email: "candidata@exemplo.com",
       },
     });
