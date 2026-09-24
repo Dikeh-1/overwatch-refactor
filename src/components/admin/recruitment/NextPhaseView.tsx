@@ -513,23 +513,33 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-1 max-w-md">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSendPreview();
+          }}
+          autoComplete="off"
+          className="flex items-center gap-2 flex-1 max-w-md"
+        >
           <input
             type="email"
+            name="overwatch_admin_preview_recipient"
+            id="overwatch_admin_preview_recipient"
+            autoComplete="off"
+            spellCheck={false}
             placeholder="admin@overwatch.co.mz"
             value={previewEmail}
             onChange={(e) => setPreviewEmail(e.target.value)}
             className="flex-1 px-3 py-1.5 text-xs rounded border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
           />
           <button
-            type="button"
-            onClick={handleSendPreview}
+            type="submit"
             disabled={previewSending}
             className="px-3 py-1.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap"
           >
             {previewSending ? t("Sending...", "A enviar...") : t("Send Sample", "Enviar Amostra")}
           </button>
-        </div>
+        </form>
       </div>
 
       {previewSuccessMsg && (
@@ -542,28 +552,43 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
       {/* Filter and Search Bar */}
       <div className="bg-white border border-slate-200 rounded-lg p-3 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
         <div className="flex items-center gap-2.5 flex-1 min-w-[260px] max-w-xl">
-          <div className="relative flex-1">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <form
+            role="search"
+            onSubmit={(e) => e.preventDefault()}
+            autoComplete="off"
+            className="relative flex-1"
+          >
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
-              type="text"
+              type="search"
+              name="candidate_search_filter_query"
+              id="candidate_search_filter_query"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              data-lpignore="true"
+              data-1p-ignore="true"
+              data-form-type="other"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t(
                 "Search by candidate name, email or phone...",
                 "Pesquisar por nome, email ou telefone..."
               )}
-              className="w-full pl-9 pr-8 py-1.5 text-xs rounded-md border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
+              className="w-full pl-9 pr-8 py-1.5 text-xs rounded-md border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500 [::-webkit-search-cancel-button]:hidden"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                title={t("Clear search", "Limpar pesquisa")}
               >
                 <X size={13} />
               </button>
             )}
-          </div>
+          </form>
 
           {/* Response Dropdown */}
           <select
@@ -1427,17 +1452,27 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
             {/* 4. Modal Footer: Live Test Email & Action Controls */}
             <div className="px-5 py-3 border-t border-slate-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-3">
               {/* Test Sender for This Specific Candidate */}
-              <div className="flex items-center gap-2 w-full sm:w-auto flex-1 max-w-md">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (activeCandidate) handleSendCandidatePreview(activeCandidate);
+                }}
+                autoComplete="off"
+                className="flex items-center gap-2 w-full sm:w-auto flex-1 max-w-md"
+              >
                 <input
                   type="email"
+                  name="modal_preview_email_address"
+                  id="modal_preview_email_address"
+                  autoComplete="off"
+                  spellCheck={false}
                   placeholder="admin@overwatch.co.mz"
                   value={previewEmail}
                   onChange={(e) => setPreviewEmail(e.target.value)}
                   className="flex-1 px-3 py-1.5 text-xs rounded border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
                 <button
-                  type="button"
-                  onClick={() => activeCandidate && handleSendCandidatePreview(activeCandidate)}
+                  type="submit"
                   disabled={previewSending || !activeCandidate}
                   className="px-3 py-1.5 rounded bg-[#0b1329] hover:bg-[#111b3a] text-white text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap inline-flex items-center gap-1.5"
                 >
@@ -1451,7 +1486,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                         )}
                   </span>
                 </button>
-              </div>
+              </form>
 
               {/* Action Buttons */}
               <div className="flex items-center gap-2 w-full sm:w-auto justify-end">

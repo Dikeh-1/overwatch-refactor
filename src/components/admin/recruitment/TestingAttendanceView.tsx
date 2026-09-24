@@ -248,25 +248,40 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
 
       {/* Search & Export Toolbar */}
       <div className="bg-white border border-slate-200 rounded-lg p-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="relative flex-1 min-w-[240px] max-w-md">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <form
+          role="search"
+          onSubmit={(e) => e.preventDefault()}
+          autoComplete="off"
+          className="relative flex-1 min-w-[240px] max-w-md"
+        >
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           <input
-            type="text"
+            type="search"
+            name="testing_attendance_search_query"
+            id="testing_attendance_search_query"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            data-lpignore="true"
+            data-1p-ignore="true"
+            data-form-type="other"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t("Search candidate in session...", "Pesquisar candidata nesta sessão...")}
-            className="w-full pl-9 pr-8 py-1.5 text-xs rounded-md border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
+            className="w-full pl-9 pr-8 py-1.5 text-xs rounded-md border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500 [::-webkit-search-cancel-button]:hidden"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+              title={t("Clear search", "Limpar pesquisa")}
             >
               <X size={13} />
             </button>
           )}
-        </div>
+        </form>
 
         <div className="flex items-center gap-3">
           <div className="text-xs text-slate-500">

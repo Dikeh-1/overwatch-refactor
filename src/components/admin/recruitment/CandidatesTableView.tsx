@@ -304,25 +304,40 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
       {/* Filter & Search Bar */}
       <div className="bg-white border border-slate-200 rounded-lg p-3 flex flex-wrap items-center justify-between gap-3">
         {/* Search Input */}
-        <div className="relative flex-1 min-w-[240px] max-w-md">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <form
+          role="search"
+          onSubmit={(e) => e.preventDefault()}
+          autoComplete="off"
+          className="relative flex-1 min-w-[240px] max-w-md"
+        >
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           <input
-            type="text"
+            type="search"
+            name="candidate_roster_search_query"
+            id="candidate_roster_search_query"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            data-lpignore="true"
+            data-1p-ignore="true"
+            data-form-type="other"
             value={searchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder={t("Search candidates by name, email, phone...", "Pesquisar por nome, email, telefone...")}
-            className="w-full pl-9 pr-8 py-1.5 text-xs rounded-md border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
+            className="w-full pl-9 pr-8 py-1.5 text-xs rounded-md border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 [::-webkit-search-cancel-button]:hidden"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => handleSearchChange("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+              title={t("Clear search", "Limpar pesquisa")}
             >
               <X size={13} />
             </button>
           )}
-        </div>
+        </form>
 
         {/* Filter Dropdowns */}
         <div className="flex items-center gap-2 flex-wrap">
