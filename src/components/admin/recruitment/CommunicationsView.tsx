@@ -24,10 +24,11 @@ import {
 } from "lucide-react";
 import { Application, formatPhoneDisplay, formatSlotDisplay, normalizeSlot } from "@/lib/careers";
 import Logo from "@/components/ui/Logo";
+import { useAdminLanguage } from "../shell/AdminLanguageContext";
 
 interface CommunicationsViewProps {
   applications: Application[];
-  lang: "pt" | "en";
+  lang?: "pt" | "en";
 }
 
 interface CommLog {
@@ -44,8 +45,10 @@ interface CommLog {
 
 export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
   applications,
-  lang,
+  lang: propLang,
 }) => {
+  const { lang: contextLang } = useAdminLanguage();
+  const lang = propLang ?? contextLang;
   const t = (en: string, pt: string) => (lang === "en" ? en : pt);
 
   const [activeTab, setActiveTab] = useState<"overview" | "templates" | "compose" | "history">("overview");

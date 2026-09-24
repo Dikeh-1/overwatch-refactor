@@ -10,16 +10,17 @@ import TechGrid from "@/components/ui/TechGrid";
 import { IMAGES } from "@/lib/constants";
 import Link from "next/link";
 import { Application, Role } from "@/lib/careers";
+import { AdminLanguageProvider, useAdminLanguage } from "./AdminLanguageContext";
 
 interface AdminShellProps {
   children: React.ReactNode;
 }
 
-export const AdminShell: React.FC<AdminShellProps> = ({ children }) => {
+const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
   const pathname = usePathname();
   const router = useRouter();
 
-  const [lang, setLang] = useState<"pt" | "en">("pt");
+  const { lang, setLang, toggleLang, t } = useAdminLanguage();
   const [auth, setAuth] = useState<boolean | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
@@ -29,17 +30,8 @@ export const AdminShell: React.FC<AdminShellProps> = ({ children }) => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const t = (en: string, pt: string) => (lang === "en" ? en : pt);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("overwatch_admin_lang") as "pt" | "en" | null;
-    if (saved === "pt" || saved === "en") setLang(saved);
-  }, []);
-
   const handleToggleLang = () => {
-    const next = lang === "pt" ? "en" : "pt";
-    setLang(next);
-    localStorage.setItem("overwatch_admin_lang", next);
+    toggleLang();
   };
 
   // Auth check
@@ -306,7 +298,29 @@ export const AdminShell: React.FC<AdminShellProps> = ({ children }) => {
             </nav>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {/* Header Language Switcher */}
+            <div className="flex items-center rounded-md bg-slate-100 p-0.5 text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setLang("en")}
+                className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                  lang === "en" ? "bg-white text-slate-900 shadow-xs font-bold" : "text-slate-500 hover:text-slate-900"
+                }`}
+              >
+                EN
+              </button>
+              <button
+                type="button"
+                onClick={() => setLang("pt")}
+                className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                  lang === "pt" ? "bg-white text-slate-900 shadow-xs font-bold" : "text-slate-500 hover:text-slate-900"
+                }`}
+              >
+                PT
+              </button>
+            </div>
+
             <button
               type="button"
               onClick={() => {
@@ -327,5 +341,13 @@ export const AdminShell: React.FC<AdminShellProps> = ({ children }) => {
         </main>
       </div>
     </div>
+  );
+};
+
+export const AdminShell: React.FC<AdminShellProps> = ({ children }) => {
+  return (
+    <AdminLanguageProvider>
+      <AdminShellInner>{children}</AdminShellInner>
+    </AdminLanguageProvider>
   );
 };

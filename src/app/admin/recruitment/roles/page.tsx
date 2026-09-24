@@ -56,7 +56,6 @@ export default function RolesPage() {
     <JobRolesView
       roles={roles}
       applications={applications}
-      lang="pt"
       onToggleRole={handleToggleRole}
     />
   );

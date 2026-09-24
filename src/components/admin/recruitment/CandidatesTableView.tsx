@@ -22,11 +22,12 @@ import {
   Award,
 } from "lucide-react";
 import { Application, Role, stages, formatPhoneDisplay, formatSlotDisplay } from "@/lib/careers";
+import { useAdminLanguage } from "../shell/AdminLanguageContext";
 
 interface CandidatesTableViewProps {
   applications: Application[];
   roles: Role[];
-  lang: "pt" | "en";
+  lang?: "pt" | "en";
   onBulkStatusChange?: (ids: string[], status: string) => Promise<void>;
   onBulkArchive?: (ids: string[], reason: string) => Promise<void>;
 }
@@ -34,7 +35,7 @@ interface CandidatesTableViewProps {
 export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
   applications,
   roles,
-  lang,
+  lang: propLang,
   onBulkStatusChange,
   onBulkArchive,
 }) => {
@@ -42,6 +43,8 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  const { lang: contextLang } = useAdminLanguage();
+  const lang = propLang ?? contextLang;
   const t = (en: string, pt: string) => (lang === "en" ? en : pt);
 
   // Read URL query params or fallback
@@ -200,23 +203,23 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
   const renderStageBadge = (status: string) => {
     switch (status) {
       case "shortlisted":
-        return <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-sky-50 text-sky-700 border border-sky-200">Pré-selecionado</span>;
+        return <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-sky-50 text-sky-700 border border-sky-200">{t("Shortlisted", "Pré-selecionado")}</span>;
       case "test_invited":
       case "invited":
-        return <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-amber-50 text-amber-700 border border-amber-200">Convocado</span>;
+        return <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-amber-50 text-amber-700 border border-amber-200">{t("Invited", "Convocado")}</span>;
       case "test_booked":
-        return <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Agendado</span>;
+        return <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">{t("Booked", "Agendado")}</span>;
       case "interest_confirmed":
-        return <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">Interesse Confirmado</span>;
+        return <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">{t("Interest Confirmed", "Interesse Confirmado")}</span>;
       case "interest_declined":
-        return <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-slate-100 text-slate-600 border border-slate-200">Interesse Recusado</span>;
+        return <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-slate-100 text-slate-600 border border-slate-200">{t("Interest Declined", "Interesse Recusado")}</span>;
       case "archived":
-        return <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-slate-100 text-slate-500 border border-slate-200">Arquivado</span>;
+        return <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-slate-100 text-slate-500 border border-slate-200">{t("Archived", "Arquivado")}</span>;
       case "rejected":
       case "disqualified":
-        return <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-red-50 text-red-700 border border-red-200">Não Selecionado</span>;
+        return <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-red-50 text-red-700 border border-red-200">{t("Not Selected", "Não Selecionado")}</span>;
       default:
-        return <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-slate-50 text-slate-600 border border-slate-200">Em Análise</span>;
+        return <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-slate-50 text-slate-600 border border-slate-200">{t("Under Review", "Em Análise")}</span>;
     }
   };
 
@@ -241,7 +244,17 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
           <button
             type="button"
             onClick={() => {
-              const headers = ["ID", "Nome", "Email", "WhatsApp", "Cargo", "Estado", "Turno", "Presença", "Score"];
+              const headers = [
+                t("ID", "ID"),
+                t("Name", "Nome"),
+                t("Email", "Email"),
+                t("WhatsApp", "WhatsApp"),
+                t("Role", "Cargo"),
+                t("Status", "Estado"),
+                t("Slot", "Turno"),
+                t("Attendance", "Presença"),
+                t("Score", "Pontuação"),
+              ];
               const rows = filteredCandidates.map((c) => [
                 `"${c.id}"`,
                 `"${c.name}"`,
@@ -250,7 +263,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                 `"${c.role || "cctv"}"`,
                 `"${c.status}"`,
                 `"${c.testSlot || ""}"`,
-                c.attendedAt ? '"Presente"' : '"Aguardado"',
+                c.attendedAt ? `"${t("Attended", "Presente")}"` : `"${t("Awaiting", "Aguardado")}"`,
                 `"${c.testScore || ""}"`,
               ]);
               const csv = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\r\n");
@@ -586,14 +599,14 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                 onChange={(e) => setArchiveReason(e.target.value)}
                 className="w-full px-3 py-2 text-xs rounded-md border border-slate-300 text-slate-800 bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
               >
-                <option value="Below Test Threshold">Abaixo da Nota de Teste (&lt; 80%)</option>
-                <option value="Not Selected for Next Phase">Não Selecionado para a Próxima Fase</option>
-                <option value="No Show">Faltou ao Teste Presencial</option>
-                <option value="Candidate Withdrew">Candidato Desistiu do Processo</option>
-                <option value="Declined Next Phase">Recusou Condições da Próxima Fase</option>
-                <option value="Duplicate">Candidatura Duplicada</option>
-                <option value="Recruitment Closed">Concurso Encerrado</option>
-                <option value="Other">Outro Motivo</option>
+                <option value="Below Test Threshold">{t("Below Test Threshold (< 80%)", "Abaixo da Nota de Teste (< 80%)")}</option>
+                <option value="Not Selected for Next Phase">{t("Not Selected for Next Phase", "Não Selecionado para a Próxima Fase")}</option>
+                <option value="No Show">{t("No Show (Absent from Test)", "Faltou ao Teste Presencial")}</option>
+                <option value="Candidate Withdrew">{t("Candidate Withdrew", "Candidato Desistiu do Processo")}</option>
+                <option value="Declined Next Phase">{t("Declined Next Phase Conditions", "Recusou Condições da Próxima Fase")}</option>
+                <option value="Duplicate">{t("Duplicate Application", "Candidatura Duplicada")}</option>
+                <option value="Recruitment Closed">{t("Recruitment Closed", "Concurso Encerrado")}</option>
+                <option value="Other">{t("Other Reason", "Outro Motivo")}</option>
               </select>
             </div>
 

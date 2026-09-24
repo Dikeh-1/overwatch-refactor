@@ -126,7 +126,6 @@ export default function CandidateDetailPage() {
     <CandidateProfileView
       candidate={candidate}
       roles={roles}
-      lang="pt"
       onStatusChange={handleStatusChange}
       onArchive={handleArchive}
       onDelete={handleDelete}

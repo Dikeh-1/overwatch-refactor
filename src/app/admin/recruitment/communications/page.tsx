@@ -34,5 +34,5 @@ export default function CommunicationsPage() {
     );
   }
 
-  return <CommunicationsView applications={applications} lang="pt" />;
+  return <CommunicationsView applications={applications} />;
 }

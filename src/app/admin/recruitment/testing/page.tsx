@@ -116,7 +116,6 @@ export default function TestingPage() {
     <>
       <TestingAttendanceView
         applications={applications}
-        lang="pt"
         slotQuota={slotQuota}
         broadcastSlots={broadcastSlots}
         onToggleAttendance={handleToggleAttendance}
@@ -129,7 +128,6 @@ export default function TestingPage() {
         isOpen={scannerOpen}
         onClose={() => setScannerOpen(false)}
         onCheckInSuccess={() => loadData()}
-        lang="pt"
       />
     </>
   );

@@ -36,13 +36,22 @@ export async function GET() {
       const phone = matchedApp ? normalizePhone(matchedApp.whatsapp) : "";
       const score = matchedApp?.testScore ?? seed.score;
       const nextPhaseStatus = matchedApp?.nextPhaseStatus || "selected";
-      const invitationStatus = matchedApp?.nextPhaseInvitedAt ? "sent" : "not_sent";
-      const candidateResponse = matchedApp?.nextPhaseResponse === "yes"
+      const invitationStatus: "not_sent" | "sent" = matchedApp?.nextPhaseInvitedAt ? "sent" : "not_sent";
+      const invitationSentAt = matchedApp?.nextPhaseInvitedAt || null;
+      const candidateResponse: "confirmed" | "declined" | "awaiting" | null = matchedApp?.nextPhaseResponse === "yes"
         ? "confirmed"
         : matchedApp?.nextPhaseResponse === "no"
           ? "declined"
-          : "awaiting";
+          : invitationStatus === "sent"
+            ? "awaiting"
+            : null;
       const responseDate = matchedApp?.nextPhaseRespondedAt || null;
+      const recruitmentStage = matchedApp?.status || (matchedApp ? "shortlisted" : "selected");
+      const responseOption = matchedApp?.nextPhaseResponse === "yes"
+        ? (matchedApp.nextPhaseResponseOption || "Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas.")
+        : matchedApp?.nextPhaseResponse === "no"
+          ? (matchedApp.nextPhaseResponseOption || "Não tenho interesse")
+          : null;
 
       return {
         id,
@@ -56,8 +65,12 @@ export async function GET() {
         matchedId: matchedApp?.id,
         nextPhaseStatus,
         invitationStatus,
+        invitationSentAt,
         candidateResponse,
         responseDate,
+        respondedAt: responseDate,
+        responseOption,
+        recruitmentStage,
         token: matchedApp?.nextPhaseToken,
       };
     });

@@ -25,11 +25,12 @@ import {
 import { Application, Role, stages, formatPhoneDisplay, formatSlotDisplay, ArchiveReason } from "@/lib/careers";
 import { screenCandidate } from "@/lib/careers-screening";
 import DocxViewer from "../DocxViewer";
+import { useAdminLanguage } from "../shell/AdminLanguageContext";
 
 interface CandidateProfileViewProps {
   candidate: Application;
   roles: Role[];
-  lang: "pt" | "en";
+  lang?: "pt" | "en";
   onStatusChange: (id: string, newStatus: string) => Promise<void>;
   onArchive: (id: string, reason: ArchiveReason) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
@@ -38,13 +39,15 @@ interface CandidateProfileViewProps {
 export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
   candidate,
   roles,
-  lang,
+  lang: propLang,
   onStatusChange,
   onArchive,
   onDelete,
 }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { lang: contextLang } = useAdminLanguage();
+  const lang = propLang ?? contextLang;
   const t = (en: string, pt: string) => (lang === "en" ? en : pt);
 
   const [activeTab, setActiveTab] = useState<"overview" | "application" | "test" | "documents" | "communications" | "activity">("overview");
@@ -311,7 +314,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                 <div className="flex justify-between text-slate-600">
                   <span>{t("Gate Attendance:", "Presença no Portão:")}</span>
                   <strong className={candidate.attendedAt ? "text-emerald-700 font-semibold" : "text-slate-500"}>
-                    {candidate.attendedAt ? `Presente (${new Date(candidate.attendedAt).toLocaleTimeString("pt-MZ")})` : t("Awaiting", "Aguardado")}
+                    {candidate.attendedAt ? `${t("Present", "Presente")} (${new Date(candidate.attendedAt).toLocaleTimeString(lang === "en" ? "en-GB" : "pt-MZ")})` : t("Awaiting", "Aguardado")}
                   </strong>
                 </div>
                 <div className="flex justify-between text-slate-600">
@@ -323,21 +326,54 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
               </div>
 
               {candidate.nextPhaseStatus && (
-                <div className="p-3 rounded-md bg-sky-50 border border-sky-200 space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-sky-900 font-bold">
-                    <Award size={14} />
-                    <span>{t("Next Phase Cohort Status", "Estado na Turma da Próxima Fase")}</span>
+                <div className="p-3.5 rounded-md bg-sky-50/70 border border-sky-200 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-sky-900 font-bold">
+                      <Award size={14} />
+                      <span>{t("Next Phase Cohort Status", "Estado na Turma da Próxima Fase")}</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold uppercase tracking-wider bg-white border border-sky-200 text-sky-800">
+                      {candidate.nextPhaseStatus}
+                    </span>
                   </div>
-                  <div className="flex justify-between text-xs text-sky-800">
-                    <span>{t("Cohort Status:", "Estado:")}</span>
-                    <strong className="capitalize">{candidate.nextPhaseStatus}</strong>
-                  </div>
-                  {candidate.nextPhaseResponse && (
-                    <div className="flex justify-between text-xs text-sky-800">
-                      <span>{t("Candidate Response:", "Resposta da Candidata:")}</span>
-                      <strong className={candidate.nextPhaseResponse === "yes" ? "text-emerald-700" : "text-slate-700"}>
-                        {candidate.nextPhaseResponse === "yes" ? "Confirmou SIM" : "Recusou NÃO"}
+
+                  {candidate.nextPhaseInvitedAt && (
+                    <div className="flex justify-between text-xs text-sky-900">
+                      <span>{t("Invitation Sent:", "Convocatória Enviada:")}</span>
+                      <strong className="font-mono text-[0.72rem]">
+                        {new Date(candidate.nextPhaseInvitedAt).toLocaleString(lang === "en" ? "en-GB" : "pt-MZ")}
                       </strong>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between text-xs text-sky-900">
+                    <span>{t("Candidate Decision:", "Decisão da Candidata:")}</span>
+                    <strong className={candidate.nextPhaseResponse === "yes" ? "text-emerald-700 font-bold" : candidate.nextPhaseResponse === "no" ? "text-slate-700 font-bold" : "text-amber-700 font-semibold"}>
+                      {candidate.nextPhaseResponse === "yes"
+                        ? t("Confirmed Interest (YES)", "Confirmou SIM")
+                        : candidate.nextPhaseResponse === "no"
+                          ? t("Declined Interest (NO)", "Recusou NÃO")
+                          : t("Awaiting Candidate Decision", "Aguardando Resposta")}
+                    </strong>
+                  </div>
+
+                  {candidate.nextPhaseRespondedAt && (
+                    <div className="flex justify-between text-xs text-sky-900">
+                      <span>{t("Responded At:", "Data da Resposta:")}</span>
+                      <strong className="font-mono text-[0.72rem]">
+                        {new Date(candidate.nextPhaseRespondedAt).toLocaleString(lang === "en" ? "en-GB" : "pt-MZ")}
+                      </strong>
+                    </div>
+                  )}
+
+                  {candidate.nextPhaseResponse && (
+                    <div className="pt-2 border-t border-sky-200/70 text-xs">
+                      <span className="text-[0.65rem] font-bold text-sky-800 uppercase tracking-wider block mb-1">
+                        {t("Selected Response Option (PT-MZ):", "Opção de Resposta Selecionada (PT-MZ):")}
+                      </span>
+                      <div className="p-2.5 rounded bg-white border border-sky-200 text-slate-800 italic text-[0.72rem]">
+                        "{candidate.nextPhaseResponseOption || (candidate.nextPhaseResponse === "yes" ? "Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas." : "Não tenho interesse")}"
+                      </div>
                     </div>
                   )}
                 </div>
@@ -559,14 +595,14 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                 onChange={(e) => setArchiveReason(e.target.value as any)}
                 className="w-full px-3 py-2 text-xs rounded-md border border-slate-300 text-slate-800 bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
               >
-                <option value="Below Test Threshold">Abaixo da Nota de Teste (&lt; 80%)</option>
-                <option value="Not Selected for Next Phase">Não Selecionado para a Próxima Fase</option>
-                <option value="No Show">Faltou ao Teste Presencial</option>
-                <option value="Candidate Withdrew">Candidato Desistiu do Processo</option>
-                <option value="Declined Next Phase">Recusou Condições da Próxima Fase</option>
-                <option value="Duplicate">Candidatura Duplicada</option>
-                <option value="Recruitment Closed">Concurso Encerrado</option>
-                <option value="Other">Outro Motivo</option>
+                <option value="Below Test Threshold">{t("Below Test Threshold (< 80%)", "Abaixo da Nota de Teste (< 80%)")}</option>
+                <option value="Not Selected for Next Phase">{t("Not Selected for Next Phase", "Não Selecionado para a Próxima Fase")}</option>
+                <option value="No Show">{t("No Show (Absent from Test)", "Faltou ao Teste Presencial")}</option>
+                <option value="Candidate Withdrew">{t("Candidate Withdrew", "Candidato Desistiu do Processo")}</option>
+                <option value="Declined Next Phase">{t("Declined Next Phase Conditions", "Recusou Condições da Próxima Fase")}</option>
+                <option value="Duplicate">{t("Duplicate Application", "Candidatura Duplicada")}</option>
+                <option value="Recruitment Closed">{t("Recruitment Closed", "Concurso Encerrado")}</option>
+                <option value="Other">{t("Other Reason", "Outro Motivo")}</option>
               </select>
             </div>
 

@@ -100,10 +100,13 @@ export async function POST(request: Request) {
         details: "Accepted 10-day initial training & 3-month practical conditions via secure portal link",
       });
 
+      const responseOption = "Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas.";
+
       await updateApplication(candidate.id, {
         nextPhaseStatus: "confirmed",
         status: "interest_confirmed",
         nextPhaseResponse: "yes",
+        nextPhaseResponseOption: responseOption,
         nextPhaseRespondedAt: now,
         communications,
         activityLog,
@@ -144,10 +147,13 @@ export async function POST(request: Request) {
         details: "Candidate indicated lack of interest/availability for next phase conditions",
       });
 
+      const responseOption = "Não tenho interesse";
+
       await updateApplication(candidate.id, {
         nextPhaseStatus: "declined",
         status: "interest_declined",
         nextPhaseResponse: "no",
+        nextPhaseResponseOption: responseOption,
         nextPhaseRespondedAt: now,
         archiveReason: "Declined Next Phase",
         communications,

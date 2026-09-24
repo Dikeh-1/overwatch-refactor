@@ -100,6 +100,7 @@ export type Application = {
   nextPhaseInvitedAt?: string;
   nextPhaseRespondedAt?: string;
   nextPhaseResponse?: "yes" | "no";
+  nextPhaseResponseOption?: string;
   archiveReason?: ArchiveReason;
   communications?: CommunicationRecord[];
   activityLog?: ActivityRecord[];

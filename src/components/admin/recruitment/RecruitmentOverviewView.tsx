@@ -14,18 +14,21 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Application, Role } from "@/lib/careers";
+import { useAdminLanguage } from "../shell/AdminLanguageContext";
 
 interface RecruitmentOverviewProps {
   applications: Application[];
   roles: Role[];
-  lang: "pt" | "en";
+  lang?: "pt" | "en";
 }
 
 export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
   applications,
   roles,
-  lang,
+  lang: propLang,
 }) => {
+  const { lang: contextLang } = useAdminLanguage();
+  const lang = propLang ?? contextLang;
   const t = (en: string, pt: string) => (lang === "en" ? en : pt);
 
   // Exact database calculations

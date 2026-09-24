@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
   Award,
@@ -17,8 +17,16 @@ import {
   Check,
   X,
   FileText,
+  Search,
+  Filter,
+  UserCheck,
+  ExternalLink,
+  ChevronRight,
+  ShieldCheck,
+  MessageCircle,
 } from "lucide-react";
 import { formatPhoneDisplay } from "@/lib/careers";
+import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import Logo from "@/components/ui/Logo";
 
 interface NextPhaseCandidate {
@@ -33,8 +41,12 @@ interface NextPhaseCandidate {
   matchedId?: string;
   nextPhaseStatus: string;
   invitationStatus: "not_sent" | "sent" | "failed";
-  candidateResponse: "awaiting" | "confirmed" | "declined";
+  invitationSentAt?: string | null;
+  candidateResponse: "awaiting" | "confirmed" | "declined" | null;
   responseDate?: string | null;
+  respondedAt?: string | null;
+  responseOption?: string | null;
+  recruitmentStage?: string;
   token?: string;
 }
 
@@ -47,10 +59,12 @@ interface NextPhaseSummary {
 }
 
 interface NextPhaseViewProps {
-  lang: "pt" | "en";
+  lang?: "pt" | "en";
 }
 
-export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang }) => {
+export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) => {
+  const { lang: contextLang } = useAdminLanguage();
+  const lang = propLang ?? contextLang;
   const t = (en: string, pt: string) => (lang === "en" ? en : pt);
 
   const [candidates, setCandidates] = useState<NextPhaseCandidate[]>([]);
@@ -63,6 +77,17 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang }) => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Filter states
+  const [selectedMetricFilter, setSelectedMetricFilter] = useState<
+    "all" | "not_sent" | "awaiting" | "confirmed" | "declined"
+  >("all");
+  const [responseFilter, setResponseFilter] = useState<string>("all");
+  const [deliveryFilter, setDeliveryFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Slide-over drawer state
+  const [selectedCandidate, setSelectedCandidate] = useState<NextPhaseCandidate | null>(null);
 
   // Email template state
   const [emailSubject, setEmailSubject] = useState("Próxima Fase – Processo de Selecção Overwatch");
@@ -101,6 +126,72 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang }) => {
     return () => clearInterval(interval);
   }, []);
 
+  // Filtered candidate list based on metric card click + dropdowns + search query
+  const filteredCandidates = useMemo(() => {
+    return candidates.filter((c) => {
+      // 1. Metric card click filter
+      if (selectedMetricFilter === "not_sent") {
+        if (c.invitationStatus !== "not_sent") return false;
+      } else if (selectedMetricFilter === "awaiting") {
+        if (!(c.invitationStatus === "sent" && c.candidateResponse === "awaiting")) return false;
+      } else if (selectedMetricFilter === "confirmed") {
+        if (c.candidateResponse !== "confirmed") return false;
+      } else if (selectedMetricFilter === "declined") {
+        if (c.candidateResponse !== "declined") return false;
+      }
+
+      // 2. Response dropdown filter
+      if (responseFilter !== "all") {
+        if (responseFilter === "awaiting") {
+          if (!(c.invitationStatus === "sent" && c.candidateResponse === "awaiting")) return false;
+        } else if (responseFilter === "confirmed") {
+          if (c.candidateResponse !== "confirmed") return false;
+        } else if (responseFilter === "declined") {
+          if (c.candidateResponse !== "declined") return false;
+        } else if (responseFilter === "not_sent") {
+          if (c.invitationStatus !== "not_sent") return false;
+        }
+      }
+
+      // 3. Delivery status dropdown filter
+      if (deliveryFilter !== "all") {
+        if (c.invitationStatus !== deliveryFilter) return false;
+      }
+
+      // 4. Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const rawPhone = (c.phone || "").replace(/\D/g, "");
+        const cleanQuery = q.replace(/\D/g, "");
+        const matchName =
+          (c.name || "").toLowerCase().includes(q) ||
+          (c.approvedName || "").toLowerCase().includes(q);
+        const matchEmail = (c.email || "").toLowerCase().includes(q);
+        const matchPhone = cleanQuery.length > 2 && rawPhone.includes(cleanQuery);
+        if (!matchName && !matchEmail && !matchPhone) return false;
+      }
+
+      return true;
+    });
+  }, [candidates, selectedMetricFilter, responseFilter, deliveryFilter, searchQuery]);
+
+  const hasActiveFilters =
+    selectedMetricFilter !== "all" ||
+    responseFilter !== "all" ||
+    deliveryFilter !== "all" ||
+    searchQuery.trim() !== "";
+
+  const clearAllFilters = () => {
+    setSelectedMetricFilter("all");
+    setResponseFilter("all");
+    setDeliveryFilter("all");
+    setSearchQuery("");
+  };
+
+  const handleCardClick = (filterKey: "all" | "not_sent" | "awaiting" | "confirmed" | "declined") => {
+    setSelectedMetricFilter((prev) => (prev === filterKey ? "all" : filterKey));
+  };
+
   const handleSendPreview = async () => {
     if (!previewEmail || !previewEmail.includes("@")) {
       alert(t("Please enter a valid preview email address.", "Por favor insira um email de pré-visualização válido."));
@@ -122,7 +213,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang }) => {
       if (res.ok && data.success) {
         setPreviewSuccessMsg(
           t(
-            `Sample preview email successfully sent to ${previewEmail} at ${new Date().toLocaleTimeString("pt-MZ")}.`,
+            `Sample preview email successfully sent to ${previewEmail} at ${new Date().toLocaleTimeString(lang === "en" ? "en-US" : "pt-MZ")}.`,
             `Email de pré-visualização enviado com sucesso para ${previewEmail} às ${new Date().toLocaleTimeString("pt-MZ")}.`
           )
         );
@@ -166,6 +257,22 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang }) => {
     }
   };
 
+  const formatTimestamp = (dateStr?: string | null) => {
+    if (!dateStr) return "—";
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString(lang === "en" ? "en-GB" : "pt-MZ", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Info */}
@@ -173,7 +280,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang }) => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-              {t("Next Phase", "Próxima Fase")}
+              {t("Next Phase Candidate Roster", "Próxima Fase – Gestão de Candidatas")}
             </h1>
             <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-sky-50 text-sky-700 border border-sky-200">
               Operadora de CCO • Recruitment 2026
@@ -194,7 +301,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang }) => {
             className="px-3 py-1.5 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <Eye size={13} />
-            <span>{t("View Template", "Ver Modelo")}</span>
+            <span>{t("View Email Template", "Ver Modelo de Email")}</span>
           </button>
 
           <button
@@ -211,64 +318,164 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang }) => {
         </div>
       </div>
 
-      {/* Operational KPI Summary Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <div className="p-3.5 rounded-lg bg-white border border-slate-200">
-          <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-400 block">
-            {t("Approved Selected", "Aprovadas")}
-          </span>
-          <div className="text-xl font-bold font-mono text-slate-900 mt-1">
-            {summary.totalSelected}
-          </div>
+      {/* Interactive Operational KPI Summary Bar - Clickable to filter */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-[0.7rem] text-slate-500 px-0.5">
+          <span>{t("Filter roster by clicking metric card:", "Filtre a lista clicando nos cartões de métrica:")}</span>
+          {selectedMetricFilter !== "all" && (
+            <button
+              type="button"
+              onClick={() => setSelectedMetricFilter("all")}
+              className="text-sky-600 hover:text-sky-800 font-semibold cursor-pointer underline"
+            >
+              {t("Reset Metric Filter", "Repor Filtro de Métricas")}
+            </button>
+          )}
         </div>
 
-        <div className="p-3.5 rounded-lg bg-white border border-slate-200">
-          <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-400 block">
-            {t("Not Dispatched", "Não Enviadas")}
-          </span>
-          <div className="text-xl font-bold font-mono text-slate-700 mt-1">
-            {summary.notSent}
-          </div>
-        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          {/* 1. All Selected */}
+          <button
+            type="button"
+            onClick={() => handleCardClick("all")}
+            className={`p-3.5 rounded-lg border text-left transition-all cursor-pointer ${
+              selectedMetricFilter === "all"
+                ? "bg-sky-50/50 border-sky-500 ring-2 ring-sky-200 shadow-xs"
+                : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500 block">
+                {t("Total Approved", "Total Aprovadas")}
+              </span>
+              {selectedMetricFilter === "all" && (
+                <span className="w-1.5 h-1.5 rounded-full bg-sky-600"></span>
+              )}
+            </div>
+            <div className="text-xl font-bold font-mono text-slate-900 mt-1">
+              {summary.totalSelected}
+            </div>
+            <div className="text-[0.65rem] text-slate-400 mt-0.5">
+              {t("Approved cohort", "Turma aprovada")}
+            </div>
+          </button>
 
-        <div className="p-3.5 rounded-lg bg-white border border-slate-200">
-          <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-400 block">
-            {t("Awaiting Response", "Aguardando Resposta")}
-          </span>
-          <div className="text-xl font-bold font-mono text-amber-700 mt-1">
-            {summary.awaiting}
-          </div>
-        </div>
+          {/* 2. Not Dispatched */}
+          <button
+            type="button"
+            onClick={() => handleCardClick("not_sent")}
+            className={`p-3.5 rounded-lg border text-left transition-all cursor-pointer ${
+              selectedMetricFilter === "not_sent"
+                ? "bg-slate-100 border-slate-500 ring-2 ring-slate-300 shadow-xs"
+                : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500 block">
+                {t("Not Dispatched", "Não Enviadas")}
+              </span>
+              {selectedMetricFilter === "not_sent" && (
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-600"></span>
+              )}
+            </div>
+            <div className="text-xl font-bold font-mono text-slate-700 mt-1">
+              {summary.notSent}
+            </div>
+            <div className="text-[0.65rem] text-slate-400 mt-0.5">
+              {t("Pending dispatch", "Pendente de envio")}
+            </div>
+          </button>
 
-        <div className="p-3.5 rounded-lg bg-white border border-slate-200">
-          <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-400 block">
-            {t("Confirmed Interest (YES)", "Confirmaram SIM")}
-          </span>
-          <div className="text-xl font-bold font-mono text-emerald-700 mt-1">
-            {summary.confirmed}
-          </div>
-        </div>
+          {/* 3. Awaiting Response */}
+          <button
+            type="button"
+            onClick={() => handleCardClick("awaiting")}
+            className={`p-3.5 rounded-lg border text-left transition-all cursor-pointer ${
+              selectedMetricFilter === "awaiting"
+                ? "bg-amber-50/70 border-amber-500 ring-2 ring-amber-200 shadow-xs"
+                : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-amber-700 block">
+                {t("Awaiting Response", "Aguardando Resposta")}
+              </span>
+              {selectedMetricFilter === "awaiting" && (
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+              )}
+            </div>
+            <div className="text-xl font-bold font-mono text-amber-700 mt-1">
+              {summary.awaiting}
+            </div>
+            <div className="text-[0.65rem] text-amber-600/80 mt-0.5">
+              {t("Sent, awaiting decision", "Enviado, a aguardar")}
+            </div>
+          </button>
 
-        <div className="p-3.5 rounded-lg bg-white border border-slate-200">
-          <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-400 block">
-            {t("Declined (NO)", "Recusaram NÃO")}
-          </span>
-          <div className="text-xl font-bold font-mono text-slate-500 mt-1">
-            {summary.declined}
-          </div>
+          {/* 4. Confirmed Interest */}
+          <button
+            type="button"
+            onClick={() => handleCardClick("confirmed")}
+            className={`p-3.5 rounded-lg border text-left transition-all cursor-pointer ${
+              selectedMetricFilter === "confirmed"
+                ? "bg-emerald-50/70 border-emerald-500 ring-2 ring-emerald-200 shadow-xs"
+                : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-emerald-700 block">
+                {t("Confirmed Interest (YES)", "Confirmaram SIM")}
+              </span>
+              {selectedMetricFilter === "confirmed" && (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+              )}
+            </div>
+            <div className="text-xl font-bold font-mono text-emerald-700 mt-1">
+              {summary.confirmed}
+            </div>
+            <div className="text-[0.65rem] text-emerald-600/80 mt-0.5">
+              {t("Accepted conditions", "Condições aceites")}
+            </div>
+          </button>
+
+          {/* 5. Declined */}
+          <button
+            type="button"
+            onClick={() => handleCardClick("declined")}
+            className={`p-3.5 rounded-lg border text-left transition-all cursor-pointer ${
+              selectedMetricFilter === "declined"
+                ? "bg-rose-50/70 border-rose-400 ring-2 ring-rose-200 shadow-xs"
+                : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500 block">
+                {t("Declined (NO)", "Recusaram NÃO")}
+              </span>
+              {selectedMetricFilter === "declined" && (
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+              )}
+            </div>
+            <div className="text-xl font-bold font-mono text-slate-600 mt-1">
+              {summary.declined}
+            </div>
+            <div className="text-[0.65rem] text-slate-400 mt-0.5">
+              {t("Declined conditions", "Condições recusadas")}
+            </div>
+          </button>
         </div>
       </div>
 
       {/* Two-step Preview & Testing Tool */}
-      <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-2xs">
         <div className="space-y-0.5">
           <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
             <Mail size={14} className="text-sky-600" />
-            <span>{t("Step 1: Send Sample Preview to Admin", "Passo 1: Enviar Pré-visualização de Teste")}</span>
+            <span>{t("Send Sample Preview to Admin", "Enviar Pré-visualização de Teste")}</span>
           </h3>
           <p className="text-[0.7rem] text-slate-500">
             {t(
-              "Review the exact email layout and conditions before executing candidate dispatch.",
+              "Review the exact email layout and legal conditions before executing candidate dispatch.",
               "Valide a apresentação do email e termos antes de enviar às candidatas."
             )}
           </p>
@@ -286,7 +493,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang }) => {
             type="button"
             onClick={handleSendPreview}
             disabled={previewSending}
-            className="px-3 py-1.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
+            className="px-3 py-1.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap"
           >
             {previewSending ? t("Sending...", "A enviar...") : t("Send Sample", "Enviar Amostra")}
           </button>
@@ -300,109 +507,532 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang }) => {
         </div>
       )}
 
-      {/* Approved 15 Candidates Table */}
+      {/* Filter and Search Bar */}
+      <div className="bg-white border border-slate-200 rounded-lg p-3 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
+        <div className="flex items-center gap-2.5 flex-1 min-w-[260px] max-w-xl">
+          <div className="relative flex-1">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t(
+                "Search by candidate name, email or phone...",
+                "Pesquisar por nome, email ou telefone..."
+              )}
+              className="w-full pl-9 pr-8 py-1.5 text-xs rounded-md border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
+          {/* Response Dropdown */}
+          <select
+            value={responseFilter}
+            onChange={(e) => setResponseFilter(e.target.value)}
+            className="px-2.5 py-1.5 text-xs rounded-md border border-slate-300 text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+          >
+            <option value="all">{t("All Responses", "Todas as Respostas")}</option>
+            <option value="awaiting">{t("Awaiting Response", "Aguardando Resposta")}</option>
+            <option value="confirmed">{t("Confirmed (YES)", "Confirmou (SIM)")}</option>
+            <option value="declined">{t("Declined (NO)", "Recusou (NÃO)")}</option>
+            <option value="not_sent">{t("Not Sent Yet", "Não Enviado")}</option>
+          </select>
+
+          {/* Delivery Status Dropdown */}
+          <select
+            value={deliveryFilter}
+            onChange={(e) => setDeliveryFilter(e.target.value)}
+            className="px-2.5 py-1.5 text-xs rounded-md border border-slate-300 text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+          >
+            <option value="all">{t("All Delivery Statuses", "Todos os Estados")}</option>
+            <option value="sent">{t("Sent", "Enviado")}</option>
+            <option value="not_sent">{t("Not Sent", "Não Enviado")}</option>
+            <option value="failed">{t("Failed", "Falhou")}</option>
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          <span className="text-xs text-slate-500">
+            {t(
+              `Showing ${filteredCandidates.length} of ${candidates.length} candidates`,
+              `A exibir ${filteredCandidates.length} de ${candidates.length} candidatas`
+            )}
+          </span>
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              className="px-2.5 py-1 text-xs rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 font-medium inline-flex items-center gap-1 cursor-pointer transition-colors"
+            >
+              <X size={12} />
+              <span>{t("Clear Filters", "Limpar Filtros")}</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Approved 15 Candidates Roster Table */}
       <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-xs">
         <div className="p-3.5 border-b border-slate-200 flex items-center justify-between">
-          <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-            {t("Approved Candidate Roster (15)", "Lista de Candidatas Aprovadas (15)")}
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+              {t("Approved Candidate Roster (15)", "Lista de Candidatas Aprovadas (15)")}
+            </h2>
+            {selectedMetricFilter !== "all" && (
+              <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-sky-100 text-sky-800">
+                {selectedMetricFilter === "not_sent" && t("Filter: Not Dispatched", "Filtro: Não Enviadas")}
+                {selectedMetricFilter === "awaiting" && t("Filter: Awaiting Response", "Filtro: Aguardando Resposta")}
+                {selectedMetricFilter === "confirmed" && t("Filter: Confirmed (YES)", "Filtro: Confirmou SIM")}
+                {selectedMetricFilter === "declined" && t("Filter: Declined (NO)", "Filtro: Recusou NÃO")}
+              </span>
+            )}
+          </div>
           <span className="text-[0.7rem] text-slate-400">
-            {t("Ranked by Test Score", "Ordenadas por Nota no Teste")}
+            {t("Ranked by Written Test Score (≥ 80%)", "Ordenadas por Nota no Teste Escrito (≥ 80%)")}
           </span>
         </div>
 
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-slate-200 bg-slate-50/75 text-[0.65rem] font-semibold text-slate-500 uppercase tracking-wider">
-              <th className="w-12 px-4 py-2.5">#</th>
-              <th className="px-4 py-2.5">{t("Candidate", "Candidata")}</th>
-              <th className="px-4 py-2.5">{t("Test Score", "Pontuação")}</th>
-              <th className="px-4 py-2.5">{t("Contact", "Contacto")}</th>
-              <th className="px-4 py-2.5">{t("Invitation Status", "Estado do Envio")}</th>
-              <th className="px-4 py-2.5">{t("Candidate Response", "Resposta da Candidata")}</th>
-              <th className="px-4 py-2.5 text-right">{t("Action", "Ação")}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-            {candidates.map((cand) => {
-              const hasSent = cand.invitationStatus === "sent";
-              const isConfirmed = cand.candidateResponse === "confirmed";
-              const isDeclined = cand.candidateResponse === "declined";
-
-              return (
-                <tr key={cand.id} className="hover:bg-slate-50/70 transition-colors">
-                  <td className="px-4 py-3 font-mono text-slate-400 font-semibold text-[0.75rem]">
-                    {cand.seedIndex}
-                  </td>
-
-                  <td className="px-4 py-3">
-                    <div className="font-semibold text-slate-900 flex items-center gap-1.5">
-                      <span>{cand.name}</span>
-                      {cand.isMatched && (
-                        <span title={t("Matched with application record", "Ligado à candidatura")}>
-                          <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-[0.7rem] text-slate-400">{cand.email || t("No email on file", "Sem email")}</div>
-                  </td>
-
-                  <td className="px-4 py-3 font-mono">
-                    <span className="font-semibold text-slate-900">
-                      {cand.score}%
-                    </span>
-                  </td>
-
-                  <td className="px-4 py-3 font-mono text-[0.75rem] text-slate-600 whitespace-nowrap">
-                    {formatPhoneDisplay(cand.phone) || "—"}
-                  </td>
-
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {hasSent ? (
-                      <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        {t("SENT", "ENVIADO")}
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-slate-100 text-slate-500">
-                        {t("NOT SENT", "NÃO ENVIADO")}
-                      </span>
-                    )}
-                  </td>
-
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {isConfirmed ? (
-                      <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                        {t("Confirmed YES", "Confirmou SIM")}
-                      </span>
-                    ) : isDeclined ? (
-                      <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-                        {t("Declined NO", "Recusou NÃO")}
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                        {t("Awaiting Response", "Aguardando")}
-                      </span>
-                    )}
-                  </td>
-
-                  <td className="px-4 py-3 text-right whitespace-nowrap">
-                    {cand.matchedId ? (
-                      <Link
-                        href={`/admin/recruitment/candidates/${cand.matchedId}`}
-                        className="px-2.5 py-1 rounded border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-medium transition-colors"
-                      >
-                        {t("Profile", "Perfil")}
-                      </Link>
-                    ) : (
-                      <span className="text-slate-400 text-xs">—</span>
+        <div className="overflow-x-auto admin-scrollbar">
+          <table className="w-full text-left border-collapse min-w-[760px]">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50/75 text-[0.65rem] font-semibold text-slate-500 uppercase tracking-wider">
+                <th className="w-10 px-4 py-2.5">#</th>
+                <th className="px-4 py-2.5">{t("Candidate", "Candidata")}</th>
+                <th className="px-4 py-2.5">{t("Score", "Pontuação")}</th>
+                <th className="px-4 py-2.5">{t("Contact", "Contacto")}</th>
+                <th className="px-4 py-2.5">{t("Delivery Status", "Estado do Envio")}</th>
+                <th className="px-4 py-2.5">{t("Candidate Response", "Resposta da Candidata")}</th>
+                <th className="px-4 py-2.5">{t("Responded At", "Data da Resposta")}</th>
+                <th className="px-4 py-2.5 text-right">{t("Action", "Ação")}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+              {filteredCandidates.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="text-center py-12 text-slate-400 text-xs">
+                    {t(
+                      "No candidates match the selected filters.",
+                      "Nenhuma candidata encontrada com os filtros selecionados."
                     )}
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              ) : (
+                filteredCandidates.map((cand) => {
+                  const hasSent = cand.invitationStatus === "sent";
+                  const isConfirmed = cand.candidateResponse === "confirmed";
+                  const isDeclined = cand.candidateResponse === "declined";
+                  const isAwaiting = hasSent && cand.candidateResponse === "awaiting";
+                  const rawPhone = (cand.phone || "").replace(/\D/g, "");
+
+                  return (
+                    <tr
+                      key={cand.id}
+                      onClick={() => setSelectedCandidate(cand)}
+                      className={`hover:bg-slate-50/80 transition-colors cursor-pointer ${
+                        selectedCandidate?.id === cand.id ? "bg-sky-50/40" : ""
+                      }`}
+                    >
+                      {/* Seed Rank */}
+                      <td className="px-4 py-3 font-mono text-slate-400 font-semibold text-[0.75rem]">
+                        {cand.seedIndex}
+                      </td>
+
+                      {/* Candidate Name & Email */}
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                          <span>{cand.name}</span>
+                          {cand.isMatched && (
+                            <span title={t("Linked to live application record", "Ligada ao registo da candidatura")}>
+                              <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[0.7rem] text-slate-400 truncate max-w-[220px]">
+                          {cand.email || t("No email on file", "Sem email registado")}
+                        </div>
+                      </td>
+
+                      {/* Score */}
+                      <td className="px-4 py-3 font-mono whitespace-nowrap">
+                        <span className="font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded text-[0.75rem]">
+                          {cand.score}%
+                        </span>
+                      </td>
+
+                      {/* Contact */}
+                      <td className="px-4 py-3 font-mono text-[0.75rem] text-slate-600 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          <span>{formatPhoneDisplay(cand.phone) || "—"}</span>
+                          {rawPhone && (
+                            <a
+                              href={`https://wa.me/${rawPhone}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              title={t("Message via WhatsApp", "Enviar mensagem via WhatsApp")}
+                              className="text-emerald-600 hover:text-emerald-700"
+                            >
+                              <MessageCircle size={13} />
+                            </a>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Delivery Status */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {cand.invitationStatus === "sent" ? (
+                          <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            {t("SENT", "ENVIADO")}
+                          </span>
+                        ) : cand.invitationStatus === "failed" ? (
+                          <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-red-50 text-red-700 border border-red-200">
+                            {t("FAILED", "FALHOU")}
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-slate-100 text-slate-500 border border-slate-200">
+                            {t("NOT SENT", "NÃO ENVIADO")}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Candidate Response */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {isConfirmed ? (
+                          <span className="px-2.5 py-0.5 rounded text-[0.65rem] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1">
+                            <Check size={11} className="stroke-[3]" />
+                            <span>{t("Confirmed YES", "Confirmou SIM")}</span>
+                          </span>
+                        ) : isDeclined ? (
+                          <span className="px-2.5 py-0.5 rounded text-[0.65rem] font-bold bg-slate-100 text-slate-700 border border-slate-300 inline-flex items-center gap-1">
+                            <X size={11} className="stroke-[3]" />
+                            <span>{t("Declined NO", "Recusou NÃO")}</span>
+                          </span>
+                        ) : isAwaiting ? (
+                          <span className="px-2.5 py-0.5 rounded text-[0.65rem] font-semibold bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1">
+                            <Clock size={11} />
+                            <span>{t("Awaiting Response", "Aguardando")}</span>
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs">—</span>
+                        )}
+                      </td>
+
+                      {/* Responded At */}
+                      <td className="px-4 py-3 font-mono text-[0.72rem] text-slate-600 whitespace-nowrap">
+                        {formatTimestamp(cand.respondedAt || cand.responseDate)}
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-4 py-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedCandidate(cand)}
+                            className="px-2.5 py-1 rounded border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-medium transition-colors cursor-pointer"
+                          >
+                            {t("View Details", "Ver Detalhes")}
+                          </button>
+
+                          {cand.matchedId && (
+                            <Link
+                              href={`/admin/recruitment/candidates/${cand.matchedId}`}
+                              className="px-2 py-1 rounded border border-slate-200 hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors"
+                              title={t("Open full candidate profile", "Abrir perfil completo")}
+                            >
+                              <ExternalLink size={12} />
+                            </Link>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {/* Candidate Detail Slide-Over Panel */}
+      {selectedCandidate && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-2xs transition-opacity"
+            onClick={() => setSelectedCandidate(null)}
+          />
+
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+            <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col border-l border-slate-200">
+              {/* Slide-over Header */}
+              <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-slate-900">
+                      {t("Candidate Next Phase Audit", "Auditoria de Candidata – Próxima Fase")}
+                    </h3>
+                    <span className="px-1.5 py-0.5 rounded font-mono text-[0.65rem] font-bold bg-slate-200 text-slate-700">
+                      #{selectedCandidate.seedIndex}
+                    </span>
+                  </div>
+                  <p className="text-[0.7rem] text-slate-500 mt-0.5">
+                    {selectedCandidate.approvedName}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedCandidate(null)}
+                  className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Slide-over Content */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 admin-scrollbar text-xs">
+                {/* 1. Candidate Overview */}
+                <div className="space-y-3">
+                  <h4 className="text-[0.68rem] font-bold uppercase tracking-wider text-slate-400">
+                    {t("Candidate Summary", "Resumo da Candidata")}
+                  </h4>
+
+                  <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-2.5">
+                    <div className="flex justify-between items-baseline">
+                      <span className="text-slate-500">{t("Full Name:", "Nome Completo:")}</span>
+                      <strong className="text-slate-900 font-semibold text-right">
+                        {selectedCandidate.name}
+                      </strong>
+                    </div>
+
+                    <div className="flex justify-between items-baseline">
+                      <span className="text-slate-500">{t("Written Test Score:", "Nota do Teste Escrito:")}</span>
+                      <div className="flex items-center gap-1.5">
+                        <strong className="text-slate-900 font-mono font-bold">
+                          {selectedCandidate.score}%
+                        </strong>
+                        <span className="px-1.5 py-0.2 rounded text-[0.6rem] font-bold bg-emerald-100 text-emerald-800">
+                          {t("PASSED ≥ 80%", "APROVADO ≥ 80%")}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-baseline">
+                      <span className="text-slate-500">{t("Email:", "Email:")}</span>
+                      <a
+                        href={`mailto:${selectedCandidate.email}`}
+                        className="text-sky-700 hover:underline font-mono text-[0.75rem]"
+                      >
+                        {selectedCandidate.email || "—"}
+                      </a>
+                    </div>
+
+                    <div className="flex justify-between items-baseline">
+                      <span className="text-slate-500">{t("WhatsApp / Phone:", "WhatsApp / Telefone:")}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-slate-800">
+                          {formatPhoneDisplay(selectedCandidate.phone) || "—"}
+                        </span>
+                        {selectedCandidate.phone && (
+                          <a
+                            href={`https://wa.me/${selectedCandidate.phone.replace(/\D/g, "")}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[0.68rem] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 hover:bg-emerald-100"
+                          >
+                            <MessageCircle size={11} />
+                            <span>WhatsApp</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-baseline pt-1 border-t border-slate-200">
+                      <span className="text-slate-500">{t("Recruitment Stage:", "Fase do Recrutamento:")}</span>
+                      <span className="font-semibold text-slate-700 capitalize">
+                        {selectedCandidate.recruitmentStage?.replace(/_/g, " ") || "Shortlisted"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Invitation Dispatch Status */}
+                <div className="space-y-3">
+                  <h4 className="text-[0.68rem] font-bold uppercase tracking-wider text-slate-400">
+                    {t("Invitation Delivery Audit", "Auditoria de Envio da Convocatória")}
+                  </h4>
+
+                  <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-2.5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">{t("Delivery Status:", "Estado do Envio:")}</span>
+                      {selectedCandidate.invitationStatus === "sent" ? (
+                        <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          {t("DISPATCHED & DELIVERED", "DISPARADO E ENTREGUE")}
+                        </span>
+                      ) : selectedCandidate.invitationStatus === "failed" ? (
+                        <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-red-50 text-red-700 border border-red-200">
+                          {t("DELIVERY FAILED", "FALHA NO ENVIO")}
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                          {t("NOT DISPATCHED YET", "AINDA NÃO ENVIADO")}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex justify-between items-baseline">
+                      <span className="text-slate-500">{t("Dispatched At:", "Data do Envio:")}</span>
+                      <strong className="text-slate-800 font-mono text-[0.75rem]">
+                        {selectedCandidate.invitationSentAt
+                          ? formatTimestamp(selectedCandidate.invitationSentAt)
+                          : t("Pending Dispatch", "Pendente de Envio")}
+                      </strong>
+                    </div>
+
+                    <div className="flex justify-between items-baseline">
+                      <span className="text-slate-500">{t("Secure Access Token:", "Token de Acesso Seguro:")}</span>
+                      <span className="font-mono text-[0.7rem] text-slate-500">
+                        {selectedCandidate.token
+                          ? `${selectedCandidate.token.slice(0, 10)}••••••••`
+                          : t("Generated at dispatch", "Gerado no disparo")}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Candidate Response & Selection Declaration */}
+                <div className="space-y-3">
+                  <h4 className="text-[0.68rem] font-bold uppercase tracking-wider text-slate-400">
+                    {t("Candidate Response & Declaration", "Resposta & Declaração da Candidata")}
+                  </h4>
+
+                  <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">{t("Response State:", "Estado da Resposta:")}</span>
+                      {selectedCandidate.candidateResponse === "confirmed" ? (
+                        <span className="px-2.5 py-0.5 rounded text-[0.65rem] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1">
+                          <Check size={11} className="stroke-[3]" />
+                          <span>{t("CONFIRMED INTEREST (YES)", "CONFIRMOU INTERESSE (SIM)")}</span>
+                        </span>
+                      ) : selectedCandidate.candidateResponse === "declined" ? (
+                        <span className="px-2.5 py-0.5 rounded text-[0.65rem] font-bold bg-slate-200 text-slate-800 border border-slate-300 inline-flex items-center gap-1">
+                          <X size={11} className="stroke-[3]" />
+                          <span>{t("DECLINED INTEREST (NO)", "RECUSOU INTERESSE (NÃO)")}</span>
+                        </span>
+                      ) : selectedCandidate.invitationStatus === "sent" ? (
+                        <span className="px-2.5 py-0.5 rounded text-[0.65rem] font-semibold bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1">
+                          <Clock size={11} />
+                          <span>{t("AWAITING CANDIDATE DECISION", "A AGUARDAR DECISÃO DA CANDIDATA")}</span>
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-0.5 rounded text-[0.65rem] font-medium bg-slate-100 text-slate-500">
+                          {t("INVITATION NOT SENT", "CONVOCATÓRIA NÃO ENVIADA")}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex justify-between items-baseline">
+                      <span className="text-slate-500">{t("Responded At Timestamp:", "Data e Hora da Resposta:")}</span>
+                      <strong className="text-slate-900 font-mono text-[0.75rem]">
+                        {selectedCandidate.respondedAt || selectedCandidate.responseDate
+                          ? formatTimestamp(selectedCandidate.respondedAt || selectedCandidate.responseDate)
+                          : t("Awaiting candidate submission", "Aguardando submissão")}
+                      </strong>
+                    </div>
+
+                    {/* Exact Quoted Selection Box */}
+                    <div className="pt-2 border-t border-slate-200">
+                      <span className="text-[0.68rem] font-semibold uppercase tracking-wider text-slate-500 block mb-1.5">
+                        {t("Candidate Selected Option (Original Copy):", "Opção Selecionada pela Candidata (Texto Original):")}
+                      </span>
+
+                      {selectedCandidate.candidateResponse === "confirmed" ? (
+                        <div className="p-3 rounded-md bg-emerald-50/80 border-l-3 border-emerald-600 text-emerald-950 text-[0.75rem] leading-relaxed italic">
+                          "{selectedCandidate.responseOption || "Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas."}"
+                        </div>
+                      ) : selectedCandidate.candidateResponse === "declined" ? (
+                        <div className="p-3 rounded-md bg-slate-100 border-l-3 border-slate-500 text-slate-800 text-[0.75rem] leading-relaxed italic">
+                          "{selectedCandidate.responseOption || "Não tenho interesse"}"
+                        </div>
+                      ) : (
+                        <div className="p-3 rounded-md bg-amber-50/50 border-l-3 border-amber-400 text-amber-900 text-[0.75rem] leading-relaxed italic">
+                          {selectedCandidate.invitationStatus === "sent"
+                            ? t(
+                                "Candidate has received the notice and has not yet submitted her response via the secure link.",
+                                "A candidata recebeu a notificação e ainda não submeteu a sua resposta através do link seguro."
+                              )
+                            : t(
+                                "Invitation has not been dispatched to this candidate yet.",
+                                "A convocatória ainda não foi enviada a esta candidata."
+                              )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Terms and Conditions Summary */}
+                <div className="p-3.5 rounded-lg bg-sky-50/50 border border-sky-100 text-[0.7rem] text-sky-900 space-y-1.5">
+                  <div className="font-bold flex items-center gap-1.5 text-sky-950">
+                    <ShieldCheck size={13} />
+                    <span>{t("Notified Conditions of Consideration", "Termos e Condições Notificados")}</span>
+                  </div>
+                  <ul className="list-disc pl-4 space-y-1 text-slate-600">
+                    <li>{t("10 days of initial training (unpaid)", "10 dias de formação inicial (sem remuneração)")}</li>
+                    <li>{t("3 months practical training (9.000 MZN/month if selected)", "3 meses de formação prática (9.000 MZN/mês se selecionada)")}</li>
+                    <li>{t("Potential adjustment up to 12.000 MZN/month based on performance", "Remuneração até 12.000 MZN/mês conforme desempenho")}</li>
+                    <li>{t("Shift regime: 12h rotation (2 day + 2 night + 2 off)", "Turnos de 12 horas (2 dia + 2 noite + 2 folgas)")}</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Slide-over Footer Actions */}
+              <div className="px-6 py-3.5 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setSelectedCandidate(null)}
+                  className="px-3 py-1.5 rounded-md border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-100 cursor-pointer"
+                >
+                  {t("Close", "Fechar")}
+                </button>
+
+                <div className="flex items-center gap-2">
+                  {selectedCandidate.phone && (
+                    <a
+                      href={`https://wa.me/${selectedCandidate.phone.replace(/\D/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <MessageCircle size={13} />
+                      <span>WhatsApp</span>
+                    </a>
+                  )}
+
+                  {selectedCandidate.matchedId && (
+                    <Link
+                      href={`/admin/recruitment/candidates/${selectedCandidate.matchedId}`}
+                      className="px-3.5 py-1.5 rounded-md bg-[#0a1128] hover:bg-[#101b3d] text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <span>{t("View Full Profile", "Ver Perfil Completo")}</span>
+                      <ChevronRight size={13} />
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirmation Dispatch Modal */}
       {confirmModalOpen && (
@@ -415,7 +1045,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang }) => {
 
             <p className="text-xs text-slate-600 leading-relaxed">
               {t(
-                `You are about to send the official Next Phase Conditions notice to ${summary.notSent} approved candidates. Each candidate will receive a secure individual token with YES and NO options.`,
+                `You are about to send the official Next Phase Conditions notice to ${summary.notSent} approved candidates. Each candidate will receive an individual secure link with YES and NO response options.`,
                 `Está prestes a enviar a notificação oficial de condições da Próxima Fase para as ${summary.notSent} candidatas aprovadas. Cada mensagem contém um token seguro de utilização única com opções SIM e NÃO.`
               )}
             </p>
@@ -445,14 +1075,16 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang }) => {
                 disabled={dispatching}
                 className="px-3.5 py-1.5 rounded-md bg-[#0a1128] hover:bg-[#101b3d] text-white text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
               >
-                {dispatching ? t("Sending...", "A enviar...") : t(`Send ${summary.notSent} Invitations`, `Enviar ${summary.notSent} Convocatórias`)}
+                {dispatching
+                  ? t("Sending...", "A enviar...")
+                  : t(`Send ${summary.notSent} Invitations`, `Enviar ${summary.notSent} Convocatórias`)}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Template Modal with Realistic Overwatch Letterhead & Device Switcher */}
+      {/* Template Modal with Realistic Overwatch Letterhead */}
       {templateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
           <div className="w-full max-w-2xl bg-white rounded-lg shadow-xl border border-slate-200 space-y-0 max-h-[90vh] flex flex-col overflow-hidden">
@@ -534,7 +1166,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang }) => {
                     Neste momento, gostaríamos apenas de saber se, tendo conhecimento destas condições, continua interessada em ser considerada para a próxima fase do processo de selecção.
                   </p>
 
-                  {/* Buttons */}
+                  {/* Bulletproof action buttons with direct preview links */}
                   <div className="pt-2 space-y-2">
                     <a
                       href="/pt/careers/next-phase/preview_sample?choice=yes"

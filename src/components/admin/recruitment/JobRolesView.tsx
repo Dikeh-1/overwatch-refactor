@@ -16,20 +16,23 @@ import {
   X,
 } from "lucide-react";
 import { Role, Application } from "@/lib/careers";
+import { useAdminLanguage } from "../shell/AdminLanguageContext";
 
 interface JobRolesViewProps {
   roles: Role[];
   applications: Application[];
-  lang: "pt" | "en";
+  lang?: "pt" | "en";
   onToggleRole: (roleId: string, open: boolean) => Promise<void>;
 }
 
 export const JobRolesView: React.FC<JobRolesViewProps> = ({
   roles,
   applications,
-  lang,
+  lang: propLang,
   onToggleRole,
 }) => {
+  const { lang: contextLang } = useAdminLanguage();
+  const lang = propLang ?? contextLang;
   const t = (en: string, pt: string) => (lang === "en" ? en : pt);
   const [searchQuery, setSearchQuery] = useState("");
   const [togglingRoleId, setTogglingRoleId] = useState<string | null>(null);

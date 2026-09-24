@@ -20,6 +20,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { formatSlotDisplay } from "@/lib/careers";
+import { useAdminLanguage } from "./shell/AdminLanguageContext";
 
 type VerificationResult = {
   success: boolean;
@@ -41,15 +42,17 @@ interface GateCheckInModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCheckInSuccess: (candidate: any) => void;
-  lang: "pt" | "en";
+  lang?: "pt" | "en";
 }
 
 export default function GateCheckInModal({
   isOpen,
   onClose,
   onCheckInSuccess,
-  lang,
+  lang: propLang,
 }: GateCheckInModalProps) {
+  const { lang: contextLang } = useAdminLanguage();
+  const lang = propLang ?? contextLang;
   const isPt = lang === "pt";
   const [activeTab, setActiveTab] = useState<"camera" | "manual">("camera");
   const [cameraActive, setCameraActive] = useState(false);

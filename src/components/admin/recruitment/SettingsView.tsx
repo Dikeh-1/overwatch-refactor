@@ -2,12 +2,15 @@
 
 import React, { useState } from "react";
 import { Settings, Save, CheckCircle2, ShieldCheck, Mail, SlidersHorizontal } from "lucide-react";
+import { useAdminLanguage } from "../shell/AdminLanguageContext";
 
 interface SettingsViewProps {
-  lang: "pt" | "en";
+  lang?: "pt" | "en";
 }
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ lang }) => {
+export const SettingsView: React.FC<SettingsViewProps> = ({ lang: propLang }) => {
+  const { lang: contextLang } = useAdminLanguage();
+  const lang = propLang ?? contextLang;
   const t = (en: string, pt: string) => (lang === "en" ? en : pt);
 
   const [defaultQuota, setDefaultQuota] = useState(15);

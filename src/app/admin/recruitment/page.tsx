@@ -40,7 +40,6 @@ export default function RecruitmentOverviewPage() {
     <RecruitmentOverviewView
       applications={applications}
       roles={roles}
-      lang="pt"
     />
   );
 }

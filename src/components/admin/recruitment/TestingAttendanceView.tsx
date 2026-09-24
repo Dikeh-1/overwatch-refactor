@@ -21,10 +21,11 @@ import {
   Trash2,
 } from "lucide-react";
 import { Application, normalizeSlot, formatSlotDisplay, formatPhoneDisplay } from "@/lib/careers";
+import { useAdminLanguage } from "../shell/AdminLanguageContext";
 
 interface TestingAttendanceViewProps {
   applications: Application[];
-  lang: "pt" | "en";
+  lang?: "pt" | "en";
   slotQuota: number;
   broadcastSlots: string[];
   onToggleAttendance: (candidateId: string, attended: boolean) => Promise<void>;
@@ -35,7 +36,7 @@ interface TestingAttendanceViewProps {
 
 export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
   applications,
-  lang,
+  lang: propLang,
   slotQuota,
   broadcastSlots,
   onToggleAttendance,
@@ -43,6 +44,8 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
   onDispatchGatePasses,
   onSaveSlots,
 }) => {
+  const { lang: contextLang } = useAdminLanguage();
+  const lang = propLang ?? contextLang;
   const t = (en: string, pt: string) => (lang === "en" ? en : pt);
 
   const [selectedSlot, setSelectedSlot] = useState<string>("all");

@@ -71,7 +71,6 @@ export default function CandidatesPage() {
     <CandidatesTableView
       applications={applications}
       roles={roles}
-      lang="pt"
       onBulkStatusChange={handleBulkStatusChange}
       onBulkArchive={handleBulkArchive}
     />
