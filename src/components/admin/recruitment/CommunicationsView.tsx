@@ -1122,13 +1122,23 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
                         Neste momento, gostaríamos apenas de saber se, tendo conhecimento destas condições, continua interessada em ser considerada para a próxima fase do processo de selecção.
                       </p>
                       <div className="pt-2 space-y-2">
-                        <div className="w-full text-center py-2.5 px-4 rounded bg-[#0b1329] text-white font-semibold text-xs shadow-xs">
+                        <a
+                          href="/pt/careers/next-phase/preview_sample?choice=yes"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block w-full text-center py-2.5 px-4 rounded bg-[#0b1329] hover:bg-[#111b3a] text-white font-semibold text-xs shadow-xs transition-colors cursor-pointer"
+                        >
                           Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas.
-                        </div>
+                        </a>
                         <div className="text-center">
-                          <span className="text-[0.7rem] text-slate-400 hover:text-slate-600 underline cursor-pointer">
+                          <a
+                            href="/pt/careers/next-phase/preview_sample?choice=no"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[0.7rem] text-slate-500 hover:text-slate-700 underline cursor-pointer"
+                          >
                             Não tenho interesse
-                          </span>
+                          </a>
                         </div>
                       </div>
                     </>

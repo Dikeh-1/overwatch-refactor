@@ -85,6 +85,11 @@ export async function POST(request: Request) {
     const action = body.action as "preview" | "dispatch" | "reconcile";
     const applications = await getApplications();
 
+    const url = new URL(request.url);
+    const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || url.host;
+    const proto = request.headers.get("x-forwarded-proto") || url.protocol.replace(":", "") || "https";
+    const baseUrl = `${proto}://${host}`;
+
     if (action === "preview") {
       const previewEmail = (body.previewEmail || process.env.ADMIN_PREVIEW_EMAIL || "").trim();
       if (!previewEmail || !previewEmail.includes("@")) {
@@ -102,6 +107,7 @@ export async function POST(request: Request) {
       const res = await sendNextPhaseInvitationEmail({
         candidate: sampleCandidate,
         token: sampleToken,
+        baseUrl,
         preview: true,
         recipientEmail: previewEmail,
         customSubject: body.subject,
@@ -148,6 +154,7 @@ export async function POST(request: Request) {
           await sendNextPhaseInvitationEmail({
             candidate: { id: app.id, name: app.name, email: app.email },
             token,
+            baseUrl,
             customSubject: body.subject,
           });
 

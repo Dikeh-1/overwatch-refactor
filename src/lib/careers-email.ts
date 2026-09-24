@@ -2370,18 +2370,27 @@ export async function sendNextPhaseInvitationEmail(options: {
 
             <p style="font-size: 13.5px; color: #475569;">Caso tenha interesse, pedimos que indique carregando no botão abaixo:</p>
 
-            <!-- YES Button -->
-            <div style="margin: 28px 0 16px 0;">
-              <a href="${yesUrl}" style="display: block; width: 100%; box-sizing: border-box; text-align: center; background-color: #0b1329; color: #ffffff; padding: 16px 20px; font-size: 13.5px; font-weight: 600; text-decoration: none; border-radius: 8px; line-height: 1.4;">
-                Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas.
+            <!-- YES Button (Bulletproof Table-Based Email Button) -->
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 28px 0 12px 0; border-collapse: separate;">
+              <tr>
+                <td align="center" bgcolor="#0b1329" style="border-radius: 8px; background-color: #0b1329; text-align: center;">
+                  <a href="${yesUrl}" target="_blank" rel="noopener noreferrer" style="display: block; width: 100%; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 700; color: #ffffff !important; text-decoration: none; padding: 16px 20px; border-radius: 8px; line-height: 1.4; border: 1px solid #0b1329; cursor: pointer;">
+                    Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas.
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <!-- NO Button -->
+            <div style="text-align: center; margin-top: 8px; margin-bottom: 20px;">
+              <a href="${noUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: transparent; color: #64748b !important; padding: 8px 16px; font-size: 13px; font-weight: 500; text-decoration: underline; border-radius: 6px; cursor: pointer;">
+                Não tenho interesse
               </a>
             </div>
 
-            <!-- NO Button -->
-            <div style="text-align: center; margin-top: 12px; margin-bottom: 24px;">
-              <a href="${noUrl}" style="display: inline-block; background-color: transparent; color: #64748b; padding: 8px 16px; font-size: 13px; font-weight: 500; text-decoration: underline; border-radius: 6px;">
-                Não tenho interesse
-              </a>
+            <!-- Alternative direct URL fallback for strict email clients -->
+            <div style="text-align: center; margin-bottom: 24px; font-size: 11px; color: #94a3b8;">
+              Caso o botão acima não abra, aceda directamente: <a href="${yesUrl}" target="_blank" rel="noopener noreferrer" style="color: #0284c7; text-decoration: underline; word-break: break-all;">Confirmar Participação Online</a>
             </div>
 
             <p style="font-size: 13px; color: #64748b; font-style: italic; margin-top: 24px; line-height: 1.5;">As candidatas que confirmarem o interesse receberão posteriormente informação sobre datas, horários e organização da formação.</p>
