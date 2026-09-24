@@ -3,8 +3,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AdminSidebar } from "./AdminSidebar";
-import { LockKeyhole, Loader2, AlertCircle, RefreshCw, Menu } from "lucide-react";
+import { LockKeyhole, Loader2, AlertCircle, RefreshCw, Menu, ShieldCheck, ArrowRight, ExternalLink } from "lucide-react";
 import Logo from "@/components/ui/Logo";
+import LazyVideo from "@/components/ui/LazyVideo";
+import TechGrid from "@/components/ui/TechGrid";
+import { IMAGES } from "@/lib/constants";
+import Link from "next/link";
 import { Application, Role } from "@/lib/careers";
 
 interface AdminShellProps {
@@ -125,72 +129,127 @@ export const AdminShell: React.FC<AdminShellProps> = ({ children }) => {
   // Login view
   if (auth === false) {
     return (
-      <div className="min-h-screen bg-[#0a1128] flex items-center justify-center p-4">
-        <div className="w-full max-w-sm bg-white rounded-lg p-6 sm:p-8 shadow-xl border border-slate-200">
-          <div className="text-center mb-6">
-            <div className="flex justify-center mb-3">
-              <Logo />
+      <main className="min-h-screen flex items-center justify-center bg-[#090d16] text-white relative isolate overflow-hidden px-4 py-12">
+        {/* Soft Background Video */}
+        <div className="absolute inset-0 z-0 opacity-30 pointer-events-none">
+          <LazyVideo
+            className="h-full w-full object-cover mix-blend-luminosity"
+            poster={IMAGES.videoPoster}
+            rootMargin="700px"
+            src={IMAGES.videoSrc}
+          />
+        </div>
+        {/* Soft dark dimming overlay to keep it soft, not too bright, matching Overwatch theme */}
+        <div className="absolute inset-0 bg-[#090d16]/80 z-0 pointer-events-none" />
+        <TechGrid className="absolute inset-0 opacity-35 pointer-events-none z-0" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.06),transparent_40%),radial-gradient(circle_at_80%_80%,rgba(255,255,255,0.03),transparent_40%)] pointer-events-none z-0" />
+
+        <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-[#121827]/95 p-8 shadow-[0_32px_80px_rgba(0,0,0,0.6)] backdrop-blur-md">
+          {/* Top Language Toggle */}
+          <div className="flex justify-end mb-2">
+            <div className="flex items-center rounded-xl bg-white/[0.06] border border-white/10 p-0.5 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setLang("en");
+                  localStorage.setItem("overwatch_admin_lang", "en");
+                }}
+                className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                  lang === "en"
+                    ? "bg-white text-[#090d16] shadow-sm font-bold"
+                    : "text-white/60 hover:text-white"
+                }`}
+              >
+                EN
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLang("pt");
+                  localStorage.setItem("overwatch_admin_lang", "pt");
+                }}
+                className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                  lang === "pt"
+                    ? "bg-white text-[#090d16] shadow-sm font-bold"
+                    : "text-white/60 hover:text-white"
+                }`}
+              >
+                PT
+              </button>
             </div>
-            <h1 className="text-lg font-bold text-slate-900 tracking-tight">
-              Overwatch Admin
+          </div>
+
+          <div className="text-center pb-6 border-b border-white/10">
+            <div className="flex justify-center mb-4">
+              <Logo size="md" variant="light" />
+            </div>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.06] px-3 py-1 text-[0.68rem] font-bold uppercase tracking-wider text-white/80">
+              <ShieldCheck size={13} />
+              {t("Talent Operations Portal", "Portal de Operações de Recrutamento")}
+            </span>
+            <h1 className="mt-3 text-xl font-bold text-white tracking-tight">
+              {t("Recruitment Workspace", "Área de Recrutamento")}
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5">
-              {lang === "pt" ? "Acesso restrito a operadores autorizados" : "Authorized operational access"}
+            <p className="mt-1 text-xs text-white/60">
+              {t(
+                "Sign in with your administrator key to review applications and manage candidates.",
+                "Inicie sessão com a sua chave de administração para rever candidaturas e gerir vagas.",
+              )}
             </p>
           </div>
 
-          <form onSubmit={handleSignIn} className="space-y-4">
-            {authError && (
-              <div className="p-3 rounded-md bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
-                <AlertCircle size={14} className="shrink-0" />
-                <span>{authError}</span>
-              </div>
-            )}
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                {lang === "pt" ? "Palavra-passe" : "Password"}
-              </label>
+          <form onSubmit={handleSignIn} className="mt-6 space-y-4">
+            <label className="block space-y-1.5 text-left">
+              <span className="text-xs font-semibold text-white/80">
+                {t("Admin password", "Palavra-passe de administrador")}
+              </span>
               <div className="relative">
                 <input
                   name="password"
                   type="password"
                   required
                   autoFocus
-                  placeholder="••••••••••••"
-                  className="w-full px-3 py-2 text-xs rounded-md border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
+                  autoComplete="current-password"
+                  placeholder={t("Enter administrator password", "Introduza a palavra-passe")}
+                  className="w-full rounded-xl border border-white/15 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/15 transition-colors"
                 />
-                <LockKeyhole size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
               </div>
-            </div>
+            </label>
+
+            {authError && (
+              <div
+                role="alert"
+                className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400 font-medium"
+              >
+                {authError}
+              </div>
+            )}
 
             <button
               type="submit"
               disabled={authLoading}
-              className="w-full py-2.5 px-4 rounded-md bg-[#0a1128] hover:bg-[#101b3d] text-white text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-3.5 text-sm font-semibold text-[#090d16] shadow-lg shadow-black/30 transition-all hover:bg-white/90 active:scale-[0.99] disabled:opacity-50 cursor-pointer"
             >
-              {authLoading ? (
-                <>
-                  <Loader2 size={14} className="animate-spin" />
-                  <span>{lang === "pt" ? "A verificar..." : "Verifying..."}</span>
-                </>
-              ) : (
-                <span>{lang === "pt" ? "Entrar" : "Sign In"}</span>
-              )}
+              {authLoading ? <RefreshCw className="animate-spin" size={16} /> : null}
+              <span>{authLoading ? t("Authenticating…", "A autenticar…") : t("Enter Workspace", "Entrar no Portal")}</span>
+              {!authLoading && <ArrowRight size={16} />}
             </button>
-          </form>
 
-          <div className="mt-5 pt-3 border-t border-slate-100 text-center">
-            <button
-              type="button"
-              onClick={handleToggleLang}
-              className="text-[0.7rem] text-slate-500 hover:text-slate-800 transition-colors"
-            >
-              {lang === "pt" ? "Switch to English" : "Mudar para Português"}
-            </button>
-          </div>
+            <div className="pt-2 flex items-center justify-between text-xs text-white/50">
+              <span className="flex items-center gap-1">
+                <LockKeyhole size={12} /> {t("Confidential access", "Acesso reservado")}
+              </span>
+              <Link
+                href="/careers"
+                target="_blank"
+                className="flex items-center gap-1 text-white/70 hover:text-white transition-colors"
+              >
+                {t("View Careers Page", "Ver Página de Carreiras")} <ExternalLink size={12} />
+              </Link>
+            </div>
+          </form>
         </div>
-      </div>
+      </main>
     );
   }
 

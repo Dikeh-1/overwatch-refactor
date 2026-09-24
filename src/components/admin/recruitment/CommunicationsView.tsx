@@ -23,6 +23,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Application, formatPhoneDisplay, formatSlotDisplay, normalizeSlot } from "@/lib/careers";
+import Logo from "@/components/ui/Logo";
 
 interface CommunicationsViewProps {
   applications: Application[];
@@ -1071,23 +1072,27 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
                   previewDevice === "mobile" ? "w-[340px]" : "w-full max-w-xl"
                 }`}
               >
-                {/* Brand Bar */}
-                <div className="h-1 bg-[#0b1329]" />
+                {/* Official Letterhead Header (Dark Navy) */}
+                <div className="bg-[#0b1329] px-6 py-4 border-b-2 border-white/15 flex items-center justify-between">
+                  <Logo variant="light" size="sm" />
+                  <div className="text-right">
+                    <span className="inline-block bg-white/10 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded border border-white/20 tracking-wider">
+                      REF: CCO-2026/MAPUTO
+                    </span>
+                    <div className="text-[11px] text-slate-300 font-medium mt-1">
+                      Departamento de Recursos Humanos
+                    </div>
+                  </div>
+                </div>
 
-                {/* Email Header */}
-                <div className="p-5 border-b border-slate-100 bg-white">
-                  <span className="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400 block mb-1">
-                    Overwatch • Recrutamento CCO 2026
+                {/* Official Subheading Bar */}
+                <div className="bg-[#f8fafc] px-6 py-2.5 border-b border-slate-200 flex items-center justify-between text-[11px]">
+                  <span className="font-semibold uppercase tracking-wider text-slate-700">
+                    NOTIFICAÇÃO OFICIAL · PROCESSO DE SELECÇÃO
                   </span>
-                  <h2 className="text-base font-bold text-[#0b1329] tracking-tight">
-                    {previewTemplateId === "next_phase"
-                      ? "Próxima Fase do Processo de Selecção"
-                      : previewTemplateId === "convocation"
-                      ? "Convocatória para Teste Presencial"
-                      : previewTemplateId === "confirmation"
-                      ? "Confirmação – Processo de Selecção Overwatch"
-                      : "Processo de Selecção Overwatch"}
-                  </h2>
+                  <span className="text-slate-500">
+                    Maputo, Moçambique
+                  </span>
                 </div>
 
                 {/* Email Body */}
@@ -1169,15 +1174,16 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
 
                   <div className="pt-4 border-t border-slate-100 text-xs">
                     <p className="text-slate-500">Com os melhores cumprimentos,</p>
-                    <p className="font-bold text-[#0b1329] mt-0.5">Overwatch</p>
+                    <p className="font-bold text-[#090d16] mt-0.5">Equipa de Recrutamento &amp; Selecção</p>
+                    <p className="text-slate-600">Overwatch Moçambique</p>
                   </div>
                 </div>
 
-                {/* Email Footer */}
-                <div className="bg-slate-50 px-5 py-3 border-t border-slate-200 text-center">
-                  <p className="text-[0.65rem] text-slate-400">
-                    © 2026 Overwatch Moçambique. Todos os direitos reservados.
-                  </p>
+                {/* Formal Legal & Contact Footer */}
+                <div className="bg-[#f8fafc] px-6 py-4 border-t border-slate-200 text-xs text-slate-500 leading-relaxed">
+                  <div className="font-bold text-[#090d16]">Overwatch Moçambique, Lda.</div>
+                  <div>Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo, Moçambique</div>
+                  <div>Telefone / WhatsApp: <span className="text-sky-700 font-semibold">+258 84 287 0793</span> · Email: info@overwatchmoz.com</div>
                 </div>
               </div>
             </div>
