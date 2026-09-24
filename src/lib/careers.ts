@@ -24,11 +24,57 @@ export const stages = [
   "new",
   "reviewing",
   "shortlisted",
+  "test_invited",
+  "test_booked",
+  "tested",
+  "next_phase_selected",
+  "next_phase_invited",
+  "awaiting_response",
+  "interest_confirmed",
+  "interest_declined",
   "interview",
+  "training",
   "hired",
+  "not_advancing",
+  "withdrawn",
+  "no_show",
+  "disqualified",
   "rejected",
   "archived",
 ] as const;
+
+export type PipelineStage = (typeof stages)[number];
+
+export interface CommunicationRecord {
+  id: string;
+  type: "convocation" | "confirmation" | "gate_pass" | "reminder" | "next_phase_invite" | "next_phase_confirmation" | "next_phase_closure" | "custom" | "apology";
+  subject: string;
+  bodySnippet?: string;
+  recipient: string;
+  sentAt: string;
+  status: "sent" | "delivered" | "failed";
+  sender?: string;
+  preview?: boolean;
+}
+
+export interface ActivityRecord {
+  id: string;
+  timestamp: string;
+  action: string;
+  actor?: string;
+  details?: string;
+}
+
+export type ArchiveReason =
+  | "Below Test Threshold"
+  | "Not Selected for Next Phase"
+  | "No Show"
+  | "Candidate Withdrew"
+  | "Declined Next Phase"
+  | "Duplicate"
+  | "Recruitment Closed"
+  | "Other";
+
 export type Application = {
   id: string;
   createdAt: string;
@@ -47,7 +93,16 @@ export type Application = {
   cvName: string;
   cvType: string;
   cvSize: number;
-  status: (typeof stages)[number];
+  status: PipelineStage;
+  testScore?: number;
+  nextPhaseStatus?: "selected" | "invited" | "confirmed" | "declined" | "not_advancing";
+  nextPhaseToken?: string;
+  nextPhaseInvitedAt?: string;
+  nextPhaseRespondedAt?: string;
+  nextPhaseResponse?: "yes" | "no";
+  archiveReason?: ArchiveReason;
+  communications?: CommunicationRecord[];
+  activityLog?: ActivityRecord[];
   invitedAt?: string;
   invitedSlots?: string[];
   testSlot?: string;
@@ -56,6 +111,7 @@ export type Application = {
   gatePassSentAt?: string;
   reminderSentAt?: string;
   attendedAt?: string;
+  attendedBy?: string;
   attendanceStatus?: "present" | "absent" | "late";
   previousTestSlot?: string;
   rebookingGrace?: {
@@ -72,6 +128,53 @@ export type Application = {
 
 export type RebookingGrace = NonNullable<Application["rebookingGrace"]>;
 export const MAX_CV = 3 * 1024 * 1024;
+
+export function normalizePhone(raw?: string | null): string {
+  if (!raw) return "";
+  const digits = raw.replace(/\D/g, "");
+  if (digits.startsWith("258") && digits.length === 12) {
+    return `+${digits}`;
+  }
+  if (digits.length === 9) {
+    return `+258${digits}`;
+  }
+  if (raw.startsWith("+")) {
+    return `+${digits}`;
+  }
+  return digits ? `+${digits}` : "";
+}
+
+export function formatPhoneDisplay(raw?: string | null): string {
+  const norm = normalizePhone(raw);
+  if (norm.startsWith("+258") && norm.length === 13) {
+    return `+258 ${norm.slice(4, 6)} ${norm.slice(6, 9)} ${norm.slice(9)}`;
+  }
+  return raw || "";
+}
+
+export interface NextPhaseCandidateSeed {
+  name: string;
+  score: number;
+  matchedId?: string;
+}
+
+export const APPROVED_NEXT_PHASE_15: NextPhaseCandidateSeed[] = [
+  { name: "Artimiza André Manuel Vilanculos", score: 93, matchedId: "e7352e38-6608-4fe5-a6c5-cf5251912901" },
+  { name: "Isabel Paulo", score: 91, matchedId: "3cbac31c-b82d-44d8-a702-372f1011b101" },
+  { name: "Nádia Emília Calisto Jalane", score: 91, matchedId: "bc3d929d-e09e-44c1-9129-d29ac1e4811c" },
+  { name: "Denize Maura Cuinica", score: 90, matchedId: "b0c66d1e-c918-4de2-8cec-f6333e5196c2" },
+  { name: "Ivânia Zacarias Simbine", score: 90, matchedId: "4d49be41-f6dd-4792-bda6-88a7b5ec57e9" },
+  { name: "Jana Sheinil Mugalela", score: 90, matchedId: "5b009156-bc7a-43e4-b619-dcb728543589" },
+  { name: "Arminda Martins Guambe", score: 89, matchedId: "a64edc70-52ef-4993-b646-5a962b5aadcc" },
+  { name: "Dulce Filomena Ricardo Massango", score: 89, matchedId: "c15f8303-f3af-487d-8a37-eae13a9984af" },
+  { name: "Isaura José Vilanculos", score: 88, matchedId: "c39b7cde-a15d-4f26-a681-ef78a9a63621" },
+  { name: "Orquidia Mabasso", score: 88, matchedId: "b912a272-18d8-4ed2-a097-cb00860db869" },
+  { name: "Palmira João Mordinho", score: 87, matchedId: "7e04bfcd-12c5-408b-8cb8-46482e1e9499" },
+  { name: "Lindica Chiluane", score: 86 },
+  { name: "Érica Khossa", score: 85, matchedId: "64827472-1369-4879-b045-7459da72daeb" },
+  { name: "Cinelia Machaieie", score: 81, matchedId: "f5229a5e-ca36-4b2a-b9b3-d97ba319ea90" },
+  { name: "Marcia Emilia Jacinto Mavie", score: 81, matchedId: "7a2d84c8-be8f-4470-9eaa-1b8f11052b81" },
+];
 
 export const DEFAULT_TEST_SLOTS = [
   "Segunda-feira, 21 de Setembro - 10h00",

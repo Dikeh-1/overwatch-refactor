@@ -2279,3 +2279,216 @@ Overwatch Moçambique`;
   return sendTransactionalEmail(payload);
 }
 
+/**
+ * Send official Next Phase Invitation Email to approved candidate (with YES/NO response buttons)
+ */
+export async function sendNextPhaseInvitationEmail(options: {
+  candidate: { id: string; name: string; email: string };
+  token: string;
+  baseUrl?: string;
+  customSubject?: string;
+  preview?: boolean;
+  recipientEmail?: string;
+}) {
+  const { candidate, token, baseUrl = "https://www.overwatchmoz.com", customSubject, preview = false, recipientEmail } = options;
+
+  const subject = customSubject?.trim() || "Próxima Fase – Processo de Selecção Overwatch";
+  const yesUrl = `${baseUrl.replace(/\/+$/, "")}/pt/careers/next-phase/${token}?choice=yes`;
+  const noUrl = `${baseUrl.replace(/\/+$/, "")}/pt/careers/next-phase/${token}?choice=no`;
+
+  const htmlContent = `
+    <div style="background-color: #f8fafc; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; line-height: 1.6;">
+      <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
+        <!-- Dark Brand Bar -->
+        <div style="height: 4px; background: #0b1329;"></div>
+
+        <!-- Header -->
+        <div style="padding: 28px 32px 20px 32px; border-bottom: 1px solid #f1f5f9;">
+          <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; display: block; margin-bottom: 4px;">Overwatch • Recrutamento CCO 2026</span>
+          <h1 style="font-size: 20px; font-weight: 700; color: #0b1329; margin: 0; letter-spacing: -0.01em;">Próxima Fase do Processo de Selecção</h1>
+        </div>
+
+        <!-- Content Body -->
+        <div style="padding: 32px;">
+          <p style="font-size: 14px; margin-top: 0; color: #1e293b;">Prezada Candidata <strong>${candidate.name}</strong>,</p>
+
+          <p style="font-size: 14px; color: #334155;">Agradecemos a sua participação no processo de selecção para a função de <strong>Operadora de CCO</strong> da Overwatch.</p>
+
+          <p style="font-size: 14px; color: #334155;">O seu resultado no teste (mais de 80%) permitiu-lhe avançar para consideração na próxima fase do processo.</p>
+
+          <p style="font-size: 14px; color: #334155;">Antes de prosseguirmos, gostaríamos de assegurar que compreende e aceita as condições previstas para esta etapa:</p>
+
+          <div style="background-color: #f8fafc; border-left: 3px solid #0b1329; padding: 16px 20px; border-radius: 4px; margin: 20px 0;">
+            <ul style="margin: 0; padding-left: 16px; font-size: 13.5px; color: #1e293b; line-height: 1.7;">
+              <li style="margin-bottom: 8px;"><strong>10 dias de formação inicial</strong>, sem remuneração;</li>
+              <li style="margin-bottom: 8px;">Caso seja seleccionada após essa formação, seguirá para um período de <strong>3 meses de formação prática</strong>, com uma remuneração mensal de <strong>9.000 MZN</strong>;</li>
+              <li style="margin-bottom: 8px;">Após a conclusão satisfatória desse período, a remuneração mensal poderá chegar a <strong>12.000 MZN</strong>, de acordo com o desempenho e enquadramento na função;</li>
+              <li>O regime de trabalho previsto é de <strong>12 horas por turno</strong>, numa rotação de:<br/><span style="display:inline-block; margin-top: 4px; font-weight: 600; color: #0b1329;">2 turnos de dia + 2 turnos de noite + 2 dias de folga.</span></li>
+            </ul>
+          </div>
+
+          <p style="font-size: 13.5px; color: #475569;">A progressão para cada fase dependerá do desempenho, disciplina, capacidade de aprendizagem, cumprimento dos procedimentos e adequação à função.</p>
+
+          <p style="font-size: 14px; color: #1e293b; font-weight: 500;">Neste momento, gostaríamos apenas de saber se, tendo conhecimento destas condições, continua interessada em ser considerada para a próxima fase do processo de selecção.</p>
+
+          <p style="font-size: 13.5px; color: #475569;">Caso tenha interesse, pedimos que indique carregando no botão abaixo:</p>
+
+          <!-- YES Button -->
+          <div style="margin: 28px 0 16px 0;">
+            <a href="${yesUrl}" style="display: block; width: 100%; box-sizing: border-box; text-align: center; background-color: #0b1329; color: #ffffff; padding: 16px 20px; font-size: 13.5px; font-weight: 600; text-decoration: none; border-radius: 6px; line-height: 1.4;">
+              Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas.
+            </a>
+          </div>
+
+          <!-- NO Button -->
+          <div style="text-align: center; margin-top: 12px; margin-bottom: 24px;">
+            <a href="${noUrl}" style="display: inline-block; background-color: transparent; color: #64748b; padding: 8px 16px; font-size: 13px; font-weight: 500; text-decoration: underline; border-radius: 6px;">
+              Não tenho interesse
+            </a>
+          </div>
+
+          <p style="font-size: 13px; color: #64748b; font-style: italic; margin-top: 24px;">As candidatas que confirmarem o interesse receberão posteriormente informação sobre datas, horários e organização da formação.</p>
+
+          <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid #f1f5f9;">
+            <p style="font-size: 13.5px; color: #334155; margin: 0 0 4px 0;">Com os melhores cumprimentos,</p>
+            <strong style="font-size: 14px; color: #0b1329;">Overwatch</strong>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color: #f8fafc; padding: 18px 32px; border-top: 1px solid #e2e8f0; text-align: center;">
+          <p style="font-size: 11px; color: #94a3b8; margin: 0;">© 2026 Overwatch Moçambique. Todos os direitos reservados.</p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const textContent = `Próxima Fase do Processo de Selecção — Overwatch
+
+Prezada Candidata ${candidate.name},
+
+Agradecemos a sua participação no processo de selecção para a função de Operadora de CCO da Overwatch.
+
+O seu resultado no teste (mais de 80%) permitiu-lhe avançar para consideração na próxima fase do processo.
+
+Antes de prosseguirmos, gostaríamos de assegurar que compreende e aceita as condições previstas para esta etapa:
+
+• 10 dias de formação inicial, sem remuneração;
+• Caso seja seleccionada após essa formação, seguirá para um período de 3 meses de formação prática, com uma remuneração mensal de 9.000 MZN;
+• Após a conclusão satisfatória desse período, a remuneração mensal poderá chegar a 12.000 MZN, de acordo com o desempenho e enquadramento na função;
+• O regime de trabalho previsto é de 12 horas por turno, numa rotação de: 2 turnos de dia + 2 turnos de noite + 2 dias de folga.
+
+A progressão para cada fase dependerá do desempenho, disciplina, capacidade de aprendizagem, cumprimento dos procedimentos e adequação à função.
+
+Neste momento, gostaríamos apenas de saber se, tendo conhecimento destas condições, continua interessada em ser considerada para a próxima fase do processo de selecção.
+
+SIM:
+${yesUrl}
+
+NÃO:
+${noUrl}
+
+As candidatas que confirmarem o interesse receberão posteriormente informação sobre datas, horários e organização da formação.
+
+Com os melhores cumprimentos,
+Overwatch`;
+
+  const toEmail = recipientEmail || candidate.email;
+  const toName = preview ? `[PREVIEW] ${candidate.name}` : candidate.name;
+
+  return sendTransactionalEmail({
+    to: [{ email: toEmail, name: toName }],
+    subject: preview ? `[PREVIEW] ${subject}` : subject,
+    htmlContent,
+    textContent,
+  });
+}
+
+/**
+ * Send confirmation email after candidate clicks YES
+ */
+export async function sendNextPhaseConfirmationEmail(candidate: { name: string; email: string }) {
+  const subject = "Confirmação – Processo de Selecção Overwatch";
+  const htmlContent = `
+    <div style="background-color: #f8fafc; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; line-height: 1.6;">
+      <div style="max-width: 560px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
+        <div style="height: 4px; background: #0b1329;"></div>
+        <div style="padding: 32px;">
+          <p style="font-size: 14px; margin-top: 0; color: #1e293b;">Prezada Candidata <strong>${candidate.name}</strong>,</p>
+          <p style="font-size: 14px; color: #334155;">Obrigada pela sua confirmação e pelo interesse em continuar no processo de selecção da Overwatch.</p>
+          <p style="font-size: 14px; color: #334155;">Entraremos em contacto brevemente com as próximas instruções relativas à fase seguinte.</p>
+          <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid #f1f5f9;">
+            <p style="font-size: 13.5px; color: #334155; margin: 0 0 4px 0;">Com os melhores cumprimentos,</p>
+            <strong style="font-size: 14px; color: #0b1329;">Overwatch</strong>
+          </div>
+        </div>
+        <div style="background-color: #f8fafc; padding: 18px 32px; border-top: 1px solid #e2e8f0; text-align: center;">
+          <p style="font-size: 11px; color: #94a3b8; margin: 0;">© 2026 Overwatch Moçambique. Todos os direitos reservados.</p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const textContent = `Prezada Candidata ${candidate.name},
+
+Obrigada pela sua confirmação e pelo interesse em continuar no processo de selecção da Overwatch.
+
+Entraremos em contacto brevemente com as próximas instruções relativas à fase seguinte.
+
+Com os melhores cumprimentos,
+Overwatch`;
+
+  return sendTransactionalEmail({
+    to: [{ email: candidate.email, name: candidate.name }],
+    subject,
+    htmlContent,
+    textContent,
+  });
+}
+
+/**
+ * Send polite closure email after candidate clicks NO
+ */
+export async function sendNextPhaseClosureEmail(candidate: { name: string; email: string }) {
+  const subject = "Processo de Selecção Overwatch";
+  const htmlContent = `
+    <div style="background-color: #f8fafc; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; line-height: 1.6;">
+      <div style="max-width: 560px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
+        <div style="height: 4px; background: #0b1329;"></div>
+        <div style="padding: 32px;">
+          <p style="font-size: 14px; margin-top: 0; color: #1e293b;">Prezada Candidata <strong>${candidate.name}</strong>,</p>
+          <p style="font-size: 14px; color: #334155;">Obrigada pela sua resposta e pela participação no processo de selecção da Overwatch.</p>
+          <p style="font-size: 14px; color: #334155;">Agradecemos o seu interesse e desejamos-lhe sucesso nas suas próximas oportunidades profissionais.</p>
+          <p style="font-size: 14px; color: #334155;">Esperamos poder voltar a contar com a sua candidatura no futuro.</p>
+          <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid #f1f5f9;">
+            <p style="font-size: 13.5px; color: #334155; margin: 0 0 4px 0;">Com os melhores cumprimentos,</p>
+            <strong style="font-size: 14px; color: #0b1329;">Overwatch</strong>
+          </div>
+        </div>
+        <div style="background-color: #f8fafc; padding: 18px 32px; border-top: 1px solid #e2e8f0; text-align: center;">
+          <p style="font-size: 11px; color: #94a3b8; margin: 0;">© 2026 Overwatch Moçambique. Todos os direitos reservados.</p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const textContent = `Prezada Candidata ${candidate.name},
+
+Obrigada pela sua resposta e pela participação no processo de selecção da Overwatch.
+
+Agradecemos o seu interesse e desejamos-lhe sucesso nas suas próximas oportunidades profissionais.
+
+Esperamos poder voltar a contar com a sua candidatura no futuro.
+
+Com os melhores cumprimentos,
+Overwatch`;
+
+  return sendTransactionalEmail({
+    to: [{ email: candidate.email, name: candidate.name }],
+    subject,
+    htmlContent,
+    textContent,
+  });
+}
+
+
