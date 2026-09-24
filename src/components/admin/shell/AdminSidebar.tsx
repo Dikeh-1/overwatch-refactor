@@ -156,17 +156,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       >
         {/* Brand Header */}
         <div className="p-4 border-b border-white/[0.08] flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <Logo variant="light" size="xs" />
-            <div className="flex flex-col">
-              <span className="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400">
-                Overwatch
-              </span>
-              <span className="text-xs font-bold text-white tracking-tight">
-                Admin
-              </span>
-            </div>
-          </div>
+          <Link href="/admin" className="flex items-center">
+            <Logo variant="light" size="sm" />
+          </Link>
           <button
             type="button"
             onClick={onCloseMobile}
