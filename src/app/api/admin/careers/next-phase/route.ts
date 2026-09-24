@@ -111,9 +111,17 @@ export async function POST(request: Request) {
 
       // Generate a sample preview token
       const sampleToken = `preview_${crypto.randomBytes(8).toString("hex")}`;
+      let candidateName = APPROVED_NEXT_PHASE_15[0].name;
+      if (body.candidateName) {
+        candidateName = body.candidateName;
+      } else if (body.candidateId) {
+        const matched = applications.find((a) => a.id === body.candidateId);
+        if (matched) candidateName = matched.name;
+      }
+
       const sampleCandidate = {
-        id: "preview_sample",
-        name: APPROVED_NEXT_PHASE_15[0].name,
+        id: body.candidateId || "preview_sample",
+        name: candidateName,
         email: previewEmail,
       };
 

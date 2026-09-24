@@ -22,8 +22,12 @@ import {
   UserCheck,
   ExternalLink,
   ChevronRight,
+  ChevronLeft,
   ShieldCheck,
   MessageCircle,
+  Monitor,
+  Smartphone,
+  Copy,
 } from "lucide-react";
 import { formatPhoneDisplay } from "@/lib/careers";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
@@ -100,8 +104,11 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
   const [dispatching, setDispatching] = useState(false);
   const [dispatchResult, setDispatchResult] = useState<{ sentCount: number; failedCount: number } | null>(null);
 
-  // Template View Modal
-  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  // Individual Candidate Email Preview Modal State
+  const [emailPreviewModalOpen, setEmailPreviewModalOpen] = useState(false);
+  const [previewCandidateIndex, setPreviewCandidateIndex] = useState<number>(0);
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const loadData = async () => {
     try {
@@ -192,11 +199,18 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
     setSelectedMetricFilter((prev) => (prev === filterKey ? "all" : filterKey));
   };
 
-  const handleSendPreview = async () => {
+  const activeCandidate = useMemo(() => {
+    if (!candidates || candidates.length === 0) return null;
+    const safeIdx = Math.max(0, Math.min(previewCandidateIndex, candidates.length - 1));
+    return candidates[safeIdx];
+  }, [candidates, previewCandidateIndex]);
+
+  const handleSendCandidatePreview = async (candidate?: NextPhaseCandidate | null) => {
     if (!previewEmail || !previewEmail.includes("@")) {
       alert(t("Please enter a valid preview email address.", "Por favor insira um email de pré-visualização válido."));
       return;
     }
+    const target = candidate || activeCandidate;
     setPreviewSending(true);
     setPreviewSuccessMsg(null);
     try {
@@ -207,14 +221,17 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
           action: "preview",
           previewEmail: previewEmail.trim(),
           subject: emailSubject,
+          candidateName: target?.name,
+          candidateId: target?.matchedId || target?.id,
         }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
+        const candNameLabel = target?.name ? ` (${target.name})` : "";
         setPreviewSuccessMsg(
           t(
-            `Sample preview email successfully sent to ${previewEmail} at ${new Date().toLocaleTimeString(lang === "en" ? "en-US" : "pt-MZ")}.`,
-            `Email de pré-visualização enviado com sucesso para ${previewEmail} às ${new Date().toLocaleTimeString("pt-MZ")}.`
+            `Preview email${candNameLabel} successfully sent to ${previewEmail} at ${new Date().toLocaleTimeString(lang === "en" ? "en-US" : "pt-MZ")}.`,
+            `Email de pré-visualização${candNameLabel} enviado com sucesso para ${previewEmail} às ${new Date().toLocaleTimeString("pt-MZ")}.`
           )
         );
       } else {
@@ -224,6 +241,18 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
       alert(err.message || "Network error sending preview");
     } finally {
       setPreviewSending(false);
+    }
+  };
+
+  const handleSendPreview = async () => {
+    return handleSendCandidatePreview(activeCandidate);
+  };
+
+  const handleCopyLink = (url: string) => {
+    if (typeof window !== "undefined") {
+      navigator.clipboard.writeText(`${window.location.origin}${url}`);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
     }
   };
 
@@ -297,11 +326,14 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
         <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
-            onClick={() => setTemplateModalOpen(true)}
-            className="px-3 py-1.5 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+            onClick={() => {
+              if (previewCandidateIndex >= candidates.length) setPreviewCandidateIndex(0);
+              setEmailPreviewModalOpen(true);
+            }}
+            className="px-3 py-1.5 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
           >
-            <Eye size={13} />
-            <span>{t("View Email Template", "Ver Modelo de Email")}</span>
+            <Eye size={13} className="text-sky-600" />
+            <span>{t("Preview Candidate Emails (15)", "Pré-visualizar Emails das Candidatas (15)")}</span>
           </button>
 
           <button
@@ -736,6 +768,20 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             type="button"
+                            onClick={() => {
+                              const idx = candidates.findIndex((c) => c.id === cand.id);
+                              setPreviewCandidateIndex(idx >= 0 ? idx : 0);
+                              setEmailPreviewModalOpen(true);
+                            }}
+                            className="px-2.5 py-1 rounded border border-sky-200 bg-sky-50/70 hover:bg-sky-100 text-sky-800 text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+                            title={t("Preview this candidate's personalized email", "Pré-visualizar email personalizado desta candidata")}
+                          >
+                            <Eye size={12} className="text-sky-600" />
+                            <span>{t("Preview Email", "Pré-visualizar")}</span>
+                          </button>
+
+                          <button
+                            type="button"
                             onClick={() => setSelectedCandidate(cand)}
                             className="px-2.5 py-1 rounded border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-medium transition-colors cursor-pointer"
                           >
@@ -1006,6 +1052,19 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                 </button>
 
                 <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const idx = candidates.findIndex((c) => c.id === selectedCandidate.id);
+                      setPreviewCandidateIndex(idx >= 0 ? idx : 0);
+                      setEmailPreviewModalOpen(true);
+                    }}
+                    className="px-3 py-1.5 rounded-md border border-sky-300 bg-sky-50 hover:bg-sky-100 text-sky-800 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Eye size={13} className="text-sky-600" />
+                    <span>{t("Preview Email", "Pré-visualizar")}</span>
+                  </button>
+
                   {selectedCandidate.phone && (
                     <a
                       href={`https://wa.me/${selectedCandidate.phone.replace(/\D/g, "")}`}
@@ -1084,33 +1143,179 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
         </div>
       )}
 
-      {/* Template Modal with Realistic Overwatch Letterhead */}
-      {templateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="w-full max-w-2xl bg-white rounded-lg shadow-xl border border-slate-200 space-y-0 max-h-[90vh] flex flex-col overflow-hidden">
-            {/* Modal Header */}
-            <div className="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-              <div>
-                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                  {t("Email Letterhead Preview", "Pré-visualização do Modelo de Email")}
-                </h3>
-                <p className="text-[0.7rem] text-slate-500">
-                  {t("Next Phase Conditions Notice • Mozambique Portuguese (PT-MZ)", "Notificação de Condições da Próxima Fase • Português (Moçambique)")}
-                </p>
+      {/* Individual Candidate Email Preview Modal with Realistic Overwatch Letterhead */}
+      {emailPreviewModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs">
+          <div className="w-full max-w-4xl bg-white rounded-xl shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* 1. Modal Top Bar */}
+            <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between bg-white">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-[#0b1329] text-white flex items-center justify-center font-bold font-mono text-sm shadow-xs shrink-0">
+                  #{activeCandidate?.seedIndex ?? previewCandidateIndex + 1}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-sm font-bold text-slate-900">
+                      {activeCandidate?.name || t("Candidate Preview", "Pré-visualização da Candidata")}
+                    </h3>
+                    <span className="px-2 py-0.5 rounded text-[0.68rem] font-bold bg-slate-100 text-slate-800 font-mono border border-slate-200">
+                      {activeCandidate?.score ?? 80}% SCORE
+                    </span>
+                    {activeCandidate?.invitationStatus === "sent" ? (
+                      <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        {t("INVITATION SENT", "ENVIADO")}
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                        {t("NOT SENT YET", "NÃO ENVIADO")}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[0.7rem] text-slate-500 mt-0.5">
+                    {t(
+                      "Reviewing personalized next phase invitation before official dispatch",
+                      "A validar convocatória personalizada da próxima fase antes do disparo oficial"
+                    )}
+                  </p>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setTemplateModalOpen(false)}
-                className="p-1 rounded text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
-              >
-                <X size={16} />
-              </button>
+
+              <div className="flex items-center gap-2">
+                {/* Device Switcher */}
+                <div className="flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewDevice("desktop")}
+                    className={`px-2.5 py-1 rounded text-xs font-medium inline-flex items-center gap-1.5 transition-all cursor-pointer ${
+                      previewDevice === "desktop"
+                        ? "bg-white text-slate-900 shadow-2xs font-semibold"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                    title={t("Desktop preview (600px)", "Pré-visualização desktop (600px)")}
+                  >
+                    <Monitor size={13} />
+                    <span className="hidden sm:inline">{t("Desktop", "Desktop")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewDevice("mobile")}
+                    className={`px-2.5 py-1 rounded text-xs font-medium inline-flex items-center gap-1.5 transition-all cursor-pointer ${
+                      previewDevice === "mobile"
+                        ? "bg-white text-slate-900 shadow-2xs font-semibold"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                    title={t("Mobile smartphone preview (390px)", "Pré-visualização telemóvel (390px)")}
+                  >
+                    <Smartphone size={13} />
+                    <span className="hidden sm:inline">{t("Mobile", "Telemóvel")}</span>
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setEmailPreviewModalOpen(false)}
+                  className="p-1.5 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                  title={t("Close preview", "Fechar")}
+                >
+                  <X size={18} />
+                </button>
+              </div>
             </div>
 
-            {/* Email Letterhead Viewer */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#f8fafc] admin-scrollbar">
-              <div className="max-w-xl mx-auto bg-white rounded-lg border border-slate-200 overflow-hidden shadow-xs">
-                {/* Official Letterhead Header (Dark Navy) */}
+            {/* 2. Interactive Candidate Switcher & Quick Navigation Bar */}
+            <div className="px-5 py-2.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+              {/* Prev / Dropdown / Next */}
+              <div className="flex items-center gap-2 flex-1 min-w-[280px]">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPreviewCandidateIndex((prev) => (prev > 0 ? prev - 1 : candidates.length - 1))
+                  }
+                  className="p-1.5 rounded border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer inline-flex items-center justify-center shrink-0"
+                  title={t("Previous candidate", "Candidata anterior")}
+                >
+                  <ChevronLeft size={15} />
+                </button>
+
+                <div className="relative flex-1 max-w-md">
+                  <select
+                    value={previewCandidateIndex}
+                    onChange={(e) => setPreviewCandidateIndex(Number(e.target.value))}
+                    className="w-full px-3 py-1.5 rounded border border-slate-300 bg-white text-slate-900 font-medium text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer"
+                  >
+                    {candidates.map((cand, idx) => {
+                      const statusTag =
+                        cand.invitationStatus === "sent"
+                          ? cand.candidateResponse === "confirmed"
+                            ? " [✓ Confirmed YES]"
+                            : cand.candidateResponse === "declined"
+                              ? " [✗ Declined NO]"
+                              : " [⏳ Awaiting]"
+                          : " [Not Sent]";
+                      return (
+                        <option key={cand.id || idx} value={idx}>
+                          #{cand.seedIndex} · {cand.name} ({cand.score}%){statusTag}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPreviewCandidateIndex((prev) => (prev < candidates.length - 1 ? prev + 1 : 0))
+                  }
+                  className="p-1.5 rounded border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer inline-flex items-center justify-center shrink-0"
+                  title={t("Next candidate", "Próxima candidata")}
+                >
+                  <ChevronRight size={15} />
+                </button>
+
+                <span className="text-[0.72rem] text-slate-500 font-mono whitespace-nowrap pl-1">
+                  {previewCandidateIndex + 1} / {candidates.length || 15}
+                </span>
+              </div>
+
+              {/* Candidate Info Highlights */}
+              <div className="flex items-center gap-2 text-[0.72rem]">
+                <div className="text-slate-600 flex items-center gap-1">
+                  <Mail size={12} className="text-slate-400" />
+                  <span className="font-mono text-slate-800 font-semibold truncate max-w-[200px]">
+                    {activeCandidate?.email || t("No email configured", "Sem email")}
+                  </span>
+                </div>
+
+                {activeCandidate?.candidateResponse && (
+                  <span
+                    className={`px-2 py-0.5 rounded font-bold uppercase text-[0.65rem] ${
+                      activeCandidate.candidateResponse === "confirmed"
+                        ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                        : activeCandidate.candidateResponse === "declined"
+                          ? "bg-slate-200 text-slate-800 border border-slate-300"
+                          : "bg-amber-100 text-amber-800 border border-amber-300"
+                    }`}
+                  >
+                    {activeCandidate.candidateResponse === "confirmed"
+                      ? t("Confirmed YES", "Confirmou SIM")
+                      : activeCandidate.candidateResponse === "declined"
+                        ? t("Declined NO", "Recusou NÃO")
+                        : t("Awaiting Response", "Aguardando")}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* 3. Main Email Preview Canvas */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#f1f5f9] admin-scrollbar">
+              <div
+                className={`mx-auto bg-white rounded-xl border border-slate-300 overflow-hidden transition-all duration-200 ${
+                  previewDevice === "mobile"
+                    ? "max-w-[390px] shadow-lg ring-1 ring-slate-400/20"
+                    : "max-w-xl shadow-xs"
+                }`}
+              >
+                {/* Official Letterhead Header (Dark Navy #0b1329) */}
                 <div className="bg-[#0b1329] px-6 py-4 border-b-2 border-white/15 flex items-center justify-between">
                   <Logo variant="light" size="sm" />
                   <div className="text-right">
@@ -1123,7 +1328,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                   </div>
                 </div>
 
-                {/* Official Subheading Bar */}
+                {/* Subheading Bar */}
                 <div className="bg-[#f8fafc] px-6 py-2.5 border-b border-slate-200 flex items-center justify-between text-[11px]">
                   <span className="font-semibold uppercase tracking-wider text-slate-700">
                     NOTIFICAÇÃO OFICIAL · PROCESSO DE SELECÇÃO
@@ -1133,10 +1338,10 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                   </span>
                 </div>
 
-                {/* Email Body */}
+                {/* Candidate Personalized Body */}
                 <div className="p-6 text-xs text-slate-700 space-y-3.5 leading-relaxed">
-                  <p className="font-semibold text-slate-900">
-                    Prezada Candidata <span className="text-sky-700">[Nome da Candidata]</span>,
+                  <p className="font-semibold text-slate-900 text-sm">
+                    Prezada Candidata <span className="text-sky-700 font-bold">{activeCandidate?.name}</span>,
                   </p>
 
                   <p>
@@ -1144,14 +1349,15 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                   </p>
 
                   <p>
-                    O seu resultado no teste (<strong className="text-slate-900">mais de 80%</strong>) permitiu-lhe avançar para consideração na próxima fase do processo.
+                    O seu resultado no teste (<strong className="text-slate-900">{activeCandidate?.score}% — mais de 80%</strong>) permitiu-lhe avançar para consideração na próxima fase do processo.
                   </p>
 
                   <p>
                     Antes de prosseguirmos, gostaríamos de assegurar que compreende e aceita as condições previstas para esta etapa:
                   </p>
 
-                  <div className="bg-slate-50 border-l-2 border-[#0b1329] p-3.5 rounded-r space-y-2 text-[0.72rem] text-slate-800">
+                  {/* Condition Bullet Points */}
+                  <div className="bg-slate-50 border-l-3 border-[#0b1329] p-3.5 rounded-r border border-slate-200 space-y-2 text-[0.72rem] text-slate-800">
                     <div>• <strong>10 dias de formação inicial</strong>, sem remuneração;</div>
                     <div>• Caso seja seleccionada após essa formação, seguirá para um período de <strong>3 meses de formação prática</strong>, com uma remuneração mensal de <strong>9.000 MZN</strong>;</div>
                     <div>• Após a conclusão satisfatória desse período, a remuneração mensal poderá chegar a <strong>12.000 MZN</strong>, de acordo com o desempenho e enquadramento na função;</div>
@@ -1170,26 +1376,33 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                     Caso tenha interesse, pedimos que indique carregando no botão abaixo:
                   </p>
 
-                  {/* Bulletproof action buttons with direct preview links */}
+                  {/* Bulletproof action buttons with candidate's actual or preview token */}
                   <div className="pt-2 space-y-2">
                     <a
-                      href="/pt/careers/next-phase/preview_sample?choice=yes"
+                      href={`/pt/careers/next-phase/${activeCandidate?.token || `preview_sample_${activeCandidate?.seedIndex || 1}`}?choice=yes`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block w-full text-center py-2.5 px-4 rounded bg-[#0b1329] hover:bg-[#111b3a] text-white font-semibold text-xs shadow-xs transition-colors cursor-pointer"
+                      className="block w-full text-center py-3 px-4 rounded-lg bg-[#0b1329] hover:bg-[#111b3a] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
                     >
                       Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas.
                     </a>
-                    <div className="text-center">
+                    <div className="text-center pt-1">
                       <a
-                        href="/pt/careers/next-phase/preview_sample?choice=no"
+                        href={`/pt/careers/next-phase/${activeCandidate?.token || `preview_sample_${activeCandidate?.seedIndex || 1}`}?choice=no`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[0.7rem] text-slate-500 hover:text-slate-700 underline cursor-pointer"
+                        className="text-[0.72rem] text-slate-500 hover:text-slate-800 underline cursor-pointer"
                       >
                         Não tenho interesse
                       </a>
                     </div>
+                  </div>
+
+                  <div className="text-center pt-1 text-[0.65rem] text-slate-400">
+                    Aceder directamente:{" "}
+                    <span className="font-mono text-sky-700 underline break-all">
+                      /pt/careers/next-phase/{activeCandidate?.token ? `${activeCandidate.token.slice(0, 8)}...` : `preview_sample_${activeCandidate?.seedIndex || 1}`}?choice=yes
+                    </span>
                   </div>
 
                   <p className="text-[0.68rem] text-slate-400 italic pt-2">
@@ -1202,8 +1415,8 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                   </div>
                 </div>
 
-                {/* Formal Legal & Contact Footer */}
-                <div className="bg-[#f8fafc] px-6 py-4 border-t border-slate-200 text-xs text-slate-500 leading-relaxed">
+                {/* Letterhead Footer */}
+                <div className="bg-[#f8fafc] px-6 py-4 border-t border-slate-200 text-[0.72rem] text-slate-500 leading-relaxed">
                   <div className="font-bold text-[#090d16]">Overwatch Moçambique, Lda.</div>
                   <div>Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo, Moçambique</div>
                   <div>Telefone / WhatsApp: <span className="text-sky-700 font-semibold">+258 84 287 0793</span> · Email: info@overwatchmoz.com</div>
@@ -1211,18 +1424,57 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
               </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="px-5 py-3 border-t border-slate-200 flex items-center justify-between bg-white">
-              <span className="text-[0.7rem] text-slate-400">
-                {t("Template body is official PT-MZ copy", "O corpo do modelo utiliza a redação oficial em PT-MZ")}
-              </span>
-              <button
-                type="button"
-                onClick={() => setTemplateModalOpen(false)}
-                className="px-3.5 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-800 transition-colors cursor-pointer"
-              >
-                {t("Close", "Fechar")}
-              </button>
+            {/* 4. Modal Footer: Live Test Email & Action Controls */}
+            <div className="px-5 py-3 border-t border-slate-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-3">
+              {/* Test Sender for This Specific Candidate */}
+              <div className="flex items-center gap-2 w-full sm:w-auto flex-1 max-w-md">
+                <input
+                  type="email"
+                  placeholder="admin@overwatch.co.mz"
+                  value={previewEmail}
+                  onChange={(e) => setPreviewEmail(e.target.value)}
+                  className="flex-1 px-3 py-1.5 text-xs rounded border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => activeCandidate && handleSendCandidatePreview(activeCandidate)}
+                  disabled={previewSending || !activeCandidate}
+                  className="px-3 py-1.5 rounded bg-[#0b1329] hover:bg-[#111b3a] text-white text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap inline-flex items-center gap-1.5"
+                >
+                  <Mail size={12} />
+                  <span>
+                    {previewSending
+                      ? t("Sending...", "A enviar...")
+                      : t(
+                          `Send Test (${activeCandidate?.name.split(" ")[0] || "Sample"})`,
+                          `Enviar Teste (${activeCandidate?.name.split(" ")[0] || "Amostra"})`
+                        )}
+                  </span>
+                </button>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const token = activeCandidate?.token || `preview_sample_${activeCandidate?.seedIndex || 1}`;
+                    handleCopyLink(`/pt/careers/next-phase/${token}?choice=yes`);
+                  }}
+                  className="px-3 py-1.5 rounded-md border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Copy size={12} className="text-slate-400" />
+                  <span>{copiedLink ? t("Link Copied!", "Link Copiado!") : t("Copy Link", "Copiar Link")}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setEmailPreviewModalOpen(false)}
+                  className="px-4 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-800 transition-colors cursor-pointer"
+                >
+                  {t("Close Preview", "Fechar")}
+                </button>
+              </div>
             </div>
           </div>
         </div>
