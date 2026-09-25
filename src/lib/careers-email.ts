@@ -2398,7 +2398,8 @@ export async function sendNextPhaseInvitationEmail(options: {
             <!-- Formal Sign-Off -->
             <div style="margin-top: 24px; font-size: 14px; color: #334155; line-height: 1.5;">
               Com os melhores cumprimentos,<br />
-              <strong style="color: #090d16;">Overwatch</strong>
+              <strong style="color: #090d16;">Equipa de Recrutamento e Selecção</strong><br />
+              <span style="color: #475569; font-size: 13px; font-weight: 600;">Overwatch Moçambique</span>
             </div>
           </div>
 
@@ -2442,7 +2443,8 @@ ${noUrl}
 As candidatas que confirmarem o interesse receberão posteriormente informação sobre datas, horários e organização da formação.
 
 Com os melhores cumprimentos,
-Overwatch`;
+Equipa de Recrutamento e Selecção
+Overwatch Moçambique`;
 
   const toEmail = recipientEmail || candidate.email;
   const toName = preview ? `[PREVIEW] ${candidate.name}` : candidate.name;
@@ -2517,7 +2519,8 @@ export async function sendNextPhaseConfirmationEmail(candidate: { name: string; 
             <!-- Formal Sign-Off -->
             <div style="margin-top: 24px; font-size: 14px; color: #334155; line-height: 1.5;">
               Com os melhores cumprimentos,<br />
-              <strong style="color: #090d16;">Overwatch</strong>
+              <strong style="color: #090d16;">Equipa de Recrutamento e Selecção</strong><br />
+              <span style="color: #475569; font-size: 13px; font-weight: 600;">Overwatch Moçambique</span>
             </div>
           </div>
 
@@ -2540,7 +2543,8 @@ Obrigada pela sua confirmação e pelo interesse em continuar no processo de sel
 Entraremos em contacto brevemente com as próximas instruções relativas à fase seguinte.
 
 Com os melhores cumprimentos,
-Overwatch`;
+Equipa de Recrutamento e Selecção
+Overwatch Moçambique`;
 
   return sendTransactionalEmail({
     to: [{ email: candidate.email, name: candidate.name }],
@@ -2613,7 +2617,8 @@ export async function sendNextPhaseClosureEmail(candidate: { name: string; email
             <!-- Formal Sign-Off -->
             <div style="margin-top: 24px; font-size: 14px; color: #334155; line-height: 1.5;">
               Com os melhores cumprimentos,<br />
-              <strong style="color: #090d16;">Overwatch</strong>
+              <strong style="color: #090d16;">Equipa de Recrutamento e Selecção</strong><br />
+              <span style="color: #475569; font-size: 13px; font-weight: 600;">Overwatch Moçambique</span>
             </div>
           </div>
 
@@ -2638,7 +2643,8 @@ Agradecemos o seu interesse e desejamos-lhe sucesso nas suas próximas oportunid
 Esperamos poder voltar a contar com a sua candidatura no futuro.
 
 Com os melhores cumprimentos,
-Overwatch`;
+Equipa de Recrutamento e Selecção
+Overwatch Moçambique`;
 
   return sendTransactionalEmail({
     to: [{ email: candidate.email, name: candidate.name }],

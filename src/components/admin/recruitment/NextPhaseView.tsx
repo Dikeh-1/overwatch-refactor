@@ -28,6 +28,7 @@ import {
   Monitor,
   Smartphone,
   Copy,
+  Edit2,
 } from "lucide-react";
 import { formatPhoneDisplay } from "@/lib/careers";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
@@ -108,7 +109,17 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
   const [emailPreviewModalOpen, setEmailPreviewModalOpen] = useState(false);
   const [previewCandidateIndex, setPreviewCandidateIndex] = useState<number>(0);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
+  const [previewLanguage, setPreviewLanguage] = useState<"pt" | "en">("pt");
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // Edit Candidate Contact Details Modal State
+  const [editContactModalOpen, setEditContactModalOpen] = useState(false);
+  const [editingCandidate, setEditingCandidate] = useState<NextPhaseCandidate | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [savingContact, setSavingContact] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
 
   const loadData = async () => {
     try {
@@ -253,6 +264,76 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
       navigator.clipboard.writeText(`${window.location.origin}${url}`);
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2000);
+    }
+  };
+
+  const handleOpenEditContact = (cand: NextPhaseCandidate) => {
+    setEditingCandidate(cand);
+    setEditName(cand.name);
+    setEditEmail(cand.email || "");
+    setEditPhone(cand.phone || "");
+    setContactError(null);
+    setEditContactModalOpen(true);
+  };
+
+  const handleSaveContact = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCandidate) return;
+    setSavingContact(true);
+    setContactError(null);
+
+    try {
+      const res = await fetch("/api/admin/careers/next-phase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update_contact",
+          candidateId: editingCandidate.id,
+          name: editName.trim(),
+          email: editEmail.trim(),
+          phone: editPhone.trim(),
+          score: editingCandidate.score,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setCandidates((prev) =>
+          prev.map((c) =>
+            c.id === editingCandidate.id
+              ? {
+                  ...c,
+                  name: editName.trim() || c.name,
+                  email: editEmail.trim(),
+                  phone: editPhone.trim(),
+                  isMatched: true,
+                  token: data.candidate?.nextPhaseToken || c.token,
+                }
+              : c
+          )
+        );
+        if (selectedCandidate?.id === editingCandidate.id) {
+          setSelectedCandidate((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  name: editName.trim() || prev.name,
+                  email: editEmail.trim(),
+                  phone: editPhone.trim(),
+                  isMatched: true,
+                  token: data.candidate?.nextPhaseToken || prev.token,
+                }
+              : null
+          );
+        }
+        setEditContactModalOpen(false);
+        loadData();
+      } else {
+        setContactError(data.error || "Failed to update contact details");
+      }
+    } catch (err: any) {
+      setContactError(err.message || "Network error updating contact");
+    } finally {
+      setSavingContact(false);
     }
   };
 
@@ -813,6 +894,20 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                             {t("View Details", "Ver Detalhes")}
                           </button>
 
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditContact(cand)}
+                            className={`px-2 py-1 rounded border text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer ${
+                              !cand.email
+                                ? "bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100"
+                                : "border-slate-200 hover:bg-slate-100 text-slate-700"
+                            }`}
+                            title={t("Edit or Add Contact Details", "Editar ou Adicionar Contactos")}
+                          >
+                            <Edit2 size={11} className={!cand.email ? "text-amber-600" : "text-slate-500"} />
+                            <span>{!cand.email ? t("Add Email", "Add Email") : t("Edit", "Editar")}</span>
+                          </button>
+
                           {cand.matchedId && (
                             <Link
                               href={`/admin/recruitment/candidates/${cand.matchedId}`}
@@ -932,6 +1027,17 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                       <span className="font-semibold text-slate-700 capitalize">
                         {selectedCandidate.recruitmentStage?.replace(/_/g, " ") || "Shortlisted"}
                       </span>
+                    </div>
+
+                    <div className="pt-2 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditContact(selectedCandidate)}
+                        className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                      >
+                        <Edit2 size={12} className="text-slate-500" />
+                        <span>{t("Edit Contact Details", "Editar Contactos")}</span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1206,6 +1312,34 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
               </div>
 
               <div className="flex items-center gap-2">
+                {/* Preview Language Switcher: Official PT vs English Preview */}
+                <div className="flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewLanguage("pt")}
+                    className={`px-2.5 py-1 rounded text-xs font-semibold inline-flex items-center gap-1 transition-all cursor-pointer ${
+                      previewLanguage === "pt"
+                        ? "bg-emerald-700 text-white shadow-2xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                    title={t("Official Portuguese text sent to candidates", "Texto oficial em Português enviado às candidatas")}
+                  >
+                    <span>🇲🇿 PT-MZ Oficial</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewLanguage("en")}
+                    className={`px-2.5 py-1 rounded text-xs font-semibold inline-flex items-center gap-1 transition-all cursor-pointer ${
+                      previewLanguage === "en"
+                        ? "bg-[#0b1329] text-white shadow-2xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                    title={t("Accurate English translation with proper 2nd-person pronouns (your/you)", "Tradução em Inglês com pronomes de 2ª pessoa (your/you)")}
+                  >
+                    <span>🇬🇧 English Preview</span>
+                  </button>
+                </div>
+
                 {/* Device Switcher */}
                 <div className="flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200">
                   <button
@@ -1331,6 +1465,29 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
               </div>
             </div>
 
+            {/* Warning if candidate has no email */}
+            {activeCandidate && !activeCandidate.email && (
+              <div className="px-5 py-2.5 bg-amber-50 border-b border-amber-200 flex items-center justify-between text-xs text-amber-900">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle size={15} className="text-amber-600 shrink-0" />
+                  <span>
+                    {t(
+                      `No email address registered for ${activeCandidate.name}. Please add an email address before dispatching official invitations.`,
+                      `Nenhum endereço de email registado para ${activeCandidate.name}. Por favor adicione um email antes de enviar a convocatória oficial.`
+                    )}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleOpenEditContact(activeCandidate)}
+                  className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded font-bold text-xs inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+                >
+                  <Edit2 size={12} />
+                  <span>{t("Add Email Now", "Adicionar Email")}</span>
+                </button>
+              </div>
+            )}
+
             {/* 3. Main Email Preview Canvas */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#f1f5f9] admin-scrollbar">
               <div
@@ -1356,7 +1513,9 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                 {/* Subheading Bar */}
                 <div className="bg-[#f8fafc] px-6 py-2.5 border-b border-slate-200 flex items-center justify-between text-[11px]">
                   <span className="font-semibold uppercase tracking-wider text-slate-700">
-                    NOTIFICAÇÃO OFICIAL · PROCESSO DE SELECÇÃO
+                    {previewLanguage === "en"
+                      ? "OFFICIAL NOTIFICATION · SELECTION PROCESS"
+                      : "NOTIFICAÇÃO OFICIAL · PROCESSO DE SELECÇÃO"}
                   </span>
                   <span className="text-slate-500">
                     Maputo, Moçambique
@@ -1364,81 +1523,184 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                 </div>
 
                 {/* Candidate Personalized Body */}
-                <div className="p-6 text-xs text-slate-700 space-y-3.5 leading-relaxed">
-                  <p className="font-semibold text-slate-900 text-sm">
-                    Prezada Candidata <span className="text-sky-700 font-bold">{activeCandidate?.name}</span>,
-                  </p>
+                {previewLanguage === "pt" ? (
+                  <div
+                    translate="no"
+                    className="notranslate p-6 text-xs text-slate-700 space-y-3.5 leading-relaxed select-text"
+                  >
+                    <p className="font-semibold text-slate-900 text-sm">
+                      Prezada Candidata <span className="text-sky-700 font-bold">{activeCandidate?.name}</span>,
+                    </p>
 
-                  <p>
-                    Agradecemos a sua participação no processo de selecção para a função de <strong>Operadora de CCO</strong> da Overwatch.
-                  </p>
+                    <p>
+                      Agradecemos a sua participação no processo de selecção para a função de <strong>Operadora de CCO</strong> da Overwatch.
+                    </p>
 
-                  <p>
-                    O seu resultado no teste (<strong className="text-slate-900">{activeCandidate?.score}% — mais de 80%</strong>) permitiu-lhe avançar para consideração na próxima fase do processo.
-                  </p>
+                    <p>
+                      O seu resultado no teste (<strong className="text-slate-900">{activeCandidate?.score}% — mais de 80%</strong>) permitiu-lhe avançar para consideração na próxima fase do processo.
+                    </p>
 
-                  <p>
-                    Antes de prosseguirmos, gostaríamos de assegurar que compreende e aceita as condições previstas para esta etapa:
-                  </p>
+                    <p>
+                      Antes de prosseguirmos, gostaríamos de assegurar que compreende e aceita as condições previstas para esta etapa:
+                    </p>
 
-                  {/* Condition Bullet Points */}
-                  <div className="bg-slate-50 border-l-3 border-[#0b1329] p-3.5 rounded-r border border-slate-200 space-y-2 text-[0.72rem] text-slate-800">
-                    <div>• <strong>10 dias de formação inicial</strong>, sem remuneração;</div>
-                    <div>• Caso seja seleccionada após essa formação, seguirá para um período de <strong>3 meses de formação prática</strong>, com uma remuneração mensal de <strong>9.000 MZN</strong>;</div>
-                    <div>• Após a conclusão satisfatória desse período, a remuneração mensal poderá chegar a <strong>12.000 MZN</strong>, de acordo com o desempenho e enquadramento na função;</div>
-                    <div>• O regime de trabalho previsto é de <strong>12 horas por turno</strong>, numa rotação de: <span className="font-semibold text-slate-900">2 turnos de dia + 2 turnos de noite + 2 dias de folga</span>.</div>
-                  </div>
+                    {/* Condition Bullet Points */}
+                    <div className="bg-slate-50 border-l-3 border-[#0b1329] p-3.5 rounded-r border border-slate-200 space-y-2 text-[0.72rem] text-slate-800">
+                      <div>• <strong>10 dias de formação inicial</strong>, sem remuneração;</div>
+                      <div>• Caso seja seleccionada após essa formação, seguirá para um período de <strong>3 meses de formação prática</strong>, com uma remuneração mensal de <strong>9.000 MZN</strong>;</div>
+                      <div>• Após a conclusão satisfatória desse período, a remuneração mensal poderá chegar a <strong>12.000 MZN</strong>, de acordo com o desempenho e enquadramento na função;</div>
+                      <div>• O regime de trabalho previsto é de <strong>12 horas por turno</strong>, numa rotação de: <span className="font-semibold text-slate-900">2 turnos de dia + 2 turnos de noite + 2 dias de folga</span>.</div>
+                    </div>
 
-                  <p className="text-slate-500 text-[0.7rem]">
-                    A progressão para cada fase dependerá do desempenho, disciplina, capacidade de aprendizagem, cumprimento dos procedimentos e adequação à função.
-                  </p>
+                    <p className="text-slate-500 text-[0.7rem]">
+                      A progressão para cada fase dependerá do desempenho, disciplina, capacidade de aprendizagem, cumprimento dos procedimentos e adequação à função.
+                    </p>
 
-                  <p className="font-medium text-slate-900 pt-1">
-                    Neste momento, gostaríamos apenas de saber se, tendo conhecimento destas condições, continua interessada em ser considerada para a próxima fase do processo de selecção.
-                  </p>
+                    <p className="font-medium text-slate-900 pt-1">
+                      Neste momento, gostaríamos apenas de saber se, tendo conhecimento destas condições, continua interessada em ser considerada para a próxima fase do processo de selecção.
+                    </p>
 
-                  <p className="text-slate-600 text-[0.72rem]">
-                    Caso tenha interesse, pedimos que indique carregando no botão abaixo:
-                  </p>
+                    <p className="text-slate-600 text-[0.72rem]">
+                      Caso tenha interesse, pedimos que indique carregando no botão abaixo:
+                    </p>
 
-                  {/* Bulletproof action buttons with candidate's actual or preview token */}
-                  <div className="pt-2 space-y-2">
-                    <a
-                      href={`/pt/careers/next-phase/${activeCandidate?.token || `preview_sample_${activeCandidate?.seedIndex || 1}`}?choice=yes`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block w-full text-center py-3 px-4 rounded-lg bg-[#0b1329] hover:bg-[#111b3a] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
-                    >
-                      Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas.
-                    </a>
-                    <div className="text-center pt-1">
+                    {/* Bulletproof action buttons with candidate's actual dedicated token */}
+                    <div className="pt-2 space-y-2">
                       <a
-                        href={`/pt/careers/next-phase/${activeCandidate?.token || `preview_sample_${activeCandidate?.seedIndex || 1}`}?choice=no`}
+                        href={`/pt/careers/next-phase/${activeCandidate?.token || ""}?choice=yes`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[0.72rem] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                        className="block w-full text-center py-3 px-4 rounded-lg bg-[#0b1329] hover:bg-[#111b3a] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
                       >
-                        Não tenho interesse
+                        Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas.
+                      </a>
+                      <div className="text-center pt-1">
+                        <a
+                          href={`/pt/careers/next-phase/${activeCandidate?.token || ""}?choice=no`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[0.72rem] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                        >
+                          Não tenho interesse
+                        </a>
+                      </div>
+                    </div>
+
+                    {/* Direct link box */}
+                    <div className="text-center pt-2 text-[0.68rem] text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                      <span className="font-semibold text-slate-700">Link Dedicado Oficial da Candidata:</span><br />
+                      <a
+                        href={`/pt/careers/next-phase/${activeCandidate?.token || ""}?choice=yes`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-sky-700 hover:underline break-all font-medium mt-0.5 inline-block"
+                      >
+                        /pt/careers/next-phase/{activeCandidate?.token || ""}
                       </a>
                     </div>
-                  </div>
 
-                  <div className="text-center pt-1 text-[0.65rem] text-slate-400">
-                    Aceder directamente:{" "}
-                    <span className="font-mono text-sky-700 underline break-all">
-                      /pt/careers/next-phase/{activeCandidate?.token ? `${activeCandidate.token.slice(0, 8)}...` : `preview_sample_${activeCandidate?.seedIndex || 1}`}?choice=yes
-                    </span>
-                  </div>
+                    <p className="text-[0.68rem] text-slate-400 italic pt-2">
+                      As candidatas que confirmarem o interesse receberão posteriormente informação sobre datas, horários e organização da formação.
+                    </p>
 
-                  <p className="text-[0.68rem] text-slate-400 italic pt-2">
-                    As candidatas que confirmarem o interesse receberão posteriormente informação sobre datas, horários e organização da formação.
-                  </p>
-
-                  <div className="pt-4 border-t border-slate-100 text-xs">
-                    <p className="text-slate-500">Com os melhores cumprimentos,</p>
-                    <p className="font-bold text-[#090d16] mt-0.5">Overwatch</p>
+                    <div className="pt-4 border-t border-slate-100 text-xs">
+                      <p className="text-slate-500">Com os melhores cumprimentos,</p>
+                      <p className="font-bold text-[#090d16] mt-0.5">Equipa de Recrutamento e Selecção</p>
+                      <p className="text-slate-600 text-[11px] font-semibold">Overwatch Moçambique</p>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  /* Candidate Personalized Body - Accurate English Translation with 2nd-person (your/you) */
+                  <div className="p-6 text-xs text-slate-700 space-y-3.5 leading-relaxed select-text">
+                    <div className="mb-2 p-2.5 rounded-lg bg-sky-50 border border-sky-200 text-sky-900 text-[0.7rem] flex items-center gap-2">
+                      <span className="font-bold">ℹ️</span>
+                      <span>
+                        <strong>English Management Preview:</strong> Accurate second-person translation ("your / you") for English-speaking administrators. The candidate receives the official Portuguese notification.
+                      </span>
+                    </div>
+
+                    <p className="font-semibold text-slate-900 text-sm">
+                      Dear Candidate <span className="text-sky-700 font-bold">{activeCandidate?.name}</span>,
+                    </p>
+
+                    <p>
+                      Thank you for participating in the selection process for the <strong>CCO Operator</strong> position at Overwatch.
+                    </p>
+
+                    <p>
+                      <strong>Your</strong> test score (<strong className="text-slate-900">{activeCandidate?.score}% — more than 80%</strong>) allowed <strong>you</strong> to advance to consideration in the next phase of the process.
+                    </p>
+
+                    <p>
+                      Before proceeding, we would like to ensure that you understand and accept the conditions scheduled for this stage:
+                    </p>
+
+                    {/* Condition Bullet Points */}
+                    <div className="bg-slate-50 border-l-3 border-[#0b1329] p-3.5 rounded-r border border-slate-200 space-y-2 text-[0.72rem] text-slate-800">
+                      <div>• <strong>10 days of initial training</strong>, unpaid;</div>
+                      <div>• If selected after this training, you will proceed to a <strong>3-month practical training period</strong>, with a monthly stipend of <strong>9,000 MZN</strong>;</div>
+                      <div>• Following satisfactory completion of this period, monthly remuneration may reach <strong>12,000 MZN</strong>, according to performance and role placement;</div>
+                      <div>• The scheduled working regime is <strong>12 hours per shift</strong>, on a rotation of: <span className="font-semibold text-slate-900">2 day shifts + 2 night shifts + 2 days off</span>.</div>
+                    </div>
+
+                    <p className="text-slate-500 text-[0.7rem]">
+                      Progression to each stage will depend on performance, discipline, learning agility, procedural compliance, and suitability for the role.
+                    </p>
+
+                    <p className="font-medium text-slate-900 pt-1">
+                      At this stage, we would simply like to know whether, being aware of these conditions, you remain interested in being considered for the next phase of the selection process.
+                    </p>
+
+                    <p className="text-slate-600 text-[0.72rem]">
+                      If you are interested, please confirm by clicking the button below:
+                    </p>
+
+                    {/* Action buttons with candidate's actual dedicated token */}
+                    <div className="pt-2 space-y-2">
+                      <a
+                        href={`/pt/careers/next-phase/${activeCandidate?.token || ""}?choice=yes`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block w-full text-center py-3 px-4 rounded-lg bg-[#0b1329] hover:bg-[#111b3a] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                      >
+                        Yes, I am interested in continuing in the selection process and am available to fulfill the indicated conditions.
+                      </a>
+                      <div className="text-center pt-1">
+                        <a
+                          href={`/pt/careers/next-phase/${activeCandidate?.token || ""}?choice=no`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[0.72rem] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                        >
+                          I am not interested
+                        </a>
+                      </div>
+                    </div>
+
+                    {/* Direct link box */}
+                    <div className="text-center pt-2 text-[0.68rem] text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                      <span className="font-semibold text-slate-700">Candidate Dedicated Live Link:</span><br />
+                      <a
+                        href={`/pt/careers/next-phase/${activeCandidate?.token || ""}?choice=yes`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-sky-700 hover:underline break-all font-medium mt-0.5 inline-block"
+                      >
+                        /pt/careers/next-phase/{activeCandidate?.token || ""}
+                      </a>
+                    </div>
+
+                    <p className="text-[0.68rem] text-slate-400 italic pt-2">
+                      Candidates who confirm interest will subsequently receive details regarding dates, schedules, and training arrangements.
+                    </p>
+
+                    <div className="pt-4 border-t border-slate-100 text-xs">
+                      <p className="text-slate-500">With best regards,</p>
+                      <p className="font-bold text-[#090d16] mt-0.5">Selection and Recruitment Team</p>
+                      <p className="text-slate-600 text-[11px] font-semibold">Overwatch Mozambique</p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Letterhead Footer */}
                 <div className="bg-[#f8fafc] px-6 py-4 border-t border-slate-200 text-[0.72rem] text-slate-500 leading-relaxed">
@@ -1493,7 +1755,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                 <button
                   type="button"
                   onClick={() => {
-                    const token = activeCandidate?.token || `preview_sample_${activeCandidate?.seedIndex || 1}`;
+                    const token = activeCandidate?.token || "";
                     handleCopyLink(`/pt/careers/next-phase/${token}?choice=yes`);
                   }}
                   className="px-3 py-1.5 rounded-md border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -1511,6 +1773,116 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Candidate Contact Details Modal */}
+      {editContactModalOpen && editingCandidate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white rounded-xl p-6 shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[#0b1329] text-white flex items-center justify-center font-bold font-mono text-xs">
+                  #{editingCandidate.seedIndex}
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    {t("Edit Contact Details", "Editar Contactos da Candidata")}
+                  </h3>
+                  <p className="text-[0.7rem] text-slate-500 font-mono">
+                    Score: {editingCandidate.score}%
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditContactModalOpen(false)}
+                className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {contactError && (
+              <div className="p-2.5 rounded bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                <AlertTriangle size={14} className="shrink-0" />
+                <span>{contactError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveContact} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  {t("Candidate Name", "Nome da Candidata")}
+                </label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-slate-900 focus:outline-none focus:ring-1 focus:ring-sky-500 text-xs"
+                  placeholder="Nome completo"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  {t("Email Address", "Endereço de Email")}
+                </label>
+                <input
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-slate-900 font-mono focus:outline-none focus:ring-1 focus:ring-sky-500 text-xs"
+                  placeholder="candidata@exemplo.com"
+                  autoComplete="off"
+                />
+                <p className="text-[0.68rem] text-slate-500 mt-1">
+                  {t(
+                    "Official next phase conditions invitations will be dispatched to this email address.",
+                    "A convocatória oficial com os termos da próxima fase será enviada para este email."
+                  )}
+                </p>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  {t("WhatsApp / Phone Number", "Número WhatsApp / Telefone")}
+                </label>
+                <input
+                  type="tel"
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-slate-900 font-mono focus:outline-none focus:ring-1 focus:ring-sky-500 text-xs"
+                  placeholder="+258 84 000 0000"
+                />
+                <p className="text-[0.68rem] text-slate-500 mt-1">
+                  {t(
+                    "Optional backup contact for WhatsApp communication or call reminders.",
+                    "Contacto telefónico ou WhatsApp para lembretes e confirmações."
+                  )}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditContactModalOpen(false)}
+                  className="px-3.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 cursor-pointer"
+                >
+                  {t("Cancel", "Cancelar")}
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingContact}
+                  className="px-4 py-1.5 rounded-lg bg-[#0b1329] hover:bg-[#111b3a] text-white text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <Check size={13} />
+                  <span>{savingContact ? t("Saving...", "A guardar...") : t("Save & Update", "Guardar e Actualizar")}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

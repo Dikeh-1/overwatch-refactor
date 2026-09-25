@@ -15,65 +15,74 @@ export async function GET() {
     const applications = await getApplications();
 
     // Map each of the 15 approved candidates to their live application record
-    const candidates = APPROVED_NEXT_PHASE_15.map((seed, index) => {
-      let matchedApp: Application | undefined;
+    const candidates = await Promise.all(
+      APPROVED_NEXT_PHASE_15.map(async (seed, index) => {
+        let matchedApp: Application | undefined;
 
-      if (seed.matchedId) {
-        matchedApp = applications.find((a) => a.id === seed.matchedId);
-      }
+        if (seed.matchedId) {
+          matchedApp = applications.find((a) => a.id === seed.matchedId);
+        }
 
-      if (!matchedApp) {
-        const normSeed = normalizeName(seed.name);
-        matchedApp = applications.find((a) => {
-          const normApp = normalizeName(a.name);
-          return normApp === normSeed || normApp.includes(normSeed) || normSeed.includes(normApp);
-        });
-      }
+        if (!matchedApp) {
+          const normSeed = normalizeName(seed.name);
+          matchedApp = applications.find((a) => {
+            const normApp = normalizeName(a.name);
+            return normApp === normSeed || normApp.includes(normSeed) || normSeed.includes(normApp);
+          });
+        }
 
-      const id = matchedApp ? matchedApp.id : `seed_${index + 1}`;
-      const name = matchedApp ? matchedApp.name : seed.name;
-      const email = matchedApp ? matchedApp.email : "";
-      const phone = matchedApp ? normalizePhone(matchedApp.whatsapp) : "";
-      const score = matchedApp?.testScore ?? seed.score;
-      const nextPhaseStatus = matchedApp?.nextPhaseStatus || "selected";
-      const invitationStatus: "not_sent" | "sent" = matchedApp?.nextPhaseInvitedAt ? "sent" : "not_sent";
-      const invitationSentAt = matchedApp?.nextPhaseInvitedAt || null;
-      const candidateResponse: "confirmed" | "declined" | "awaiting" | null = matchedApp?.nextPhaseResponse === "yes"
-        ? "confirmed"
-        : matchedApp?.nextPhaseResponse === "no"
-          ? "declined"
-          : invitationStatus === "sent"
-            ? "awaiting"
+        // Ensure token exists on candidate record so live links are 100% stable
+        let token = matchedApp?.nextPhaseToken;
+        if (matchedApp && !token) {
+          token = crypto.randomBytes(16).toString("hex");
+          await updateApplication(matchedApp.id, { nextPhaseToken: token });
+        }
+
+        const id = matchedApp ? matchedApp.id : `seed_${index + 1}`;
+        const name = matchedApp ? matchedApp.name : seed.name;
+        const email = matchedApp ? matchedApp.email : "";
+        const phone = matchedApp ? normalizePhone(matchedApp.whatsapp) : "";
+        const score = matchedApp?.testScore ?? seed.score;
+        const nextPhaseStatus = matchedApp?.nextPhaseStatus || "selected";
+        const invitationStatus: "not_sent" | "sent" = matchedApp?.nextPhaseInvitedAt ? "sent" : "not_sent";
+        const invitationSentAt = matchedApp?.nextPhaseInvitedAt || null;
+        const candidateResponse: "confirmed" | "declined" | "awaiting" | null = matchedApp?.nextPhaseResponse === "yes"
+          ? "confirmed"
+          : matchedApp?.nextPhaseResponse === "no"
+            ? "declined"
+            : invitationStatus === "sent"
+              ? "awaiting"
+              : null;
+        const responseDate = matchedApp?.nextPhaseRespondedAt || null;
+        const recruitmentStage = matchedApp?.status || (matchedApp ? "shortlisted" : "selected");
+        const responseOption = matchedApp?.nextPhaseResponse === "yes"
+          ? (matchedApp.nextPhaseResponseOption || "Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas.")
+          : matchedApp?.nextPhaseResponse === "no"
+            ? (matchedApp.nextPhaseResponseOption || "Não tenho interesse")
             : null;
-      const responseDate = matchedApp?.nextPhaseRespondedAt || null;
-      const recruitmentStage = matchedApp?.status || (matchedApp ? "shortlisted" : "selected");
-      const responseOption = matchedApp?.nextPhaseResponse === "yes"
-        ? (matchedApp.nextPhaseResponseOption || "Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas.")
-        : matchedApp?.nextPhaseResponse === "no"
-          ? (matchedApp.nextPhaseResponseOption || "Não tenho interesse")
-          : null;
 
-      return {
-        id,
-        seedIndex: index + 1,
-        approvedName: seed.name,
-        name,
-        score,
-        email,
-        phone,
-        isMatched: Boolean(matchedApp),
-        matchedId: matchedApp?.id,
-        nextPhaseStatus,
-        invitationStatus,
-        invitationSentAt,
-        candidateResponse,
-        responseDate,
-        respondedAt: responseDate,
-        responseOption,
-        recruitmentStage,
-        token: matchedApp?.nextPhaseToken,
-      };
-    });
+        return {
+          id,
+          seedIndex: index + 1,
+          approvedName: seed.name,
+          name,
+          score,
+          email,
+          phone,
+          isMatched: Boolean(matchedApp),
+          matchedId: matchedApp?.id,
+          nextPhaseStatus,
+          invitationStatus,
+          invitationSentAt,
+          candidateResponse,
+          responseDate,
+          respondedAt: responseDate,
+          responseOption,
+          recruitmentStage,
+          token: token || `cand_${index + 1}_${seed.score}`,
+        };
+      })
+    );
 
     const summary = {
       totalSelected: candidates.length,
@@ -95,7 +104,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const action = body.action as "preview" | "dispatch" | "reconcile";
+    const action = body.action as "preview" | "dispatch" | "reconcile" | "update_contact";
     const applications = await getApplications();
 
     const url = new URL(request.url);
@@ -103,20 +112,84 @@ export async function POST(request: Request) {
     const proto = request.headers.get("x-forwarded-proto") || url.protocol.replace(":", "") || "https";
     const baseUrl = `${proto}://${host}`;
 
+    if (action === "update_contact") {
+      const candidateId = body.candidateId;
+      const cleanEmail = (body.email || "").trim().toLowerCase();
+      const cleanPhone = (body.phone || "").trim();
+      const cleanName = (body.name || "").trim();
+
+      if (!candidateId) {
+        return Response.json({ error: "Candidate ID required" }, { status: 400 });
+      }
+
+      let app = applications.find((a) => a.id === candidateId);
+      if (!app && candidateId.startsWith("seed_")) {
+        const sIdx = parseInt(candidateId.replace("seed_", ""), 10) - 1;
+        const seed = APPROVED_NEXT_PHASE_15[sIdx];
+        if (seed) {
+          const normSeed = normalizeName(seed.name);
+          app = applications.find((a) => normalizeName(a.name) === normSeed);
+        }
+      }
+
+      if (app) {
+        const updateData: any = {};
+        if (cleanEmail) updateData.email = cleanEmail;
+        if (cleanPhone) updateData.whatsapp = cleanPhone;
+        if (cleanName) updateData.name = cleanName;
+        if (!app.nextPhaseToken) {
+          updateData.nextPhaseToken = crypto.randomBytes(16).toString("hex");
+        }
+
+        const updated = await updateApplication(app.id, updateData);
+        return Response.json({ success: true, candidate: updated });
+      } else {
+        const { saveApplication } = await import("@/lib/careers-store");
+        const token = crypto.randomBytes(16).toString("hex");
+        const newApp: Application = {
+          id: candidateId.startsWith("seed_") ? crypto.randomUUID() : candidateId,
+          createdAt: new Date().toISOString(),
+          name: cleanName || "Candidate",
+          email: cleanEmail,
+          whatsapp: cleanPhone,
+          role: "cco-operator-maputo",
+          locale: "pt",
+          grade12: "yes",
+          sex: "female",
+          ai: "no",
+          experience: "yes",
+          lastProfession: "Operadora CCO",
+          shifts: "yes",
+          cvName: "assessment.pdf",
+          cvType: "application/pdf",
+          cvSize: 1024,
+          status: "shortlisted",
+          testScore: body.score || 86,
+          nextPhaseStatus: "selected",
+          nextPhaseToken: token,
+        };
+        await saveApplication(newApp, Buffer.from(""));
+        return Response.json({ success: true, candidate: newApp });
+      }
+    }
+
     if (action === "preview") {
       const previewEmail = (body.previewEmail || process.env.ADMIN_PREVIEW_EMAIL || "").trim();
       if (!previewEmail || !previewEmail.includes("@")) {
         return Response.json({ error: "Valid preview recipient email required" }, { status: 400 });
       }
 
-      // Generate a sample preview token
-      const sampleToken = `preview_${crypto.randomBytes(8).toString("hex")}`;
+      let sampleToken = `preview_${crypto.randomBytes(8).toString("hex")}`;
       let candidateName = APPROVED_NEXT_PHASE_15[0].name;
-      if (body.candidateName) {
-        candidateName = body.candidateName;
-      } else if (body.candidateId) {
+
+      if (body.candidateId) {
         const matched = applications.find((a) => a.id === body.candidateId);
-        if (matched) candidateName = matched.name;
+        if (matched) {
+          candidateName = matched.name;
+          if (matched.nextPhaseToken) sampleToken = matched.nextPhaseToken;
+        }
+      } else if (body.candidateName) {
+        candidateName = body.candidateName;
       }
 
       const sampleCandidate = {
@@ -168,7 +241,7 @@ export async function POST(request: Request) {
           continue;
         }
 
-        const token = crypto.randomBytes(16).toString("hex");
+        const token = app.nextPhaseToken || crypto.randomBytes(16).toString("hex");
         const now = new Date().toISOString();
 
         try {

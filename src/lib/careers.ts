@@ -171,7 +171,7 @@ export const APPROVED_NEXT_PHASE_15: NextPhaseCandidateSeed[] = [
   { name: "Isaura José Vilanculos", score: 88, matchedId: "c39b7cde-a15d-4f26-a681-ef78a9a63621" },
   { name: "Orquidia Mabasso", score: 88, matchedId: "b912a272-18d8-4ed2-a097-cb00860db869" },
   { name: "Palmira João Mordinho", score: 87, matchedId: "7e04bfcd-12c5-408b-8cb8-46482e1e9499" },
-  { name: "Lindica Chiluane", score: 86 },
+  { name: "Lindica Chiluane", score: 86, matchedId: "e0a12b34-86ff-4c22-b912-lindica86chiluane" },
   { name: "Érica Khossa", score: 85, matchedId: "64827472-1369-4879-b045-7459da72daeb" },
   { name: "Cinelia Machaieie", score: 81, matchedId: "f5229a5e-ca36-4b2a-b9b3-d97ba319ea90" },
   { name: "Marcia Emilia Jacinto Mavie", score: 81, matchedId: "7a2d84c8-be8f-4470-9eaa-1b8f11052b81" },
