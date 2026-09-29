@@ -76,6 +76,36 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
     };
   }, [loadSummaryData]);
 
+  const nextPhaseCount = useMemo(() => {
+    const matchedAppIds = new Set<string>();
+    APPROVED_NEXT_PHASE_15.forEach((seed) => {
+      if (seed.matchedId) matchedAppIds.add(seed.matchedId);
+      const normSeed = seed.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+      const m = applications.find(
+        (a) => a.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === normSeed
+      );
+      if (m) matchedAppIds.add(m.id);
+    });
+
+    const additionalNextPhase = applications.filter((a) => {
+      if (matchedAppIds.has(a.id)) return false;
+      if (a.status === "archived" || a.status === "rejected") return false;
+      return (
+        a.status === "next_phase_selected" ||
+        a.status === "next_phase_invited" ||
+        a.status === "awaiting_response" ||
+        a.status === "interest_confirmed" ||
+        a.status === "interest_declined" ||
+        a.nextPhaseStatus === "selected" ||
+        a.nextPhaseStatus === "invited" ||
+        a.nextPhaseStatus === "confirmed" ||
+        a.nextPhaseStatus === "declined"
+      );
+    });
+
+    return APPROVED_NEXT_PHASE_15.length + additionalNextPhase.length;
+  }, [applications]);
+
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setAuthLoading(true);
@@ -261,36 +291,6 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
   }
 
   const breadcrumbs = getBreadcrumbs();
-
-  const nextPhaseCount = useMemo(() => {
-    const matchedAppIds = new Set<string>();
-    APPROVED_NEXT_PHASE_15.forEach((seed) => {
-      if (seed.matchedId) matchedAppIds.add(seed.matchedId);
-      const normSeed = seed.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-      const m = applications.find(
-        (a) => a.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === normSeed
-      );
-      if (m) matchedAppIds.add(m.id);
-    });
-
-    const additionalNextPhase = applications.filter((a) => {
-      if (matchedAppIds.has(a.id)) return false;
-      if (a.status === "archived" || a.status === "rejected") return false;
-      return (
-        a.status === "next_phase_selected" ||
-        a.status === "next_phase_invited" ||
-        a.status === "awaiting_response" ||
-        a.status === "interest_confirmed" ||
-        a.status === "interest_declined" ||
-        a.nextPhaseStatus === "selected" ||
-        a.nextPhaseStatus === "invited" ||
-        a.nextPhaseStatus === "confirmed" ||
-        a.nextPhaseStatus === "declined"
-      );
-    });
-
-    return APPROVED_NEXT_PHASE_15.length + additionalNextPhase.length;
-  }, [applications]);
 
   const sidebarCounts = {
     totalCandidates: applications.length,
