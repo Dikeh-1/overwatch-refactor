@@ -102,12 +102,21 @@ export async function setRole(id: string, open: boolean) {
     ),
   );
 }
+export const SYSTEM_DELETED_NEXT_PHASE_UUID = "00000000-0000-0000-0000-000000000001";
+export const SYSTEM_TEST_SLOTS_UUID = "00000000-0000-0000-0000-000000000002";
+const SYSTEM_UUIDS = new Set([SYSTEM_DELETED_NEXT_PHASE_UUID, SYSTEM_TEST_SLOTS_UUID]);
+
 export async function getApplications(): Promise<Application[]> {
-  if (!isRemote()) return read("applications.json", []);
+  if (!isRemote()) {
+    const list = await read("applications.json", []);
+    return list.filter((a: any) => a && a.role !== "__system_config__" && !SYSTEM_UUIDS.has(a.id));
+  }
   const rows = await (
     await api("/rest/v1/career_applications?select=data&order=created_at.desc")
   ).json();
-  return rows.map((r: { data: Application }) => r.data);
+  return rows
+    .map((r: { data: Application }) => r.data)
+    .filter((a: any) => a && a.role !== "__system_config__" && !SYSTEM_UUIDS.has(a.id));
 }
 export async function saveApplication(application: Application, cv: Buffer) {
   if (isRemote()) {
@@ -212,7 +221,7 @@ export async function updateApplication(
 }
 
 export async function deleteApplications(ids: string[]): Promise<void> {
-  const validIds = ids.filter((id) => /^[\da-f-]{36}$/i.test(id));
+  const validIds = ids.filter((id) => /^[\da-f-]{36}$/i.test(id) && !SYSTEM_UUIDS.has(id));
   if (!validIds.length) return;
 
   if (isRemote()) {
@@ -265,6 +274,23 @@ export async function getTestSlotConfig(): Promise<TestSlotConfig> {
   };
 
   if (isRemote()) {
+    // 1. Check DB row first
+    try {
+      const res = await api(`/rest/v1/career_applications?id=eq.${SYSTEM_TEST_SLOTS_UUID}&select=data`);
+      const rows = await res.json();
+      if (Array.isArray(rows) && rows.length > 0 && rows[0]?.data?.config) {
+        const parsed = rows[0].data.config;
+        const slots = Array.isArray(parsed.slots) && parsed.slots.length > 0
+          ? parsed.slots.map((s: unknown) => String(s).trim()).filter(Boolean)
+          : [...DEFAULT_TEST_SLOTS];
+        const quota = typeof parsed.quota === "number" && parsed.quota > 0 ? parsed.quota : DEFAULT_SLOT_QUOTA;
+        return { slots, quota };
+      }
+    } catch {
+      // ignore
+    }
+
+    // 2. Storage fallback
     try {
       const res = await api("/storage/v1/object/career-cvs/test-slots.json");
       const text = await res.text();
@@ -318,15 +344,55 @@ export async function saveTestSlotConfig(config: { slots: string[]; quota?: numb
   const payload: TestSlotConfig = { slots: cleanSlots, quota };
 
   if (isRemote()) {
-    const jsonBody = Buffer.from(JSON.stringify(payload), "utf8");
-    await api("/storage/v1/object/career-cvs/test-slots.json", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-upsert": "true",
-      },
-      body: new Uint8Array(jsonBody),
-    });
+    // 1. Save to DB table career_applications
+    try {
+      const patchRes = await api(`/rest/v1/career_applications?id=eq.${SYSTEM_TEST_SLOTS_UUID}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({
+          data: {
+            role: "__system_config__",
+            type: "test_slots",
+            config: payload,
+            updatedAt: new Date().toISOString(),
+          },
+        }),
+      });
+      const patchRows = await patchRes.json().catch(() => []);
+      if (!Array.isArray(patchRows) || patchRows.length === 0) {
+        await api(`/rest/v1/career_applications`, {
+          method: "POST",
+          headers: { Prefer: "resolution=merge-duplicates" },
+          body: JSON.stringify({
+            id: SYSTEM_TEST_SLOTS_UUID,
+            data: {
+              role: "__system_config__",
+              type: "test_slots",
+              config: payload,
+              updatedAt: new Date().toISOString(),
+            },
+          }),
+        });
+      }
+    } catch (dbErr) {
+      console.error("Failed to save test slots to Supabase DB:", dbErr);
+    }
+
+    // 2. Storage backup (safely wrapped)
+    try {
+      const jsonBody = Buffer.from(JSON.stringify(payload), "utf8");
+      await api("/storage/v1/object/career-cvs/test-slots.json", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-upsert": "true",
+        },
+        body: new Uint8Array(jsonBody),
+      });
+    } catch (storageErr) {
+      console.warn("Test slots storage backup note:", storageErr);
+    }
+
     return payload;
   }
 
@@ -344,15 +410,27 @@ export async function saveTestSlots(slots: string[], quota?: number): Promise<st
 export async function getDeletedNextPhaseIdentifiers(): Promise<string[]> {
   const fallback: string[] = [];
   if (isRemote()) {
+    // 1. Try DB row first
+    try {
+      const res = await api(`/rest/v1/career_applications?id=eq.${SYSTEM_DELETED_NEXT_PHASE_UUID}&select=data`);
+      const rows = await res.json();
+      if (Array.isArray(rows) && rows.length > 0 && Array.isArray(rows[0]?.data?.list)) {
+        return rows[0].data.list.map((s: unknown) => String(s).trim()).filter(Boolean);
+      }
+    } catch {
+      // not found in DB
+    }
+
+    // 2. Try storage backup
     try {
       const res = await api("/storage/v1/object/career-cvs/deleted-next-phase.json");
       const text = await res.text();
       const parsed = JSON.parse(text);
       if (Array.isArray(parsed)) {
-        return parsed.map((s) => String(s).trim()).filter(Boolean);
+        return parsed.map((s: unknown) => String(s).trim()).filter(Boolean);
       }
     } catch {
-      // not found
+      // not found in storage
     }
     return fallback;
   }
@@ -381,15 +459,55 @@ export async function addDeletedNextPhaseIdentifiers(identifiers: string[]): Pro
   const updated = Array.from(set);
 
   if (isRemote()) {
-    const jsonBody = Buffer.from(JSON.stringify(updated), "utf8");
-    await api("/storage/v1/object/career-cvs/deleted-next-phase.json", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-upsert": "true",
-      },
-      body: new Uint8Array(jsonBody),
-    });
+    // 1. Persist to DB table career_applications with dedicated UUID
+    try {
+      const patchRes = await api(`/rest/v1/career_applications?id=eq.${SYSTEM_DELETED_NEXT_PHASE_UUID}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({
+          data: {
+            role: "__system_config__",
+            type: "deleted_next_phase",
+            list: updated,
+            updatedAt: new Date().toISOString(),
+          },
+        }),
+      });
+      const patchRows = await patchRes.json().catch(() => []);
+      if (!Array.isArray(patchRows) || patchRows.length === 0) {
+        await api(`/rest/v1/career_applications`, {
+          method: "POST",
+          headers: { Prefer: "resolution=merge-duplicates" },
+          body: JSON.stringify({
+            id: SYSTEM_DELETED_NEXT_PHASE_UUID,
+            data: {
+              role: "__system_config__",
+              type: "deleted_next_phase",
+              list: updated,
+              updatedAt: new Date().toISOString(),
+            },
+          }),
+        });
+      }
+    } catch (dbErr) {
+      console.error("Failed to write deleted next phase to Supabase DB:", dbErr);
+    }
+
+    // 2. Also try storage replica (safe catch)
+    try {
+      const jsonBody = Buffer.from(JSON.stringify(updated), "utf8");
+      await api("/storage/v1/object/career-cvs/deleted-next-phase.json", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-upsert": "true",
+        },
+        body: new Uint8Array(jsonBody),
+      });
+    } catch (storageErr) {
+      console.warn("Storage replica save note:", storageErr);
+    }
+
     return updated;
   }
 

@@ -1,4 +1,4 @@
-﻿import pg8000.native, ssl
+import pg8000.native, ssl
 
 ctx = ssl.create_default_context()
 ctx.check_hostname = False
@@ -28,7 +28,7 @@ statements = [
     \"ALTER TABLE public.career_applications ENABLE ROW LEVEL SECURITY;\",
     \"REVOKE ALL ON public.career_roles, public.career_applications FROM anon, authenticated;\",
     \"GRANT ALL ON public.career_roles, public.career_applications TO service_role;\",
-    \"INSERT INTO storage.buckets (id,name,public,file_size_limit,allowed_mime_types) VALUES ('career-cvs','career-cvs',false,3145728,ARRAY['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document']) ON CONFLICT (id) DO NOTHING;\",
+    \"INSERT INTO storage.buckets (id,name,public,file_size_limit,allowed_mime_types) VALUES ('career-cvs','career-cvs',false,3145728,ARRAY['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/json','text/plain','application/octet-stream']) ON CONFLICT (id) DO NOTHING;\",
     \"\"\"CREATE OR REPLACE FUNCTION public.submit_career_application(application jsonb) RETURNS void LANGUAGE plpgsql AS \$\$
 BEGIN
   PERFORM 1 FROM public.career_roles WHERE id = application->>'role' AND open = true FOR UPDATE;
