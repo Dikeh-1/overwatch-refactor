@@ -29,6 +29,7 @@ import {
   Smartphone,
   Copy,
   Edit2,
+  Loader2,
 } from "lucide-react";
 import { formatPhoneDisplay } from "@/lib/careers";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
@@ -120,8 +121,10 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
   const [editPhone, setEditPhone] = useState("");
   const [savingContact, setSavingContact] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const loadData = async () => {
+  const loadData = async (isManual = false) => {
+    if (isManual) setIsRefreshing(true);
     try {
       const res = await fetch("/api/admin/careers/next-phase");
       const data = await res.json();
@@ -135,13 +138,21 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
       setError(err.message || "Network error");
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
     loadData();
     const interval = setInterval(loadData, 8000);
-    return () => clearInterval(interval);
+    const handleAdminUpdate = () => {
+      loadData();
+    };
+    window.addEventListener("admin:careers-updated", handleAdminUpdate);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("admin:careers-updated", handleAdminUpdate);
+    };
   }, []);
 
   // Filtered candidate list based on metric card click + dropdowns + search query
@@ -383,6 +394,17 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
     }
   };
 
+  if (loading && candidates.length === 0) {
+    return (
+      <div className="py-24 flex flex-col items-center justify-center space-y-3 bg-white border border-slate-200 rounded-lg p-8">
+        <Loader2 size={26} className="animate-spin text-sky-600" />
+        <p className="text-xs font-semibold text-slate-600">
+          {t("Loading Next Phase candidate cohort...", "A carregar turma da Próxima Fase...")}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header Info */}
@@ -405,6 +427,17 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => loadData(true)}
+            disabled={isRefreshing}
+            className="px-2.5 py-1.5 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs disabled:opacity-50"
+            title={t("Refresh candidate list", "Actualizar lista de candidatas")}
+          >
+            <RefreshCw size={13} className={`text-slate-600 ${isRefreshing ? "animate-spin text-sky-600" : ""}`} />
+            <span>{isRefreshing ? t("Refreshing...", "A carregar...") : t("Refresh", "Actualizar")}</span>
+          </button>
+
           <button
             type="button"
             onClick={() => {

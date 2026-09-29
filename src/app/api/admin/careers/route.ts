@@ -1,6 +1,7 @@
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
 import {
   getApplications,
+  getApplication,
   getRoles,
   setRole,
   setStatus,
@@ -9,6 +10,7 @@ import {
   updateApplication,
 } from "@/lib/careers-store";
 import { roles, stages } from "@/lib/careers";
+import crypto from "node:crypto";
 export async function GET() {
   if (!(await authenticated())) return new Response(null, { status: 401 });
   try {
@@ -42,8 +44,21 @@ export async function PATCH(request: Request) {
       data.kind === "status" &&
       stages.includes(data.status) &&
       /^[\da-f-]{36}$/.test(data.id)
-    )
+    ) {
       await setStatus(data.id, data.status);
+      if (data.status === "next_phase_selected" || data.status === "next_phase_invited") {
+        const app = await getApplication(data.id);
+        const updates: Record<string, any> = {
+          nextPhaseStatus: data.status === "next_phase_invited" ? "invited" : "selected",
+        };
+        if (!app?.nextPhaseToken) {
+          updates.nextPhaseToken = crypto.randomBytes(16).toString("hex");
+        }
+        await updateApplication(data.id, updates);
+      } else if (data.status === "archived" || data.status === "rejected" || data.status === "not_advancing") {
+        await updateApplication(data.id, { nextPhaseStatus: undefined });
+      }
+    }
     else if (
       data.kind === "bulk_status" &&
       stages.includes(data.status) &&
@@ -53,6 +68,18 @@ export async function PATCH(request: Request) {
       for (const id of data.ids) {
         if (/^[\da-f-]{36}$/.test(id)) {
           await setStatus(id, data.status);
+          if (data.status === "next_phase_selected" || data.status === "next_phase_invited") {
+            const app = await getApplication(id);
+            const updates: Record<string, any> = {
+              nextPhaseStatus: data.status === "next_phase_invited" ? "invited" : "selected",
+            };
+            if (!app?.nextPhaseToken) {
+              updates.nextPhaseToken = crypto.randomBytes(16).toString("hex");
+            }
+            await updateApplication(id, updates);
+          } else if (data.status === "archived" || data.status === "rejected" || data.status === "not_advancing") {
+            await updateApplication(id, { nextPhaseStatus: undefined });
+          }
         }
       }
     }

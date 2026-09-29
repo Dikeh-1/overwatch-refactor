@@ -51,11 +51,14 @@ export default function CandidateDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ kind: "status", id: candidateId, status: newStatus }),
       });
-      if (res.ok) {
-        await loadCandidate();
+      if (!res.ok) throw new Error("Failed to update status");
+      await loadCandidate();
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("admin:careers-updated", { detail: { candidateId, newStatus } }));
       }
     } catch (err) {
       console.error("Status update error:", err);
+      throw err;
     }
   };
 
@@ -66,11 +69,14 @@ export default function CandidateDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ kind: "status", id: candidateId, status: "archived" }),
       });
-      if (res.ok) {
-        await loadCandidate();
+      if (!res.ok) throw new Error("Failed to archive candidate");
+      await loadCandidate();
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("admin:careers-updated"));
       }
     } catch (err) {
       console.error("Archive error:", err);
+      throw err;
     }
   };
 
@@ -81,11 +87,14 @@ export default function CandidateDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: [candidateId] }),
       });
-      if (res.ok) {
-        router.push("/admin/recruitment/candidates");
+      if (!res.ok) throw new Error("Failed to delete candidate");
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("admin:careers-updated"));
       }
+      router.push("/admin/recruitment/candidates");
     } catch (err) {
       console.error("Delete error:", err);
+      throw err;
     }
   };
 

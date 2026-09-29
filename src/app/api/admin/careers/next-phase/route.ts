@@ -13,9 +13,10 @@ export async function GET() {
 
   try {
     const applications = await getApplications();
+    const matchedAppIds = new Set<string>();
 
-    // Map each of the 15 approved candidates to their live application record
-    const candidates = await Promise.all(
+    // Map each of the approved seed candidates to their live application record
+    const seededCandidates = await Promise.all(
       APPROVED_NEXT_PHASE_15.map(async (seed, index) => {
         let matchedApp: Application | undefined;
 
@@ -29,6 +30,10 @@ export async function GET() {
             const normApp = normalizeName(a.name);
             return normApp === normSeed || normApp.includes(normSeed) || normSeed.includes(normApp);
           });
+        }
+
+        if (matchedApp) {
+          matchedAppIds.add(matchedApp.id);
         }
 
         // Ensure token exists on candidate record so live links are 100% stable
@@ -83,6 +88,69 @@ export async function GET() {
         };
       })
     );
+
+    // Also include any other applications explicitly moved to next phase that were not in the seed roster
+    const additionalApps = applications.filter((a) => {
+      if (matchedAppIds.has(a.id)) return false;
+      if (a.status === "archived" || a.status === "rejected") return false;
+      return (
+        a.status === "next_phase_selected" ||
+        a.status === "next_phase_invited" ||
+        a.status === "awaiting_response" ||
+        a.status === "interest_confirmed" ||
+        a.status === "interest_declined" ||
+        a.nextPhaseStatus === "selected" ||
+        a.nextPhaseStatus === "invited" ||
+        a.nextPhaseStatus === "confirmed" ||
+        a.nextPhaseStatus === "declined"
+      );
+    });
+
+    const additionalCandidates = await Promise.all(
+      additionalApps.map(async (app, idx) => {
+        let token = app.nextPhaseToken;
+        if (!token) {
+          token = crypto.randomBytes(16).toString("hex");
+          await updateApplication(app.id, { nextPhaseToken: token });
+        }
+
+        const invitationStatus: "not_sent" | "sent" = app.nextPhaseInvitedAt ? "sent" : "not_sent";
+        const candidateResponse: "confirmed" | "declined" | "awaiting" | null = app.nextPhaseResponse === "yes"
+          ? "confirmed"
+          : app.nextPhaseResponse === "no"
+            ? "declined"
+            : invitationStatus === "sent"
+              ? "awaiting"
+              : null;
+
+        return {
+          id: app.id,
+          seedIndex: seededCandidates.length + idx + 1,
+          approvedName: app.name,
+          name: app.name,
+          score: app.testScore ?? 0,
+          email: app.email || "",
+          phone: normalizePhone(app.whatsapp),
+          isMatched: true,
+          matchedId: app.id,
+          nextPhaseStatus: app.nextPhaseStatus || "selected",
+          invitationStatus,
+          invitationSentAt: app.nextPhaseInvitedAt || null,
+          candidateResponse,
+          responseDate: app.nextPhaseRespondedAt || null,
+          respondedAt: app.nextPhaseRespondedAt || null,
+          responseOption: app.nextPhaseResponse === "yes"
+            ? (app.nextPhaseResponseOption || "Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas.")
+            : app.nextPhaseResponse === "no"
+              ? (app.nextPhaseResponseOption || "Não tenho interesse")
+              : null,
+          recruitmentStage: app.status || "next_phase_selected",
+          token,
+        };
+      })
+    );
+
+    const candidates = [...seededCandidates, ...additionalCandidates];
 
     const summary = {
       totalSelected: candidates.length,
@@ -221,6 +289,14 @@ export async function POST(request: Request) {
       let sentCount = 0;
       let failedCount = 0;
       const results: any[] = [];
+      const handledAppIds = new Set<string>();
+
+      interface DispatchTarget {
+        app: Application;
+        score?: number;
+      }
+
+      const targets: DispatchTarget[] = [];
 
       for (const seed of APPROVED_NEXT_PHASE_15) {
         let app: Application | undefined;
@@ -238,6 +314,34 @@ export async function POST(request: Request) {
           continue;
         }
 
+        handledAppIds.add(app.id);
+        targets.push({ app, score: seed.score });
+      }
+
+      // Also dispatch to any other dynamically added Next Phase applicants
+      for (const a of applications) {
+        if (handledAppIds.has(a.id)) continue;
+        if (a.status === "archived" || a.status === "rejected") continue;
+        const isNextPhase =
+          a.status === "next_phase_selected" ||
+          a.status === "next_phase_invited" ||
+          a.status === "awaiting_response" ||
+          a.status === "interest_confirmed" ||
+          a.status === "interest_declined" ||
+          a.nextPhaseStatus === "selected" ||
+          a.nextPhaseStatus === "invited" ||
+          a.nextPhaseStatus === "confirmed" ||
+          a.nextPhaseStatus === "declined";
+
+        if (isNextPhase && a.email) {
+          handledAppIds.add(a.id);
+          targets.push({ app: a, score: a.testScore });
+        }
+      }
+
+      for (const target of targets) {
+        const { app, score } = target;
+
         // Idempotency: Skip if already invited
         if (app.nextPhaseInvitedAt && app.nextPhaseToken) {
           results.push({ name: app.name, status: "already_sent" });
@@ -249,7 +353,7 @@ export async function POST(request: Request) {
 
         try {
           await sendNextPhaseInvitationEmail({
-            candidate: { id: app.id, name: app.name, email: app.email, score: seed.score },
+            candidate: { id: app.id, name: app.name, email: app.email, score },
             token,
             baseUrl,
             customSubject: body.subject,
@@ -273,11 +377,11 @@ export async function POST(request: Request) {
             timestamp: now,
             action: "Next Phase Invitation Dispatched",
             actor: "Admin",
-            details: `Dispatched official next-phase conditions notice (Score: ${seed.score})`,
+            details: `Dispatched official next-phase conditions notice (Score: ${score ?? "N/A"})`,
           });
 
           await updateApplication(app.id, {
-            testScore: seed.score,
+            testScore: score ?? app.testScore,
             nextPhaseStatus: "invited",
             nextPhaseToken: token,
             nextPhaseInvitedAt: now,

@@ -20,6 +20,7 @@ import {
   SlidersHorizontal,
   X,
   Award,
+  Loader2,
 } from "lucide-react";
 import { Application, Role, stages, formatPhoneDisplay, formatSlotDisplay } from "@/lib/careers";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
@@ -391,15 +392,28 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
           <div className="flex items-center gap-2">
             <button
               type="button"
+              disabled={bulkActionBusy}
               onClick={async () => {
                 if (onBulkStatusChange) {
-                  await onBulkStatusChange(Array.from(selectedIds), "shortlisted");
-                  setSelectedIds(new Set());
+                  setBulkActionBusy(true);
+                  try {
+                    await onBulkStatusChange(Array.from(selectedIds), "shortlisted");
+                    setSelectedIds(new Set());
+                  } finally {
+                    setBulkActionBusy(false);
+                  }
                 }
               }}
-              className="px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 text-xs font-medium transition-colors"
+              className="px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 text-xs font-medium transition-colors inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
-              {t("Set Shortlisted", "Marcar Pré-selecionado")}
+              {bulkActionBusy ? (
+                <>
+                  <Loader2 size={12} className="animate-spin text-white" />
+                  <span>{t("Processing...", "A processar...")}</span>
+                </>
+              ) : (
+                <span>{t("Set Shortlisted", "Marcar Pré-selecionado")}</span>
+              )}
             </button>
 
             <button
@@ -628,23 +642,37 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
+                disabled={bulkActionBusy}
                 onClick={() => setArchiveModalOpen(false)}
-                className="px-3 py-1.5 rounded-md border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 cursor-pointer"
+                className="px-3 py-1.5 rounded-md border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 cursor-pointer disabled:opacity-50"
               >
                 {t("Cancel", "Cancelar")}
               </button>
               <button
                 type="button"
+                disabled={bulkActionBusy}
                 onClick={async () => {
                   if (onBulkArchive) {
-                    await onBulkArchive(Array.from(selectedIds), archiveReason);
-                    setSelectedIds(new Set());
-                    setArchiveModalOpen(false);
+                    setBulkActionBusy(true);
+                    try {
+                      await onBulkArchive(Array.from(selectedIds), archiveReason);
+                      setSelectedIds(new Set());
+                      setArchiveModalOpen(false);
+                    } finally {
+                      setBulkActionBusy(false);
+                    }
                   }
                 }}
-                className="px-3 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-white cursor-pointer"
+                className="px-3 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-white inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
-                {t("Confirm Archive", "Confirmar Arquivo")}
+                {bulkActionBusy ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin text-white" />
+                    <span>{t("Archiving...", "A arquivar...")}</span>
+                  </>
+                ) : (
+                  <span>{t("Confirm Archive", "Confirmar Arquivo")}</span>
+                )}
               </button>
             </div>
           </div>

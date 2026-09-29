@@ -103,7 +103,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           href: "/admin/recruitment/next-phase",
           label: t("Next Phase", "Próxima Fase"),
           icon: Award,
-          badge: counts?.nextPhaseCount ? String(counts.nextPhaseCount) : "15",
+          badge: counts?.nextPhaseCount ? String(counts.nextPhaseCount) : null,
           highlight: true,
         },
         {

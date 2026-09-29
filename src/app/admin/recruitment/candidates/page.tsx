@@ -38,6 +38,9 @@ export default function CandidatesPage() {
       });
       if (res.ok) {
         await loadData();
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("admin:careers-updated"));
+        }
       }
     } catch (err) {
       console.error("Bulk status error:", err);
@@ -53,6 +56,9 @@ export default function CandidatesPage() {
       });
       if (res.ok) {
         await loadData();
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("admin:careers-updated"));
+        }
       }
     } catch (err) {
       console.error("Bulk archive error:", err);

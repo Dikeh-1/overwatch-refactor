@@ -21,6 +21,9 @@ import {
   AlertCircle,
   ExternalLink,
   ChevronDown,
+  Loader2,
+  Check,
+  X,
 } from "lucide-react";
 import { Application, Role, stages, formatPhoneDisplay, formatSlotDisplay, ArchiveReason } from "@/lib/careers";
 import { screenCandidate } from "@/lib/careers-screening";
@@ -55,11 +58,15 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
   const [translating, setTranslating] = useState(false);
   const [showEnglishCover, setShowEnglishCover] = useState(false);
 
-  // Modals
+  // Modals & Action States
   const [archiveModalOpen, setArchiveModalOpen] = useState(false);
   const [archiveReason, setArchiveReason] = useState<ArchiveReason>("Not Selected for Next Phase");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [statusSuccessMsg, setStatusSuccessMsg] = useState<string | null>(null);
+  const [statusErrorMsg, setStatusErrorMsg] = useState<string | null>(null);
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const roleObj = roles.find((r) => r.id === candidate.role);
   const roleLabel = roleObj ? (lang === "pt" ? roleObj.pt : roleObj.en) : (candidate.role || "Operadora de CCTV");
@@ -96,8 +103,15 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
 
   const handleStatusSelect = async (newStatus: string) => {
     setIsUpdatingStatus(true);
+    setStatusSuccessMsg(null);
+    setStatusErrorMsg(null);
     try {
       await onStatusChange(candidate.id, newStatus);
+      setStatusSuccessMsg(t("Stage updated", "Estado actualizado"));
+      setTimeout(() => setStatusSuccessMsg(null), 3000);
+    } catch (err: any) {
+      setStatusErrorMsg(t("Update failed", "Falha na actualização"));
+      setTimeout(() => setStatusErrorMsg(null), 4000);
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -127,21 +141,49 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
         </Link>
 
         <div className="flex items-center gap-2">
-          {/* Status Dropdown */}
-          <div className="flex items-center gap-2">
+          {/* Status Dropdown with Live Processing State */}
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs text-slate-500 font-medium">{t("Stage:", "Estado:")}</span>
-            <select
-              value={candidate.status}
-              disabled={isUpdatingStatus}
-              onChange={(e) => handleStatusSelect(e.target.value)}
-              className="px-2.5 py-1 text-xs font-semibold rounded-md border border-slate-300 text-slate-800 bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
-            >
-              {stages.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
+            <div className="relative inline-flex items-center">
+              <select
+                value={candidate.status}
+                disabled={isUpdatingStatus}
+                onChange={(e) => handleStatusSelect(e.target.value)}
+                className={`px-2.5 py-1 text-xs font-semibold rounded-md border text-slate-800 bg-white focus:outline-none focus:ring-1 focus:ring-sky-500 transition-colors cursor-pointer ${
+                  isUpdatingStatus ? "opacity-60 cursor-wait border-sky-400 bg-sky-50/40" : "border-slate-300"
+                }`}
+              >
+                {stages.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Visual Processing State */}
+            {isUpdatingStatus && (
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[0.68rem] font-semibold bg-sky-50 text-sky-700 border border-sky-200 animate-pulse">
+                <Loader2 size={12} className="animate-spin text-sky-600" />
+                <span>{t("Processing update...", "A processar alteração...")}</span>
+              </span>
+            )}
+
+            {/* Visual Success Confirmation Badge */}
+            {statusSuccessMsg && !isUpdatingStatus && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.68rem] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 animate-in fade-in duration-150">
+                <Check size={12} className="text-emerald-600" />
+                <span>{statusSuccessMsg}</span>
+              </span>
+            )}
+
+            {/* Visual Error Badge */}
+            {statusErrorMsg && !isUpdatingStatus && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.68rem] font-bold bg-red-50 text-red-700 border border-red-200">
+                <X size={12} className="text-red-600" />
+                <span>{statusErrorMsg}</span>
+              </span>
+            )}
           </div>
 
           {/* Archive Button */}
@@ -609,20 +651,34 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
+                disabled={isArchiving}
                 onClick={() => setArchiveModalOpen(false)}
-                className="px-3 py-1.5 rounded-md border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 cursor-pointer"
+                className="px-3 py-1.5 rounded-md border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 cursor-pointer disabled:opacity-50"
               >
                 {t("Cancel", "Cancelar")}
               </button>
               <button
                 type="button"
+                disabled={isArchiving}
                 onClick={async () => {
-                  await onArchive(candidate.id, archiveReason);
-                  setArchiveModalOpen(false);
+                  setIsArchiving(true);
+                  try {
+                    await onArchive(candidate.id, archiveReason);
+                    setArchiveModalOpen(false);
+                  } finally {
+                    setIsArchiving(false);
+                  }
                 }}
-                className="px-3 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-white cursor-pointer"
+                className="px-3 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-white inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
-                {t("Confirm Archive", "Confirmar Arquivo")}
+                {isArchiving ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin text-white" />
+                    <span>{t("Archiving...", "A arquivar...")}</span>
+                  </>
+                ) : (
+                  <span>{t("Confirm Archive", "Confirmar Arquivo")}</span>
+                )}
               </button>
             </div>
           </div>
@@ -648,20 +704,33 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
+                disabled={isDeleting}
                 onClick={() => setDeleteModalOpen(false)}
-                className="px-3 py-1.5 rounded-md border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 cursor-pointer"
+                className="px-3 py-1.5 rounded-md border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 cursor-pointer disabled:opacity-50"
               >
                 {t("Cancel", "Cancelar")}
               </button>
               <button
                 type="button"
+                disabled={isDeleting}
                 onClick={async () => {
-                  await onDelete(candidate.id);
-                  router.push(`/admin/recruitment/candidates${returnQuery}`);
+                  setIsDeleting(true);
+                  try {
+                    await onDelete(candidate.id);
+                  } finally {
+                    setIsDeleting(false);
+                  }
                 }}
-                className="px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-xs font-semibold text-white cursor-pointer"
+                className="px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-xs font-semibold text-white inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
-                {t("Delete Permanently", "Eliminar Definitivamente")}
+                {isDeleting ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin text-white" />
+                    <span>{t("Deleting...", "A eliminar...")}</span>
+                  </>
+                ) : (
+                  <span>{t("Delete Permanently", "Eliminar Definitivamente")}</span>
+                )}
               </button>
             </div>
           </div>

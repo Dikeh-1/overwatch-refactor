@@ -19,6 +19,7 @@ import {
   SlidersHorizontal,
   Plus,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import { Application, normalizeSlot, formatSlotDisplay, formatPhoneDisplay } from "@/lib/careers";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
@@ -55,6 +56,19 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
   const [editingQuota, setEditingQuota] = useState<number>(slotQuota || 15);
   const [newSlotText, setNewSlotText] = useState("");
   const [savingConfig, setSavingConfig] = useState(false);
+  const [togglingAttendanceId, setTogglingAttendanceId] = useState<string | null>(null);
+
+  const handleToggleAttendanceWithFeedback = async (candidateId: string, attended: boolean) => {
+    setTogglingAttendanceId(candidateId);
+    try {
+      await onToggleAttendance(candidateId, attended);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("admin:careers-updated"));
+      }
+    } finally {
+      setTogglingAttendanceId(null);
+    }
+  };
 
   // Collect all distinct confirmed slots
   const allSlots = useMemo(() => {
@@ -348,14 +362,20 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
                     <td className="px-4 py-3 whitespace-nowrap">
                       <button
                         type="button"
-                        onClick={() => onToggleAttendance(candidate.id, !isPresent)}
-                        className={`px-2.5 py-1 rounded text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
+                        disabled={togglingAttendanceId === candidate.id}
+                        onClick={() => handleToggleAttendanceWithFeedback(candidate.id, !isPresent)}
+                        className={`px-2.5 py-1 rounded text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 ${
                           isPresent
                             ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
                             : "bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200"
                         }`}
                       >
-                        {isPresent ? (
+                        {togglingAttendanceId === candidate.id ? (
+                          <>
+                            <Loader2 size={13} className="animate-spin text-sky-600" />
+                            <span>{t("Saving...", "A guardar...")}</span>
+                          </>
+                        ) : isPresent ? (
                           <>
                             <CheckCircle2 size={13} className="text-emerald-600" />
                             <span>{t("Present", "Presente")}</span>

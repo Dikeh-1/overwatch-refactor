@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AdminSidebar } from "./AdminSidebar";
 import { LockKeyhole, Loader2, AlertCircle, RefreshCw, Menu, ShieldCheck, ArrowRight, ExternalLink } from "lucide-react";
@@ -9,7 +9,7 @@ import LazyVideo from "@/components/ui/LazyVideo";
 import TechGrid from "@/components/ui/TechGrid";
 import { IMAGES } from "@/lib/constants";
 import Link from "next/link";
-import { Application, Role } from "@/lib/careers";
+import { Application, Role, APPROVED_NEXT_PHASE_15 } from "@/lib/careers";
 import { AdminLanguageProvider, useAdminLanguage } from "./AdminLanguageContext";
 
 interface AdminShellProps {
@@ -65,8 +65,15 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
 
   useEffect(() => {
     loadSummaryData();
-    const interval = setInterval(loadSummaryData, 10000);
-    return () => clearInterval(interval);
+    const interval = setInterval(loadSummaryData, 8000);
+    const handleAdminUpdate = () => {
+      loadSummaryData();
+    };
+    window.addEventListener("admin:careers-updated", handleAdminUpdate);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("admin:careers-updated", handleAdminUpdate);
+    };
   }, [loadSummaryData]);
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -254,10 +261,41 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
   }
 
   const breadcrumbs = getBreadcrumbs();
+
+  const nextPhaseCount = useMemo(() => {
+    const matchedAppIds = new Set<string>();
+    APPROVED_NEXT_PHASE_15.forEach((seed) => {
+      if (seed.matchedId) matchedAppIds.add(seed.matchedId);
+      const normSeed = seed.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+      const m = applications.find(
+        (a) => a.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === normSeed
+      );
+      if (m) matchedAppIds.add(m.id);
+    });
+
+    const additionalNextPhase = applications.filter((a) => {
+      if (matchedAppIds.has(a.id)) return false;
+      if (a.status === "archived" || a.status === "rejected") return false;
+      return (
+        a.status === "next_phase_selected" ||
+        a.status === "next_phase_invited" ||
+        a.status === "awaiting_response" ||
+        a.status === "interest_confirmed" ||
+        a.status === "interest_declined" ||
+        a.nextPhaseStatus === "selected" ||
+        a.nextPhaseStatus === "invited" ||
+        a.nextPhaseStatus === "confirmed" ||
+        a.nextPhaseStatus === "declined"
+      );
+    });
+
+    return APPROVED_NEXT_PHASE_15.length + additionalNextPhase.length;
+  }, [applications]);
+
   const sidebarCounts = {
     totalCandidates: applications.length,
     bookedSessions: applications.filter((a) => Boolean(a.testSlot) && a.status !== "archived" && a.status !== "rejected").length,
-    nextPhaseCount: 15,
+    nextPhaseCount,
   };
 
   return (
