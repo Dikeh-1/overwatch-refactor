@@ -8,14 +8,20 @@ import {
   deleteApplication,
   deleteApplications,
   updateApplication,
+  getDeletedNextPhaseIdentifiers,
 } from "@/lib/careers-store";
 import { roles, stages } from "@/lib/careers";
 import crypto from "node:crypto";
 export async function GET() {
   if (!(await authenticated())) return new Response(null, { status: 401 });
   try {
+    const [applications, roles, deletedNextPhase] = await Promise.all([
+      getApplications(),
+      getRoles(),
+      getDeletedNextPhaseIdentifiers(),
+    ]);
     return Response.json(
-      { applications: await getApplications(), roles: await getRoles() },
+      { applications, roles, deletedNextPhase },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (err) {

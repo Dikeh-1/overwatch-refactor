@@ -1,5 +1,11 @@
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
-import { getApplications, updateApplication } from "@/lib/careers-store";
+import {
+  getApplications,
+  updateApplication,
+  deleteApplications,
+  getDeletedNextPhaseIdentifiers,
+  addDeletedNextPhaseIdentifiers,
+} from "@/lib/careers-store";
 import { APPROVED_NEXT_PHASE_CANDIDATES, Application, normalizePhone } from "@/lib/careers";
 import { sendNextPhaseInvitationEmail } from "@/lib/careers-email";
 import crypto from "node:crypto";
@@ -12,12 +18,33 @@ export async function GET() {
   if (!(await authenticated())) return new Response(null, { status: 401 });
 
   try {
-    const applications = await getApplications();
+    const [applications, deletedRaw] = await Promise.all([
+      getApplications(),
+      getDeletedNextPhaseIdentifiers(),
+    ]);
+    const deletedIdentifiers = new Set(deletedRaw);
+
+    const isDeleted = (id?: string, name?: string) => {
+      if (id && deletedIdentifiers.has(id)) return true;
+      if (name) {
+        const norm = normalizeName(name);
+        if (deletedIdentifiers.has(norm) || deletedIdentifiers.has(name)) return true;
+      }
+      return false;
+    };
+
     const matchedAppIds = new Set<string>();
 
     // Map each of the approved seed candidates to their live application record
+    const activeSeeds = APPROVED_NEXT_PHASE_CANDIDATES.filter((seed, index) => {
+      if (seed.matchedId && isDeleted(seed.matchedId, seed.name)) return false;
+      if (isDeleted(`seed_${index + 1}`, seed.name)) return false;
+      if (isDeleted(undefined, seed.name)) return false;
+      return true;
+    });
+
     const seededCandidates = await Promise.all(
-      APPROVED_NEXT_PHASE_CANDIDATES.map(async (seed, index) => {
+      activeSeeds.map(async (seed, index) => {
         let matchedApp: Application | undefined;
 
         if (seed.matchedId) {
@@ -92,6 +119,7 @@ export async function GET() {
     // Also include any other applications explicitly moved to next phase that were not in the seed roster
     const additionalApps = applications.filter((a) => {
       if (matchedAppIds.has(a.id)) return false;
+      if (isDeleted(a.id, a.name)) return false;
       if (a.status === "archived" || a.status === "rejected") return false;
       return (
         a.status === "next_phase_selected" ||
@@ -150,7 +178,10 @@ export async function GET() {
       })
     );
 
-    const candidates = [...seededCandidates, ...additionalCandidates];
+    const candidates = [...seededCandidates, ...additionalCandidates].map((cand, idx) => ({
+      ...cand,
+      seedIndex: idx + 1,
+    }));
 
     const summary = {
       totalSelected: candidates.length,
@@ -172,13 +203,94 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const action = body.action as "preview" | "dispatch" | "reconcile" | "update_contact";
+    const action = body.action as "preview" | "dispatch" | "reconcile" | "update_contact" | "delete_candidate" | "bulk_delete" | "delete_candidates";
     const applications = await getApplications();
 
     const url = new URL(request.url);
     const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || url.host;
     const proto = request.headers.get("x-forwarded-proto") || url.protocol.replace(":", "") || "https";
     const baseUrl = `${proto}://${host}`;
+
+    if (action === "delete_candidate") {
+      const candidateId = String(body.candidateId || "").trim();
+      const candidateName = String(body.candidateName || "").trim();
+      const matchedId = String(body.matchedId || "").trim();
+
+      if (!candidateId && !matchedId && !candidateName) {
+        return Response.json({ error: "Candidate identifier required" }, { status: 400 });
+      }
+
+      const toDeleteFromDb: string[] = [];
+      if (matchedId && /^[\da-f-]{36}$/i.test(matchedId)) {
+        toDeleteFromDb.push(matchedId);
+      }
+      if (candidateId && /^[\da-f-]{36}$/i.test(candidateId) && !toDeleteFromDb.includes(candidateId)) {
+        toDeleteFromDb.push(candidateId);
+      }
+
+      if (toDeleteFromDb.length === 0 && candidateName) {
+        const norm = normalizeName(candidateName);
+        const match = applications.find((a) => normalizeName(a.name) === norm);
+        if (match) toDeleteFromDb.push(match.id);
+      }
+
+      if (toDeleteFromDb.length > 0) {
+        await deleteApplications(toDeleteFromDb);
+      }
+
+      const idsToExclude: string[] = [];
+      if (candidateId) idsToExclude.push(candidateId);
+      if (matchedId) idsToExclude.push(matchedId);
+      if (candidateName) idsToExclude.push(candidateName);
+      toDeleteFromDb.forEach((id) => idsToExclude.push(id));
+
+      await addDeletedNextPhaseIdentifiers(idsToExclude);
+
+      return Response.json({
+        success: true,
+        deletedCandidateId: candidateId,
+        purgedApplications: toDeleteFromDb.length,
+      });
+    }
+
+    if (action === "bulk_delete" || action === "delete_candidates") {
+      const candidateIds: string[] = Array.isArray(body.candidateIds) ? body.candidateIds : [];
+      const candidatesList: Array<{ id: string; name?: string; matchedId?: string }> = Array.isArray(body.candidates) ? body.candidates : [];
+
+      const toDeleteFromDb: string[] = [];
+      const idsToExclude: string[] = [];
+
+      for (const id of candidateIds) {
+        if (/^[\da-f-]{36}$/i.test(id)) toDeleteFromDb.push(id);
+        idsToExclude.push(id);
+      }
+
+      for (const item of candidatesList) {
+        if (item.matchedId && /^[\da-f-]{36}$/i.test(item.matchedId)) toDeleteFromDb.push(item.matchedId);
+        if (item.id && /^[\da-f-]{36}$/i.test(item.id)) toDeleteFromDb.push(item.id);
+        if (item.id) idsToExclude.push(item.id);
+        if (item.matchedId) idsToExclude.push(item.matchedId);
+        if (item.name) {
+          idsToExclude.push(item.name);
+          const norm = normalizeName(item.name);
+          const match = applications.find((a) => normalizeName(a.name) === norm);
+          if (match && !toDeleteFromDb.includes(match.id)) toDeleteFromDb.push(match.id);
+        }
+      }
+
+      if (toDeleteFromDb.length > 0) {
+        await deleteApplications(Array.from(new Set(toDeleteFromDb)));
+      }
+      if (idsToExclude.length > 0) {
+        await addDeletedNextPhaseIdentifiers(idsToExclude);
+      }
+
+      return Response.json({
+        success: true,
+        count: idsToExclude.length,
+        purgedApplications: toDeleteFromDb.length,
+      });
+    }
 
     if (action === "update_contact") {
       const candidateId = body.candidateId;
@@ -412,3 +524,42 @@ export async function POST(request: Request) {
     return Response.json({ error: err.message || "Next phase action failed" }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  if (!(await authenticated()) || !sameOrigin(request)) return new Response(null, { status: 403 });
+  try {
+    const body = await request.json();
+    const candidateId = String(body.candidateId || body.id || "").trim();
+    const candidateName = String(body.candidateName || body.name || "").trim();
+    const matchedId = String(body.matchedId || "").trim();
+    const applications = await getApplications();
+
+    const toDeleteFromDb: string[] = [];
+    if (matchedId && /^[\da-f-]{36}$/i.test(matchedId)) toDeleteFromDb.push(matchedId);
+    if (candidateId && /^[\da-f-]{36}$/i.test(candidateId) && !toDeleteFromDb.includes(candidateId)) {
+      toDeleteFromDb.push(candidateId);
+    }
+    if (toDeleteFromDb.length === 0 && candidateName) {
+      const norm = normalizeName(candidateName);
+      const match = applications.find((a) => normalizeName(a.name) === norm);
+      if (match) toDeleteFromDb.push(match.id);
+    }
+    if (toDeleteFromDb.length > 0) {
+      await deleteApplications(toDeleteFromDb);
+    }
+
+    const idsToExclude: string[] = [];
+    if (candidateId) idsToExclude.push(candidateId);
+    if (matchedId) idsToExclude.push(matchedId);
+    if (candidateName) idsToExclude.push(candidateName);
+    toDeleteFromDb.forEach((id) => idsToExclude.push(id));
+
+    await addDeletedNextPhaseIdentifiers(idsToExclude);
+
+    return Response.json({ success: true, purgedApplications: toDeleteFromDb.length });
+  } catch (err: any) {
+    console.error("Next-phase DELETE error:", err);
+    return Response.json({ error: "Failed to delete candidate" }, { status: 500 });
+  }
+}
+

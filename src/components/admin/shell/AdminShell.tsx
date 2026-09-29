@@ -28,6 +28,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
 
   // App metrics for sidebar badges
   const [applications, setApplications] = useState<Application[]>([]);
+  const [deletedNextPhase, setDeletedNextPhase] = useState<string[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleToggleLang = () => {
@@ -57,6 +58,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
       if (res.ok) {
         const data = await res.json();
         setApplications(data.applications || []);
+        setDeletedNextPhase(data.deletedNextPhase || []);
       }
     } catch {
       // silent
@@ -77,8 +79,18 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
   }, [loadSummaryData]);
 
   const nextPhaseCount = useMemo(() => {
+    const deletedSet = new Set(deletedNextPhase);
     const matchedAppIds = new Set<string>();
-    APPROVED_NEXT_PHASE_CANDIDATES.forEach((seed) => {
+
+    const activeSeeds = APPROVED_NEXT_PHASE_CANDIDATES.filter((seed, index) => {
+      if (seed.matchedId && deletedSet.has(seed.matchedId)) return false;
+      if (deletedSet.has(`seed_${index + 1}`)) return false;
+      const norm = seed.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+      if (deletedSet.has(norm) || deletedSet.has(seed.name)) return false;
+      return true;
+    });
+
+    activeSeeds.forEach((seed) => {
       if (seed.matchedId) matchedAppIds.add(seed.matchedId);
       const normSeed = seed.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
       const m = applications.find(
@@ -89,6 +101,9 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
 
     const additionalNextPhase = applications.filter((a) => {
       if (matchedAppIds.has(a.id)) return false;
+      if (deletedSet.has(a.id)) return false;
+      const normApp = a.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+      if (deletedSet.has(normApp)) return false;
       if (a.status === "archived" || a.status === "rejected") return false;
       return (
         a.status === "next_phase_selected" ||
@@ -103,8 +118,8 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
       );
     });
 
-    return APPROVED_NEXT_PHASE_CANDIDATES.length + additionalNextPhase.length;
-  }, [applications]);
+    return activeSeeds.length + additionalNextPhase.length;
+  }, [applications, deletedNextPhase]);
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

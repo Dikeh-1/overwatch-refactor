@@ -341,5 +341,63 @@ export async function saveTestSlots(slots: string[], quota?: number): Promise<st
   return saved.slots;
 }
 
+export async function getDeletedNextPhaseIdentifiers(): Promise<string[]> {
+  const fallback: string[] = [];
+  if (isRemote()) {
+    try {
+      const res = await api("/storage/v1/object/career-cvs/deleted-next-phase.json");
+      const text = await res.text();
+      const parsed = JSON.parse(text);
+      if (Array.isArray(parsed)) {
+        return parsed.map((s) => String(s).trim()).filter(Boolean);
+      }
+    } catch {
+      // not found
+    }
+    return fallback;
+  }
+
+  try {
+    const raw = await read<any>("deleted-next-phase.json", fallback);
+    if (Array.isArray(raw)) {
+      return raw.map((s) => String(s).trim()).filter(Boolean);
+    }
+    return fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export async function addDeletedNextPhaseIdentifiers(identifiers: string[]): Promise<string[]> {
+  const current = await getDeletedNextPhaseIdentifiers();
+  const set = new Set(current);
+  identifiers.forEach((id) => {
+    if (id && id.trim()) {
+      set.add(id.trim());
+      const norm = id.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+      if (norm) set.add(norm);
+    }
+  });
+  const updated = Array.from(set);
+
+  if (isRemote()) {
+    const jsonBody = Buffer.from(JSON.stringify(updated), "utf8");
+    await api("/storage/v1/object/career-cvs/deleted-next-phase.json", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-upsert": "true",
+      },
+      body: new Uint8Array(jsonBody),
+    });
+    return updated;
+  }
+
+  await exclusive(async () => {
+    await write("deleted-next-phase.json", updated);
+  });
+  return updated;
+}
+
 
 
