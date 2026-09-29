@@ -1,6 +1,6 @@
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
 import { getApplications, updateApplication } from "@/lib/careers-store";
-import { APPROVED_NEXT_PHASE_15, Application, normalizePhone } from "@/lib/careers";
+import { APPROVED_NEXT_PHASE_CANDIDATES, Application, normalizePhone } from "@/lib/careers";
 import { sendNextPhaseInvitationEmail } from "@/lib/careers-email";
 import crypto from "node:crypto";
 
@@ -17,7 +17,7 @@ export async function GET() {
 
     // Map each of the approved seed candidates to their live application record
     const seededCandidates = await Promise.all(
-      APPROVED_NEXT_PHASE_15.map(async (seed, index) => {
+      APPROVED_NEXT_PHASE_CANDIDATES.map(async (seed, index) => {
         let matchedApp: Application | undefined;
 
         if (seed.matchedId) {
@@ -193,7 +193,7 @@ export async function POST(request: Request) {
       let app = applications.find((a) => a.id === candidateId);
       if (!app && candidateId.startsWith("seed_")) {
         const sIdx = parseInt(candidateId.replace("seed_", ""), 10) - 1;
-        const seed = APPROVED_NEXT_PHASE_15[sIdx];
+        const seed = APPROVED_NEXT_PHASE_CANDIDATES[sIdx];
         if (seed) {
           const normSeed = normalizeName(seed.name);
           app = applications.find((a) => normalizeName(a.name) === normSeed);
@@ -248,8 +248,8 @@ export async function POST(request: Request) {
       }
 
       let sampleToken = `preview_${crypto.randomBytes(8).toString("hex")}`;
-      let candidateName = APPROVED_NEXT_PHASE_15[0].name;
-      let candidateScore: number | undefined = APPROVED_NEXT_PHASE_15[0].score;
+      let candidateName = body.candidateName || APPROVED_NEXT_PHASE_CANDIDATES[0]?.name || "Candidate";
+      let candidateScore: number | undefined = APPROVED_NEXT_PHASE_CANDIDATES[0]?.score;
 
       if (body.candidateId) {
         const matched = applications.find((a) => a.id === body.candidateId);
@@ -298,7 +298,7 @@ export async function POST(request: Request) {
 
       const targets: DispatchTarget[] = [];
 
-      for (const seed of APPROVED_NEXT_PHASE_15) {
+      for (const seed of APPROVED_NEXT_PHASE_CANDIDATES) {
         let app: Application | undefined;
         if (seed.matchedId) {
           app = applications.find((a) => a.id === seed.matchedId);

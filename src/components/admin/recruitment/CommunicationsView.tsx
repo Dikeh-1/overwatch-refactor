@@ -22,7 +22,7 @@ import {
   ShieldAlert,
   ChevronRight,
 } from "lucide-react";
-import { Application, formatPhoneDisplay, formatSlotDisplay, normalizeSlot } from "@/lib/careers";
+import { Application, formatPhoneDisplay, formatSlotDisplay, normalizeSlot, APPROVED_NEXT_PHASE_CANDIDATES } from "@/lib/careers";
 import Logo from "@/components/ui/Logo";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 
@@ -154,8 +154,64 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
 
   // Recipient computation for Compose
   const targetRecipients = useMemo(() => {
-    if (composeAudience === "next_phase_15") {
-      return applications.filter((a) => a.nextPhaseStatus === "selected" || a.nextPhaseStatus === "invited" || a.nextPhaseStatus === "confirmed");
+    if (composeAudience === "next_phase_15" || (composeAudience as string) === "next_phase") {
+      const matchedAppIds = new Set<string>();
+      const list: Application[] = [];
+
+      APPROVED_NEXT_PHASE_CANDIDATES.forEach((seed) => {
+        let m: Application | undefined;
+        if (seed.matchedId) m = applications.find((a) => a.id === seed.matchedId);
+        if (!m) {
+          const normSeed = seed.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+          m = applications.find((a) => a.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === normSeed);
+        }
+        if (m) {
+          matchedAppIds.add(m.id);
+          list.push(m);
+        } else {
+          list.push({
+            id: `seed_${seed.name}`,
+            name: seed.name,
+            email: "",
+            whatsapp: "",
+            testScore: seed.score,
+            status: "shortlisted",
+            nextPhaseStatus: "selected",
+            createdAt: new Date().toISOString(),
+            role: "cco-operator-maputo",
+            locale: "pt",
+            grade12: "yes",
+            sex: "female",
+            ai: "no",
+            experience: "yes",
+            lastProfession: "",
+            shifts: "yes",
+            cvName: "cv.pdf",
+            cvType: "application/pdf",
+            cvSize: 1024,
+          } as Application);
+        }
+      });
+
+      applications.forEach((a) => {
+        if (matchedAppIds.has(a.id)) return;
+        if (a.status === "archived" || a.status === "rejected") return;
+        if (
+          a.status === "next_phase_selected" ||
+          a.status === "next_phase_invited" ||
+          a.status === "awaiting_response" ||
+          a.status === "interest_confirmed" ||
+          a.status === "interest_declined" ||
+          a.nextPhaseStatus === "selected" ||
+          a.nextPhaseStatus === "invited" ||
+          a.nextPhaseStatus === "confirmed" ||
+          a.nextPhaseStatus === "declined"
+        ) {
+          list.push(a);
+        }
+      });
+
+      return list;
     }
     if (composeAudience === "session_slot" && composeSlot) {
       return applications.filter((a) => a.testSlot && normalizeSlot(a.testSlot) === normalizeSlot(composeSlot) && a.status !== "archived");
@@ -276,7 +332,7 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
       id: "next_phase",
       title: t("Next Phase Conditions Notice", "Notificação de Condições – Próxima Fase"),
       code: "NEXT_PHASE_CONDITIONS",
-      audience: t("Approved 15 Candidates (>80% test score)", "15 Candidatas Aprovadas (Nota >80%)"),
+      audience: t("Approved Next Phase Cohort", "Turma Aprovada da Próxima Fase"),
       subject: "Próxima Fase – Processo de Selecção Overwatch",
       description: t(
         "Official notice outlining 10-day training conditions, salary schedule, and 12h shift rotation with secure YES/NO buttons.",
@@ -666,7 +722,7 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
                     onChange={(e) => setComposeAudience(e.target.value as any)}
                     className="w-full px-3 py-2 text-xs rounded-md border border-slate-300 text-slate-900 bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
                   >
-                    <option value="next_phase_15">{t("Approved Next Phase Cohort (15 candidates)", "Turma Aprovada da Próxima Fase (15 candidatas)")}</option>
+                    <option value="next_phase_15">{t("Approved Next Phase Cohort", "Turma Aprovada da Próxima Fase")}</option>
                     <option value="session_slot">{t("Filter by In-Person Test Session Slot", "Filtrar por Turno de Teste Presencial")}</option>
                     <option value="shortlisted_unbooked">{t("Shortlisted Candidates Awaiting Booking", "Candidaturas Triadas Pendentes de Agendamento")}</option>
                     <option value="individual">{t("Single Candidate by Name / ID", "Candidatura Individual por Nome")}</option>

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import Link from "next/link";
 import {
   Users,
@@ -13,7 +13,7 @@ import {
   Briefcase,
   TrendingUp,
 } from "lucide-react";
-import { Application, Role } from "@/lib/careers";
+import { Application, Role, APPROVED_NEXT_PHASE_CANDIDATES } from "@/lib/careers";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 
 interface RecruitmentOverviewProps {
@@ -35,7 +35,59 @@ export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
   const totalApps = applications.length;
   const testsBooked = applications.filter((a) => Boolean(a.testSlot) && a.status !== "archived" && a.status !== "rejected").length;
   const testsCompleted = applications.filter((a) => Boolean(a.attendedAt)).length;
-  const nextPhaseSelected = 15;
+
+  // Dynamic next phase cohort metrics derived from DB applications & roster
+  const nextPhaseStats = useMemo(() => {
+    const matchedAppIds = new Set<string>();
+    const scores: number[] = [];
+
+    APPROVED_NEXT_PHASE_CANDIDATES.forEach((seed) => {
+      let score = seed.score;
+      if (seed.matchedId) {
+        matchedAppIds.add(seed.matchedId);
+        const m = applications.find((a) => a.id === seed.matchedId);
+        if (m && typeof m.testScore === "number") score = m.testScore;
+      } else {
+        const normSeed = seed.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+        const m = applications.find(
+          (a) => a.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === normSeed
+        );
+        if (m) {
+          matchedAppIds.add(m.id);
+          if (typeof m.testScore === "number") score = m.testScore;
+        }
+      }
+      scores.push(score);
+    });
+
+    const additionalNextPhase = applications.filter((a) => {
+      if (matchedAppIds.has(a.id)) return false;
+      if (a.status === "archived" || a.status === "rejected") return false;
+      return (
+        a.status === "next_phase_selected" ||
+        a.status === "next_phase_invited" ||
+        a.status === "awaiting_response" ||
+        a.status === "interest_confirmed" ||
+        a.status === "interest_declined" ||
+        a.nextPhaseStatus === "selected" ||
+        a.nextPhaseStatus === "invited" ||
+        a.nextPhaseStatus === "confirmed" ||
+        a.nextPhaseStatus === "declined"
+      );
+    });
+
+    additionalNextPhase.forEach((a) => {
+      if (typeof a.testScore === "number") scores.push(a.testScore);
+    });
+
+    const totalCount = APPROVED_NEXT_PHASE_CANDIDATES.length + additionalNextPhase.length;
+    const minScore = scores.length > 0 ? Math.min(...scores) : 0;
+    const maxScore = scores.length > 0 ? Math.max(...scores) : 100;
+
+    return { totalCount, minScore, maxScore };
+  }, [applications]);
+
+  const nextPhaseSelected = nextPhaseStats.totalCount;
   const awaitingResponse = applications.filter((a) => a.nextPhaseInvitedAt && !a.nextPhaseResponse).length;
   const confirmedInterest = applications.filter((a) => a.nextPhaseResponse === "yes").length;
 
@@ -217,15 +269,15 @@ export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
             </div>
             <p className="text-xs text-slate-500 leading-relaxed">
               {t(
-                "Management has approved 15 candidates for the CCO practical training pipeline (Scores: 81% - 93%).",
-                "A administração aprovou 15 candidatas para a formação prática de CCO (Pontuações: 81% - 93%)."
+                `Management has approved ${nextPhaseStats.totalCount} candidates for the CCO practical training pipeline (Scores: ${nextPhaseStats.minScore}% - ${nextPhaseStats.maxScore}%).`,
+                `A administração aprovou ${nextPhaseStats.totalCount} candidatas para a formação prática de CCO (Pontuações: ${nextPhaseStats.minScore}% - ${nextPhaseStats.maxScore}%).`
               )}
             </p>
 
             <div className="mt-4 p-3 rounded-md bg-slate-50 border border-slate-200 text-xs space-y-1.5">
               <div className="flex justify-between text-slate-600">
                 <span>{t("Approved Candidates:", "Candidatas Aprovadas:")}</span>
-                <strong className="text-slate-900 font-mono">15</strong>
+                <strong className="text-slate-900 font-mono">{nextPhaseStats.totalCount}</strong>
               </div>
               <div className="flex justify-between text-slate-600">
                 <span>{t("Confirmed YES:", "Confirmaram SIM:")}</span>

@@ -9,7 +9,7 @@ import LazyVideo from "@/components/ui/LazyVideo";
 import TechGrid from "@/components/ui/TechGrid";
 import { IMAGES } from "@/lib/constants";
 import Link from "next/link";
-import { Application, Role, APPROVED_NEXT_PHASE_15 } from "@/lib/careers";
+import { Application, Role, APPROVED_NEXT_PHASE_CANDIDATES } from "@/lib/careers";
 import { AdminLanguageProvider, useAdminLanguage } from "./AdminLanguageContext";
 
 interface AdminShellProps {
@@ -78,7 +78,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
 
   const nextPhaseCount = useMemo(() => {
     const matchedAppIds = new Set<string>();
-    APPROVED_NEXT_PHASE_15.forEach((seed) => {
+    APPROVED_NEXT_PHASE_CANDIDATES.forEach((seed) => {
       if (seed.matchedId) matchedAppIds.add(seed.matchedId);
       const normSeed = seed.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
       const m = applications.find(
@@ -103,7 +103,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
       );
     });
 
-    return APPROVED_NEXT_PHASE_15.length + additionalNextPhase.length;
+    return APPROVED_NEXT_PHASE_CANDIDATES.length + additionalNextPhase.length;
   }, [applications]);
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {

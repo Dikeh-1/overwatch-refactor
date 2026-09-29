@@ -90,6 +90,14 @@ export async function PATCH(request: Request) {
       // Clear booked test slot without changing candidate status
       await updateApplication(data.id, { testSlot: undefined, testBookedAt: undefined });
     }
+    else if (
+      data.kind === "score" &&
+      /^[\da-f-]{36}$/.test(data.id) &&
+      typeof data.score === "number"
+    ) {
+      const sanitizedScore = Math.max(0, Math.min(100, Math.round(data.score)));
+      await updateApplication(data.id, { testScore: sanitizedScore });
+    }
     else {
       return new Response(null, { status: 400 });
     }

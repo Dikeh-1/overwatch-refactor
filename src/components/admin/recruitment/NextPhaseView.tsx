@@ -75,8 +75,8 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
 
   const [candidates, setCandidates] = useState<NextPhaseCandidate[]>([]);
   const [summary, setSummary] = useState<NextPhaseSummary>({
-    totalSelected: 21,
-    notSent: 21,
+    totalSelected: 0,
+    notSent: 0,
     awaiting: 0,
     confirmed: 0,
     declined: 0,
@@ -420,8 +420,8 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
             {t(
-              `Management approved cohort of ${candidates.length || 21} candidates moving forward to practical training consideration`,
-              `Turma de ${candidates.length || 21} candidatas aprovadas pela administração para consideração na fase de formação`
+              `Management approved cohort of ${candidates.length} candidates moving forward to practical training consideration`,
+              `Turma de ${candidates.length} candidatas aprovadas pela administração para consideração na fase de formação`
             )}
           </p>
         </div>
@@ -447,7 +447,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
             className="px-3 py-1.5 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
           >
             <Eye size={13} className="text-sky-600" />
-            <span>{t(`Preview Candidate Emails (${candidates.length || 21})`, `Pré-visualizar Emails das Candidatas (${candidates.length || 21})`)}</span>
+            <span>{t(`Preview Candidate Emails (${candidates.length})`, `Pré-visualizar Emails das Candidatas (${candidates.length})`)}</span>
           </button>
 
           <button
@@ -751,12 +751,12 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
         </div>
       </div>
 
-      {/* Approved 15 Candidates Roster Table */}
+      {/* Approved Candidates Roster Table */}
       <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-xs">
         <div className="p-3.5 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-              {t(`Approved Candidate Roster (${candidates.length || 21})`, `Lista de Candidatas Aprovadas (${candidates.length || 21})`)}
+              {t(`Approved Candidate Roster (${candidates.length})`, `Lista de Candidatas Aprovadas (${candidates.length})`)}
             </h2>
             {selectedMetricFilter !== "all" && (
               <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-sky-100 text-sky-800">
@@ -1022,7 +1022,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                         <span className="px-1.5 py-0.2 rounded text-[0.6rem] font-bold bg-emerald-100 text-emerald-800">
                           {selectedCandidate.score >= 80
                             ? t("PASSED ≥ 80%", "APROVADO ≥ 80%")
-                            : t("APPROVED (70-79%)", "APROVADO (70-79%)")}
+                            : t(`APPROVED (${selectedCandidate.score}%)`, `APROVADO (${selectedCandidate.score}%)`)}
                         </span>
                       </div>
                     </div>
@@ -1467,7 +1467,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                 </button>
 
                 <span className="text-[0.72rem] text-slate-500 font-mono whitespace-nowrap pl-1">
-                  {previewCandidateIndex + 1} / {candidates.length || 21}
+                  {candidates.length > 0 ? previewCandidateIndex + 1 : 0} / {candidates.length}
                 </span>
               </div>
 

@@ -68,6 +68,51 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
   const [isArchiving, setIsArchiving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Dynamic test score state
+  const [savedScore, setSavedScore] = useState<number | undefined>(candidate.testScore);
+  const [currentScore, setCurrentScore] = useState<string>(
+    typeof candidate.testScore === "number" ? String(candidate.testScore) : ""
+  );
+  const [isSavingScore, setIsSavingScore] = useState(false);
+  const [scoreSuccessMsg, setScoreSuccessMsg] = useState<string | null>(null);
+  const [scoreErrorMsg, setScoreErrorMsg] = useState<string | null>(null);
+
+  const handleSaveScore = async () => {
+    const num = parseFloat(currentScore);
+    if (isNaN(num) || num < 0 || num > 100) {
+      setScoreErrorMsg(t("Score must be between 0 and 100", "A pontuação deve estar entre 0 e 100"));
+      setTimeout(() => setScoreErrorMsg(null), 3000);
+      return;
+    }
+
+    setIsSavingScore(true);
+    setScoreSuccessMsg(null);
+    setScoreErrorMsg(null);
+    try {
+      const sanitized = Math.round(num);
+      const res = await fetch("/api/admin/careers", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "score",
+          id: candidate.id,
+          score: sanitized,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save score");
+      candidate.testScore = sanitized;
+      setSavedScore(sanitized);
+      setScoreSuccessMsg(t("Score saved successfully", "Pontuação gravada com sucesso"));
+      window.dispatchEvent(new CustomEvent("admin:careers-updated"));
+      setTimeout(() => setScoreSuccessMsg(null), 3000);
+    } catch (err: any) {
+      setScoreErrorMsg(err.message || t("Error saving score", "Erro ao gravar pontuação"));
+      setTimeout(() => setScoreErrorMsg(null), 3000);
+    } finally {
+      setIsSavingScore(false);
+    }
+  };
+
   const roleObj = roles.find((r) => r.id === candidate.role);
   const roleLabel = roleObj ? (lang === "pt" ? roleObj.pt : roleObj.en) : (candidate.role || "Operadora de CCTV");
 
@@ -223,9 +268,9 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                 <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
                   {roleLabel}
                 </span>
-                {candidate.testScore && (
+                {typeof savedScore === "number" && (
                   <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-slate-900 text-white">
-                    Score: {candidate.testScore}%
+                    Score: {savedScore}%
                   </span>
                 )}
               </div>
@@ -497,6 +542,82 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                   {t("Timestamp:", "Hora de Entrada:")} {new Date(candidate.attendedAt).toLocaleString("pt-MZ")}
                 </div>
               )}
+            </div>
+
+            {/* Dynamic Assessment Score Card */}
+            <div className="p-4 rounded-md border border-slate-200 space-y-3 md:col-span-2 bg-slate-50/50">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <span className="text-[0.65rem] font-bold uppercase tracking-wider text-slate-500 block">
+                  {t("Written Assessment Test Score", "Pontuação do Teste Escrito de Avaliação")}
+                </span>
+                {typeof savedScore === "number" && (
+                  <span
+                    className={`px-2 py-0.5 rounded text-[0.65rem] font-bold ${
+                      savedScore >= 80
+                        ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                        : "bg-amber-100 text-amber-800 border border-amber-300"
+                    }`}
+                  >
+                    {savedScore >= 80
+                      ? t("Passed (≥80%) — Next Phase Eligible", "Aprovada (≥80%) — Apta para Próxima Fase")
+                      : t(`Score: ${savedScore}%`, `Nota: ${savedScore}%`)}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="relative w-32">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={currentScore}
+                    onChange={(e) => setCurrentScore(e.target.value)}
+                    placeholder="0 - 100"
+                    className="w-full px-3 py-1.5 text-xs font-mono font-bold rounded-md border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                    %
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleSaveScore}
+                  disabled={isSavingScore || currentScore === ""}
+                  className="px-3 py-1.5 rounded-md bg-[#0a1128] hover:bg-[#101b3d] text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingScore ? (
+                    <>
+                      <Loader2 size={13} className="animate-spin" />
+                      <span>{t("Saving...", "A gravar...")}</span>
+                    </>
+                  ) : (
+                    <span>{t("Save Test Score", "Gravar Nota")}</span>
+                  )}
+                </button>
+
+                {scoreSuccessMsg && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <Check size={13} className="text-emerald-600" />
+                    <span>{scoreSuccessMsg}</span>
+                  </span>
+                )}
+
+                {scoreErrorMsg && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-red-50 text-red-700 border border-red-200">
+                    <X size={13} className="text-red-600" />
+                    <span>{scoreErrorMsg}</span>
+                  </span>
+                )}
+              </div>
+
+              <p className="text-[0.7rem] text-slate-500 leading-relaxed">
+                {t(
+                  "Enter the candidate's verified written test score (0–100%). Scores update live across the portal and qualify candidates for next-phase cohorts.",
+                  "Introduza a nota verificada do teste presencial (0–100%). A pontuação actualiza em tempo real em todo o portal e qualifica a candidata para a turma da próxima fase."
+                )}
+              </p>
             </div>
           </div>
         </div>
