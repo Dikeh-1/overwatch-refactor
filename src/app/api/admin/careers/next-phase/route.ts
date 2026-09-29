@@ -181,11 +181,13 @@ export async function POST(request: Request) {
 
       let sampleToken = `preview_${crypto.randomBytes(8).toString("hex")}`;
       let candidateName = APPROVED_NEXT_PHASE_15[0].name;
+      let candidateScore: number | undefined = APPROVED_NEXT_PHASE_15[0].score;
 
       if (body.candidateId) {
         const matched = applications.find((a) => a.id === body.candidateId);
         if (matched) {
           candidateName = matched.name;
+          candidateScore = matched.testScore ?? candidateScore;
           if (matched.nextPhaseToken) sampleToken = matched.nextPhaseToken;
         }
       } else if (body.candidateName) {
@@ -196,6 +198,7 @@ export async function POST(request: Request) {
         id: body.candidateId || "preview_sample",
         name: candidateName,
         email: previewEmail,
+        score: candidateScore,
       };
 
       const res = await sendNextPhaseInvitationEmail({
@@ -246,7 +249,7 @@ export async function POST(request: Request) {
 
         try {
           await sendNextPhaseInvitationEmail({
-            candidate: { id: app.id, name: app.name, email: app.email },
+            candidate: { id: app.id, name: app.name, email: app.email, score: seed.score },
             token,
             baseUrl,
             customSubject: body.subject,

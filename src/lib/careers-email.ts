@@ -2284,7 +2284,7 @@ Overwatch Moçambique`;
  * Send official Next Phase Invitation Email to approved candidate (with YES/NO response buttons)
  */
 export async function sendNextPhaseInvitationEmail(options: {
-  candidate: { id: string; name: string; email: string };
+  candidate: { id: string; name: string; email: string; score?: number };
   token: string;
   baseUrl?: string;
   customSubject?: string;
@@ -2299,6 +2299,11 @@ export async function sendNextPhaseInvitationEmail(options: {
   const subject = customSubject?.trim() || "Próxima Fase – Processo de Selecção Overwatch";
   const yesUrl = `${baseUrl.replace(/\/+$/, "")}/pt/careers/next-phase/${token}?choice=yes`;
   const noUrl = `${baseUrl.replace(/\/+$/, "")}/pt/careers/next-phase/${token}?choice=no`;
+
+  const scorePhrase =
+    typeof candidate.score === "number" && candidate.score < 80
+      ? "O seu resultado no teste permitiu-lhe avançar para consideração na próxima fase do processo."
+      : "O seu resultado no teste (mais de 80%) permitiu-lhe avançar para consideração na próxima fase do processo.";
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -2351,7 +2356,7 @@ export async function sendNextPhaseInvitationEmail(options: {
 
             <p style="font-size: 14px; color: #334155; line-height: 1.6;">Agradecemos a sua participação no processo de selecção para a função de <strong>Operadora de CCO</strong> da Overwatch.</p>
 
-            <p style="font-size: 14px; color: #334155; line-height: 1.6;">O seu resultado no teste (mais de 80%) permitiu-lhe avançar para consideração na próxima fase do processo.</p>
+            <p style="font-size: 14px; color: #334155; line-height: 1.6;">${scorePhrase}</p>
 
             <p style="font-size: 14px; color: #334155; line-height: 1.6;">Antes de prosseguirmos, gostaríamos de assegurar que compreende e aceita as condições previstas para esta etapa:</p>
 
@@ -2421,7 +2426,7 @@ Prezada Candidata ${candidate.name},
 
 Agradecemos a sua participação no processo de selecção para a função de Operadora de CCO da Overwatch.
 
-O seu resultado no teste (mais de 80%) permitiu-lhe avançar para consideração na próxima fase do processo.
+${scorePhrase}
 
 Antes de prosseguirmos, gostaríamos de assegurar que compreende e aceita as condições previstas para esta etapa:
 

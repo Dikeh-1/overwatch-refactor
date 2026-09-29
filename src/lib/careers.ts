@@ -175,7 +175,14 @@ export const APPROVED_NEXT_PHASE_15: NextPhaseCandidateSeed[] = [
   { name: "Érica Khossa", score: 85, matchedId: "64827472-1369-4879-b045-7459da72daeb" },
   { name: "Cinelia Machaieie", score: 81, matchedId: "f5229a5e-ca36-4b2a-b9b3-d97ba319ea90" },
   { name: "Marcia Emilia Jacinto Mavie", score: 81, matchedId: "7a2d84c8-be8f-4470-9eaa-1b8f11052b81" },
+  { name: "Cátia Saidino Hargas", score: 78, matchedId: "5f4c6dc7-3d57-451c-a3ca-9a2067fd83f4" },
+  { name: "Edna Joaquim", score: 77, matchedId: "e3592560-2a09-4861-9839-3da5ebe549a2" },
+  { name: "Ilódia da Ana Lourenço", score: 76, matchedId: "3dc4b7cd-9bed-4e04-9461-5ff2e7f96f76" },
+  { name: "Claudina Chaima", score: 75, matchedId: "0df8c415-dbbf-438d-b177-a506b220067b" },
+  { name: "Gleid Elaine Munguambe", score: 75, matchedId: "599f2e08-2338-406e-9cef-51f43d89d4aa" },
+  { name: "Yumina Alzira Mahumane", score: 73, matchedId: "4dcbf0aa-89d4-4ca9-b944-1875cb99308c" },
 ];
+export const APPROVED_NEXT_PHASE_CANDIDATES = APPROVED_NEXT_PHASE_15;
 
 export const DEFAULT_TEST_SLOTS = [
   "Segunda-feira, 21 de Setembro - 10h00",
