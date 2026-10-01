@@ -1,8 +1,11 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useState, type FormEvent } from "react";
 import { useLocale } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
+
+const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
 import {
   ArrowDown,
   ArrowRight,
@@ -256,6 +259,13 @@ interface CareersFormProps {
   hideHero?: boolean;
 }
 
+
+function formatNumberWithCommas(val: string): string {
+  const digits = val.replace(/\D/g, "");
+  if (!digits) return val.trim();
+  return Number(digits).toLocaleString("en-US");
+}
+
 export default function CareersForm({
   initialLocale,
   defaultRoleId = "cctv_technical_manager",
@@ -313,6 +323,15 @@ export default function CareersForm({
   ]);
   const [selectedRoleId, setSelectedRoleId] = useState(defaultRoleId);
   const [error, setError] = useState("");
+  const [submitSuccessAnimation, setSubmitSuccessAnimation] = useState<any>(null);
+
+  useEffect(() => {
+    fetch("/animations/submit-success.json")
+      .then((r) => r.json())
+      .then((d) => setSubmitSuccessAnimation(d))
+      .catch((e) => console.warn("Could not load submit celebration animation", e));
+  }, []);
+
   const [connection, setConnection] = useState(true);
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState("");
@@ -730,117 +749,27 @@ export default function CareersForm({
         <div className="absolute inset-0 tech-grid opacity-30 pointer-events-none" />
         <div className="absolute -left-32 top-24 h-72 w-72 rounded-full bg-foreground/[0.02] blur-3xl pointer-events-none" />
 
-        <div className="relative mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[0.8fr_1.2fr] lg:gap-14 lg:px-8">
-          {/* ─── LEFT STICKY COLUMN (LIKE FAQ PAGE ASIDE) ───────────── */}
-          <aside className="lg:sticky lg:top-28 lg:self-start space-y-6">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted">
-                {t("AVAILABLE POSITIONS", "OPORTUNIDADES DE CARREIRA")}
-              </p>
-              <h2 className="mt-3 text-balance text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl">
-                {t("Join the Overwatch team", "Faça parte da Overwatch")}
-              </h2>
-              <p className="mt-4 text-base leading-relaxed text-muted">
-                {t(
-                  "Select an opening to review the role and complete your application. Role availability is managed in real time by our recruitment team.",
-                  "Selecione uma função para submeter a sua candidatura. A disponibilidade de vagas é atualizada em tempo real pela nossa equipa de recrutamento.",
-                )}
-              </p>
-            </div>
-
-            {/* Role Cards List */}
-            <div className="space-y-3">
-              {roles.map((r) => {
-                const isSelected = selectedRoleId === r.id;
-                return (
-                  <button
-                    type="button"
-                    key={r.id}
-                    onClick={() => {
-                      handleSelectRole(r);
-                      if (r.open) {
-                        document
-                          .getElementById("application-form")
-                          ?.scrollIntoView({ behavior: "smooth" });
-                      }
-                    }}
-                    className={`group relative flex w-full flex-col gap-2 rounded-2xl border p-4 text-left transition-all duration-200 cursor-pointer ${
-                      isSelected
-                        ? "border-foreground/40 bg-foreground/[0.04] shadow-md ring-1 ring-foreground/20 -translate-y-0.5"
-                        : "border-border bg-card hover:border-foreground/25 hover:-translate-y-0.5 hover:shadow-sm"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <h3 className="text-base font-semibold text-foreground group-hover:text-foreground transition-colors">
-                        {pt ? r.pt : r.en}
-                      </h3>
-                      {r.open ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[0.7rem] font-semibold text-emerald-600 dark:text-emerald-400">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                          {t("Open", "Aberta")}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-border bg-foreground/[0.04] px-2.5 py-0.5 text-[0.7rem] font-semibold text-muted">
-                          <LockKeyhole size={11} className="text-muted" />
-                          {t("Closed", "Encerrado")}
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="text-xs text-muted leading-relaxed">
-                      {pt
-                        ? (ROLE_FORM_CONFIGS[r.id] || ROLE_FORM_CONFIGS.cctv).sidebarDescription.pt
-                        : (ROLE_FORM_CONFIGS[r.id] || ROLE_FORM_CONFIGS.cctv).sidebarDescription.en}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Closed role alert in the sidebar */}
-            {isSelectedRoleClosed && (
-              <div
-                role="alert"
-                className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs leading-relaxed text-amber-700 dark:text-amber-300"
-              >
-                <div className="flex items-center gap-2 font-semibold mb-1">
-                  <LockKeyhole size={14} />
-                  <span>{t("Role Not Available", "Função Não Disponível")}</span>
-                </div>
-                {closedText}
-              </div>
-            )}
-
-            {/* Trust and Privacy Support Card */}
-            <div className="overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-foreground text-background">
-                <ShieldCheck size={21} aria-hidden="true" />
-              </div>
-              <p className="mt-4 text-xs font-bold uppercase tracking-[0.16em] text-muted">
-                {t("RECRUITMENT INTEGRITY", "TRANSPARÊNCIA E RIGOR")}
-              </p>
-              <h3 className="mt-2 text-lg font-bold leading-snug text-foreground">
-                {t("Your privacy is protected", "Processo seletivo confidencial")}
-              </h3>
-              <p className="mt-2 text-xs leading-relaxed text-muted">
-                {t(
-                  "All applications and resumes are accessed exclusively by authorized Overwatch recruitment personnel.",
-                  "Todas as candidaturas e currículos enviados são analisados exclusivamente pela equipa de recursos humanos e gestão de operações da Overwatch.",
-                )}
-              </p>
-            </div>
-          </aside>
-
-          {/* ─── RIGHT MAIN FORM COLUMN ─────────────────────────────── */}
-          <div id="application-form" className="min-w-0">
+        <div className="relative mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+          <div id="application-form" className="w-full">
             <div className="rounded-2xl border border-border bg-card p-6 shadow-[0_16px_42px_rgba(2,6,23,0.075)] sm:p-8">
               {success ? (
                 /* Success State */
-                <div className="py-12 text-center" role="status">
-                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-emerald-500/20 bg-emerald-500/10 text-emerald-500 mb-6">
-                    <CheckCircle2 size={36} />
+                <div className="py-8 sm:py-12 text-center" role="status">
+                  <div className="mx-auto flex h-32 w-32 items-center justify-center mb-3">
+                    {submitSuccessAnimation ? (
+                      <Lottie
+                        animationData={submitSuccessAnimation}
+                        loop={false}
+                        autoplay={true}
+                        className="w-full h-full"
+                      />
+                    ) : (
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full border border-foreground/20 bg-foreground/5 text-foreground">
+                        <CheckCircle2 size={36} />
+                      </div>
+                    )}
                   </div>
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400">
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-foreground font-mono">
                     {t("APPLICATION RECEIVED", "CANDIDATURA RECEBIDA")}
                   </p>
                   <h3 className="mt-2 text-2xl font-bold text-foreground sm:text-3xl">
@@ -947,7 +876,7 @@ export default function CareersForm({
                         {/* Progress Bar */}
                         <div className="w-16 h-2 rounded-full bg-foreground/[0.1] overflow-hidden">
                           <div
-                            className="h-full bg-emerald-500 transition-all duration-300"
+                            className="h-full bg-foreground transition-all duration-300"
                             style={{ width: `${(currentStep / totalSteps) * 100}%` }}
                           />
                         </div>
@@ -966,7 +895,7 @@ export default function CareersForm({
                               isCurrent
                                 ? "border-foreground bg-foreground text-background shadow-xs font-bold"
                                 : isPast
-                                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                ? "border-foreground/20 bg-foreground/[0.04] text-foreground/90 font-medium"
                                 : "border-border/60 bg-background/50 text-muted/60"
                             }`}
                           >
@@ -975,7 +904,7 @@ export default function CareersForm({
                                 isCurrent
                                   ? "bg-background text-foreground"
                                   : isPast
-                                  ? "bg-emerald-500 text-white"
+                                  ? "bg-foreground text-background"
                                   : "bg-foreground/5 text-muted"
                               }`}
                             >
@@ -1470,7 +1399,7 @@ export default function CareersForm({
                                   <input
                                     type="text"
                                     value={salaryExpectation}
-                                    onChange={(e) => setSalaryExpectation(e.target.value)}
+                                    onChange={(e) => setSalaryExpectation(formatNumberWithCommas(e.target.value))}
                                     placeholder={t("e.g. 50,000 MZN or Negotiable", "ex.: 50.000 MZN ou A negociar")}
                                     className="min-h-12 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground placeholder:text-muted/60 focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 transition-colors"
                                   />
@@ -1551,13 +1480,13 @@ export default function CareersForm({
                                 }}
                                 className={`relative flex min-h-[130px] flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center transition-all cursor-pointer ${
                                   file
-                                    ? "border-emerald-500/60 bg-emerald-500/[0.04]"
+                                    ? "border-foreground/40 bg-foreground/[0.04]"
                                     : "border-border bg-background hover:border-foreground/40 hover:bg-foreground/[0.02]"
                                 }`}
                               >
                                 <Upload
                                   size={26}
-                                  className={file ? "text-emerald-500 mb-2" : "text-muted mb-2"}
+                                  className={file ? "text-foreground mb-2" : "text-muted mb-2"}
                                 />
                                 <strong className="text-sm font-semibold text-foreground">
                                   {file
@@ -1731,13 +1660,13 @@ export default function CareersForm({
                             }}
                             className={`relative flex min-h-[140px] flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center transition-all cursor-pointer ${
                               file
-                                ? "border-emerald-500/60 bg-emerald-500/[0.04]"
+                                ? "border-foreground/40 bg-foreground/[0.04]"
                                 : "border-border bg-background hover:border-foreground/40 hover:bg-foreground/[0.02]"
                             }`}
                           >
                             <Upload
                               size={28}
-                              className={file ? "text-emerald-500 mb-2" : "text-muted mb-2"}
+                              className={file ? "text-foreground mb-2" : "text-muted mb-2"}
                             />
                             <strong className="text-sm font-semibold text-foreground">
                               {file

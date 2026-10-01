@@ -163,7 +163,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
       // 6. Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const haystack = `${cand.name} ${cand.email} ${cand.whatsapp} ${cand.lastProfession || ""} ${cand.currentLocation || ""} ${cand.yearsCctvExperience || ""}`.toLowerCase();
+        const haystack = `${cand.id} ${cand.id.slice(0, 8)} ${cand.name} ${cand.email} ${cand.whatsapp} ${cand.lastProfession || ""} ${cand.currentLocation || ""} ${cand.yearsCctvExperience || ""}`.toLowerCase();
         if (!haystack.includes(q)) return false;
       }
 
@@ -492,9 +492,16 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                       <td className="px-4 py-3">
                         <Link
                           href={`/admin/recruitment/candidates/${candidate.id}?${searchParams.toString()}`}
-                          className="font-semibold text-slate-900 hover:text-sky-700 block truncate max-w-[200px]"
+                          className="block group"
                         >
-                          {candidate.name}
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-slate-900 hover:text-sky-700 truncate max-w-[180px]">
+                              {candidate.name}
+                            </span>
+                            <span className="inline-block px-1.5 py-0.2 rounded bg-slate-100 border border-slate-200 text-[0.62rem] font-mono font-bold text-slate-600">
+                              #{candidate.id.slice(0, 8).toUpperCase()}
+                            </span>
+                          </div>
                         </Link>
                         <div className="text-[0.7rem] text-slate-400 truncate max-w-[200px]">
                           {candidate.email}
