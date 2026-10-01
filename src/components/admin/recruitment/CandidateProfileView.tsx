@@ -115,6 +115,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
 
   const roleObj = roles.find((r) => r.id === candidate.role);
   const roleLabel = roleObj ? (lang === "pt" ? roleObj.pt : roleObj.en) : (candidate.role || "Operadora de CCTV");
+  const isTechnicalRole = candidate.role === "cctv_technical_manager" || Boolean(candidate.technicalData || candidate.screeningResult);
 
   // Screening analysis
   const screening = screenCandidate(candidate);
@@ -338,50 +339,238 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
           {/* Qualifications & Screening */}
           <div className="md:col-span-6 bg-white border border-slate-200 rounded-lg p-5 space-y-4">
             <h2 className="text-sm font-bold text-slate-900">
-              {t("Qualification Checklist", "Verificação de Qualificações")}
+              {isTechnicalRole
+                ? t("Technical Screening & Competencies", "Triagem Técnica & Competências")
+                : t("Qualification Checklist", "Verificação de Qualificações")}
             </h2>
 
-            <div className="divide-y divide-slate-100 text-xs">
-              <div className="py-2.5 flex items-center justify-between">
-                <span className="text-slate-500">{t("Gender", "Género")}</span>
-                <span className="font-semibold text-slate-900">
-                  {candidate.sex === "female" ? t("Female", "Feminino") : t("Male", "Masculino")}
-                </span>
-              </div>
+            {isTechnicalRole ? (
+              <div className="space-y-4 text-xs">
+                {/* Screening Verdict Badge */}
+                {candidate.screeningResult && (
+                  <div
+                    className={`p-3.5 rounded-lg border ${
+                      candidate.screeningResult.passedMandatory
+                        ? "bg-emerald-50/80 border-emerald-200 text-emerald-900"
+                        : "bg-red-50/80 border-red-200 text-red-900"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between font-bold text-xs mb-1">
+                      <span>
+                        {candidate.screeningResult.passedMandatory
+                          ? t("✓ Mandatory Requirements Passed", "✓ Requisitos Obrigatórios Cumpridos")
+                          : t("✕ Mandatory Requirements Missing", "✕ Requisitos Obrigatórios em Falta")}
+                      </span>
+                      <span className="px-2 py-0.5 rounded text-[0.65rem] bg-white border border-current font-extrabold">
+                        {candidate.screeningResult.matchPercentage}% {t("Match", "Score")}
+                      </span>
+                    </div>
+                    <div className="text-[0.72rem] leading-relaxed">
+                      {candidate.screeningResult.passedMandatory ? (
+                        <span>
+                          {t(
+                            `${candidate.screeningResult.preferredScore}/${candidate.screeningResult.preferredTotal} preferred competencies met. Candidate moved to Shortlisted / Management Review.`,
+                            `${candidate.screeningResult.preferredScore}/${candidate.screeningResult.preferredTotal} competências preferenciais cumpridas. Candidato classificado para Pré-Seleção / Revisão de Gestão.`
+                          )}
+                        </span>
+                      ) : (
+                        <div>
+                          <span className="font-semibold">{t("Reasons:", "Motivos:")}</span>
+                          <ul className="list-disc list-inside mt-0.5">
+                            {(lang === "pt" && candidate.screeningResult.failedReasonsPt?.length
+                              ? candidate.screeningResult.failedReasonsPt
+                              : candidate.screeningResult.failedReasons
+                            ).map((r, i) => (
+                              <li key={i}>{r}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
-              <div className="py-2.5 flex items-center justify-between">
-                <span className="text-slate-500">{t("12th Grade Completed", "12.ª Classe Concluída")}</span>
-                <span className={`font-semibold ${candidate.grade12 === "yes" ? "text-emerald-700" : "text-slate-700"}`}>
-                  {candidate.grade12 === "yes" ? t("Yes, completed", "Sim, concluída") : t("No", "Não")}
-                </span>
-              </div>
+                {/* Candidate Logistics */}
+                <div className="divide-y divide-slate-100 border-y border-slate-100 py-1">
+                  <div className="py-2 flex items-center justify-between">
+                    <span className="text-slate-500">{t("Location", "Localização")}</span>
+                    <span className="font-semibold text-slate-900">{candidate.currentLocation || "Maputo"}</span>
+                  </div>
+                  <div className="py-2 flex items-center justify-between">
+                    <span className="text-slate-500">{t("CCTV Experience", "Experiência CCTV")}</span>
+                    <span className="font-semibold text-slate-900">
+                      {candidate.yearsCctvExperience === "0"
+                        ? t("0 years", "0 anos (Sem experiência)")
+                        : candidate.yearsCctvExperience === "1_2"
+                          ? t("1 to 2 years", "1 a 2 anos")
+                          : candidate.yearsCctvExperience === "3_5"
+                            ? t("3 to 5 years", "3 a 5 anos")
+                            : candidate.yearsCctvExperience === "5_plus"
+                              ? t("5+ years (Senior)", "5+ anos (Sénior)")
+                              : candidate.yearsCctvExperience || "—"}
+                    </span>
+                  </div>
+                  <div className="py-2 flex items-center justify-between">
+                    <span className="text-slate-500">{t("Availability / Start", "Disponibilidade / Início")}</span>
+                    <span className="font-semibold text-slate-900">
+                      {candidate.startDate === "immediate"
+                        ? t("Immediate", "Imediata")
+                        : candidate.startDate === "2_weeks"
+                          ? t("Within 2 weeks", "Dentro de 2 semanas")
+                          : candidate.startDate === "1_month"
+                            ? t("1 month notice", "1 mês de aviso")
+                            : candidate.startDate === "more_than_month"
+                              ? t("More than 1 month", "Mais de 1 mês")
+                              : candidate.startDate || "—"}
+                    </span>
+                  </div>
+                  <div className="py-2 flex items-center justify-between">
+                    <span className="text-slate-500">{t("Expected Salary", "Salário Pretendido")}</span>
+                    <span className="font-semibold text-slate-900">{candidate.salaryExpectation || "—"}</span>
+                  </div>
+                </div>
 
-              <div className="py-2.5 flex items-center justify-between">
-                <span className="text-slate-500">{t("CCTV / Security Experience", "Experiência CCTV / Segurança")}</span>
-                <span className={`font-semibold ${candidate.experience === "yes" ? "text-emerald-700" : "text-slate-700"}`}>
-                  {candidate.experience === "yes" ? t("Yes, verified", "Sim, comprovada") : t("No prior experience", "Sem experiência prévia")}
-                </span>
-              </div>
+                {/* Mandatory Requirements Audit */}
+                <div>
+                  <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    {t("Mandatory Criteria", "Critérios Obrigatórios")}
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between p-2 rounded bg-slate-50 border border-slate-100">
+                      <span className="text-slate-700">{t("Practical CCTV Installation", "Instalação Prática CCTV")}</span>
+                      {candidate.yearsCctvExperience !== "0" ? (
+                        <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✓ SIM</span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-red-50 text-red-700 border border-red-200">✕ NÃO</span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between p-2 rounded bg-slate-50 border border-slate-100">
+                      <span className="text-slate-700">{t("IP CCTV Systems", "Sistemas CCTV IP")}</span>
+                      {candidate.ipCctv === "yes" ? (
+                        <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✓ SIM</span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-red-50 text-red-700 border border-red-200">✕ NÃO</span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between p-2 rounded bg-slate-50 border border-slate-100">
+                      <span className="text-slate-700">{t("NVR / DVR Configuration", "Configuração NVR / DVR")}</span>
+                      {candidate.nvrDvr === "yes" ? (
+                        <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✓ SIM</span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-red-50 text-red-700 border border-red-200">✕ NÃO</span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between p-2 rounded bg-slate-50 border border-slate-100">
+                      <span className="text-slate-700">{t("Networking & IP Addressing", "Redes & Endereçamento IP")}</span>
+                      {candidate.networking === "yes" ? (
+                        <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✓ SIM</span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-red-50 text-red-700 border border-red-200">✕ NÃO</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
-              <div className="py-2.5 flex items-center justify-between">
-                <span className="text-slate-500">{t("AI Familiarity", "Conhecimento de IA")}</span>
-                <span className="font-semibold text-slate-900">
-                  {candidate.ai === "yes" ? t("Yes", "Sim, utiliza") : t("No", "Não")}
-                </span>
-              </div>
+                {/* Preferred Competencies */}
+                <div>
+                  <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    {t("Preferred Competencies", "Competências Preferenciais")}
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <div className="p-2 rounded bg-slate-50 border border-slate-100 flex items-center justify-between">
+                      <span className="text-slate-700">Hikvision</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[0.62rem] font-bold ${candidate.hikvision === "yes" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
+                        {candidate.hikvision === "yes" ? "SIM" : "NÃO"}
+                      </span>
+                    </div>
+                    <div className="p-2 rounded bg-slate-50 border border-slate-100 flex items-center justify-between">
+                      <span className="text-slate-700">Dahua</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[0.62rem] font-bold ${candidate.dahua === "yes" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
+                        {candidate.dahua === "yes" ? "SIM" : "NÃO"}
+                      </span>
+                    </div>
+                    <div className="p-2 rounded bg-slate-50 border border-slate-100 flex items-center justify-between">
+                      <span className="text-slate-700">{t("Supervision", "Supervisão")}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[0.62rem] font-bold ${candidate.supervision === "yes" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
+                        {candidate.supervision === "yes" ? "SIM" : "NÃO"}
+                      </span>
+                    </div>
+                    <div className="p-2 rounded bg-slate-50 border border-slate-100 flex items-center justify-between">
+                      <span className="text-slate-700">{t("Driving Licence", "Carta Condução")}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[0.62rem] font-bold ${candidate.drivingLicence === "yes" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
+                        {candidate.drivingLicence === "yes" ? "SIM" : "NÃO"}
+                      </span>
+                    </div>
+                    <div className="p-2 rounded bg-slate-50 border border-slate-100 flex items-center justify-between">
+                      <span className="text-slate-700">{t("AI Analytics", "Analítica IA")}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[0.62rem] font-bold ${candidate.aiAnalytics === "yes" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
+                        {candidate.aiAnalytics === "yes" ? "SIM" : "NÃO"}
+                      </span>
+                    </div>
+                    <div className="p-2 rounded bg-slate-50 border border-slate-100 flex items-center justify-between">
+                      <span className="text-slate-700">{t("Remote CCO", "Monitorização")}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[0.62rem] font-bold ${candidate.remoteMonitoring === "yes" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
+                        {candidate.remoteMonitoring === "yes" ? "SIM" : "NÃO"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
 
-              <div className="py-2.5 flex items-center justify-between">
-                <span className="text-slate-500">{t("Shift Availability (2D/2N/2F)", "Disponibilidade de Turnos (2D/2N/2F)")}</span>
-                <span className={`font-semibold ${candidate.shifts === "yes" ? "text-emerald-700" : "text-red-700"}`}>
-                  {candidate.shifts === "yes" ? t("Yes, full availability", "Sim, total") : t("No", "Não")}
-                </span>
+                {/* Largest Project Showcase */}
+                {candidate.largestProjectDescription && (
+                  <div className="pt-2">
+                    <div className="text-[0.65rem] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                      {t("Largest Project Managed / Installed", "Maior Projecto Gerido / Instalado")}
+                    </div>
+                    <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 text-[0.72rem] leading-relaxed whitespace-pre-wrap">
+                      {candidate.largestProjectDescription}
+                    </div>
+                  </div>
+                )}
               </div>
+            ) : (
+              <div className="divide-y divide-slate-100 text-xs">
+                <div className="py-2.5 flex items-center justify-between">
+                  <span className="text-slate-500">{t("Gender", "Género")}</span>
+                  <span className="font-semibold text-slate-900">
+                    {candidate.sex === "female" ? t("Female", "Feminino") : t("Male", "Masculino")}
+                  </span>
+                </div>
 
-              <div className="py-2.5 flex items-center justify-between">
-                <span className="text-slate-500">{t("Last Profession", "Última Profissão")}</span>
-                <span className="font-semibold text-slate-900">{candidate.lastProfession || "—"}</span>
+                <div className="py-2.5 flex items-center justify-between">
+                  <span className="text-slate-500">{t("12th Grade Completed", "12.ª Classe Concluída")}</span>
+                  <span className={`font-semibold ${candidate.grade12 === "yes" ? "text-emerald-700" : "text-slate-700"}`}>
+                    {candidate.grade12 === "yes" ? t("Yes, completed", "Sim, concluída") : t("No", "Não")}
+                  </span>
+                </div>
+
+                <div className="py-2.5 flex items-center justify-between">
+                  <span className="text-slate-500">{t("CCTV / Security Experience", "Experiência CCTV / Segurança")}</span>
+                  <span className={`font-semibold ${candidate.experience === "yes" ? "text-emerald-700" : "text-slate-700"}`}>
+                    {candidate.experience === "yes" ? t("Yes, verified", "Sim, comprovada") : t("No prior experience", "Sem experiência prévia")}
+                  </span>
+                </div>
+
+                <div className="py-2.5 flex items-center justify-between">
+                  <span className="text-slate-500">{t("AI Familiarity", "Conhecimento de IA")}</span>
+                  <span className="font-semibold text-slate-900">
+                    {candidate.ai === "yes" ? t("Yes", "Sim, utiliza") : t("No", "Não")}
+                  </span>
+                </div>
+
+                <div className="py-2.5 flex items-center justify-between">
+                  <span className="text-slate-500">{t("Shift Availability (2D/2N/2F)", "Disponibilidade de Turnos (2D/2N/2F)")}</span>
+                  <span className={`font-semibold ${candidate.shifts === "yes" ? "text-emerald-700" : "text-red-700"}`}>
+                    {candidate.shifts === "yes" ? t("Yes, full availability", "Sim, total") : t("No", "Não")}
+                  </span>
+                </div>
+
+                <div className="py-2.5 flex items-center justify-between">
+                  <span className="text-slate-500">{t("Last Profession", "Última Profissão")}</span>
+                  <span className="font-semibold text-slate-900">{candidate.lastProfession || "—"}</span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Test & Next Phase Summary */}
@@ -472,33 +661,60 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
 
       {/* TAB 2: APPLICATION & COVER LETTER */}
       {activeTab === "application" && (
-        <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-slate-900">
-              {t("Cover Letter / Submission Note", "Carta de Apresentação")}
-            </h2>
+        <div className="space-y-6">
+          {candidate.largestProjectDescription && (
+            <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-bold text-slate-900">
+                  {t(
+                    "Largest CCTV Project Managed or Installed",
+                    "Maior Projecto de CCTV Pessoalmente Gerido ou Instalado"
+                  )}
+                </h2>
+                <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
+                  {t("Technical Showcase", "Portfólio Prático")}
+                </span>
+              </div>
+              <p className="text-[0.7rem] text-slate-500">
+                {t(
+                  "Approximate number of cameras, equipment brands used, and applicant's technical responsibilities:",
+                  "Número aproximado de câmaras, marcas de equipamentos e responsabilidades técnicas relatadas:"
+                )}
+              </p>
+              <div className="p-4 rounded-md bg-slate-50 border border-slate-200 text-xs text-slate-800 leading-relaxed whitespace-pre-wrap">
+                {candidate.largestProjectDescription}
+              </div>
+            </div>
+          )}
 
-            <button
-              type="button"
-              onClick={handleTranslateCover}
-              disabled={translating || !candidate.coverLetter}
-              className="px-2.5 py-1 rounded border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium inline-flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
-            >
-              <Globe size={13} />
-              <span>
-                {translating
-                  ? t("Translating...", "A traduzir...")
-                  : showEnglishCover
-                    ? t("Show Original (PT)", "Ver Original (PT)")
-                    : t("Translate to English", "Traduzir para Inglês")}
-              </span>
-            </button>
-          </div>
+          <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-slate-900">
+                {t("Cover Letter / Submission Note", "Carta de Apresentação")}
+              </h2>
 
-          <div className="p-4 rounded-md bg-slate-50 border border-slate-200 text-xs text-slate-800 font-mono whitespace-pre-wrap leading-relaxed">
-            {showEnglishCover && translatedCover
-              ? translatedCover
-              : candidate.coverLetter || t("No cover letter provided with this submission.", "Nenhuma carta de apresentação submetida.")}
+              <button
+                type="button"
+                onClick={handleTranslateCover}
+                disabled={translating || !candidate.coverLetter}
+                className="px-2.5 py-1 rounded border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium inline-flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <Globe size={13} />
+                <span>
+                  {translating
+                    ? t("Translating...", "A traduzir...")
+                    : showEnglishCover
+                      ? t("Show Original (PT)", "Ver Original (PT)")
+                      : t("Translate to English", "Traduzir para Inglês")}
+                </span>
+              </button>
+            </div>
+
+            <div className="p-4 rounded-md bg-slate-50 border border-slate-200 text-xs text-slate-800 font-mono whitespace-pre-wrap leading-relaxed">
+              {showEnglishCover && translatedCover
+                ? translatedCover
+                : candidate.coverLetter || t("No cover letter provided with this submission.", "Nenhuma carta de apresentação submetida.")}
+            </div>
           </div>
         </div>
       )}

@@ -163,7 +163,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
       // 6. Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const haystack = `${cand.name} ${cand.email} ${cand.whatsapp} ${cand.lastProfession || ""}`.toLowerCase();
+        const haystack = `${cand.name} ${cand.email} ${cand.whatsapp} ${cand.lastProfession || ""} ${cand.currentLocation || ""} ${cand.yearsCctvExperience || ""}`.toLowerCase();
         if (!haystack.includes(q)) return false;
       }
 
@@ -518,7 +518,19 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                       </td>
 
                       <td className="px-4 py-3 whitespace-nowrap font-mono">
-                        {candidate.testScore ? (
+                        {candidate.screeningResult ? (
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded text-[0.68rem] font-bold ${
+                              candidate.screeningResult.passedMandatory
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : "bg-red-50 text-red-700 border border-red-200"
+                            }`}
+                          >
+                            {candidate.screeningResult.passedMandatory
+                              ? `${candidate.screeningResult.matchPercentage}% ${t("Match", "Score")}`
+                              : t("Not Qualified", "Não Qualif.")}
+                          </span>
+                        ) : candidate.testScore ? (
                           <span className="font-bold text-slate-900">{candidate.testScore}%</span>
                         ) : (
                           <span className="text-slate-300">—</span>

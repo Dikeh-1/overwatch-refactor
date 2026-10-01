@@ -184,6 +184,16 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
                       {role.open ? t("Close Applications", "Encerrar Vaga") : t("Open Applications", "Abrir Vaga")}
                     </button>
 
+                    <a
+                      href={role.id === "cctv_technical_manager" ? `/${lang}/careers/cctv-technical-manager` : `/${lang}/careers`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2 py-1 rounded border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium transition-colors inline-flex items-center gap-1"
+                    >
+                      <span>{t("Public Link", "Link Público")}</span>
+                      <ArrowUpRight size={11} className="text-slate-400" />
+                    </a>
+
                     <Link
                       href={`/admin/recruitment/candidates?role=${role.id}`}
                       className="px-2.5 py-1 rounded bg-[#0a1128] hover:bg-[#101b3d] text-white text-xs font-medium transition-colors inline-flex items-center gap-1"
