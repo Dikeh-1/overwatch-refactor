@@ -11,6 +11,7 @@ const pages = [
   "/faq",
   "/contact",
   "/careers",
+  "/careers/cctv-technical-manager",
   "/privacy",
   "/terms",
 ];

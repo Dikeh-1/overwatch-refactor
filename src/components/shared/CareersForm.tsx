@@ -216,8 +216,12 @@ const ROLE_FORM_CONFIGS: Record<string, RoleConfig> = {
 
 export default function CareersForm({
   initialLocale,
+  defaultRoleId = "cctv_technical_manager",
+  hideHero = false,
 }: {
   initialLocale?: string;
+  defaultRoleId?: string;
+  hideHero?: boolean;
 } = {}) {
   const activeLocale = useLocale();
   const locale = initialLocale || activeLocale;
@@ -251,7 +255,7 @@ export default function CareersForm({
       open: false,
     },
   ]);
-  const [selectedRoleId, setSelectedRoleId] = useState("cctv_technical_manager");
+  const [selectedRoleId, setSelectedRoleId] = useState(defaultRoleId);
   const [error, setError] = useState("");
   const [connection, setConnection] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -561,80 +565,82 @@ export default function CareersForm({
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* ─── HERO SECTION ────────────────────────────────────────────── */}
-      <section className="dark relative isolate overflow-hidden bg-[#090d16] pb-16 pt-28 text-white sm:pb-20 sm:pt-32 lg:pb-24 lg:pt-36">
-        {/* Authentic Security Surveillance Background Video */}
-        <div className="absolute inset-0 z-0 opacity-35 pointer-events-none">
-          <LazyVideo
-            className="h-full w-full object-cover mix-blend-luminosity"
-            poster={IMAGES.videoPoster}
-            rootMargin="700px"
-            src={IMAGES.videoSrc}
-          />
-        </div>
-        <TechGrid className="absolute inset-0 opacity-35 pointer-events-none z-0" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_25%,rgba(255,255,255,0.08),transparent_32%),radial-gradient(circle_at_85%_20%,rgba(255,255,255,0.06),transparent_30%),linear-gradient(to_bottom,transparent_45%,rgba(9,13,22,0.95))] pointer-events-none z-0" />
+      {!hideHero && (
+        <section className="dark relative isolate overflow-hidden bg-[#090d16] pb-16 pt-28 text-white sm:pb-20 sm:pt-32 lg:pb-24 lg:pt-36">
+          {/* Authentic Security Surveillance Background Video */}
+          <div className="absolute inset-0 z-0 opacity-35 pointer-events-none">
+            <LazyVideo
+              className="h-full w-full object-cover mix-blend-luminosity"
+              poster={IMAGES.videoPoster}
+              rootMargin="700px"
+              src={IMAGES.videoSrc}
+            />
+          </div>
+          <TechGrid className="absolute inset-0 opacity-35 pointer-events-none z-0" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_25%,rgba(255,255,255,0.08),transparent_32%),radial-gradient(circle_at_85%_20%,rgba(255,255,255,0.06),transparent_30%),linear-gradient(to_bottom,transparent_45%,rgba(9,13,22,0.95))] pointer-events-none z-0" />
 
-        <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl">
-            <span className={darkEyebrowClassName}>
-              <ShieldCheck size={15} className="shrink-0" aria-hidden="true" />
-              OVERWATCH / {t("CAREERS", "CARREIRAS")}
-            </span>
-
-            <h1 className="mt-6 text-balance text-4xl font-bold leading-[1.06] tracking-[-0.035em] text-white sm:text-5xl lg:text-6xl">
-              {t("Your focus.", "A sua atenção.")}{" "}
-              <span className="text-white/70">
-                {t("Their peace of mind.", "A tranquilidade de todos.")}
+          <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="max-w-3xl">
+              <span className={darkEyebrowClassName}>
+                <ShieldCheck size={15} className="shrink-0" aria-hidden="true" />
+                OVERWATCH / {t("CAREERS", "CARREIRAS")}
               </span>
-            </h1>
 
-            <p className="mt-5 max-w-2xl text-pretty text-base leading-relaxed text-white/70 sm:text-lg lg:text-xl">
-              {t(
-                "Behind every protected facility is someone vigilant and dedicated. Shape your career at Overwatch where AI-powered CCTV surveillance, real-time alert verification, and human dedication protect what matters most.",
-                "Por trás de cada instalação protegida, há alguém atento, vigilante e empenhado. Construa a sua carreira na Overwatch, onde a monitorização CCTV apoiada por IA, a verificação de alertas em tempo real e a dedicação humana protegem o que mais importa.",
-              )}
-            </p>
+              <h1 className="mt-6 text-balance text-4xl font-bold leading-[1.06] tracking-[-0.035em] text-white sm:text-5xl lg:text-6xl">
+                {t("Your focus.", "A sua atenção.")}{" "}
+                <span className="text-white/70">
+                  {t("Their peace of mind.", "A tranquilidade de todos.")}
+                </span>
+              </h1>
 
-            <div className="mt-8 flex flex-wrap items-center gap-4">
-              <a
-                href="#opportunities"
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 text-sm font-semibold text-[#090d16] shadow-lg shadow-black/25 transition-[transform,background-color] hover:-translate-y-0.5 hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-4 focus-visible:ring-offset-[#090d16]"
-              >
-                {t("Explore open roles", "Explorar vagas abertas")}
-                <ArrowDown size={17} aria-hidden="true" />
-              </a>
-
-              {/* Dynamic live badge based on open roles */}
-              <div className="inline-flex items-center gap-2.5 rounded-xl border border-white/12 bg-white/[0.05] px-4 py-3 text-xs font-medium text-white/80 backdrop-blur-sm shadow-sm">
-                {openRoles.length > 0 ? (
-                  <>
-                    <span className="relative flex h-2.5 w-2.5 shrink-0">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                    </span>
-                    <span>
-                      {t("Accepting applications: ", "A receber candidaturas: ")}
-                      <strong className="font-semibold text-white">
-                        {openRoles.map((r) => (pt ? r.pt : r.en)).join(", ")}
-                      </strong>
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80 shrink-0" />
-                    <span>
-                      {t(
-                        "No positions currently accepting applications",
-                        "Nenhuma vaga aberta no momento",
-                      )}
-                    </span>
-                  </>
+              <p className="mt-5 max-w-2xl text-pretty text-base leading-relaxed text-white/70 sm:text-lg lg:text-xl">
+                {t(
+                  "Behind every protected facility is someone vigilant and dedicated. Shape your career at Overwatch where AI-powered CCTV surveillance, real-time alert verification, and human dedication protect what matters most.",
+                  "Por trás de cada instalação protegida, há alguém atento, vigilante e empenhado. Construa a sua carreira na Overwatch, onde a monitorização CCTV apoiada por IA, a verificação de alertas em tempo real e a dedicação humana protegem o que mais importa.",
                 )}
+              </p>
+
+              <div className="mt-8 flex flex-wrap items-center gap-4">
+                <a
+                  href="#opportunities"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 text-sm font-semibold text-[#090d16] shadow-lg shadow-black/25 transition-[transform,background-color] hover:-translate-y-0.5 hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-4 focus-visible:ring-offset-[#090d16]"
+                >
+                  {t("Explore open roles", "Explorar vagas abertas")}
+                  <ArrowDown size={17} aria-hidden="true" />
+                </a>
+
+                {/* Dynamic live badge based on open roles */}
+                <div className="inline-flex items-center gap-2.5 rounded-xl border border-white/12 bg-white/[0.05] px-4 py-3 text-xs font-medium text-white/80 backdrop-blur-sm shadow-sm">
+                  {openRoles.length > 0 ? (
+                    <>
+                      <span className="relative flex h-2.5 w-2.5 shrink-0">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                      </span>
+                      <span>
+                        {t("Accepting applications: ", "A receber candidaturas: ")}
+                        <strong className="font-semibold text-white">
+                          {openRoles.map((r) => (pt ? r.pt : r.en)).join(", ")}
+                        </strong>
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80 shrink-0" />
+                      <span>
+                        {t(
+                          "No positions currently accepting applications",
+                          "Nenhuma vaga aberta no momento",
+                        )}
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ─── OPPORTUNITIES & APPLICATION (FAQ STICKY-SCROLL ARCHITECTURE) ── */}
       <section
