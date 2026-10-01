@@ -777,7 +777,7 @@ function GateSecurityContent() {
                   <span className="hidden sm:inline">{t.postTitle}</span>
                   <span className="sm:hidden">{lang === "pt" ? "Portaria" : "Gate"}</span>
                 </h1>
-                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 shrink-0" />
               </div>
               <p className="text-[10px] text-white/50 truncate hidden md:flex items-center gap-1">
                 <MapPin size={10} className="text-white/40" />
@@ -790,7 +790,7 @@ function GateSecurityContent() {
             {/* Live Maputo Clock & 9 AM Lock Status */}
             {maputoTime.isBeforeNineAm ? (
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg sm:rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-300 font-mono text-[10px] sm:text-xs">
-                <Clock size={12} className="text-amber-400 shrink-0 animate-pulse" />
+                <Clock size={12} className="text-amber-400 shrink-0" />
                 <span className="hidden sm:inline">Maputo:</span>
                 <span className="font-bold">{maputoTime.timeString}</span>
                 <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/25 text-amber-200 border border-amber-500/40 uppercase font-bold">
@@ -799,7 +799,7 @@ function GateSecurityContent() {
               </div>
             ) : (
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg sm:rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 font-mono text-[10px] sm:text-xs">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <span className="h-2 w-2 rounded-full bg-emerald-400 shrink-0" />
                 <span className="hidden sm:inline">Maputo:</span>
                 <span className="font-bold">{maputoTime.timeString}</span>
               </div>
@@ -1156,7 +1156,7 @@ function GateSecurityContent() {
                   <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-emerald-400 rounded-tr-lg" />
                   <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-emerald-400 rounded-bl-lg" />
                   <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-emerald-400 rounded-br-lg" />
-                  <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-pulse absolute top-1/2 -translate-y-1/2" />
+                  <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent absolute top-1/2 -translate-y-1/2" />
                 </div>
               </div>
 

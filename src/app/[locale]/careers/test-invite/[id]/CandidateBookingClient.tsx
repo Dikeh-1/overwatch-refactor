@@ -431,7 +431,7 @@ export default function CandidateBookingClient({
                       />
                     ) : (
                       <div className="w-48 h-48 flex items-center justify-center text-gray-400">
-                        <QrCode size={48} className="animate-pulse" />
+                        <QrCode size={48} />
                       </div>
                     )}
                     <div className="mt-2 text-center">

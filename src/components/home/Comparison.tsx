@@ -48,7 +48,7 @@ export default function Comparison() {
                     key={index}
                     className="flex items-start gap-3 text-sm text-foreground py-2 border-b border-border/20 last:border-0"
                   >
-                    <Check className="text-accent shrink-0 mt-0.5 animate-pulse" size={16} />
+                    <Check className="text-accent shrink-0 mt-0.5" size={16} />
                     <span className="font-medium">{row.overwatch}</span>
                   </li>
                 ))}

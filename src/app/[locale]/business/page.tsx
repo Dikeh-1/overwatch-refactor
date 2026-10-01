@@ -148,10 +148,7 @@ export default async function BusinessPage({ params }: Props) {
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0b0e14]/90 via-transparent to-[#0b0e14]/20" />
                 <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-3 rounded-xl border border-white/12 bg-[#0b0e14]/82 px-3 py-2.5 backdrop-blur-md sm:bottom-4 sm:left-4 sm:right-4 sm:px-4">
                   <div className="flex min-w-0 items-center gap-2.5">
-                    <span className="relative flex h-2.5 w-2.5 shrink-0">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-55 motion-reduce:animate-none" />
-                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
-                    </span>
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-400" />
                     <span className="truncate text-xs font-semibold text-white/82 sm:text-sm">
                       {t("hero.liveLabel")}
                     </span>

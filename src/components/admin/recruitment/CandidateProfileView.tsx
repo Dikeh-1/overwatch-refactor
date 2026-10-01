@@ -209,7 +209,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
 
             {/* Visual Processing State */}
             {isUpdatingStatus && (
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[0.68rem] font-semibold bg-sky-50 text-sky-700 border border-sky-200 animate-pulse">
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[0.68rem] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
                 <Loader2 size={12} className="animate-spin text-sky-600" />
                 <span>{t("Processing update...", "A processar alteração...")}</span>
               </span>

@@ -5,21 +5,18 @@ import {
   ArrowLeft,
   ArrowDown,
   CheckCircle2,
-  Cpu,
   MapPin,
-  ShieldCheck,
-  Wrench,
+  Clock,
+  Camera,
   Network,
   Users,
-  Camera,
-  Layers,
-  FileSpreadsheet,
-  Zap,
-  Clock,
-  Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 import CareersForm from "@/components/shared/CareersForm";
 import TechGrid from "@/components/ui/TechGrid";
+import LazyVideo from "@/components/ui/LazyVideo";
+import { IMAGES } from "@/lib/constants";
+import InteractiveResponsibilityStack from "@/components/careers/InteractiveResponsibilityStack";
 import { darkEyebrowClassName } from "@/components/ui/eyebrow";
 
 type Props = { params: Promise<{ locale: string }> };
@@ -122,140 +119,6 @@ export default async function CctvTechnicalManagerPage({ params }: Props) {
     },
   };
 
-  const responsibilities = [
-    {
-      icon: MapPin,
-      title: t(
-        "Technical Site Surveys & Assessments",
-        "Levantamentos Técnicos e Vistorias no Terreno"
-      ),
-      desc: t(
-        "Conduct detailed technical site surveys, evaluate existing infrastructure, and identify critical vulnerabilities.",
-        "Conduzir levantamentos técnicos detalhados nos locais dos clientes e avaliar a infraestrutura existente."
-      ),
-    },
-    {
-      icon: Camera,
-      title: t(
-        "Blind Spot Elimination & Camera Positioning",
-        "Identificação de Ângulos Mortos e Posicionamento de Câmaras"
-      ),
-      desc: t(
-        "Analyze facility layouts to eliminate coverage gaps and optimize camera angles for intelligent threat detection.",
-        "Analisar plantas e layouts para eliminar pontos cegos e optimizar ângulos para deteção inteligente de ameaças."
-      ),
-    },
-    {
-      icon: FileSpreadsheet,
-      title: t(
-        "Technical Scopes of Work & BoQs",
-        "Cadernos de Encargos Técnicos e Listas de Material (BoQs)"
-      ),
-      desc: t(
-        "Prepare comprehensive technical scopes of work, Bills of Quantities (BoQs), and equipment specifications.",
-        "Elaborar cadernos de encargos técnicos completos, especificações de equipamentos e orçamentos de material (BoQs)."
-      ),
-    },
-    {
-      icon: Users,
-      title: t(
-        "Supervision of Technicians & Subcontractors",
-        "Supervisão de Equipas Técnicas e Subempreiteiros"
-      ),
-      desc: t(
-        "Lead, mentor, and supervise on-site CCTV installation teams, ensuring flawless execution and safety compliance.",
-        "Coordenar e fiscalizar equipas de técnicos no terreno e subempreiteiros, garantindo rigor de execução e segurança."
-      ),
-    },
-    {
-      icon: Network,
-      title: t(
-        "IP Cameras, NVR/DVR & Network Configuration",
-        "Configuração de Câmaras IP, NVRs/DVRs e Redes"
-      ),
-      desc: t(
-        "Configure IP addressing, subnets, routers, switches, port forwarding, and secure remote access protocols.",
-        "Configurar endereçamento IP, sub-redes, switches, routers, regras de encaminhamento e acessos remotos seguros."
-      ),
-    },
-    {
-      icon: Zap,
-      title: t(
-        "Image Quality & System Performance Testing",
-        "Testes de Qualidade de Imagem e Desempenho do Sistema"
-      ),
-      desc: t(
-        "Rigorous commissioning of night vision, frame rates, bandwidth optimization, and recording retention cycles.",
-        "Comissionamento rigoroso de visão noturna, taxas de fotogramas, otimização de largura de banda e gravação."
-      ),
-    },
-    {
-      icon: ShieldCheck,
-      title: t(
-        "Overwatch Remote Monitoring Platform Integration",
-        "Integração com a Plataforma de Monitorização Overwatch"
-      ),
-      desc: t(
-        "Ensure seamless live video streams and automated alarm telemetry into the Overwatch Central Control Operations (CCO).",
-        "Garantir transmissão fluida de vídeo e telemetria de alarmes para a Central de Controlo e Operações (CCO) da Overwatch."
-      ),
-    },
-    {
-      icon: Wrench,
-      title: t(
-        "Preventive & Corrective Maintenance",
-        "Gestão de Manutenção Preventiva e Corretiva"
-      ),
-      desc: t(
-        "Establish inspection schedules and lead rapid corrective maintenance interventions to maintain maximum uptime.",
-        "Estabelecer planos regulares de inspeção e liderar intervenções corretivas rápidas para garantir disponibilidade máxima."
-      ),
-    },
-    {
-      icon: Cpu,
-      title: t(
-        "Troubleshooting & Fault Diagnostics",
-        "Diagnóstico e Resolução Avançada de Avarias"
-      ),
-      desc: t(
-        "Systematic troubleshooting of camera dropouts, power interruptions, network bottlenecks, and hardware faults.",
-        "Diagnóstico metódico e resolução rápida de falhas de sinal, quebras de conectividade de rede e avarias elétricas."
-      ),
-    },
-    {
-      icon: Layers,
-      title: t(
-        "Technical Documentation & Camera Layouts",
-        "Documentação Técnica, Plantas e Registos de Equipamento",
-      ),
-      desc: t(
-        "Maintain clean as-built schematics, IP registers, credentials logs, and asset serial tracking.",
-        "Manter esquemas atualizados 'as-built', mapas de endereçamento IP, inventário de números de série e registos técnicos."
-      ),
-    },
-    {
-      icon: Sparkles,
-      title: t(
-        "Tools, Spare Parts & Technical Inventory",
-        "Gestão de Ferramental, Stock Técnico e Sobressalentes"
-      ),
-      desc: t(
-        "Manage technical equipment, testing tools, spare modules, and consumables to prevent operational delays.",
-        "Controlar ferramentas especializadas de teste, equipamentos de reserva e materiais consumíveis de instalação."
-      ),
-    },
-    {
-      icon: CheckCircle2,
-      title: t(
-        "Quality Standards Compliance",
-        "Garantia de Qualidade e Normas Técnicas Overwatch"
-      ),
-      desc: t(
-        "Enforce rigorous cabling standards, aesthetic conduit runs, grounding, and tamper-resistant camera mounts.",
-        "Assegurar padrões rigorosos de acabamento, fixação antivandalismo, passagem de calhas e proteção contra intempéries."
-      ),
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -265,12 +128,21 @@ export default async function CctvTechnicalManagerPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      {/* ─── DEDICATED HERO SECTION ─────────────────────────────────── */}
-      <section className="dark relative isolate overflow-hidden bg-[#090d16] pb-16 pt-24 text-white sm:pb-20 sm:pt-28 lg:pb-24 lg:pt-32">
-        <TechGrid className="absolute inset-0 opacity-30 pointer-events-none z-0" />
+      {/* ─── DEDICATED FULL-VIEWPORT HERO SECTION WITH VIDEO BACKGROUND ─ */}
+      <section className="dark relative isolate overflow-hidden bg-[#090d16] text-white min-h-[88vh] lg:min-h-screen flex flex-col justify-center pt-28 pb-20 sm:pt-32 sm:pb-24 lg:pt-36 lg:pb-28">
+        {/* Authentic Security Surveillance Background Video */}
+        <div className="absolute inset-0 z-0 opacity-35 pointer-events-none">
+          <LazyVideo
+            className="h-full w-full object-cover mix-blend-luminosity"
+            poster={IMAGES.videoPoster}
+            rootMargin="700px"
+            src={IMAGES.videoSrc}
+          />
+        </div>
+        <TechGrid className="absolute inset-0 opacity-35 pointer-events-none z-0" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.08),transparent_40%),radial-gradient(circle_at_80%_80%,rgba(2,132,199,0.06),transparent_40%),linear-gradient(to_bottom,transparent_40%,rgba(9,13,22,0.98))] pointer-events-none z-0" />
 
-        <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full">
           {/* Back link */}
           <div className="mb-6">
             <Link
@@ -286,7 +158,7 @@ export default async function CctvTechnicalManagerPage({ params }: Props) {
             {/* Top badges */}
             <div className="flex flex-wrap items-center gap-2.5 mb-5">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-400">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="h-2 w-2 rounded-full bg-emerald-400" />
                 {t("Active Opening • Immediate Start", "Vaga Aberta • Admissão Imediata")}
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-white/80">
@@ -385,7 +257,7 @@ export default async function CctvTechnicalManagerPage({ params }: Props) {
         </div>
       </section>
 
-      {/* ─── DETAILED RESPONSIBILITIES ───────────────────────────────── */}
+      {/* ─── INTERACTIVE RESPONSIBILITY STACK ────────────────────────── */}
       <section id="responsibilities" className="py-16 sm:py-20 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mb-12">
@@ -393,45 +265,21 @@ export default async function CctvTechnicalManagerPage({ params }: Props) {
               {t("SCOPE OF WORK", "ÂMBITO DE ACTUAÇÃO")}
             </p>
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-              {t("Key Responsibilities", "Principais Responsabilidades")}
+              {t("Key Responsibilities & Operational Domains", "Principais Responsabilidades & Domínios")}
             </h2>
             <p className="mt-3 text-sm text-muted">
               {t(
-                "This role bridges practical on-site installation leadership with enterprise control centre monitoring standards.",
-                "Esta função articula a liderança prática de instalação em campo com os padrões operacionais da nossa central de monitorização remota."
+                "This role bridges practical on-site installation leadership with enterprise control centre monitoring standards. Explore our core technical pillars below.",
+                "Esta função articula a liderança prática de instalação em campo com os padrões operacionais da nossa central de monitorização remota. Explore os domínios técnicos abaixo."
               )}
             </p>
           </div>
 
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {responsibilities.map((r, idx) => {
-              const Icon = r.icon;
-              return (
-                <div
-                  key={idx}
-                  className="rounded-2xl border border-border bg-card p-5 transition-all hover:border-foreground/20 hover:shadow-xs"
-                >
-                  <div className="flex items-start gap-3.5">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-foreground/[0.05] text-foreground border border-border">
-                      <Icon size={18} />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-foreground leading-snug">
-                        {r.title}
-                      </h4>
-                      <p className="mt-1.5 text-xs leading-relaxed text-muted">
-                        {r.desc}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <InteractiveResponsibilityStack locale={locale} />
         </div>
       </section>
 
-      {/* ─── EVALUATION CRITERIA & REQUIREMENTS ──────────────────────── */}
+      {/* ─── CANDIDATE PROFILE & QUALIFICATIONS ─────────────────────── */}
       <section id="requirements" className="border-y border-border bg-background py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mb-12">
@@ -439,25 +287,25 @@ export default async function CctvTechnicalManagerPage({ params }: Props) {
               {t("CANDIDATE QUALIFICATIONS", "QUALIFICAÇÕES & REQUISITOS")}
             </p>
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-              {t("Screening & Requirements Criteria", "Critérios de Triagem e Perfil")}
+              {t("Candidate Profile & Key Qualifications", "Perfil do Candidato & Qualificações Desejadas")}
             </h2>
             <p className="mt-3 text-sm text-muted">
               {t(
-                "Our automated recruitment engine reviews applications against mandatory technical fundamentals and valued preferred capabilities.",
-                "O nosso sistema de recrutamento automático avalia as candidaturas com base em critérios mandatórios essenciais e competências preferenciais valorizadas."
+                "We are seeking dedicated professionals with practical technical foundations and a passion for excellence in electronic security systems delivery.",
+                "Procuramos profissionais dedicados com bases técnicas sólidas e paixão pela excelência na entrega de sistemas de segurança eletrónica."
               )}
             </p>
           </div>
 
           <div className="grid gap-8 lg:grid-cols-2">
-            {/* Mandatory Criteria */}
-            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.03] p-6 sm:p-8">
+            {/* Core Qualifications */}
+            <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
               <div className="flex items-center gap-2 mb-4">
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold uppercase tracking-wider bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                  {t("Mandatory Requirements", "Requisitos Obrigatórios")}
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold uppercase tracking-wider bg-foreground/10 text-foreground border border-border">
+                  {t("Core Qualifications", "Qualificações Essenciais")}
                 </span>
                 <span className="text-xs text-muted">
-                  {t("(Must be met to advance)", "(Indispensáveis para qualificação)")}
+                  {t("(Fundamental Expertise)", "(Competências Fundamentais)")}
                 </span>
               </div>
               <h3 className="text-lg font-bold text-foreground mb-4">
@@ -481,26 +329,26 @@ export default async function CctvTechnicalManagerPage({ params }: Props) {
                     "Configuração e dimensionamento de NVRs / DVRs, armazenamento e esquemas de gravação"
                   ),
                   t(
-                    "Basic networking knowledge (IP addressing, subnets, routers, and Ethernet switches)",
+                    "Solid networking knowledge (IP addressing, subnets, routers, and Ethernet switches)",
                     "Conhecimentos sólidos de redes (endereçamento IP, sub-redes, routers e switches Ethernet)"
                   ),
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-3 text-xs leading-relaxed text-foreground/90">
-                    <CheckCircle2 size={16} className="text-amber-500 shrink-0 mt-0.5" />
+                    <CheckCircle2 size={16} className="text-emerald-500 shrink-0 mt-0.5" />
                     <span>{item}</span>
                   </li>
                 ))}
               </ul>
             </div>
 
-            {/* Preferred / Advantage Criteria */}
+            {/* Valued Experience */}
             <div className="rounded-2xl border border-sky-500/20 bg-sky-500/[0.03] p-6 sm:p-8">
               <div className="flex items-center gap-2 mb-4">
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold uppercase tracking-wider bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/20">
-                  {t("Preferred Competencies", "Competências Preferenciais")}
+                  {t("Valued Experience", "Experiência Valorizada")}
                 </span>
                 <span className="text-xs text-muted">
-                  {t("(Highly Valued)", "(Altamente Valorizadas)")}
+                  {t("(Advantageous Capabilities)", "(Competências Vantajosas)")}
                 </span>
               </div>
               <h3 className="text-lg font-bold text-foreground mb-4">

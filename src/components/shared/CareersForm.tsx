@@ -384,7 +384,7 @@ export default function CareersForm({
         return;
       }
       if (!ipCctv || !nvrDvr || !networking) {
-        setError(t("Please answer all mandatory technical questions (marked with *).", "Por favor responda a todas as questões técnicas obrigatórias (marcadas com *)."));
+        setError(t("Please answer all required technical questions (marked with *).", "Por favor responda a todas as questões técnicas obrigatórias (marcadas com *)."));
         return;
       }
       if (!largestProjectDescription.trim()) {
@@ -526,11 +526,6 @@ export default function CareersForm({
         <span className="text-xs font-semibold text-foreground/90 leading-tight">
           {label} {isMandatory ? <span className="text-amber-500 font-bold">*</span> : null}
         </span>
-        {isMandatory && (
-          <span className="shrink-0 px-1.5 py-0.5 rounded text-[0.62rem] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-            {t("Mandatory", "Obrigatório")}
-          </span>
-        )}
       </div>
       {helpText && (
         <p className="text-[0.7rem] text-muted leading-relaxed">{helpText}</p>
@@ -613,10 +608,7 @@ export default function CareersForm({
                 <div className="inline-flex items-center gap-2.5 rounded-xl border border-white/12 bg-white/[0.05] px-4 py-3 text-xs font-medium text-white/80 backdrop-blur-sm shadow-sm">
                   {openRoles.length > 0 ? (
                     <>
-                      <span className="relative flex h-2.5 w-2.5 shrink-0">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                      </span>
+                      <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 shrink-0" />
                       <span>
                         {t("Accepting applications: ", "A receber candidaturas: ")}
                         <strong className="font-semibold text-white">
