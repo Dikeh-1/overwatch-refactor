@@ -57,10 +57,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: "website",
       images: [
         {
-          url: "https://www.overwatchmoz.com/careers-hero.jpg",
-          width: 1200,
-          height: 630,
-          alt: "Overwatch CCTV Installation & Technical Manager",
+          url: "https://www.overwatchmoz.com/cctv-hiring-linkedin.jpg",
+          width: 1080,
+          height: 1080,
+          alt: "Overwatch CCTV Installation & Technical Manager Hiring",
         },
       ],
     },
@@ -68,7 +68,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       card: "summary_large_image",
       title,
       description,
-      images: ["https://www.overwatchmoz.com/careers-hero.jpg"],
+      images: ["https://www.overwatchmoz.com/cctv-hiring-linkedin.jpg"],
     },
   };
 }
