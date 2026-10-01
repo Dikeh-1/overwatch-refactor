@@ -90,26 +90,21 @@ export default function InteractiveResponsibilityStack({
   };
 
   return (
-    <div className="relative w-full overflow-hidden py-4 sm:py-8 select-none">
-      {/* Ambient glow: visible ONLY in dark mode to keep light mode pristine and clean */}
-      <div className="hidden dark:block absolute inset-0 pointer-events-none flex items-center justify-center">
-        <div className="h-[360px] w-[86%] max-w-[1050px] rounded-full bg-gradient-to-r from-purple-500/15 via-cyan-500/20 to-emerald-500/15 blur-3xl opacity-70" />
-      </div>
-
-      {/* Main Fan-Out Deck Display Container (Large, Centered, Prominent) */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto flex items-center justify-center">
+    <div className="relative w-full overflow-hidden py-4 sm:py-6 select-none bg-transparent">
+      {/* Main Fan-Out Deck Display Container (Large, Screen-filling, Prominent) */}
+      <div className="relative z-10 w-full max-w-[1600px] 2xl:max-w-[1780px] mx-auto flex items-center justify-center">
         {/* Horizontal scroll container for mobile screens with touch support */}
         <div className="w-full overflow-x-auto sm:overflow-x-visible pb-2 sm:pb-0 scrollbar-none">
           <div className="min-w-[680px] sm:min-w-0 w-full flex items-center justify-center">
-            {/* Aspect ratio frame that trims the empty void at top & bottom of canvas */}
-            <div className="relative w-full aspect-[1658/800] max-h-[760px] lg:max-h-[820px] flex items-center justify-center overflow-hidden">
+            {/* Aspect ratio frame that frames the card deck with ample breathing room */}
+            <div className="relative w-full aspect-[1658/820] min-h-[460px] sm:min-h-[560px] md:min-h-[640px] lg:min-h-[740px] xl:min-h-[820px] flex items-center justify-center">
               {animationData ? (
                 <div
                   onMouseEnter={handleMouseEnter}
                   onMouseLeave={handleMouseLeave}
                   onClick={handleToggle}
                   title={t("Hover or click to fan out cards", "Passe o cursor ou clique para abrir as cartas")}
-                  className="absolute inset-0 -top-[20%] -bottom-[10%] flex items-center justify-center cursor-pointer scale-105 sm:scale-110 lg:scale-115 transition-transform duration-300"
+                  className="absolute inset-0 -top-[16%] -bottom-[8%] flex items-center justify-center cursor-pointer scale-105 sm:scale-115 md:scale-120 lg:scale-125 xl:scale-130 transition-transform duration-300"
                 >
                   <Lottie
                     lottieRef={lottieRef}
@@ -117,7 +112,7 @@ export default function InteractiveResponsibilityStack({
                     loop={false}
                     autoplay={false}
                     onComplete={handleComplete}
-                    className="w-full h-full object-contain filter dark:drop-shadow-[0_24px_50px_rgba(0,0,0,0.7)] drop-shadow-[0_16px_32px_rgba(15,23,42,0.12)]"
+                    className="w-full h-full object-contain"
                   />
                 </div>
               ) : (

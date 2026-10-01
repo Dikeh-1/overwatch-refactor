@@ -163,50 +163,65 @@ function generateCardSvg(c) {
   </defs>
 
   <!-- Card Background with High-Tech Border -->
-  <rect x="2" y="2" width="302" height="369" rx="24" fill="url(#${gradId})" stroke="${c.color}" stroke-opacity="0.4" stroke-width="1.8"/>
+  <rect x="2" y="2" width="302" height="369" rx="24" fill="url(#${gradId})" stroke="${c.color}" stroke-opacity="0.45" stroke-width="2"/>
   <rect x="2" y="2" width="302" height="369" rx="24" fill="url(#${glowId})" />
 
   <!-- Subtle Tech Grid Lines -->
-  <line x1="18" y1="48" x2="288" y2="48" stroke="#334155" stroke-opacity="0.4" stroke-width="1" />
-  <line x1="18" y1="178" x2="288" y2="178" stroke="#334155" stroke-opacity="0.4" stroke-width="1" />
+  <line x1="16" y1="46" x2="290" y2="46" stroke="#334155" stroke-opacity="0.45" stroke-width="1" />
+  <line x1="16" y1="168" x2="290" y2="168" stroke="#334155" stroke-opacity="0.45" stroke-width="1" />
   
   <!-- Header Bar -->
-  <rect x="18" y="16" width="90" height="22" rx="11" fill="${c.color}" fill-opacity="0.18" stroke="${c.color}" stroke-opacity="0.5" stroke-width="1"/>
-  <text x="63" y="31.5" fill="${c.color}" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="900" letter-spacing="1" text-anchor="middle">${escapeXml(c.domain)}</text>
+  <rect x="16" y="15" width="94" height="23" rx="11.5" fill="${c.color}" fill-opacity="0.22" stroke="${c.color}" stroke-opacity="0.6" stroke-width="1"/>
+  <text x="63" y="30.5" fill="${c.color}" font-family="system-ui, -apple-system, sans-serif" font-size="10.5" font-weight="900" letter-spacing="1" text-anchor="middle">${escapeXml(c.domain)}</text>
 
-  <text x="286" y="31" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="800" letter-spacing="1.5" text-anchor="end">OVERWATCH</text>
+  <text x="288" y="31" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" font-weight="800" letter-spacing="1.5" text-anchor="end">OVERWATCH</text>
 
   <!-- Central Illustrated Icon -->
   <g>${c.icon}</g>
 
   <!-- Card Title & Subtitle: EXTRA LARGE, HIGH-CONTRAST AND PROMINENT -->
-  <text x="153" y="131" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="22.5" font-weight="900" letter-spacing="-0.4" text-anchor="middle">${escapeXml(c.title)}</text>
-  <text x="153" y="153" fill="#cbd5e1" font-family="system-ui, -apple-system, sans-serif" font-size="12.5" font-weight="700" text-anchor="middle">${escapeXml(c.sub)}</text>
+  <text x="153" y="127" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="23.5" font-weight="900" letter-spacing="-0.5" text-anchor="middle">${escapeXml(c.title)}</text>
+  <text x="153" y="148" fill="#cbd5e1" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" text-anchor="middle">${escapeXml(c.sub)}</text>
 
   <!-- Feature Bullets: MAXIMUM VISIBILITY, BOLD AND CRISP -->
-  <g transform="translate(18, 194)">
+  <g transform="translate(16, 182)">
     <!-- Bullet 1 -->
+    <circle cx="8" cy="14" r="7" fill="${c.color}" fill-opacity="0.2"/>
     <circle cx="8" cy="14" r="4.5" fill="${c.color}"/>
-    <text x="20" y="19" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="13.5" font-weight="800">${escapeXml(c.items[0])}</text>
+    <text x="22" y="19" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="800">${escapeXml(c.items[0])}</text>
 
     <!-- Bullet 2 -->
-    <circle cx="8" cy="49" r="4.5" fill="${c.color}"/>
-    <text x="20" y="54" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="13.5" font-weight="800">${escapeXml(c.items[1])}</text>
+    <circle cx="8" cy="50" r="7" fill="${c.color}" fill-opacity="0.2"/>
+    <circle cx="8" cy="50" r="4.5" fill="${c.color}"/>
+    <text x="22" y="55" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="800">${escapeXml(c.items[1])}</text>
 
     <!-- Bullet 3 -->
-    <circle cx="8" cy="84" r="4.5" fill="${c.color}"/>
-    <text x="20" y="89" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="13.5" font-weight="800">${escapeXml(c.items[2])}</text>
+    <circle cx="8" cy="86" r="7" fill="${c.color}" fill-opacity="0.2"/>
+    <circle cx="8" cy="86" r="4.5" fill="${c.color}"/>
+    <text x="22" y="91" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="800">${escapeXml(c.items[2])}</text>
   </g>
 
   <!-- Footer Tag -->
-  <rect x="18" y="322" width="270" height="30" rx="8" fill="#080d1a" stroke="#1e293b" stroke-width="1"/>
-  <text x="30" y="341.5" fill="#64748b" font-family="monospace" font-size="8.5" font-weight="700">${escapeXml(c.statusText || 'STATUS // ACTIVE')}</text>
-  <text x="276" y="341.5" fill="${c.color}" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="800" letter-spacing="0.5" text-anchor="end">${escapeXml(c.tag)}</text>
+  <rect x="16" y="322" width="274" height="32" rx="8" fill="#080d1a" stroke="#1e293b" stroke-width="1"/>
+  <text x="28" y="342" fill="#64748b" font-family="monospace" font-size="9" font-weight="700">${escapeXml(c.statusText || 'STATUS // ACTIVE')}</text>
+  <text x="278" y="342" fill="${c.color}" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" font-weight="800" letter-spacing="0.5" text-anchor="end">${escapeXml(c.tag)}</text>
 </svg>`;
 }
 
 async function buildLottieDeck(cards, outputFile, baseLottieData) {
   const cloned = JSON.parse(JSON.stringify(baseLottieData));
+
+  // 1. Strip the 15 Ellipse layers from the downloaded template to eliminate the clipped blurry rectangle box
+  cloned.layers = cloned.layers.filter(l => !l.nm || !l.nm.startsWith('Ellipse'));
+  
+  // 2. Scale up all card layers by 20% around their anchor point so the cards fill the empty screen spaces generously
+  cloned.layers.forEach((l, idx) => {
+    l.ind = idx + 1;
+    if (l.ks && l.ks.s) {
+      l.ks.s = { a: 0, k: [120, 120] };
+    }
+  });
+
   const targetAssetIds = ['2', '4', '6', '8', '10'];
 
   for (let i = 0; i < 5; i++) {
@@ -218,9 +233,9 @@ async function buildLottieDeck(cards, outputFile, baseLottieData) {
     const w = assetObj && assetObj.w ? assetObj.w : 306;
     const h = assetObj && assetObj.h ? assetObj.h : 373;
 
-    // Render at 2x resolution (612x746) for razor-sharp fidelity
+    // Render at 2.5x resolution for crystal-clear readability
     const pngBuffer = await sharp(Buffer.from(svg))
-      .resize(w * 2, h * 2)
+      .resize(Math.round(w * 2.5), Math.round(h * 2.5))
       .png({ quality: 95, compressionLevel: 8 })
       .toBuffer();
 

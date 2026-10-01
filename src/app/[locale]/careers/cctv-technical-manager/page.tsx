@@ -203,15 +203,15 @@ export default async function CctvTechnicalManagerPage({ params }: Props) {
       </section>
 
       {/* ─── INTERACTIVE FAN-OUT CARD STACK ─────────────────────────── */}
-      <section id="responsibilities" className="relative py-12 sm:py-16 lg:py-20 overflow-hidden bg-background">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section id="responsibilities" className="relative py-8 sm:py-12 lg:py-16 overflow-hidden bg-background">
+        <div className="w-full max-w-[1600px] 2xl:max-w-[1780px] mx-auto px-2 sm:px-4 lg:px-6">
           <InteractiveResponsibilityStack locale={locale} />
         </div>
       </section>
 
 
       {/* ─── CANDIDATE PROFILE & QUALIFICATIONS ─────────────────────── */}
-      <section id="requirements" className="border-y border-border bg-background py-16 sm:py-20">
+      <section id="requirements" className="border-b border-border bg-background py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mb-12">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted">
