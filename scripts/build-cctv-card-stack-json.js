@@ -114,23 +114,23 @@ function generateCardSvg(c) {
   <!-- Central Illustrated Icon -->
   <g>${c.icon}</g>
 
-  <!-- Card Title & Subtitle: LARGE, HIGH-CONTRAST AND PROMINENT -->
-  <text x="153" y="132" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="21.5" font-weight="900" letter-spacing="-0.3" text-anchor="middle">${escapeXml(c.title)}</text>
-  <text x="153" y="153" fill="#cbd5e1" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" text-anchor="middle">${escapeXml(c.sub)}</text>
+  <!-- Card Title & Subtitle: EXTRA LARGE, HIGH-CONTRAST AND PROMINENT -->
+  <text x="153" y="131" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="23" font-weight="900" letter-spacing="-0.4" text-anchor="middle">${escapeXml(c.title)}</text>
+  <text x="153" y="153" fill="#cbd5e1" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" text-anchor="middle">${escapeXml(c.sub)}</text>
 
-  <!-- Feature Bullets: MUCH LARGER, BOLD AND CRISP -->
-  <g transform="translate(22, 196)">
+  <!-- Feature Bullets: MAXIMUM VISIBILITY, BOLD AND CRISP -->
+  <g transform="translate(20, 194)">
     <!-- Bullet 1 -->
-    <circle cx="8" cy="14" r="4" fill="${c.color}"/>
-    <text x="20" y="19" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700">${escapeXml(c.items[0])}</text>
+    <circle cx="8" cy="14" r="4.5" fill="${c.color}"/>
+    <text x="21" y="19" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="14.5" font-weight="800">${escapeXml(c.items[0])}</text>
 
     <!-- Bullet 2 -->
-    <circle cx="8" cy="48" r="4" fill="${c.color}"/>
-    <text x="20" y="53" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700">${escapeXml(c.items[1])}</text>
+    <circle cx="8" cy="49" r="4.5" fill="${c.color}"/>
+    <text x="21" y="54" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="14.5" font-weight="800">${escapeXml(c.items[1])}</text>
 
     <!-- Bullet 3 -->
-    <circle cx="8" cy="82" r="4" fill="${c.color}"/>
-    <text x="20" y="87" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700">${escapeXml(c.items[2])}</text>
+    <circle cx="8" cy="84" r="4.5" fill="${c.color}"/>
+    <text x="21" y="89" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="14.5" font-weight="800">${escapeXml(c.items[2])}</text>
   </g>
 
   <!-- Footer Tag -->
