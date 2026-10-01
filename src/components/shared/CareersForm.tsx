@@ -13,6 +13,16 @@ import {
   ShieldCheck,
   Upload,
   UserCheck,
+  Cpu,
+  Wrench,
+  Network,
+  Car,
+  Briefcase,
+  MapPin,
+  Sparkles,
+  Layers,
+  Calendar,
+  DollarSign,
 } from "lucide-react";
 import { type Role, MAX_CV } from "@/lib/careers";
 import { darkEyebrowClassName } from "@/components/ui/eyebrow";
@@ -32,6 +42,40 @@ interface RoleConfig {
 }
 
 const ROLE_FORM_CONFIGS: Record<string, RoleConfig> = {
+  cctv_technical_manager: {
+    grade12Question: {
+      en: "Do you have practical CCTV installation experience?",
+      pt: "Tem experiência prática em instalação de CCTV?",
+    },
+    aiQuestion: {
+      en: "Experience with AI cameras and video analytics?",
+      pt: "Tem experiência com câmaras com IA e analítica de vídeo?",
+    },
+    experienceQuestion: {
+      en: "Experienced with IP CCTV and NVR configuration?",
+      pt: "Experiência em CCTV IP e configuração de NVRs?",
+    },
+    shiftsQuestion: {
+      en: "Available for on-site technical supervision and emergency support?",
+      pt: "Disponível para supervisão técnica em obra e suporte de emergência?",
+    },
+    lastProfessionLabel: {
+      en: "Most recent technical / leadership role",
+      pt: "Última função técnica ou de chefia exercida",
+    },
+    lastProfessionPlaceholder: {
+      en: "e.g. CCTV Technical Manager, Senior CCTV Technician, Systems Engineer",
+      pt: "ex: Gestor Técnico de CCTV, Técnico Sénior de CCTV, Engenheiro de Sistemas",
+    },
+    coverLetterPlaceholder: {
+      en: "Detail your CCTV project track record, team leadership experience, and how you ensure installations meet high standards...",
+      pt: "Descreva o seu percurso em projectos de CCTV, liderança de equipas no terreno e como garante o cumprimento de normas de qualidade...",
+    },
+    sidebarDescription: {
+      en: "Technical Delivery, Site Surveys & Infrastructure · Maputo, Mozambique",
+      pt: "Liderança Técnica, Vistorias e Infraestrutura · Maputo, Moçambique",
+    },
+  },
   cctv: {
     grade12Question: {
       en: "Have you completed Grade 12?",
@@ -181,7 +225,13 @@ export default function CareersForm({
   const t = (en: string, po: string) => (pt ? po : en);
 
   const [roles, setRoles] = useState<Role[]>([
-    { id: "cctv", en: "CCTV Operator", pt: "Operadora de CCTV", open: true },
+    {
+      id: "cctv_technical_manager",
+      en: "CCTV Installation & Technical Manager",
+      pt: "Gestor Técnico e Instalação de CCTV",
+      open: true,
+    },
+    { id: "cctv", en: "CCTV Operator", pt: "Operadora de CCTV", open: false },
     {
       id: "operations",
       en: "Security Operations Manager",
@@ -201,19 +251,42 @@ export default function CareersForm({
       open: false,
     },
   ]);
-  const [selectedRoleId, setSelectedRoleId] = useState("cctv");
+  const [selectedRoleId, setSelectedRoleId] = useState("cctv_technical_manager");
   const [error, setError] = useState("");
   const [connection, setConnection] = useState(true);
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState("");
   const [file, setFile] = useState<File | null>(null);
 
-  // Form field state
+  // CCTV Operator legacy form field state
   const [grade12, setGrade12] = useState<"yes" | "no" | "">("");
   const [sex, setSex] = useState<"female" | "male" | "">("");
   const [ai, setAi] = useState<"yes" | "no" | "">("");
   const [experience, setExperience] = useState<"yes" | "no" | "">("");
   const [shifts, setShifts] = useState<"yes" | "no" | "">("");
+
+  // Technical Manager Form States
+  const [currentLocation, setCurrentLocation] = useState("");
+  const [yearsCctvExperience, setYearsCctvExperience] = useState("");
+  const [ipCctv, setIpCctv] = useState<"yes" | "no" | "">("");
+  const [analogueCctv, setAnalogueCctv] = useState<"yes" | "no" | "">("");
+  const [hikvision, setHikvision] = useState<"yes" | "no" | "">("");
+  const [dahua, setDahua] = useState<"yes" | "no" | "">("");
+  const [nvrDvr, setNvrDvr] = useState<"yes" | "no" | "">("");
+  const [networking, setNetworking] = useState<"yes" | "no" | "">("");
+  const [structuredCabling, setStructuredCabling] = useState<"yes" | "no" | "">("");
+  const [electricalUps, setElectricalUps] = useState<"yes" | "no" | "">("");
+  const [troubleshooting, setTroubleshooting] = useState<"yes" | "no" | "">("");
+  const [supervision, setSupervision] = useState<"yes" | "no" | "">("");
+  const [drivingLicence, setDrivingLicence] = useState<"yes" | "no" | "">("");
+  const [aiAnalytics, setAiAnalytics] = useState<"yes" | "no" | "">("");
+  const [remoteMonitoring, setRemoteMonitoring] = useState<"yes" | "no" | "">("");
+  const [boqScopes, setBoqScopes] = useState<"yes" | "no" | "">("");
+  const [startDate, setStartDate] = useState("immediate");
+  const [salaryExpectation, setSalaryExpectation] = useState("");
+  const [largestProjectDescription, setLargestProjectDescription] = useState("");
+
+  const isTechnicalManager = selectedRoleId === "cctv_technical_manager";
 
   useEffect(() => {
     let active = true;
@@ -297,6 +370,87 @@ export default function CareersForm({
       return;
     }
 
+    if (isTechnicalManager) {
+      if (!currentLocation.trim()) {
+        setError(t("Please provide your current location / city.", "Por favor indique a sua localização / cidade actual."));
+        return;
+      }
+      if (!yearsCctvExperience) {
+        setError(t("Please select your years of CCTV installation experience.", "Por favor selecione os seus anos de experiência em CCTV."));
+        return;
+      }
+      if (!ipCctv || !nvrDvr || !networking) {
+        setError(t("Please answer all mandatory technical questions (marked with *).", "Por favor responda a todas as questões técnicas obrigatórias (marcadas com *)."));
+        return;
+      }
+      if (!largestProjectDescription.trim()) {
+        setError(t("Please describe your largest CCTV installation project.", "Por favor descreva o seu projecto de instalação de CCTV de maior dimensão."));
+        return;
+      }
+      if (!file) {
+        setError(t("Please attach your CV.", "Por favor, anexe o seu CV."));
+        return;
+      }
+
+      const formEl = event.currentTarget;
+      const formData = new FormData(formEl);
+      formData.set("cv", file);
+      formData.set("role", selectedRoleId);
+      formData.set("locale", pt ? "pt" : "en");
+      formData.set("currentLocation", currentLocation.trim());
+      formData.set("yearsCctvExperience", yearsCctvExperience);
+      formData.set("ipCctv", ipCctv);
+      formData.set("analogueCctv", analogueCctv || "no");
+      formData.set("hikvision", hikvision || "no");
+      formData.set("dahua", dahua || "no");
+      formData.set("nvrDvr", nvrDvr);
+      formData.set("networking", networking);
+      formData.set("structuredCabling", structuredCabling || "no");
+      formData.set("electricalUps", electricalUps || "no");
+      formData.set("troubleshooting", troubleshooting || "no");
+      formData.set("supervision", supervision || "no");
+      formData.set("drivingLicence", drivingLicence || "no");
+      formData.set("aiAnalytics", aiAnalytics || "no");
+      formData.set("remoteMonitoring", remoteMonitoring || "no");
+      formData.set("boqScopes", boqScopes || "no");
+      formData.set("startDate", startDate);
+      formData.set("salaryExpectation", salaryExpectation.trim());
+      formData.set("largestProjectDescription", largestProjectDescription.trim());
+
+      setBusy(true);
+      try {
+        const res = await fetch("/api/careers", {
+          method: "POST",
+          body: formData,
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.code);
+        setSuccess(result.id);
+      } catch (e) {
+        const code = (e as Error).message;
+        if (code === "ROLE_CLOSED") {
+          setError(closedText);
+        } else if (code === "FILE_INVALID") {
+          setError(
+            t(
+              "Your CV could not be processed. Please provide a standard PDF, DOC, or DOCX under 3 MB.",
+              "O seu CV não pôde ser processado. Envie um ficheiro PDF, DOC ou DOCX válido de até 3 MB.",
+            ),
+          );
+        } else {
+          setError(
+            t(
+              "We were unable to submit your application right now. Please check your information and try again.",
+              "Não foi possível submeter a sua candidatura neste momento. Verifique os dados e tente novamente.",
+            ),
+          );
+        }
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
     if (!grade12 || !sex || !ai || !experience || !shifts) {
       setError(
         t(
@@ -360,18 +514,30 @@ export default function CareersForm({
     label: string,
     value: "yes" | "no" | "",
     onChange: (val: "yes" | "no") => void,
+    isMandatory: boolean = false,
+    helpText?: string,
   ) => (
-    <div className="space-y-2">
-      <span className="text-xs font-semibold text-foreground/90 flex items-center gap-1">
-        {label} <span className="text-foreground/40">*</span>
-      </span>
-      <div className="grid grid-cols-2 gap-2">
+    <div className="space-y-2 p-3.5 rounded-xl border border-border/80 bg-background/50 hover:border-foreground/20 transition-all">
+      <div className="flex items-start justify-between gap-2">
+        <span className="text-xs font-semibold text-foreground/90 leading-tight">
+          {label} {isMandatory ? <span className="text-amber-500 font-bold">*</span> : null}
+        </span>
+        {isMandatory && (
+          <span className="shrink-0 px-1.5 py-0.5 rounded text-[0.62rem] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+            {t("Mandatory", "Obrigatório")}
+          </span>
+        )}
+      </div>
+      {helpText && (
+        <p className="text-[0.7rem] text-muted leading-relaxed">{helpText}</p>
+      )}
+      <div className="grid grid-cols-2 gap-2 pt-1">
         <button
           type="button"
           onClick={() => onChange("yes")}
-          className={`min-h-11 rounded-xl border text-xs font-semibold transition-all duration-200 cursor-pointer ${
+          className={`min-h-10 rounded-lg border text-xs font-semibold transition-all duration-200 cursor-pointer ${
             value === "yes"
-              ? "border-foreground bg-foreground text-background shadow-sm font-bold"
+              ? "border-foreground bg-foreground text-background shadow-xs font-bold"
               : "border-border bg-background text-foreground/80 hover:border-foreground/30 hover:bg-foreground/[0.04]"
           }`}
         >
@@ -380,9 +546,9 @@ export default function CareersForm({
         <button
           type="button"
           onClick={() => onChange("no")}
-          className={`min-h-11 rounded-xl border text-xs font-semibold transition-all duration-200 cursor-pointer ${
+          className={`min-h-10 rounded-lg border text-xs font-semibold transition-all duration-200 cursor-pointer ${
             value === "no"
-              ? "border-foreground bg-foreground text-background shadow-sm font-bold"
+              ? "border-foreground bg-foreground text-background shadow-xs font-bold"
               : "border-border bg-background text-foreground/80 hover:border-foreground/30 hover:bg-foreground/[0.04]"
           }`}
         >
@@ -595,10 +761,15 @@ export default function CareersForm({
                     {t("Thank you for applying", "Obrigado pela sua candidatura")}
                   </h3>
                   <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted">
-                    {t(
-                      "Your application and curriculum vitae have been recorded. Our hiring team will review your qualifications and contact you via WhatsApp or email if your profile matches the role.",
-                      "A sua candidatura e o seu currículo foram registados com sucesso. A nossa equipa irá analisar o seu perfil e entrar em contacto via WhatsApp ou e-mail caso seja selecionado(a).",
-                    )}
+                    {selectedRoleId === "cctv_technical_manager"
+                      ? t(
+                          "Your application for CCTV Installation & Technical Manager has been received. Our technical recruitment team will review your qualifications against the role requirements and contact you with further instructions.",
+                          "A sua candidatura para Gestor Técnico e Instalação de CCTV foi registada com sucesso. A nossa equipa irá analisar o seu perfil técnico e entrará em contacto com as instruções para as próximas etapas.",
+                        )
+                      : t(
+                          "Your application and curriculum vitae have been recorded. Our hiring team will review your qualifications and contact you via WhatsApp or email if your profile matches the role.",
+                          "A sua candidatura e o seu currículo foram registados com sucesso. A nossa equipa irá analisar o seu perfil e entrar em contacto via WhatsApp ou e-mail caso seja selecionado(a).",
+                        )}
                   </p>
                   <div className="mt-6 inline-flex items-center gap-2 rounded-xl border border-border bg-background px-4 py-2 text-xs font-mono text-muted">
                     <span>{t("Reference", "Referência")}:</span>
@@ -617,6 +788,25 @@ export default function CareersForm({
                         setAi("");
                         setExperience("");
                         setShifts("");
+                        setCurrentLocation("");
+                        setYearsCctvExperience("");
+                        setIpCctv("");
+                        setAnalogueCctv("");
+                        setHikvision("");
+                        setDahua("");
+                        setNvrDvr("");
+                        setNetworking("");
+                        setStructuredCabling("");
+                        setElectricalUps("");
+                        setTroubleshooting("");
+                        setSupervision("");
+                        setDrivingLicence("");
+                        setAiAnalytics("");
+                        setRemoteMonitoring("");
+                        setBoqScopes("");
+                        setStartDate("immediate");
+                        setSalaryExpectation("");
+                        setLargestProjectDescription("");
                       }}
                       className="inline-flex items-center gap-2 rounded-xl bg-foreground px-5 py-2.5 text-xs font-semibold text-background transition-transform hover:-translate-y-0.5 cursor-pointer"
                     >
@@ -636,10 +826,15 @@ export default function CareersForm({
                           {t("Application Form", "Formulário de Candidatura")}
                         </h3>
                         <p className="mt-1 text-xs text-muted">
-                          {t(
-                            "Complete all required details accurately.",
-                            "Preencha todos os campos obrigatórios com rigor.",
-                          )}
+                          {isTechnicalManager
+                            ? t(
+                                "Please provide comprehensive technical details for the CCTV Installation & Technical Manager position.",
+                                "Preencha com rigor as informações técnicas para a função de Gestor Técnico e Instalação de CCTV.",
+                              )
+                            : t(
+                                "Complete all required details accurately.",
+                                "Preencha todos os campos obrigatórios com rigor.",
+                              )}
                         </p>
                       </div>
 
@@ -660,7 +855,7 @@ export default function CareersForm({
                   <div className="space-y-4">
                     <h4 className="text-sm font-bold uppercase tracking-wider text-muted flex items-center gap-2">
                       <UserCheck size={16} className="text-foreground/70" />
-                      {t("Personal Details", "Dados Pessoais")}
+                      {t("Personal Details & Contact", "Identificação & Contacto")}
                     </h4>
 
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -703,7 +898,7 @@ export default function CareersForm({
                       {/* WhatsApp */}
                       <label className="space-y-1.5 block">
                         <span className="text-xs font-semibold text-foreground/90 flex items-center gap-1">
-                          {t("WhatsApp contact", "Contacto de WhatsApp")}{" "}
+                          {t("WhatsApp / Mobile Number", "Número de WhatsApp / Telemóvel")}{" "}
                           <span className="text-foreground/40">*</span>
                         </span>
                         <input
@@ -717,51 +912,72 @@ export default function CareersForm({
                         />
                       </label>
 
-                      {/* Sex */}
-                      <div className="space-y-2 sm:col-span-2">
-                        <span className="text-xs font-semibold text-foreground/90 flex items-center gap-1">
-                          {t("Sex", "Sexo")}{" "}
-                          <span className="text-foreground/40">*</span>
-                        </span>
-                        <div className="grid grid-cols-2 gap-3">
-                          <button
-                            type="button"
-                            onClick={() => setSex("female")}
-                            className={`min-h-11 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-                              sex === "female"
-                                ? "border-foreground bg-foreground text-background shadow-sm font-bold"
-                                : "border-border bg-background text-foreground/80 hover:border-foreground/30 hover:bg-foreground/[0.04]"
-                            }`}
-                          >
-                            {t("Female", "Feminino")}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setSex("male")}
-                            className={`min-h-11 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-                              sex === "male"
-                                ? "border-foreground bg-foreground text-background shadow-sm font-bold"
-                                : "border-border bg-background text-foreground/80 hover:border-foreground/30 hover:bg-foreground/[0.04]"
-                            }`}
-                          >
-                            {t("Male", "Masculino")}
-                          </button>
+                      {/* Location (for Technical Manager) */}
+                      {isTechnicalManager && (
+                        <label className="space-y-1.5 block sm:col-span-2">
+                          <span className="text-xs font-semibold text-foreground/90 flex items-center gap-1">
+                            <MapPin size={13} className="text-muted" />
+                            {t("Current Location / City", "Localização Actual / Cidade")}{" "}
+                            <span className="text-amber-500 font-bold">*</span>
+                          </span>
+                          <input
+                            type="text"
+                            value={currentLocation}
+                            onChange={(e) => setCurrentLocation(e.target.value)}
+                            required
+                            maxLength={100}
+                            placeholder={t("e.g. Maputo, Matola, etc.", "ex.: Maputo, Matola, etc.")}
+                            className="min-h-12 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground placeholder:text-muted/60 focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 transition-colors"
+                          />
+                        </label>
+                      )}
+
+                      {/* Sex (Operator only) */}
+                      {!isTechnicalManager && (
+                        <div className="space-y-2 sm:col-span-2">
+                          <span className="text-xs font-semibold text-foreground/90 flex items-center gap-1">
+                            {t("Sex", "Sexo")}{" "}
+                            <span className="text-foreground/40">*</span>
+                          </span>
+                          <div className="grid grid-cols-2 gap-3">
+                            <button
+                              type="button"
+                              onClick={() => setSex("female")}
+                              className={`min-h-11 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                                sex === "female"
+                                  ? "border-foreground bg-foreground text-background shadow-sm font-bold"
+                                  : "border-border bg-background text-foreground/80 hover:border-foreground/30 hover:bg-foreground/[0.04]"
+                              }`}
+                            >
+                              {t("Female", "Feminino")}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSex("male")}
+                              className={`min-h-11 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                                sex === "male"
+                                  ? "border-foreground bg-foreground text-background shadow-sm font-bold"
+                                  : "border-border bg-background text-foreground/80 hover:border-foreground/30 hover:bg-foreground/[0.04]"
+                              }`}
+                            >
+                              {t("Male", "Masculino")}
+                            </button>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Section: Cargo e Experiência / Role & Experience */}
+                  {/* Section: Cargo Pretendido / Position Selector */}
                   <div className="space-y-4 border-t border-border/80 pt-6">
                     <h4 className="text-sm font-bold uppercase tracking-wider text-muted flex items-center gap-2">
                       <Radio size={16} className="text-foreground/70" />
-                      {t("Role & Experience", "Cargo e Experiência")}
+                      {t("Selected Position", "Cargo Pretendido")}
                     </h4>
 
-                    {/* Position Selector */}
                     <label className="space-y-1.5 block">
                       <span className="text-xs font-semibold text-foreground/90 flex items-center gap-1">
-                        {t("Selected position", "Cargo pretendido")}{" "}
+                        {t("Select opening", "Selecione a vaga")}{" "}
                         <span className="text-foreground/40">*</span>
                       </span>
                       <select
@@ -783,70 +999,315 @@ export default function CareersForm({
                         ))}
                       </select>
                     </label>
-
-                    {/* Specific Assessment Questions (Dynamic based on selected role) */}
-                    <div className="grid gap-4 sm:grid-cols-2 pt-2">
-                      {renderYesNo(
-                        pt
-                          ? currentConfig.grade12Question.pt
-                          : currentConfig.grade12Question.en,
-                        grade12,
-                        setGrade12,
-                      )}
-
-                      {renderYesNo(
-                        pt
-                          ? currentConfig.aiQuestion.pt
-                          : currentConfig.aiQuestion.en,
-                        ai,
-                        setAi,
-                      )}
-
-                      {renderYesNo(
-                        pt
-                          ? currentConfig.experienceQuestion.pt
-                          : currentConfig.experienceQuestion.en,
-                        experience,
-                        setExperience,
-                      )}
-
-                      {renderYesNo(
-                        pt
-                          ? currentConfig.shiftsQuestion.pt
-                          : currentConfig.shiftsQuestion.en,
-                        shifts,
-                        setShifts,
-                      )}
-
-                      {/* Last Profession */}
-                      <label className="space-y-1.5 block sm:col-span-2">
-                        <span className="text-xs font-semibold text-foreground/90 flex items-center gap-1">
-                          {pt
-                            ? currentConfig.lastProfessionLabel.pt
-                            : currentConfig.lastProfessionLabel.en}{" "}
-                          <span className="text-foreground/40">*</span>
-                        </span>
-                        <input
-                          name="lastProfession"
-                          required
-                          maxLength={200}
-                          placeholder={
-                            pt
-                              ? currentConfig.lastProfessionPlaceholder.pt
-                              : currentConfig.lastProfessionPlaceholder.en
-                          }
-                          className="min-h-12 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground placeholder:text-muted/60 focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 transition-colors"
-                        />
-                      </label>
-                    </div>
                   </div>
+
+                  {/* ─── TECHNICAL MANAGER QUESTIONNAIRE ──────────────────────── */}
+                  {isTechnicalManager ? (
+                    <div className="space-y-8">
+                      {/* Section: Core CCTV & Infrastructure Experience */}
+                      <div className="space-y-4 border-t border-border/80 pt-6">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-bold uppercase tracking-wider text-muted flex items-center gap-2">
+                            <Wrench size={16} className="text-foreground/70" />
+                            {t("CCTV Installation & Core Infrastructure", "Instalação de CCTV & Infraestrutura")}
+                          </h4>
+                          <span className="text-[0.68rem] text-muted font-mono uppercase tracking-wider">
+                            {t("Phase 1 Screening", "Triagem Técnica")}
+                          </span>
+                        </div>
+
+                        {/* Years of CCTV Installation Experience */}
+                        <label className="space-y-1.5 block">
+                          <span className="text-xs font-semibold text-foreground/90 flex items-center gap-1">
+                            {t("Years of practical CCTV installation experience", "Anos de experiência prática em instalação de CCTV")}{" "}
+                            <span className="text-amber-500 font-bold">*</span>
+                          </span>
+                          <select
+                            value={yearsCctvExperience}
+                            onChange={(e) => setYearsCctvExperience(e.target.value)}
+                            required
+                            className="min-h-12 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 transition-colors"
+                          >
+                            <option value="">{t("Select experience...", "Selecione a sua experiência...")}</option>
+                            <option value="0">{t("No prior CCTV installation experience", "Sem experiência prévia em instalação de CCTV")}</option>
+                            <option value="1-2">{t("1 – 2 years", "1 a 2 anos")}</option>
+                            <option value="3-5">{t("3 – 5 years", "3 a 5 anos")}</option>
+                            <option value="5-8">{t("5 – 8 years", "5 a 8 anos")}</option>
+                            <option value="8+">{t("More than 8 years", "Mais de 8 anos")}</option>
+                          </select>
+                        </label>
+
+                        {/* Core Technical Yes/No Questions */}
+                        <div className="grid gap-3 sm:grid-cols-2 pt-1">
+                          {renderYesNo(
+                            t("Hands-on experience with IP CCTV systems", "Experiência prática com sistemas de CCTV IP"),
+                            ipCctv,
+                            setIpCctv,
+                            true,
+                            t("PoE, IP cameras, ONVIF, RTSP streams setup", "Câmaras IP, PoE, protocolos ONVIF, configuração de streams")
+                          )}
+
+                          {renderYesNo(
+                            t("NVR / DVR storage & system configuration", "Configuração de NVRs / DVRs e armazenamento"),
+                            nvrDvr,
+                            setNvrDvr,
+                            true,
+                            t("HDD sizing, RAID, motion recording, schedules", "Dimensionamento de discos, gravação, agendamentos")
+                          )}
+
+                          {renderYesNo(
+                            t("Networking, IP addressing, switches & routers", "Redes, endereçamento IP, switches e routers"),
+                            networking,
+                            setNetworking,
+                            true,
+                            t("Subnets, static IPs, port forwarding, VLAN basics", "Sub-redes, IPs estáticos, port forwarding, VLANs básicas")
+                          )}
+
+                          {renderYesNo(
+                            t("CCTV preventive maintenance & fault diagnosis", "Manutenção preventiva e diagnóstico de avarias CCTV"),
+                            troubleshooting,
+                            setTroubleshooting,
+                            false,
+                            t("Troubleshooting camera offline, signal drops, power loss", "Resolução de falhas de sinal, perda de ligação e energia")
+                          )}
+
+                          {renderYesNo(
+                            t("Experience with Analogue / HD-TVI / CVI CCTV", "Experiência com CCTV Analógico / HD-TVI / CVI"),
+                            analogueCctv,
+                            setAnalogueCctv,
+                            false
+                          )}
+
+                          {renderYesNo(
+                            t("Structured cabling (Cat6, Patch Panels, RJ45)", "Cablagem estruturada (Cat6, Patch Panels, RJ45)"),
+                            structuredCabling,
+                            setStructuredCabling,
+                            false
+                          )}
+
+                          {renderYesNo(
+                            t("Basic electrical, power supplies & UPS systems", "Electricidade básica, fontes de alimentação e UPS"),
+                            electricalUps,
+                            setElectricalUps,
+                            false
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Section: Platforms & Advanced Capabilities */}
+                      <div className="space-y-4 border-t border-border/80 pt-6">
+                        <h4 className="text-sm font-bold uppercase tracking-wider text-muted flex items-center gap-2">
+                          <Cpu size={16} className="text-foreground/70" />
+                          {t("Platforms & Advanced Technologies", "Plataformas & Tecnologias Avançadas")}
+                        </h4>
+
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          {renderYesNo(
+                            t("Hikvision experience (Cameras, NVRs, iVMS, Hik-Connect)", "Experiência Hikvision (Câmaras, NVRs, iVMS, Hik-Connect)"),
+                            hikvision,
+                            setHikvision,
+                            false
+                          )}
+
+                          {renderYesNo(
+                            t("Dahua experience (SmartPSS, DSS, NVRs, TiOC)", "Experiência Dahua (SmartPSS, DSS, NVRs, TiOC)"),
+                            dahua,
+                            setDahua,
+                            false
+                          )}
+
+                          {renderYesNo(
+                            t("AI-enabled cameras & video analytics", "Câmaras com IA e analítica inteligente de vídeo"),
+                            aiAnalytics,
+                            setAiAnalytics,
+                            false,
+                            t("Tripwire, perimeter protection, human/vehicle classification", "Cruzamento de linhas, protecção perimetral, classificação de alvos")
+                          )}
+
+                          {renderYesNo(
+                            t("Remote monitoring centre integration", "Integração com centrais de monitorização remota"),
+                            remoteMonitoring,
+                            setRemoteMonitoring,
+                            false,
+                            t("Integrating camera feeds with live control rooms", "Transmissão e integração com centros de controlo ao vivo")
+                          )}
+
+                          {renderYesNo(
+                            t("Preparing technical scopes of work & BoQs", "Elaboração de cadernos de encargos técnicos e BoQs"),
+                            boqScopes,
+                            setBoqScopes,
+                            false,
+                            t("Equipment lists, bills of quantities, site survey documentation", "Listas de material, dimensionamento e documentação técnica")
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Section: Leadership, Logistics & Remuneration */}
+                      <div className="space-y-4 border-t border-border/80 pt-6">
+                        <h4 className="text-sm font-bold uppercase tracking-wider text-muted flex items-center gap-2">
+                          <Briefcase size={16} className="text-foreground/70" />
+                          {t("Leadership & Practical Logistics", "Liderança & Logística Prática")}
+                        </h4>
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          {renderYesNo(
+                            t("Experience supervising or managing technical teams", "Experiência em supervisão ou gestão de equipas técnicas"),
+                            supervision,
+                            setSupervision,
+                            false,
+                            t("Directing installers, technicians and site subcontractors", "Orientação de instaladores, técnicos e subempreiteiros em obra")
+                          )}
+
+                          {renderYesNo(
+                            t("Valid driving licence (Carta de Condução)", "Carta de condução válida"),
+                            drivingLicence,
+                            setDrivingLicence,
+                            false
+                          )}
+
+                          {/* Start Date */}
+                          <label className="space-y-1.5 block">
+                            <span className="text-xs font-semibold text-foreground/90 flex items-center gap-1">
+                              <Calendar size={13} className="text-muted" />
+                              {t("Availability / Start Date", "Disponibilidade / Data de Início")}{" "}
+                              <span className="text-foreground/40">*</span>
+                            </span>
+                            <select
+                              value={startDate}
+                              onChange={(e) => setStartDate(e.target.value)}
+                              className="min-h-12 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 transition-colors"
+                            >
+                              <option value="immediate">{t("Immediate availability", "Disponibilidade Imediata")}</option>
+                              <option value="2_weeks">{t("Within 2 weeks", "Dentro de 2 semanas")}</option>
+                              <option value="1_month">{t("1 month notice", "1 mês de aviso prévio")}</option>
+                              <option value="more_than_month">{t("More than 1 month", "Mais de 1 mês")}</option>
+                            </select>
+                          </label>
+
+                          {/* Salary Expectation */}
+                          <label className="space-y-1.5 block">
+                            <span className="text-xs font-semibold text-foreground/90 flex items-center gap-1">
+                              <DollarSign size={13} className="text-muted" />
+                              {t("Current / Expected Monthly Salary (MZN)", "Salário Mensal Actual / Pretendido (MZN)")}
+                            </span>
+                            <input
+                              type="text"
+                              value={salaryExpectation}
+                              onChange={(e) => setSalaryExpectation(e.target.value)}
+                              placeholder={t("e.g. 50,000 MZN or Negotiable", "ex.: 50.000 MZN ou A negociar")}
+                              className="min-h-12 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground placeholder:text-muted/60 focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 transition-colors"
+                            />
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Section: Practical Project Showcase */}
+                      <div className="space-y-3 border-t border-border/80 pt-6">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-bold uppercase tracking-wider text-muted flex items-center gap-2">
+                            <Layers size={16} className="text-foreground/70" />
+                            {t("Practical Project Experience", "Experiência Prática em Projectos")}
+                          </h4>
+                          <span className="text-[0.68rem] text-amber-500 font-bold uppercase tracking-wider">
+                            {t("Required Question", "Questão Obrigatória")}
+                          </span>
+                        </div>
+
+                        <label className="space-y-1.5 block">
+                          <span className="text-xs font-semibold text-foreground/90 leading-relaxed block">
+                            {t(
+                              "Briefly describe the largest CCTV installation you have personally managed or installed, including the approximate number of cameras and your responsibilities:",
+                              "Descreva brevemente a maior instalação de CCTV que geriu ou instalou pessoalmente, incluindo o número aproximado de câmaras e as suas responsabilidades:",
+                            )}{" "}
+                            <span className="text-amber-500 font-bold">*</span>
+                          </span>
+                          <textarea
+                            value={largestProjectDescription}
+                            onChange={(e) => setLargestProjectDescription(e.target.value)}
+                            required
+                            rows={5}
+                            maxLength={4000}
+                            placeholder={t(
+                              "Mention the client type (commercial, industrial, residential), number of cameras, equipment brands used, networking challenges, and your role in installation/supervision...",
+                              "Indique o tipo de cliente (comercial, industrial, residencial), número de câmaras, marcas de equipamentos, desafios de rede e a sua função na instalação/supervisão...",
+                            )}
+                            className="w-full rounded-xl border border-border bg-background p-4 text-sm text-foreground placeholder:text-muted/60 focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 leading-relaxed transition-colors"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  ) : (
+                    /* ─── LEGACY CCTV OPERATOR / OTHER ROLE QUESTIONNAIRE ──────── */
+                    <div className="space-y-4 border-t border-border/80 pt-6">
+                      <h4 className="text-sm font-bold uppercase tracking-wider text-muted flex items-center gap-2">
+                        <Radio size={16} className="text-foreground/70" />
+                        {t("Role & Experience", "Cargo e Experiência")}
+                      </h4>
+
+                      {/* Specific Assessment Questions (Dynamic based on selected role) */}
+                      <div className="grid gap-4 sm:grid-cols-2 pt-2">
+                        {renderYesNo(
+                          pt
+                            ? currentConfig.grade12Question.pt
+                            : currentConfig.grade12Question.en,
+                          grade12,
+                          setGrade12,
+                        )}
+
+                        {renderYesNo(
+                          pt
+                            ? currentConfig.aiQuestion.pt
+                            : currentConfig.aiQuestion.en,
+                          ai,
+                          setAi,
+                        )}
+
+                        {renderYesNo(
+                          pt
+                            ? currentConfig.experienceQuestion.pt
+                            : currentConfig.experienceQuestion.en,
+                          experience,
+                          setExperience,
+                        )}
+
+                        {renderYesNo(
+                          pt
+                            ? currentConfig.shiftsQuestion.pt
+                            : currentConfig.shiftsQuestion.en,
+                          shifts,
+                          setShifts,
+                        )}
+
+                        {/* Last Profession */}
+                        <label className="space-y-1.5 block sm:col-span-2">
+                          <span className="text-xs font-semibold text-foreground/90 flex items-center gap-1">
+                            {pt
+                              ? currentConfig.lastProfessionLabel.pt
+                              : currentConfig.lastProfessionLabel.en}{" "}
+                            <span className="text-foreground/40">*</span>
+                          </span>
+                          <input
+                            name="lastProfession"
+                            required
+                            maxLength={200}
+                            placeholder={
+                              pt
+                                ? currentConfig.lastProfessionPlaceholder.pt
+                                : currentConfig.lastProfessionPlaceholder.en
+                            }
+                            className="min-h-12 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground placeholder:text-muted/60 focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 transition-colors"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Section: Carta de Apresentação / Cover Letter */}
                   <div className="space-y-3 border-t border-border/80 pt-6">
                     <div className="flex items-center justify-between">
                       <h4 className="text-sm font-bold uppercase tracking-wider text-muted flex items-center gap-2">
                         <FileText size={16} className="text-foreground/70" />
-                        {t("Cover Letter", "Carta de Apresentação")}
+                        {t("Cover Letter / Professional Summary", "Carta de Apresentação / Resumo Profissional")}
                       </h4>
                       <span className="text-[0.7rem] text-muted">
                         {t("Recommended", "Recomendado")}
@@ -855,10 +1316,15 @@ export default function CareersForm({
 
                     <label className="space-y-1.5 block">
                       <span className="text-xs font-semibold text-foreground/90">
-                        {t(
-                          "Tell us about yourself and your motivation",
-                          "Fale-nos sobre si e sobre a sua motivação para trabalhar na Overwatch",
-                        )}
+                        {isTechnicalManager
+                          ? t(
+                              "Highlight your hands-on technical background, team leadership capabilities, and why you are the ideal candidate to lead Overwatch's technical installations",
+                              "Destaque o seu percurso técnico no terreno, capacidades de liderança de equipas e por que razão é o(a) candidato(a) ideal para liderar as instalações técnicas da Overwatch",
+                            )
+                          : t(
+                              "Tell us about yourself and your motivation",
+                              "Fale-nos sobre si e sobre a sua motivação para trabalhar na Overwatch",
+                            )}
                       </span>
                       <textarea
                         name="coverLetter"
