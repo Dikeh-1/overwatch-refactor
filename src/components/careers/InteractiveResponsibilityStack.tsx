@@ -20,10 +20,14 @@ export default function InteractiveResponsibilityStack({
 
   const t = (en: string, pt: string) => (isPt ? pt : en);
 
-  // Load the optimized CCTV card stack JSON
+  // Load the locale-specific CCTV card stack JSON (English or Portuguese)
   useEffect(() => {
     let isMounted = true;
-    fetch("/animations/cctv-card-stack.json")
+    const animPath = isPt
+      ? "/animations/cctv-card-stack-pt.json"
+      : "/animations/cctv-card-stack-en.json";
+
+    fetch(animPath)
       .then((res) => {
         if (!res.ok) throw new Error("Animation fetch failed");
         return res.json();
@@ -37,7 +41,7 @@ export default function InteractiveResponsibilityStack({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isPt]);
 
   // When animation data first loads, start in subtle idle floating mode (frames 0 to 100)
   useEffect(() => {

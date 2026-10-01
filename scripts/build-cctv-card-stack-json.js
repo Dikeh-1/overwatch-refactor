@@ -2,14 +2,15 @@ const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
 
-// 5 Domain Cards replacing Dubai, Maldives, Sicily, Bali, Japan
-const cards = [
+// English Domain Cards
+const cardsEn = [
   {
     domain: "DOMAIN 01",
     tag: "SURVEYS & OPTICS",
     title: "Site Engineering",
     sub: "Surveys & Blind Spots",
     color: "#06b6d4", // cyan
+    statusText: "STATUS // ACTIVE",
     items: ["Technical Site Surveys", "Blind Spot Elimination", "BoQ & Scope Design"],
     icon: `
       <circle cx="153" cy="78" r="26" fill="#06b6d4" fill-opacity="0.12" stroke="#06b6d4" stroke-width="2"/>
@@ -24,6 +25,7 @@ const cards = [
     title: "IP CCTV Systems",
     sub: "Hikvision, Dahua & NVRs",
     color: "#3b82f6", // blue
+    statusText: "STATUS // ACTIVE",
     items: ["IP & Analogue Cameras", "NVR/DVR Configuration", "Storage & RAID Sizing"],
     icon: `
       <circle cx="153" cy="78" r="26" fill="#3b82f6" fill-opacity="0.12" stroke="#3b82f6" stroke-width="2"/>
@@ -41,6 +43,7 @@ const cards = [
     title: "Remote Monitoring",
     sub: "IP Routing & Control Centre",
     color: "#10b981", // emerald
+    statusText: "STATUS // ACTIVE",
     items: ["Switches, VLANs & Routers", "Structured Cabling Cat6", "Live CCO Stream Feeds"],
     icon: `
       <circle cx="153" cy="78" r="26" fill="#10b981" fill-opacity="0.12" stroke="#10b981" stroke-width="2"/>
@@ -57,6 +60,7 @@ const cards = [
     title: "Maintenance & AI",
     sub: "Video Analytics & Upkeep",
     color: "#f59e0b", // amber
+    statusText: "STATUS // ACTIVE",
     items: ["Preventive Maintenance", "Rapid Fault Diagnosis", "AI Perimeter Analytics"],
     icon: `
       <circle cx="153" cy="78" r="26" fill="#f59e0b" fill-opacity="0.12" stroke="#f59e0b" stroke-width="2"/>
@@ -70,6 +74,7 @@ const cards = [
     title: "Team & Quality",
     sub: "Supervision & Standards",
     color: "#a855f7", // purple
+    statusText: "STATUS // ACTIVE",
     items: ["Technician Supervision", "Tooling & Spares Control", "Rigorous QA Standards"],
     icon: `
       <circle cx="153" cy="78" r="26" fill="#a855f7" fill-opacity="0.12" stroke="#a855f7" stroke-width="2"/>
@@ -79,27 +84,87 @@ const cards = [
   }
 ];
 
+// Portuguese Domain Cards (Moçambique PT)
+const cardsPt = [
+  {
+    domain: "DOMÍNIO 01",
+    tag: "VISTORIAS & ÓPTICA",
+    title: "Engenharia de Campo",
+    sub: "Levantamentos & Ângulos Mortos",
+    color: "#06b6d4",
+    statusText: "ESTADO // ATIVO",
+    items: ["Vistorias Técnicas no Terreno", "Eliminação de Ângulos Mortos", "Cadernos de Encargos & BoQ"],
+    icon: cardsEn[0].icon
+  },
+  {
+    domain: "DOMÍNIO 02",
+    tag: "PLATAFORMAS & NVR",
+    title: "Sistemas CCTV IP",
+    sub: "Hikvision, Dahua & NVRs",
+    color: "#3b82f6",
+    statusText: "ESTADO // ATIVO",
+    items: ["Câmaras IP e Analógicas", "Configuração de NVRs/DVRs", "Armazenamento & RAID"],
+    icon: cardsEn[1].icon
+  },
+  {
+    domain: "DOMÍNIO 03",
+    tag: "REDES & TRANSMISSÃO",
+    title: "Monitorização Remota",
+    sub: "Redes IP & Central 24/7",
+    color: "#10b981",
+    statusText: "ESTADO // ATIVO",
+    items: ["Switches, VLANs & Routers", "Cablagem Estruturada Cat6", "Fluxos para Central CCO"],
+    icon: cardsEn[2].icon
+  },
+  {
+    domain: "DOMÍNIO 04",
+    tag: "DIAGNÓSTICO & IA",
+    title: "Manutenção & IA",
+    sub: "Analítica de Vídeo & Suporte",
+    color: "#f59e0b",
+    statusText: "ESTADO // ATIVO",
+    items: ["Manutenção Preventiva", "Diagnóstico Rápido de Avarias", "Analítica Perimetral com IA"],
+    icon: cardsEn[3].icon
+  },
+  {
+    domain: "DOMÍNIO 05",
+    tag: "GESTÃO DE CAMPO",
+    title: "Equipa & Qualidade",
+    sub: "Supervisão & Padrões",
+    color: "#a855f7",
+    statusText: "ESTADO // ATIVO",
+    items: ["Supervisão de Técnicos", "Gestão de Peças & Ferramental", "Padrões Rigorosos de Qualidade"],
+    icon: cardsEn[4].icon
+  }
+];
+
 function escapeXml(str) {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 function generateCardSvg(c) {
+  const gradId = `bgGrad_${c.domain.replace(/[^a-zA-Z0-9]/g, '_')}`;
+  const glowId = `topGlow_${c.domain.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
   return `<svg width="306" height="373" viewBox="0 0 306 373" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bgGrad_${c.domain.replace(' ', '_')}" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="${gradId}" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#0e172a" />
       <stop offset="50%" stop-color="#0a101f" />
       <stop offset="100%" stop-color="#04060d" />
     </linearGradient>
-    <radialGradient id="topGlow_${c.domain.replace(' ', '_')}" cx="50%" cy="10%" r="70%">
+    <radialGradient id="${glowId}" cx="50%" cy="10%" r="70%">
       <stop offset="0%" stop-color="${c.color}" stop-opacity="0.3"/>
       <stop offset="100%" stop-color="${c.color}" stop-opacity="0"/>
     </radialGradient>
   </defs>
 
   <!-- Card Background with High-Tech Border -->
-  <rect x="2" y="2" width="302" height="369" rx="24" fill="url(#bgGrad_${c.domain.replace(' ', '_')})" stroke="${c.color}" stroke-opacity="0.4" stroke-width="1.8"/>
-  <rect x="2" y="2" width="302" height="369" rx="24" fill="url(#topGlow_${c.domain.replace(' ', '_')})" />
+  <rect x="2" y="2" width="302" height="369" rx="24" fill="url(#${gradId})" stroke="${c.color}" stroke-opacity="0.4" stroke-width="1.8"/>
+  <rect x="2" y="2" width="302" height="369" rx="24" fill="url(#${glowId})" />
 
   <!-- Subtle Tech Grid Lines -->
   <line x1="18" y1="48" x2="288" y2="48" stroke="#334155" stroke-opacity="0.4" stroke-width="1" />
@@ -115,29 +180,60 @@ function generateCardSvg(c) {
   <g>${c.icon}</g>
 
   <!-- Card Title & Subtitle: EXTRA LARGE, HIGH-CONTRAST AND PROMINENT -->
-  <text x="153" y="131" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="23" font-weight="900" letter-spacing="-0.4" text-anchor="middle">${escapeXml(c.title)}</text>
-  <text x="153" y="153" fill="#cbd5e1" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" text-anchor="middle">${escapeXml(c.sub)}</text>
+  <text x="153" y="131" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="22.5" font-weight="900" letter-spacing="-0.4" text-anchor="middle">${escapeXml(c.title)}</text>
+  <text x="153" y="153" fill="#cbd5e1" font-family="system-ui, -apple-system, sans-serif" font-size="12.5" font-weight="700" text-anchor="middle">${escapeXml(c.sub)}</text>
 
   <!-- Feature Bullets: MAXIMUM VISIBILITY, BOLD AND CRISP -->
-  <g transform="translate(20, 194)">
+  <g transform="translate(18, 194)">
     <!-- Bullet 1 -->
     <circle cx="8" cy="14" r="4.5" fill="${c.color}"/>
-    <text x="21" y="19" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="14.5" font-weight="800">${escapeXml(c.items[0])}</text>
+    <text x="20" y="19" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="13.5" font-weight="800">${escapeXml(c.items[0])}</text>
 
     <!-- Bullet 2 -->
     <circle cx="8" cy="49" r="4.5" fill="${c.color}"/>
-    <text x="21" y="54" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="14.5" font-weight="800">${escapeXml(c.items[1])}</text>
+    <text x="20" y="54" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="13.5" font-weight="800">${escapeXml(c.items[1])}</text>
 
     <!-- Bullet 3 -->
     <circle cx="8" cy="84" r="4.5" fill="${c.color}"/>
-    <text x="21" y="89" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="14.5" font-weight="800">${escapeXml(c.items[2])}</text>
+    <text x="20" y="89" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="13.5" font-weight="800">${escapeXml(c.items[2])}</text>
   </g>
 
   <!-- Footer Tag -->
   <rect x="18" y="322" width="270" height="30" rx="8" fill="#080d1a" stroke="#1e293b" stroke-width="1"/>
-  <text x="30" y="341.5" fill="#64748b" font-family="monospace" font-size="8.5" font-weight="700">STATUS // ACTIVE</text>
-  <text x="276" y="341.5" fill="${c.color}" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" font-weight="800" letter-spacing="0.5" text-anchor="end">${escapeXml(c.tag)}</text>
+  <text x="30" y="341.5" fill="#64748b" font-family="monospace" font-size="8.5" font-weight="700">${escapeXml(c.statusText || 'STATUS // ACTIVE')}</text>
+  <text x="276" y="341.5" fill="${c.color}" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="800" letter-spacing="0.5" text-anchor="end">${escapeXml(c.tag)}</text>
 </svg>`;
+}
+
+async function buildLottieDeck(cards, outputFile, baseLottieData) {
+  const cloned = JSON.parse(JSON.stringify(baseLottieData));
+  const targetAssetIds = ['2', '4', '6', '8', '10'];
+
+  for (let i = 0; i < 5; i++) {
+    const card = cards[i];
+    const assetId = targetAssetIds[i];
+    const svg = generateCardSvg(card);
+    const assetObj = cloned.assets.find(a => a.id === assetId);
+
+    const w = assetObj && assetObj.w ? assetObj.w : 306;
+    const h = assetObj && assetObj.h ? assetObj.h : 373;
+
+    // Render at 2x resolution (612x746) for razor-sharp fidelity
+    const pngBuffer = await sharp(Buffer.from(svg))
+      .resize(w * 2, h * 2)
+      .png({ quality: 95, compressionLevel: 8 })
+      .toBuffer();
+
+    const base64Data = `data:image/png;base64,${pngBuffer.toString('base64')}`;
+    if (assetObj) {
+      assetObj.p = base64Data;
+      assetObj.u = '';
+    }
+  }
+
+  fs.writeFileSync(outputFile, JSON.stringify(cloned));
+  const stat = fs.statSync(outputFile);
+  console.log(`Saved ${path.basename(outputFile)} (${Math.round(stat.size / 1024)} KB)`);
 }
 
 async function run() {
@@ -147,42 +243,8 @@ async function run() {
     process.exit(1);
   }
 
-  const lottieData = JSON.parse(fs.readFileSync(downloadPath, 'utf8'));
-  console.log('Original Lottie loaded. Asset count:', lottieData.assets.length);
+  const rawLottie = JSON.parse(fs.readFileSync(downloadPath, 'utf8'));
 
-  // Asset IDs in Free Interactive Card Stack.json:
-  // "2": Dubai (306x373)
-  // "4": Maldives (306x373)
-  // "6": Sicily (306x372)
-  // "8": Bali (306x373)
-  // "10": Japan (307x374)
-  const targetAssetIds = ['2', '4', '6', '8', '10'];
-
-  for (let i = 0; i < 5; i++) {
-    const card = cards[i];
-    const assetId = targetAssetIds[i];
-    const svg = generateCardSvg(card);
-    const assetObj = lottieData.assets.find(a => a.id === assetId);
-
-    const w = assetObj && assetObj.w ? assetObj.w : 306;
-    const h = assetObj && assetObj.h ? assetObj.h : 373;
-
-    // Render at 2x resolution (612x746) for crystal clear sharpness
-    const pngBuffer = await sharp(Buffer.from(svg))
-      .resize(w * 2, h * 2)
-      .png({ quality: 95, compressionLevel: 8 })
-      .toBuffer();
-
-    console.log(`Generated Card ${i + 1} (${card.title}) -> Asset ${assetId}: ${pngBuffer.length} bytes (High-Res 2x)`);
-
-    const base64Data = `data:image/png;base64,${pngBuffer.toString('base64')}`;
-    if (assetObj) {
-      assetObj.p = base64Data;
-      assetObj.u = '';
-    }
-  }
-
-  // Ensure directories exist
   const publicAnimDir = path.join(__dirname, '../public/animations');
   if (!fs.existsSync(publicAnimDir)) {
     fs.mkdirSync(publicAnimDir, { recursive: true });
@@ -193,19 +255,27 @@ async function run() {
     fs.mkdirSync(srcDataDir, { recursive: true });
   }
 
-  const outPublic = path.join(publicAnimDir, 'cctv-card-stack.json');
-  fs.writeFileSync(outPublic, JSON.stringify(lottieData));
-  const publicStat = fs.statSync(outPublic);
-  console.log(`Saved to ${outPublic} (Size: ${Math.round(publicStat.size / 1024)} KB)`);
+  // 1. Build English Deck
+  console.log('Building English Card Stack…');
+  const enPublic = path.join(publicAnimDir, 'cctv-card-stack-en.json');
+  await buildLottieDeck(cardsEn, enPublic, rawLottie);
 
-  const outSrc = path.join(srcDataDir, 'cctv-card-stack.json');
-  fs.writeFileSync(outSrc, JSON.stringify(lottieData));
-  console.log(`Saved to ${outSrc}`);
+  // Also copy to cctv-card-stack.json for fallback compatibility
+  const fallbackPublic = path.join(publicAnimDir, 'cctv-card-stack.json');
+  fs.copyFileSync(enPublic, fallbackPublic);
 
-  console.log('Successfully optimized and modified Lottie card stack JSON with large, high-res text!');
+  const fallbackSrc = path.join(srcDataDir, 'cctv-card-stack.json');
+  fs.copyFileSync(enPublic, fallbackSrc);
+
+  // 2. Build Portuguese Deck
+  console.log('Building Portuguese Card Stack…');
+  const ptPublic = path.join(publicAnimDir, 'cctv-card-stack-pt.json');
+  await buildLottieDeck(cardsPt, ptPublic, rawLottie);
+
+  console.log('Successfully generated both English and Portuguese card stacks!');
 }
 
 run().catch(err => {
-  console.error('Error generating card stack:', err);
+  console.error('Error generating card stacks:', err);
   process.exit(1);
 });
