@@ -204,218 +204,626 @@ export async function notifyApplication(application: Application, cv: Buffer) {
     email: "noreply@overwatchmoz.com",
   };
 
-  // Human-readable formatted labels
   const roleName = isPt ? role.pt : role.en;
-  const grade12Text =
-    application.grade12 === "yes"
-      ? "Sim, 12.ª classe concluída"
-      : "Não concluída";
-  const sexText =
-    application.sex === "female"
-      ? "Feminino"
-      : application.sex === "male"
-        ? "Masculino"
-        : application.sex;
-  const aiText =
-    application.ai === "yes"
-      ? "Sim, tem conhecimento e sabe utilizar"
-      : "Não, sem conhecimento prévio";
-  const experienceText =
-    application.experience === "yes"
-      ? "Sim, possui experiência comprovada"
-      : "Não, sem experiência anterior";
-  const shiftsText =
-    application.shifts === "yes"
-      ? "Sim, disponível para escala 2 dias, 2 noites, 2 folgas"
-      : "Não disponível para este regime";
-
-  // 1. Professional Overwatch Branded HTML Template for HR / Operations Team
-  const adminHtmlContent = `
-    <div style="background-color: #f8fafc; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155; line-height: 1.5;">
-      <div style="max-width: 620px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05); overflow: hidden;">
-        <!-- Brand Dark Monochrome Accent Bar -->
-        <div style="height: 4px; background: #090d16;"></div>
-        
-        <!-- Header -->
-        <div style="padding: 32px 32px 24px 32px; border-bottom: 1px solid #f1f5f9;">
-          <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; display: block; margin-bottom: 4px;">Recrutamento Overwatch • Nova Candidatura</span>
-          <h1 style="font-size: 22px; font-weight: 700; color: #090d16; margin: 0; letter-spacing: -0.01em;">${application.name}</h1>
-          <p style="font-size: 14px; color: #64748b; margin: 6px 0 0 0;">Vaga pretendida: <strong style="color: #090d16;">${roleName}</strong></p>
-        </div>
-
-        <!-- Body Info -->
-        <div style="padding: 32px;">
-          <!-- Attached CV Callout Banner -->
-          <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #0b1329; border-radius: 6px; padding: 14px 18px; margin-bottom: 24px;">
-            <div>
-              <strong style="font-size: 13px; color: #0b1329; display: block;">Currículo (CV) Anexado a este E-mail</strong>
-              <span style="font-size: 12px; color: #475569;">Ficheiro: ${application.cvName} (${cvSizeKB} KB)</span>
-            </div>
-          </div>
-
-          <!-- Applicant Details Table -->
-          <div style="margin-bottom: 24px;">
-            <table style="width: 100%; border-collapse: collapse;">
-              <tbody>
-                <tr style="border-bottom: 1px solid #f1f5f9;">
-                  <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; width: 170px; text-transform: uppercase; letter-spacing: 0.04em;">Nome Completo</td>
-                  <td style="padding: 11px 0; font-size: 14px; font-weight: 600; color: #090d16;">${application.name}</td>
-                </tr>
-                <tr style="border-bottom: 1px solid #f1f5f9;">
-                  <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">Endereço de E-mail</td>
-                  <td style="padding: 11px 0; font-size: 14px; font-weight: 500; color: #090d16;"><a href="mailto:${application.email}" style="color: #090d16; text-decoration: underline;">${application.email}</a></td>
-                </tr>
-                <tr style="border-bottom: 1px solid #f1f5f9;">
-                  <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">WhatsApp</td>
-                  <td style="padding: 11px 0; font-size: 14px; font-weight: 600; color: #090d16;">
-                    <a href="https://wa.me/${application.whatsapp.replace(/\D/g, "")}" style="color: #0284c7; text-decoration: underline;">${application.whatsapp} →</a>
-                  </td>
-                </tr>
-                <tr style="border-bottom: 1px solid #f1f5f9;">
-                  <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">12.ª Classe</td>
-                  <td style="padding: 11px 0; font-size: 13px; font-weight: 500; color: #090d16;">${grade12Text}</td>
-                </tr>
-                <tr style="border-bottom: 1px solid #f1f5f9;">
-                  <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">Género / Sexo</td>
-                  <td style="padding: 11px 0; font-size: 13px; font-weight: 500; color: #090d16;">${sexText}</td>
-                </tr>
-                <tr style="border-bottom: 1px solid #f1f5f9;">
-                  <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">Sabe Usar IA?</td>
-                  <td style="padding: 11px 0; font-size: 13px; font-weight: 600; color: ${application.ai === "yes" ? "#090d16" : "#64748b"};">${aiText}</td>
-                </tr>
-                <tr style="border-bottom: 1px solid #f1f5f9;">
-                  <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">Experiência CCTV / Seg.</td>
-                  <td style="padding: 11px 0; font-size: 13px; font-weight: 600; color: ${application.experience === "yes" ? "#090d16" : "#64748b"};">${experienceText}</td>
-                </tr>
-                <tr style="border-bottom: 1px solid #f1f5f9;">
-                  <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">Última Profissão</td>
-                  <td style="padding: 11px 0; font-size: 13px; font-weight: 500; color: #090d16;">${application.lastProfession}</td>
-                </tr>
-                <tr style="border-bottom: 1px solid #f1f5f9;">
-                  <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">Disponibilidade Turnos</td>
-                  <td style="padding: 11px 0; font-size: 13px; font-weight: 500; color: ${application.shifts === "yes" ? "#090d16" : "#dc2626"};">${shiftsText}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">Data de Submissão</td>
-                  <td style="padding: 11px 0; font-size: 13px; font-weight: 500; color: #64748b;">${new Date(application.createdAt).toLocaleString("pt-MZ")}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Cover Letter Card -->
-          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 28px;">
-            <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; display: block; margin-bottom: 8px;">Carta de Apresentação</span>
-            <div style="font-size: 13px; color: #334155; line-height: 1.6; white-space: pre-wrap;">
-              ${application.coverLetter || "Nenhuma carta de apresentação submetida com esta candidatura."}
-            </div>
-          </div>
-
-          <!-- Admin Portal Link Button -->
-          <div style="text-align: center; margin-top: 24px;">
-            <a href="https://www.overwatchmoz.com/admin" style="display: inline-block; background-color: #090d16; color: #ffffff; padding: 13px 28px; font-size: 13px; font-weight: 600; text-decoration: none; border-radius: 8px; letter-spacing: 0.02em;">
-              Aceder ao Painel de Recrutamento →
-            </a>
-          </div>
-        </div>
-
-        <!-- Footer -->
-        <div style="background-color: #f8fafc; padding: 24px 32px; border-top: 1px solid #e2e8f0; text-align: center;">
-          <p style="font-size: 12px; color: #94a3b8; margin: 0 0 4px 0;">O currículo do candidato segue anexado a esta mensagem.</p>
-          <p style="font-size: 11px; color: #cbd5e1; margin: 0;">© 2026 Overwatch Moçambique. Todos os direitos reservados.</p>
-        </div>
-      </div>
-    </div>
-  `;
-
-  // Fallback plain text version (cleanly formatted, no raw key-value code dumps)
-  const adminTextContent = `NOVA CANDIDATURA OVERWATCH\n\n` +
-    `Candidato: ${application.name}\n` +
-    `Cargo Pretendido: ${roleName}\n` +
-    `E-mail: ${application.email}\n` +
-    `WhatsApp: ${application.whatsapp}\n` +
-    `12.ª Classe: ${grade12Text}\n` +
-    `Género: ${sexText}\n` +
-    `Sabe Usar Inteligência Artificial: ${aiText}\n` +
-    `Experiência CCTV / Segurança: ${experienceText}\n` +
-    `Última Profissão: ${application.lastProfession}\n` +
-    `Disponibilidade para Turnos (2D/2N/2F): ${shiftsText}\n\n` +
-    `Currículo Anexo: ${application.cvName} (${cvSizeKB} KB)\n\n` +
-    `Carta de Apresentação:\n${application.coverLetter || "Não enviada."}\n\n` +
-    `Painel de Gestão: https://www.overwatchmoz.com/admin`;
-
-  // 2. Professional Branded Auto-Responder for Candidate
-  const candidateSubject = isPt
-    ? `Candidatura Recebida — Overwatch (${role.pt})`
-    : `Application Received — Overwatch (${role.en})`;
-
-  const candidateCopy = isPt
-    ? {
-        title: "Candidatura Registada com Sucesso",
-        greeting: `Olá ${application.name},`,
-        p1: `Confirmamos a recepção da sua candidatura para a vaga de <strong>${role.pt}</strong> na Overwatch, juntamente com o seu currículo.`,
-        p2: "A nossa equipa de operações de segurança e recursos humanos está a analisar o seu perfil e as suas qualificações.",
-        p3: "Caso o seu perfil seja selecionado para a fase de entrevistas, entraremos em contacto directamente consigo através de WhatsApp ou por este endereço de e-mail.",
-        ref: `Referência da candidatura: <strong>${application.id.slice(0, 8).toUpperCase()}</strong>`,
-        noticeTitle: "Informação Importante",
-        notice: "Esta é uma confirmação automática de recepção. Por favor não responda directamente a este e-mail.",
-        enquiries: `Para quaisquer esclarecimentos adicionais, contacte-nos através de <a href="mailto:${siteContact.email}" style="color: #090d16; font-weight: 600;">${siteContact.email}</a>.`,
-        team: "Equipa de Recrutamento & Operações",
-        company: "Overwatch Moçambique",
-      }
-    : {
-        title: "Application Successfully Received",
-        greeting: `Hello ${application.name},`,
-        p1: `We have successfully received your application for the position of <strong>${role.en}</strong> at Overwatch, along with your resume.`,
-        p2: "Our security operations and human resources team is currently reviewing your application and background.",
-        p3: "If your profile matches our requirements for the interview stage, we will contact you directly via WhatsApp or this email address.",
-        ref: `Application Reference: <strong>${application.id.slice(0, 8).toUpperCase()}</strong>`,
-        noticeTitle: "Important Notice",
-        notice: "This is an automated delivery confirmation. Please do not reply directly to this email address.",
-        enquiries: `For any inquiries, reach us at <a href="mailto:${siteContact.email}" style="color: #090d16; font-weight: 600;">${siteContact.email}</a>.`,
-        team: "Recruitment & Operations Team",
-        company: "Overwatch Mozambique",
-      };
-
-  const candidateHtmlContent = `
-    <div style="background-color: #f8fafc; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155; line-height: 1.6;">
-      <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05); overflow: hidden;">
-        <!-- Brand Dark Monochrome Accent Bar -->
-        <div style="height: 4px; background: #090d16;"></div>
-        
-        <!-- Body Content -->
-        <div style="padding: 32px;">
-          <h1 style="font-size: 20px; font-weight: 700; color: #090d16; margin: 0 0 16px 0;">${candidateCopy.title}</h1>
-          <p style="margin: 0 0 12px 0;">${candidateCopy.greeting}</p>
-          <p style="margin: 0 0 12px 0;">${candidateCopy.p1}</p>
-          <p style="margin: 0 0 12px 0;">${candidateCopy.p2}</p>
-          <p style="margin: 0 0 16px 0;">${candidateCopy.p3}</p>
-          
-          <div style="margin: 20px 0; padding: 14px 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; color: #334155;">
-            ${candidateCopy.ref}
-          </div>
-
-          <div style="margin-top: 24px; padding: 16px; background: #f1f5f9; border-radius: 8px; border-left: 3px solid #cbd5e1; font-size: 12px; color: #64748b;">
-            <p style="margin: 0 0 6px 0; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #475569;">${candidateCopy.noticeTitle}</p>
-            <p style="margin: 0 0 8px 0; line-height: 1.5;">${candidateCopy.notice}</p>
-            <p style="margin: 0; line-height: 1.5;">${candidateCopy.enquiries}</p>
-          </div>
-          
-          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
-          <p style="font-size: 14px; font-weight: 600; color: #090d16; margin: 0;">${candidateCopy.team}</p>
-          <p style="font-size: 13px; color: #94a3b8; margin: 2px 0 0 0;">${candidateCopy.company}</p>
-        </div>
-
-        <!-- Footer -->
-        <div style="background-color: #f8fafc; padding: 20px 32px; border-top: 1px solid #e2e8f0; text-align: center;">
-          <p style="font-size: 11px; color: #94a3b8; margin: 0;">© 2026 ${candidateCopy.company}. Todos os direitos reservados.</p>
-        </div>
-      </div>
-    </div>
-  `;
-
   // Standardize file name for email attachment
   const safeCvName = application.cvName.replace(/[^\w.-]/g, "_");
+
+  let adminSubject = `[Candidatura] ${roleName} — ${application.name}`;
+  let adminHtmlContent = "";
+  let adminTextContent = "";
+  let candidateSubject = "";
+  let candidateHtmlContent = "";
+  let candidateTextContent = "";
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // A. Specialized Flow for Technical Roles (CCTV Installation & Technical Manager)
+  // ─────────────────────────────────────────────────────────────────────────
+  if (application.role === "cctv_technical_manager" || Boolean(application.technicalData)) {
+    const isEn = application.locale === "en";
+    const escapeHtml = (str?: string) =>
+      (str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
+    const formatYears = (val?: string) => {
+      if (val === "0") return isEn ? "0 years (No practical experience)" : "0 anos (Sem experiência prática)";
+      if (val === "1_2") return isEn ? "1 to 2 years" : "1 a 2 anos";
+      if (val === "3_5") return isEn ? "3 to 5 years" : "3 a 5 anos";
+      if (val === "5_plus") return isEn ? "5+ years (Senior experience)" : "5+ anos (Experiência sénior)";
+      return val || (isEn ? "Not specified" : "Não indicado");
+    };
+
+    const formatStart = (val?: string) => {
+      if (val === "immediate") return isEn ? "Immediate availability" : "Disponibilidade imediata";
+      if (val === "2_weeks") return isEn ? "Within 2 weeks" : "Dentro de 2 semanas";
+      if (val === "1_month") return isEn ? "1 month notice" : "1 mês de aviso prévio";
+      if (val === "more_than_month") return isEn ? "More than 1 month" : "Mais de 1 mês";
+      return val || (isEn ? "Negotiable" : "A combinar");
+    };
+
+    const renderBadge = (passed: boolean, isMandatory = false) => {
+      if (passed) {
+        return `<span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; background-color: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0;">✓ SIM</span>`;
+      }
+      return `<span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; background-color: ${isMandatory ? "#fef2f2" : "#f1f5f9"}; color: ${isMandatory ? "#dc2626" : "#64748b"}; border: 1px solid ${isMandatory ? "#fecaca" : "#cbd5e1"};">✕ NÃO</span>`;
+    };
+
+    const res = application.screeningResult;
+    const isQualified = res?.passedMandatory ?? false;
+    const prefScore = res?.preferredScore ?? 0;
+    const prefTotal = res?.preferredTotal ?? 7;
+    const matchPct = res?.matchPercentage ?? 0;
+    const cleanPhone = application.whatsapp.replace(/\D/g, "");
+
+    // 1. Admin Email Subject
+    adminSubject = isQualified
+      ? `[Candidatura Técnica] Gestor Técnico CCTV — ${application.name} [QUALIFICADO / SHORTLISTED]`
+      : `[Candidatura Técnica] Gestor Técnico CCTV — ${application.name} [NÃO QUALIFICADO]`;
+
+    // 2. Admin Email HTML Content
+    adminHtmlContent = `
+      <div style="background-color: #f8fafc; padding: 36px 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155; line-height: 1.5;">
+        <div style="max-width: 650px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden;">
+          <!-- Top Accent Bar -->
+          <div style="height: 4px; background: #0b1329;"></div>
+
+          <!-- Header -->
+          <div style="padding: 28px 32px 20px 32px; border-bottom: 1px solid #f1f5f9;">
+            <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; display: block; margin-bottom: 4px;">Recrutamento Overwatch • Triagem Técnica Automática</span>
+            <h1 style="font-size: 22px; font-weight: 700; color: #090d16; margin: 0;">${escapeHtml(application.name)}</h1>
+            <p style="font-size: 14px; color: #64748b; margin: 4px 0 0 0;">Vaga: <strong style="color: #090d16;">Gestor Técnico e Instalação de CCTV</strong> (CCTV Installation & Technical Manager)</p>
+          </div>
+
+          <div style="padding: 28px 32px;">
+            <!-- Screening Verdict Callout Banner -->
+            ${
+              isQualified
+                ? `
+                <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-left: 5px solid #059669; border-radius: 8px; padding: 16px 20px; margin-bottom: 24px;">
+                  <div style="font-size: 14px; font-weight: 700; color: #065f46;">
+                    ✓ CRITÉRIOS OBRIGATÓRIOS CUMPRIDOS — PRÉ-SELECIONADO (SHORTLISTED)
+                  </div>
+                  <div style="font-size: 13px; color: #047857; margin-top: 5px;">
+                    Correspondência Preferencial: <strong>${prefScore} de ${prefTotal} requisitos (${matchPct}%)</strong>
+                  </div>
+                  <div style="font-size: 12px; color: #065f46; margin-top: 4px;">
+                    O candidato cumpre todos os requisitos mandatórios (Instalação CCTV, IP CCTV, NVR/DVR e Redes IP). Avançou para <strong>Revisão de Gestão</strong>.
+                  </div>
+                </div>
+                `
+                : `
+                <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-left: 5px solid #dc2626; border-radius: 8px; padding: 16px 20px; margin-bottom: 24px;">
+                  <div style="font-size: 14px; font-weight: 700; color: #991b1b;">
+                    ✕ NÃO QUALIFICADO — CRITÉRIOS OBRIGATÓRIOS EM FALTA
+                  </div>
+                  <div style="font-size: 12px; color: #b91c1c; margin-top: 6px;">
+                    Requisitos obrigatórios não cumpridos:
+                    <ul style="margin: 4px 0 0 18px; padding: 0;">
+                      ${(res?.failedReasonsPt?.length ? res.failedReasonsPt : res?.failedReasons || ["Critérios mínimos não atingidos"]).map((r) => `<li>${escapeHtml(r)}</li>`).join("")}
+                    </ul>
+                  </div>
+                  <div style="font-size: 12px; color: #7f1d1d; margin-top: 6px;">
+                    Correspondência Preferencial: ${prefScore} de ${prefTotal} requisitos (${matchPct}%) • Estado: <strong>Não Avança</strong>
+                  </div>
+                </div>
+                `
+            }
+
+            <!-- Attached CV Box -->
+            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #0b1329; border-radius: 6px; padding: 14px 18px; margin-bottom: 24px;">
+              <strong style="font-size: 13px; color: #0b1329; display: block;">Currículo (CV) Anexado a este E-mail</strong>
+              <span style="font-size: 12px; color: #475569;">Ficheiro: ${escapeHtml(application.cvName)} (${cvSizeKB} KB)</span>
+            </div>
+
+            <!-- Candidate Details Table -->
+            <div style="margin-bottom: 24px;">
+              <h3 style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #475569; margin: 0 0 10px 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px;">
+                Identificação & Logística
+              </h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tbody>
+                  <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 8px 0; font-size: 12px; font-weight: 600; color: #64748b; width: 170px;">Nome Completo</td>
+                    <td style="padding: 8px 0; font-size: 13px; font-weight: 600; color: #090d16;">${escapeHtml(application.name)}</td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 8px 0; font-size: 12px; font-weight: 600; color: #64748b;">E-mail</td>
+                    <td style="padding: 8px 0; font-size: 13px; color: #090d16;"><a href="mailto:${application.email}" style="color: #0284c7; text-decoration: underline;">${application.email}</a></td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 8px 0; font-size: 12px; font-weight: 600; color: #64748b;">WhatsApp / Contacto</td>
+                    <td style="padding: 8px 0; font-size: 13px; font-weight: 600; color: #090d16;">
+                      <a href="https://wa.me/${cleanPhone}" style="color: #0284c7; text-decoration: underline;">${application.whatsapp} →</a>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 8px 0; font-size: 12px; font-weight: 600; color: #64748b;">Localização Actual</td>
+                    <td style="padding: 8px 0; font-size: 13px; color: #090d16;">${escapeHtml(application.currentLocation || "Maputo")}</td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 8px 0; font-size: 12px; font-weight: 600; color: #64748b;">Experiência em CCTV</td>
+                    <td style="padding: 8px 0; font-size: 13px; font-weight: 600; color: #090d16;">${formatYears(application.yearsCctvExperience)}</td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 8px 0; font-size: 12px; font-weight: 600; color: #64748b;">Disponibilidade</td>
+                    <td style="padding: 8px 0; font-size: 13px; color: #090d16;">${formatStart(application.startDate)}</td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 8px 0; font-size: 12px; font-weight: 600; color: #64748b;">Salário Pretendido</td>
+                    <td style="padding: 8px 0; font-size: 13px; font-weight: 600; color: #090d16;">${escapeHtml(application.salaryExpectation || "Não especificado")}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; font-size: 12px; font-weight: 600; color: #64748b;">Data de Submissão</td>
+                    <td style="padding: 8px 0; font-size: 12px; color: #64748b;">${new Date(application.createdAt).toLocaleString("pt-MZ")}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Technical Screening Audit Breakdown -->
+            <div style="margin-bottom: 24px;">
+              <h3 style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #475569; margin: 0 0 10px 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px;">
+                Auditoria de Competências Técnicas
+              </h3>
+
+              <!-- Mandatory Requirements Table -->
+              <div style="margin-bottom: 14px;">
+                <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #b91c1c; margin-bottom: 6px;">
+                  1. Requisitos Obrigatórios (Mandatórios)
+                </div>
+                <table style="width: 100%; border-collapse: collapse; background-color: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px;">
+                  <tbody>
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 8px 12px; font-size: 12px; color: #334155;">Instalação Prática de CCTV</td>
+                      <td style="padding: 8px 12px; text-align: right;">${renderBadge(application.yearsCctvExperience !== "0", true)}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 8px 12px; font-size: 12px; color: #334155;">Experiência com CCTV IP</td>
+                      <td style="padding: 8px 12px; text-align: right;">${renderBadge(application.ipCctv === "yes", true)}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 8px 12px; font-size: 12px; color: #334155;">Configuração de NVRs / DVRs</td>
+                      <td style="padding: 8px 12px; text-align: right;">${renderBadge(application.nvrDvr === "yes", true)}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 12px; font-size: 12px; color: #334155;">Redes e Configuração IP (Switches/Routers)</td>
+                      <td style="padding: 8px 12px; text-align: right;">${renderBadge(application.networking === "yes", true)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Preferred Requirements Table -->
+              <div style="margin-bottom: 14px;">
+                <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #0369a1; margin-bottom: 6px;">
+                  2. Competências Preferenciais (Score: ${prefScore}/${prefTotal})
+                </div>
+                <table style="width: 100%; border-collapse: collapse; background-color: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px;">
+                  <tbody>
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 8px 12px; font-size: 12px; color: #334155;">Plataformas Hikvision (Câmaras, NVRs, iVMS)</td>
+                      <td style="padding: 8px 12px; text-align: right;">${renderBadge(application.hikvision === "yes")}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 8px 12px; font-size: 12px; color: #334155;">Plataformas Dahua (DSS, SmartPSS, TiOC)</td>
+                      <td style="padding: 8px 12px; text-align: right;">${renderBadge(application.dahua === "yes")}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 8px 12px; font-size: 12px; color: #334155;">Supervisão de Equipas Técnicas</td>
+                      <td style="padding: 8px 12px; text-align: right;">${renderBadge(application.supervision === "yes")}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 8px 12px; font-size: 12px; color: #334155;">Carta de Condução Válida</td>
+                      <td style="padding: 8px 12px; text-align: right;">${renderBadge(application.drivingLicence === "yes")}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 8px 12px; font-size: 12px; color: #334155;">Câmaras com IA e Analítica de Vídeo</td>
+                      <td style="padding: 8px 12px; text-align: right;">${renderBadge(application.aiAnalytics === "yes")}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 8px 12px; font-size: 12px; color: #334155;">Integração com Centrais de Monitorização Remota</td>
+                      <td style="padding: 8px 12px; text-align: right;">${renderBadge(application.remoteMonitoring === "yes")}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 12px; font-size: 12px; color: #334155;">Elaboração de Escopos Técnicos e BoQs</td>
+                      <td style="padding: 8px 12px; text-align: right;">${renderBadge(application.boqScopes === "yes")}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Other Infrastructure Skills Table -->
+              <div>
+                <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #475569; margin-bottom: 6px;">
+                  3. Infraestrutura & Manutenção Complementar
+                </div>
+                <table style="width: 100%; border-collapse: collapse; background-color: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px;">
+                  <tbody>
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 8px 12px; font-size: 12px; color: #334155;">CCTV Analógico</td>
+                      <td style="padding: 8px 12px; text-align: right;">${renderBadge(application.analogueCctv === "yes")}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 8px 12px; font-size: 12px; color: #334155;">Cablagem Estruturada (Cat6, Patch Panels)</td>
+                      <td style="padding: 8px 12px; text-align: right;">${renderBadge(application.structuredCabling === "yes")}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 8px 12px; font-size: 12px; color: #334155;">Sistemas Eléctricos & UPS</td>
+                      <td style="padding: 8px 12px; text-align: right;">${renderBadge(application.electricalUps === "yes")}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 12px; font-size: 12px; color: #334155;">Manutenção e Resolução de Avarias de CCTV</td>
+                      <td style="padding: 8px 12px; text-align: right;">${renderBadge(application.troubleshooting === "yes")}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Showcase Project Callout Card -->
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+              <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #0f172a; display: block; margin-bottom: 4px;">
+                Maior Projecto de CCTV Pessoalmente Gerido ou Instalado
+              </span>
+              <p style="font-size: 11px; color: #64748b; margin: 0 0 12px 0;">
+                (Número aproximado de câmaras, marcas de equipamentos e responsabilidades técnicas relatadas pelo candidato)
+              </p>
+              <div style="font-size: 13px; color: #334155; line-height: 1.6; white-space: pre-wrap; background: #ffffff; padding: 14px 16px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                ${escapeHtml(application.largestProjectDescription || "Nenhuma descrição fornecida.")}
+              </div>
+            </div>
+
+            ${
+              application.coverLetter
+                ? `
+              <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+                <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; display: block; margin-bottom: 8px;">
+                  Carta de Apresentação / Mensagem Adicional
+                </span>
+                <div style="font-size: 13px; color: #334155; line-height: 1.6; white-space: pre-wrap;">
+                  ${escapeHtml(application.coverLetter)}
+                </div>
+              </div>
+              `
+                : ""
+            }
+
+            <!-- Admin Portal Link Button -->
+            <div style="text-align: center; margin-top: 24px;">
+              <a href="https://www.overwatchmoz.com/admin/recruitment" style="display: inline-block; background-color: #090d16; color: #ffffff; padding: 13px 28px; font-size: 13px; font-weight: 600; text-decoration: none; border-radius: 8px; letter-spacing: 0.02em;">
+                Aceder ao Painel de Recrutamento →
+              </a>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div style="background-color: #f8fafc; padding: 20px 32px; border-top: 1px solid #e2e8f0; text-align: center;">
+            <p style="font-size: 12px; color: #94a3b8; margin: 0 0 4px 0;">O currículo do candidato segue anexado a esta mensagem.</p>
+            <p style="font-size: 11px; color: #cbd5e1; margin: 0;">© 2026 Overwatch Moçambique. Todos os direitos reservados.</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // 3. Admin Email Plain Text Content
+    adminTextContent =
+      `NOVA CANDIDATURA TÉCNICA OVERWATCH\n` +
+      `Cargo: Gestor Técnico e Instalação de CCTV\n` +
+      `Candidato: ${application.name}\n` +
+      `Resultado de Triagem: ${isQualified ? "QUALIFICADO / SHORTLISTED" : "NÃO QUALIFICADO"}\n` +
+      `Competências Preferenciais: ${prefScore}/${prefTotal} (${matchPct}%)\n\n` +
+      `DADOS DO CANDIDATO:\n` +
+      `- Email: ${application.email}\n` +
+      `- WhatsApp: ${application.whatsapp}\n` +
+      `- Localização: ${application.currentLocation || "Maputo"}\n` +
+      `- Anos Exp. CCTV: ${formatYears(application.yearsCctvExperience)}\n` +
+      `- Início: ${formatStart(application.startDate)}\n` +
+      `- Salário Pretendido: ${application.salaryExpectation || "Não especificado"}\n\n` +
+      `REQUISITOS MANDATÓRIOS:\n` +
+      `- Instalação prática CCTV: ${application.yearsCctvExperience !== "0" ? "SIM" : "NÃO"}\n` +
+      `- CCTV IP: ${application.ipCctv === "yes" ? "SIM" : "NÃO"}\n` +
+      `- Configuração NVR/DVR: ${application.nvrDvr === "yes" ? "SIM" : "NÃO"}\n` +
+      `- Redes e Configuração IP: ${application.networking === "yes" ? "SIM" : "NÃO"}\n\n` +
+      `REQUISITOS PREFERENCIAIS:\n` +
+      `- Hikvision: ${application.hikvision === "yes" ? "SIM" : "NÃO"}\n` +
+      `- Dahua: ${application.dahua === "yes" ? "SIM" : "NÃO"}\n` +
+      `- Supervisão: ${application.supervision === "yes" ? "SIM" : "NÃO"}\n` +
+      `- Carta de Condução: ${application.drivingLicence === "yes" ? "SIM" : "NÃO"}\n` +
+      `- Analítica / Câmaras IA: ${application.aiAnalytics === "yes" ? "SIM" : "NÃO"}\n` +
+      `- Monitorização Remota: ${application.remoteMonitoring === "yes" ? "SIM" : "NÃO"}\n` +
+      `- Escopos Técnicos / BoQs: ${application.boqScopes === "yes" ? "SIM" : "NÃO"}\n\n` +
+      `MAIOR PROJECTO REALIZADO:\n${application.largestProjectDescription || "Não informado"}\n\n` +
+      `Currículo Anexo: ${application.cvName} (${cvSizeKB} KB)\n` +
+      `Painel: https://www.overwatchmoz.com/admin/recruitment`;
+
+    // 4. Candidate Confirmation Email (Exact wording requested by Filipa)
+    if (isEn) {
+      candidateSubject = "Application Received – CCTV Installation & Technical Manager";
+      candidateTextContent =
+        `Dear ${application.name},\n\n` +
+        `Thank you for applying for the position of CCTV Installation & Technical Manager with Overwatch.\n\n` +
+        `We confirm that your application has been received successfully.\n\n` +
+        `Our team will review your application against the technical and experience requirements for the role. Candidates selected to proceed to the next stage will be contacted with further instructions.\n\n` +
+        `Please ensure that the contact details provided in your application remain active, as all further communication regarding the recruitment process will be sent by email and/or telephone.\n\n` +
+        `Thank you for your interest in joining Overwatch.\n\n` +
+        `Kind regards,\n` +
+        `Overwatch\n` +
+        `Maputo, Mozambique`;
+
+      candidateHtmlContent = `
+        <div style="background-color: #f8fafc; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155; line-height: 1.6;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden;">
+            <div style="height: 4px; background: #0b1329;"></div>
+            <div style="padding: 32px;">
+              <h1 style="font-size: 20px; font-weight: 700; color: #090d16; margin: 0 0 16px 0;">Application Received – CCTV Installation &amp; Technical Manager</h1>
+              <p style="margin: 0 0 14px 0; font-size: 14px; color: #1e293b;">Dear ${escapeHtml(application.name)},</p>
+              <p style="margin: 0 0 14px 0; font-size: 14px; color: #334155;">Thank you for applying for the position of <strong>CCTV Installation &amp; Technical Manager</strong> with Overwatch.</p>
+              <p style="margin: 0 0 14px 0; font-size: 14px; color: #334155;">We confirm that your application has been received successfully.</p>
+              <p style="margin: 0 0 14px 0; font-size: 14px; color: #334155;">Our team will review your application against the technical and experience requirements for the role. Candidates selected to proceed to the next stage will be contacted with further instructions.</p>
+              <p style="margin: 0 0 16px 0; font-size: 14px; color: #334155;">Please ensure that the contact details provided in your application remain active, as all further communication regarding the recruitment process will be sent by email and/or telephone.</p>
+              <p style="margin: 0 0 20px 0; font-size: 14px; color: #334155;">Thank you for your interest in joining Overwatch.</p>
+
+              <div style="margin: 20px 0; padding: 14px 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; color: #334155;">
+                Application Reference: <strong style="font-family: monospace; color: #090d16;">OWT-TM-${application.id.slice(0, 8).toUpperCase()}</strong>
+              </div>
+
+              <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+              <p style="font-size: 14px; font-weight: 600; color: #090d16; margin: 0;">Kind regards,</p>
+              <p style="font-size: 14px; font-weight: 700; color: #090d16; margin: 2px 0 0 0;">Overwatch</p>
+              <p style="font-size: 13px; color: #64748b; margin: 2px 0 0 0;">Maputo, Mozambique</p>
+            </div>
+            <div style="background-color: #f8fafc; padding: 20px 32px; border-top: 1px solid #e2e8f0; text-align: center;">
+              <p style="font-size: 11px; color: #94a3b8; margin: 0;">© 2026 Overwatch Mozambique. All rights reserved.</p>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      candidateSubject = "Candidatura Recebida – Gestor Técnico e Instalação de CCTV";
+      candidateTextContent =
+        `Estimado(a) ${application.name},\n\n` +
+        `Agradecemos a sua candidatura para a posição de Gestor Técnico e Instalação de CCTV na Overwatch.\n\n` +
+        `Confirmamos que a sua candidatura foi recebida com sucesso.\n\n` +
+        `A nossa equipa irá analisar a sua candidatura relativamente aos requisitos técnicos e de experiência para a função. Os candidatos selecionados para avançar para a próxima fase serão contactados com instruções adicionais.\n\n` +
+        `Certifique-se de que os dados de contacto fornecidos na sua candidatura permanecem ativos, pois todas as comunicações posteriores relativas ao processo de recrutamento serão enviadas por e-mail e/ou telefone.\n\n` +
+        `Agradecemos o seu interesse em fazer parte da Overwatch.\n\n` +
+        `Com os melhores cumprimentos,\n` +
+        `Overwatch\n` +
+        `Maputo, Moçambique`;
+
+      candidateHtmlContent = `
+        <div style="background-color: #f8fafc; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155; line-height: 1.6;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden;">
+            <div style="height: 4px; background: #0b1329;"></div>
+            <div style="padding: 32px;">
+              <h1 style="font-size: 20px; font-weight: 700; color: #090d16; margin: 0 0 16px 0;">Candidatura Recebida – Gestor Técnico e Instalação de CCTV</h1>
+              <p style="margin: 0 0 14px 0; font-size: 14px; color: #1e293b;">Estimado(a) ${escapeHtml(application.name)},</p>
+              <p style="margin: 0 0 14px 0; font-size: 14px; color: #334155;">Agradecemos a sua candidatura para a posição de <strong>Gestor Técnico e Instalação de CCTV</strong> na Overwatch.</p>
+              <p style="margin: 0 0 14px 0; font-size: 14px; color: #334155;">Confirmamos que a sua candidatura foi recebida com sucesso.</p>
+              <p style="margin: 0 0 14px 0; font-size: 14px; color: #334155;">A nossa equipa irá analisar a sua candidatura relativamente aos requisitos técnicos e de experiência para a função. Os candidatos selecionados para avançar para a próxima fase serão contactados com instruções adicionais.</p>
+              <p style="margin: 0 0 16px 0; font-size: 14px; color: #334155;">Certifique-se de que os dados de contacto fornecidos na sua candidatura permanecem ativos, pois todas as comunicações posteriores relativas ao processo de recrutamento serão enviadas por e-mail e/ou telefone.</p>
+              <p style="margin: 0 0 20px 0; font-size: 14px; color: #334155;">Agradecemos o seu interesse em fazer parte da Overwatch.</p>
+
+              <div style="margin: 20px 0; padding: 14px 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; color: #334155;">
+                Referência da Candidatura: <strong style="font-family: monospace; color: #090d16;">OWT-TM-${application.id.slice(0, 8).toUpperCase()}</strong>
+              </div>
+
+              <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+              <p style="font-size: 14px; font-weight: 600; color: #090d16; margin: 0;">Com os melhores cumprimentos,</p>
+              <p style="font-size: 14px; font-weight: 700; color: #090d16; margin: 2px 0 0 0;">Overwatch</p>
+              <p style="font-size: 13px; color: #64748b; margin: 2px 0 0 0;">Maputo, Moçambique</p>
+            </div>
+            <div style="background-color: #f8fafc; padding: 20px 32px; border-top: 1px solid #e2e8f0; text-align: center;">
+              <p style="font-size: 11px; color: #94a3b8; margin: 0;">© 2026 Overwatch Moçambique. Todos os direitos reservados.</p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  } else {
+    // ─────────────────────────────────────────────────────────────────────────
+    // B. Standard / Operator Role Flow
+    // ─────────────────────────────────────────────────────────────────────────
+    const grade12Text =
+      application.grade12 === "yes"
+        ? "Sim, 12.ª classe concluída"
+        : "Não concluída";
+    const sexText =
+      application.sex === "female"
+        ? "Feminino"
+        : application.sex === "male"
+          ? "Masculino"
+          : application.sex;
+    const aiText =
+      application.ai === "yes"
+        ? "Sim, tem conhecimento e sabe utilizar"
+        : "Não, sem conhecimento prévio";
+    const experienceText =
+      application.experience === "yes"
+        ? "Sim, possui experiência comprovada"
+        : "Não, sem experiência anterior";
+    const shiftsText =
+      application.shifts === "yes"
+        ? "Sim, disponível para escala 2 dias, 2 noites, 2 folgas"
+        : "Não disponível para este regime";
+
+    adminHtmlContent = `
+      <div style="background-color: #f8fafc; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155; line-height: 1.5;">
+        <div style="max-width: 620px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05); overflow: hidden;">
+          <div style="height: 4px; background: #090d16;"></div>
+          
+          <div style="padding: 32px 32px 24px 32px; border-bottom: 1px solid #f1f5f9;">
+            <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; display: block; margin-bottom: 4px;">Recrutamento Overwatch • Nova Candidatura</span>
+            <h1 style="font-size: 22px; font-weight: 700; color: #090d16; margin: 0; letter-spacing: -0.01em;">${application.name}</h1>
+            <p style="font-size: 14px; color: #64748b; margin: 6px 0 0 0;">Vaga pretendida: <strong style="color: #090d16;">${roleName}</strong></p>
+          </div>
+
+          <div style="padding: 32px;">
+            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #0b1329; border-radius: 6px; padding: 14px 18px; margin-bottom: 24px;">
+              <div>
+                <strong style="font-size: 13px; color: #0b1329; display: block;">Currículo (CV) Anexado a este E-mail</strong>
+                <span style="font-size: 12px; color: #475569;">Ficheiro: ${application.cvName} (${cvSizeKB} KB)</span>
+              </div>
+            </div>
+
+            <div style="margin-bottom: 24px;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <tbody>
+                  <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; width: 170px; text-transform: uppercase; letter-spacing: 0.04em;">Nome Completo</td>
+                    <td style="padding: 11px 0; font-size: 14px; font-weight: 600; color: #090d16;">${application.name}</td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">Endereço de E-mail</td>
+                    <td style="padding: 11px 0; font-size: 14px; font-weight: 500; color: #090d16;"><a href="mailto:${application.email}" style="color: #090d16; text-decoration: underline;">${application.email}</a></td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">WhatsApp</td>
+                    <td style="padding: 11px 0; font-size: 14px; font-weight: 600; color: #090d16;">
+                      <a href="https://wa.me/${application.whatsapp.replace(/\D/g, "")}" style="color: #0284c7; text-decoration: underline;">${application.whatsapp} →</a>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">12.ª Classe</td>
+                    <td style="padding: 11px 0; font-size: 13px; font-weight: 500; color: #090d16;">${grade12Text}</td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">Género / Sexo</td>
+                    <td style="padding: 11px 0; font-size: 13px; font-weight: 500; color: #090d16;">${sexText}</td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">Sabe Usar IA?</td>
+                    <td style="padding: 11px 0; font-size: 13px; font-weight: 600; color: ${application.ai === "yes" ? "#090d16" : "#64748b"};">${aiText}</td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">Experiência CCTV / Seg.</td>
+                    <td style="padding: 11px 0; font-size: 13px; font-weight: 600; color: ${application.experience === "yes" ? "#090d16" : "#64748b"};">${experienceText}</td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">Última Profissão</td>
+                    <td style="padding: 11px 0; font-size: 13px; font-weight: 500; color: #090d16;">${application.lastProfession}</td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">Disponibilidade Turnos</td>
+                    <td style="padding: 11px 0; font-size: 13px; font-weight: 500; color: ${application.shifts === "yes" ? "#090d16" : "#dc2626"};">${shiftsText}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 11px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">Data de Submissão</td>
+                    <td style="padding: 11px 0; font-size: 13px; font-weight: 500; color: #64748b;">${new Date(application.createdAt).toLocaleString("pt-MZ")}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 28px;">
+              <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; display: block; margin-bottom: 8px;">Carta de Apresentação</span>
+              <div style="font-size: 13px; color: #334155; line-height: 1.6; white-space: pre-wrap;">
+                ${application.coverLetter || "Nenhuma carta de apresentação submetida com esta candidatura."}
+              </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 24px;">
+              <a href="https://www.overwatchmoz.com/admin/recruitment" style="display: inline-block; background-color: #090d16; color: #ffffff; padding: 13px 28px; font-size: 13px; font-weight: 600; text-decoration: none; border-radius: 8px; letter-spacing: 0.02em;">
+                Aceder ao Painel de Recrutamento →
+              </a>
+            </div>
+          </div>
+
+          <div style="background-color: #f8fafc; padding: 24px 32px; border-top: 1px solid #e2e8f0; text-align: center;">
+            <p style="font-size: 12px; color: #94a3b8; margin: 0 0 4px 0;">O currículo do candidato segue anexado a esta mensagem.</p>
+            <p style="font-size: 11px; color: #cbd5e1; margin: 0;">© 2026 Overwatch Moçambique. Todos os direitos reservados.</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    adminTextContent =
+      `NOVA CANDIDATURA OVERWATCH\n\n` +
+      `Candidato: ${application.name}\n` +
+      `Cargo Pretendido: ${roleName}\n` +
+      `E-mail: ${application.email}\n` +
+      `WhatsApp: ${application.whatsapp}\n` +
+      `12.ª Classe: ${grade12Text}\n` +
+      `Género: ${sexText}\n` +
+      `Sabe Usar Inteligência Artificial: ${aiText}\n` +
+      `Experiência CCTV / Segurança: ${experienceText}\n` +
+      `Última Profissão: ${application.lastProfession}\n` +
+      `Disponibilidade para Turnos (2D/2N/2F): ${shiftsText}\n\n` +
+      `Currículo Anexo: ${application.cvName} (${cvSizeKB} KB)\n\n` +
+      `Carta de Apresentação:\n${application.coverLetter || "Não enviada."}\n\n` +
+      `Painel de Gestão: https://www.overwatchmoz.com/admin/recruitment`;
+
+    candidateSubject = isPt
+      ? `Candidatura Recebida — Overwatch (${role.pt})`
+      : `Application Received — Overwatch (${role.en})`;
+
+    const candidateCopy = isPt
+      ? {
+          title: "Candidatura Registada com Sucesso",
+          greeting: `Olá ${application.name},`,
+          p1: `Confirmamos a recepção da sua candidatura para a vaga de <strong>${role.pt}</strong> na Overwatch, juntamente com o seu currículo.`,
+          p2: "A nossa equipa de operações de segurança e recursos humanos está a analisar o seu perfil e as suas qualificações.",
+          p3: "Caso o seu perfil seja selecionado para a fase de entrevistas, entraremos em contacto directamente consigo através de WhatsApp ou por este endereço de e-mail.",
+          ref: `Referência da candidatura: <strong>${application.id.slice(0, 8).toUpperCase()}</strong>`,
+          noticeTitle: "Informação Importante",
+          notice: "Esta é uma confirmação automática de recepção. Por favor não responda directamente a este e-mail.",
+          enquiries: `Para quaisquer esclarecimentos adicionais, contacte-nos através de <a href="mailto:${siteContact.email}" style="color: #090d16; font-weight: 600;">${siteContact.email}</a>.`,
+          team: "Equipa de Recrutamento & Operações",
+          company: "Overwatch Moçambique",
+        }
+      : {
+          title: "Application Successfully Received",
+          greeting: `Hello ${application.name},`,
+          p1: `We have successfully received your application for the position of <strong>${role.en}</strong> at Overwatch, along with your resume.`,
+          p2: "Our security operations and human resources team is currently reviewing your application and background.",
+          p3: "If your profile matches our requirements for the interview stage, we will contact you directly via WhatsApp or this email address.",
+          ref: `Application Reference: <strong>${application.id.slice(0, 8).toUpperCase()}</strong>`,
+          noticeTitle: "Important Notice",
+          notice: "This is an automated delivery confirmation. Please do not reply directly to this email address.",
+          enquiries: `For any inquiries, reach us at <a href="mailto:${siteContact.email}" style="color: #090d16; font-weight: 600;">${siteContact.email}</a>.`,
+          team: "Recruitment & Operations Team",
+          company: "Overwatch Mozambique",
+        };
+
+    candidateHtmlContent = `
+      <div style="background-color: #f8fafc; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155; line-height: 1.6;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05); overflow: hidden;">
+          <div style="height: 4px; background: #090d16;"></div>
+          
+          <div style="padding: 32px;">
+            <h1 style="font-size: 20px; font-weight: 700; color: #090d16; margin: 0 0 16px 0;">${candidateCopy.title}</h1>
+            <p style="margin: 0 0 12px 0;">${candidateCopy.greeting}</p>
+            <p style="margin: 0 0 12px 0;">${candidateCopy.p1}</p>
+            <p style="margin: 0 0 12px 0;">${candidateCopy.p2}</p>
+            <p style="margin: 0 0 16px 0;">${candidateCopy.p3}</p>
+            
+            <div style="margin: 20px 0; padding: 14px 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; color: #334155;">
+              ${candidateCopy.ref}
+            </div>
+
+            <div style="margin-top: 24px; padding: 16px; background: #f1f5f9; border-radius: 8px; border-left: 3px solid #cbd5e1; font-size: 12px; color: #64748b;">
+              <p style="margin: 0 0 6px 0; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #475569;">${candidateCopy.noticeTitle}</p>
+              <p style="margin: 0 0 8px 0; line-height: 1.5;">${candidateCopy.notice}</p>
+              <p style="margin: 0; line-height: 1.5;">${candidateCopy.enquiries}</p>
+            </div>
+            
+            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+            <p style="font-size: 14px; font-weight: 600; color: #090d16; margin: 0;">${candidateCopy.team}</p>
+            <p style="font-size: 13px; color: #94a3b8; margin: 2px 0 0 0;">${candidateCopy.company}</p>
+          </div>
+
+          <div style="background-color: #f8fafc; padding: 20px 32px; border-top: 1px solid #e2e8f0; text-align: center;">
+            <p style="font-size: 11px; color: #94a3b8; margin: 0;">© 2026 ${candidateCopy.company}. Todos os direitos reservados.</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    candidateTextContent = `${candidateCopy.greeting}\n\n${candidateCopy.p1.replace(/<[^>]+>/g, "")}\n\n${candidateCopy.p2}\n\n${candidateCopy.ref.replace(/<[^>]+>/g, "")}\n\n${candidateCopy.team}\n${candidateCopy.company}`;
+  }
 
   const payloads = [
     // 1. Email to HR/Operations with attached CV
@@ -429,7 +837,7 @@ export async function notifyApplication(application: Application, cv: Buffer) {
         { email: "ebube.michael@overwatchmoz.com", name: "Ebube Michael" },
       ],
       replyTo: { name: application.name, email: application.email },
-      subject: `[Candidatura] ${roleName} — ${application.name}`,
+      subject: adminSubject,
       htmlContent: adminHtmlContent,
       textContent: adminTextContent,
       attachment: [
@@ -445,7 +853,7 @@ export async function notifyApplication(application: Application, cv: Buffer) {
       to: [{ email: application.email, name: application.name }],
       subject: candidateSubject,
       htmlContent: candidateHtmlContent,
-      textContent: `${candidateCopy.greeting}\n\n${candidateCopy.p1.replace(/<[^>]+>/g, "")}\n\n${candidateCopy.p2}\n\n${candidateCopy.ref.replace(/<[^>]+>/g, "")}\n\n${candidateCopy.team}\n${candidateCopy.company}`,
+      textContent: candidateTextContent,
     },
   ];
 
