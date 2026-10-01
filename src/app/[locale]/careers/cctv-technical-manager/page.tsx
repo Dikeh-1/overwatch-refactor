@@ -7,9 +7,6 @@ import {
   CheckCircle2,
   MapPin,
   Clock,
-  Camera,
-  Network,
-  Users,
   ShieldCheck,
 } from "lucide-react";
 import CareersForm from "@/components/shared/CareersForm";
@@ -205,79 +202,13 @@ export default async function CctvTechnicalManagerPage({ params }: Props) {
         </div>
       </section>
 
-      {/* ─── 3 CORE PILLARS ──────────────────────────────────────────── */}
-      <section className="border-b border-border bg-card py-12">
+      {/* ─── INTERACTIVE FAN-OUT CARD STACK ─────────────────────────── */}
+      <section id="responsibilities" className="relative py-12 sm:py-16 lg:py-20 overflow-hidden bg-background">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-6 md:grid-cols-3">
-            <div className="rounded-2xl border border-border bg-background p-6">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-foreground/[0.04] text-foreground mb-4 border border-border">
-                <Camera size={22} />
-              </div>
-              <h3 className="text-base font-bold text-foreground">
-                {t("Site Surveys & Engineering", "Levantamentos & Engenharia")}
-              </h3>
-              <p className="mt-2 text-xs leading-relaxed text-muted">
-                {t(
-                  "Technical on-site evaluations, identifying coverage blind spots, calculating optical focal lengths, and preparing professional BoQ scopes.",
-                  "Avaliação técnica no terreno, identificação precisa de ângulos mortos, cálculo de distâncias focais e elaboração de listas de material (BoQs)."
-                )}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-background p-6">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-foreground/[0.04] text-foreground mb-4 border border-border">
-                <Network size={22} />
-              </div>
-              <h3 className="text-base font-bold text-foreground">
-                {t("Systems & IP Networking", "Sistemas & Redes IP")}
-              </h3>
-              <p className="mt-2 text-xs leading-relaxed text-muted">
-                {t(
-                  "Deep hands-on configuration of Hikvision, Dahua, NVRs/DVRs, managed switches, VLANs, and streaming telemetry to our Central Control Operations.",
-                  "Configuração prática avançada de plataformas Hikvision, Dahua, NVRs, switches geríveis, VLANs e integração com a Central de Controlo."
-                )}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-background p-6">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-foreground/[0.04] text-foreground mb-4 border border-border">
-                <Users size={22} />
-              </div>
-              <h3 className="text-base font-bold text-foreground">
-                {t("Leadership & Field Operations", "Liderança & Operações de Campo")}
-              </h3>
-              <p className="mt-2 text-xs leading-relaxed text-muted">
-                {t(
-                  "Supervising teams of installation technicians, managing technical spares, maintaining quality standards, and rapid fault diagnosis.",
-                  "Supervisão direta de técnicos e subempreiteiros em obra, controlo de ferramentas e peças, e diagnóstico expedito de incidentes técnicos."
-                )}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── INTERACTIVE RESPONSIBILITY STACK ────────────────────────── */}
-      <section id="responsibilities" className="py-16 sm:py-20 lg:py-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mb-12">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted">
-              {t("SCOPE OF WORK", "ÂMBITO DE ACTUAÇÃO")}
-            </p>
-            <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-              {t("Key Responsibilities & Operational Domains", "Principais Responsabilidades & Domínios")}
-            </h2>
-            <p className="mt-3 text-sm text-muted">
-              {t(
-                "This role bridges practical on-site installation leadership with enterprise control centre monitoring standards. Explore our core technical pillars below.",
-                "Esta função articula a liderança prática de instalação em campo com os padrões operacionais da nossa central de monitorização remota. Explore os domínios técnicos abaixo."
-              )}
-            </p>
-          </div>
-
           <InteractiveResponsibilityStack locale={locale} />
         </div>
       </section>
+
 
       {/* ─── CANDIDATE PROFILE & QUALIFICATIONS ─────────────────────── */}
       <section id="requirements" className="border-y border-border bg-background py-16 sm:py-20">
