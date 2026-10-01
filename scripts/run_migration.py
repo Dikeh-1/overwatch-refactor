@@ -21,7 +21,7 @@ with open(sql_file, 'r', encoding='utf-8') as f:
 statements = [
     # career_roles table
     \"CREATE TABLE IF NOT EXISTS public.career_roles (id text PRIMARY KEY, open boolean NOT NULL DEFAULT false);\",
-    \"INSERT INTO public.career_roles (id,open) VALUES ('cctv',true),('operations',false),('technical',false),('sales',false) ON CONFLICT DO NOTHING;\",
+    \"INSERT INTO public.career_roles (id,open) VALUES ('cctv',false),('cctv_technical_manager',true),('operations',false),('technical',false),('sales',false) ON CONFLICT DO NOTHING;\",
     # career_applications table
     \"CREATE TABLE IF NOT EXISTS public.career_applications (id uuid PRIMARY KEY, created_at timestamptz NOT NULL DEFAULT now(), data jsonb NOT NULL);\",
     \"ALTER TABLE public.career_roles ENABLE ROW LEVEL SECURITY;\",

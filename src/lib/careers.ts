@@ -1,5 +1,11 @@
 export const roles = [
-  { id: "cctv", en: "CCTV Operator", pt: "Operadora de CCTV", open: true },
+  {
+    id: "cctv_technical_manager",
+    en: "CCTV Installation & Technical Manager",
+    pt: "Gestor Técnico e Instalação de CCTV",
+    open: true,
+  },
+  { id: "cctv", en: "CCTV Operator", pt: "Operadora de CCTV", open: false },
   {
     id: "operations",
     en: "Security Operations Manager",
@@ -75,6 +81,17 @@ export type ArchiveReason =
   | "Recruitment Closed"
   | "Other";
 
+export type ScreeningEvaluationResult = {
+  passedMandatory: boolean;
+  failedReasons: string[];
+  failedReasonsPt?: string[];
+  preferredScore: number;
+  preferredTotal: number;
+  matchPercentage: number;
+  evaluatedAt: string;
+  details?: Array<{ key: string; label: string; passed: boolean; mandatory: boolean }>;
+};
+
 export type Application = {
   id: string;
   createdAt: string;
@@ -83,17 +100,40 @@ export type Application = {
   whatsapp: string;
   role: string;
   locale: "en" | "pt";
-  grade12: "yes" | "no";
-  sex: "female" | "male";
-  ai: "yes" | "no";
-  experience: "yes" | "no";
-  lastProfession: string;
-  shifts: "yes" | "no";
+  // CCTV Operator fields (optional for other roles)
+  grade12?: "yes" | "no";
+  sex?: "female" | "male";
+  ai?: "yes" | "no";
+  experience?: "yes" | "no";
+  lastProfession?: string;
+  shifts?: "yes" | "no";
   coverLetter?: string;
   cvName: string;
   cvType: string;
   cvSize: number;
   status: PipelineStage;
+  // Technical / Structured Screening fields
+  currentLocation?: string;
+  yearsCctvExperience?: string;
+  ipCctv?: "yes" | "no";
+  analogueCctv?: "yes" | "no";
+  hikvision?: "yes" | "no";
+  dahua?: "yes" | "no";
+  nvrDvr?: "yes" | "no";
+  networking?: "yes" | "no";
+  structuredCabling?: "yes" | "no";
+  electricalUps?: "yes" | "no";
+  troubleshooting?: "yes" | "no";
+  supervision?: "yes" | "no";
+  drivingLicence?: "yes" | "no";
+  aiAnalytics?: "yes" | "no";
+  remoteMonitoring?: "yes" | "no";
+  boqScopes?: "yes" | "no";
+  startDate?: string;
+  salaryExpectation?: string;
+  largestProjectDescription?: string;
+  technicalData?: Record<string, any>;
+  screeningResult?: ScreeningEvaluationResult;
   testScore?: number;
   nextPhaseStatus?: "selected" | "invited" | "confirmed" | "declined" | "not_advancing";
   nextPhaseToken?: string;

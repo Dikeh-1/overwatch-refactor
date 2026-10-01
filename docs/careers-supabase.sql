@@ -1,6 +1,6 @@
 -- Run once in the Supabase SQL editor. These tables are private; only the server service role can access them.
 create table if not exists public.career_roles (id text primary key, open boolean not null default false);
-insert into public.career_roles (id,open) values ('cctv',true),('operations',false),('technical',false),('sales',false) on conflict do nothing;
+insert into public.career_roles (id,open) values ('cctv',false),('cctv_technical_manager',true),('operations',false),('technical',false),('sales',false) on conflict do nothing;
 create table if not exists public.career_applications (id uuid primary key, created_at timestamptz not null default now(), data jsonb not null);
 alter table public.career_roles enable row level security;
 alter table public.career_applications enable row level security;
