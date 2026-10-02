@@ -635,7 +635,7 @@ export default function CareersForm({
     <div className="min-h-screen bg-background text-foreground">
       {/* ─── HERO SECTION ────────────────────────────────────────────── */}
       {!hideHero && (
-        <section className="dark relative isolate overflow-hidden bg-[#090d16] pb-16 pt-28 text-white sm:pb-20 sm:pt-32 lg:pb-24 lg:pt-36">
+        <section className="dark relative isolate overflow-hidden bg-[#090d16] text-white min-h-screen flex flex-col justify-center pt-28 pb-16 sm:pt-32 sm:pb-20 lg:pt-36 lg:pb-24">
           {/* Authentic Security Surveillance Background Video */}
           <div className="absolute inset-0 z-0 opacity-35 pointer-events-none">
             <LazyVideo

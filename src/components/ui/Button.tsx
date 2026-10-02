@@ -157,17 +157,17 @@ export default function Button({
     onClick?.(e);
   };
 
-  const content = (
+  const content = isLoading ? (
     <span className="inline-flex items-center justify-center gap-2">
-      {isLoading && (
-        <OverwatchOrbitLoader
-          size="xs"
-          theme={variant === "primary" ? "light" : "dark"}
-          className="shrink-0"
-        />
-      )}
-      <span>{loadingText && isLoading ? loadingText : children}</span>
+      <OverwatchOrbitLoader
+        size="xs"
+        theme={variant === "primary" ? "light" : "dark"}
+        className="shrink-0"
+      />
+      {loadingText ? loadingText : children}
     </span>
+  ) : (
+    <>{children}</>
   );
 
   if (href) {

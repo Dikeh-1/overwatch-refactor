@@ -126,7 +126,7 @@ export default async function CctvTechnicalManagerPage({ params }: Props) {
       />
 
       {/* ─── DEDICATED FULL-VIEWPORT HERO SECTION WITH VIDEO BACKGROUND ─ */}
-      <section className="dark relative isolate overflow-hidden bg-[#090d16] text-white min-h-[88vh] lg:min-h-screen flex flex-col justify-center pt-28 pb-20 sm:pt-32 sm:pb-24 lg:pt-36 lg:pb-28">
+      <section className="dark relative isolate overflow-hidden bg-[#090d16] text-white min-h-screen flex flex-col justify-center pt-28 pb-20 sm:pt-32 sm:pb-24 lg:pt-36 lg:pb-28">
         {/* Authentic Security Surveillance Background Video */}
         <div className="absolute inset-0 z-0 opacity-35 pointer-events-none">
           <LazyVideo
