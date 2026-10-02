@@ -828,10 +828,10 @@ export async function notifyApplication(application: Application, cv: Buffer) {
       sender,
       to: [
         { email: "filipa@overwatchmoz.com", name: "Filipa" },
-        { email: "ebube.michael@overwatchmoz.com", name: "Ebube Michael" },
       ],
       cc: [
         { email: siteContact.email, name: "Overwatch Operations" },
+        { email: "ebube.michael@overwatchmoz.com", name: "Ebube Michael" },
         ...(process.env.ADMIN_NOTIFY_CC
           ? [{ email: process.env.ADMIN_NOTIFY_CC.trim(), name: "Operations Admin" }]
           : []),

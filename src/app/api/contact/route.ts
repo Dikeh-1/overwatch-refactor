@@ -95,10 +95,10 @@ Enviado através do portal de contacto do website.`;
       sender: { name: FROM_NAME, email: FROM_EMAIL },
       to: [
         { email: "filipa@overwatchmoz.com", name: "Filipa" },
-        { email: "ebube.michael@overwatchmoz.com", name: "Ebube Michael" },
       ],
       cc: [
         { email: OPERATIONS_EMAIL, name: "Overwatch Operations" },
+        { email: "ebube.michael@overwatchmoz.com", name: "Ebube Michael" },
         ...(process.env.ADMIN_NOTIFY_CC
           ? [{ email: process.env.ADMIN_NOTIFY_CC.trim(), name: "Operations Admin" }]
           : []),
