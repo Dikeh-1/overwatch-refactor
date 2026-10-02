@@ -9,14 +9,14 @@ import {
   CheckCircle2,
   AlertCircle,
   Layers,
-  Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 import type {
   CareerRoleDefinition,
   PipelineStageKey,
   ScreeningRule,
 } from "@/lib/careers-models";
-import { ALL_PIPELINE_STAGES } from "@/lib/careers-models";
+import { ALL_PIPELINE_STAGES, DEFAULT_SCREENING_RULES_BY_ROLE } from "@/lib/careers-models";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 
@@ -55,7 +55,9 @@ export default function RoleConfigModal({
   );
 
   const [rules, setRules] = useState<ScreeningRule[]>(
-    roleToEdit?.screeningRules || [],
+    roleToEdit?.screeningRules && roleToEdit.screeningRules.length > 0
+      ? roleToEdit.screeningRules
+      : (roleToEdit?.id ? (DEFAULT_SCREENING_RULES_BY_ROLE[roleToEdit.id] || []) : []),
   );
 
   // New Rule form state
@@ -226,7 +228,7 @@ export default function RoleConfigModal({
                 : "border-transparent text-slate-500 hover:text-slate-900"
             }`}
           >
-            <Sparkles size={14} />
+            <ShieldCheck size={14} />
             <span>
               {t("3. CV Screening Rules", "3. Regras de Triagem CV")} ({rules.length})
             </span>
@@ -422,9 +424,20 @@ export default function RoleConfigModal({
           {activeTab === "screening" && (
             <div className="space-y-6">
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-1">
-                  {t("Active CV Screening Rules", "Regras Ativas de Triagem Automática")}
-                </h4>
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                    {t("Active CV Screening Rules", "Regras Ativas de Triagem Automática")}
+                  </h4>
+                  {roleToEdit?.id && DEFAULT_SCREENING_RULES_BY_ROLE[roleToEdit.id] && (
+                    <button
+                      type="button"
+                      onClick={() => setRules(DEFAULT_SCREENING_RULES_BY_ROLE[roleToEdit.id] || [])}
+                      className="px-2.5 py-1 rounded-md border border-slate-300 hover:bg-slate-50 text-[11px] font-semibold text-slate-700 transition-colors cursor-pointer"
+                    >
+                      {t("Restore Role Defaults", "Restaurar Padrão da Vaga")}
+                    </button>
+                  )}
+                </div>
                 <p className="text-xs text-slate-500 mb-4">
                   {t(
                     "The system automatically screens incoming applications using these rules. Mandatory rules immediately flag unqualified candidates.",

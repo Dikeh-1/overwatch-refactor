@@ -16,10 +16,11 @@ import {
   Sliders,
   Calendar,
   Layers,
-  Sparkles,
+  PlayCircle,
   ArrowUpRight,
 } from "lucide-react";
 import type { CareerRoleDefinition, CareerCohort, PipelineStageKey } from "@/lib/careers-models";
+import { DEFAULT_SCREENING_RULES_BY_ROLE } from "@/lib/careers-models";
 import { Application, roles as defaultRoles } from "@/lib/careers";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import RoleConfigModal from "./RoleConfigModal";
@@ -76,27 +77,35 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
 
   // Guarantee that default roles are ALWAYS present and never show an empty screen
   const effectiveRoles = useMemo(() => {
-    if (roleDefs && roleDefs.length > 0) return roleDefs;
+    const baseRoles = roleDefs && roleDefs.length > 0
+      ? roleDefs
+      : defaultRoles.map((r) => {
+          const isTechMgr = r.id === "cctv_technical_manager";
+          const stages: PipelineStageKey[] = isTechMgr
+            ? ["applications", "screening", "interview", "hired"]
+            : ["applications", "screening", "testing", "gate_checkin", "next_phase", "interview", "hired"];
 
-    return defaultRoles.map((r) => {
-      const isTechMgr = r.id === "cctv_technical_manager";
-      const stages: PipelineStageKey[] = isTechMgr
-        ? ["applications", "screening", "interview", "hired"]
-        : ["applications", "screening", "testing", "gate_checkin", "next_phase", "interview", "hired"];
+          return {
+            id: r.id,
+            en: r.en,
+            pt: r.pt,
+            department: isTechMgr ? "Engenharia Técnica" : "Operações",
+            open: r.open,
+            activeCohortId: r.open ? `${r.id}_initial_cohort` : null,
+            pipelineStages: stages,
+            screeningRules: DEFAULT_SCREENING_RULES_BY_ROLE[r.id] || [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+        });
 
-      return {
-        id: r.id,
-        en: r.en,
-        pt: r.pt,
-        department: isTechMgr ? "Engenharia Técnica" : "Operações",
-        open: r.open,
-        activeCohortId: r.open ? `${r.id}_initial_cohort` : null,
-        pipelineStages: stages,
-        screeningRules: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-    });
+    return baseRoles.map((role) => ({
+      ...role,
+      screeningRules:
+        role.screeningRules && role.screeningRules.length > 0
+          ? role.screeningRules
+          : DEFAULT_SCREENING_RULES_BY_ROLE[role.id] || [],
+    }));
   }, [roleDefs]);
 
   const filteredRoles = effectiveRoles.filter((r) => {
@@ -387,7 +396,7 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
                       }}
                       className="px-3 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
                     >
-                      <Sparkles size={13} className="text-emerald-700" />
+                      <PlayCircle size={13} className="text-emerald-700" />
                       <span>{t("Open New Cohort", "Abrir Novo Lote")}</span>
                     </button>
                   )}
@@ -532,7 +541,7 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
           <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl space-y-4">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200">
-                <Sparkles size={20} />
+                <PlayCircle size={20} />
               </div>
               <div>
                 <h3 className="text-base font-bold text-slate-900">

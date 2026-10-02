@@ -5,7 +5,7 @@ export const roles = [
     pt: "Gestor Técnico e Instalação de CCTV",
     open: true,
   },
-  { id: "cctv", en: "CCTV Operator", pt: "Operadora de CCTV", open: false },
+  { id: "cctv", en: "CCTV Operator", pt: "Operadora de CCTV", open: true },
   {
     id: "operations",
     en: "Security Operations Manager",

@@ -7,15 +7,18 @@ import type { Application } from "@/lib/careers";
 export const dynamic = "force-dynamic";
 
 interface BroadcastRequest {
-  audienceFilter: "invited_unconfirmed" | "booked_confirmed" | "all_invited" | "all_applied" | "disqualified";
+  audienceFilter: "invited_unconfirmed" | "booked_confirmed" | "all_invited" | "all_applied" | "disqualified" | "next_phase" | "individual";
   genderFilter?: "all" | "female" | "male";
   roleId?: string;
+  candidateId?: string;
+  candidateEmail?: string;
   subject: string;
   message: string;
   includeBookingButton?: boolean;
   buttonText?: string;
   testOnly?: boolean;
   testEmail?: string;
+  attachments?: { name: string; content: string; type?: string }[];
 }
 
 export async function POST(request: Request) {
@@ -29,12 +32,15 @@ export async function POST(request: Request) {
       audienceFilter,
       genderFilter = "all",
       roleId,
+      candidateId,
+      candidateEmail,
       subject,
       message,
       includeBookingButton = true,
       buttonText = "Confirmar Data do Teste Presencial",
       testOnly = false,
       testEmail,
+      attachments,
     } = body;
 
     if (!subject?.trim() || !message?.trim()) {
@@ -93,6 +99,7 @@ export async function POST(request: Request) {
         subject: `[TEST PREVIEW] ${subject.trim()}`,
         htmlContent: html,
         textContent: message.trim(),
+        attachment: attachments?.map((a) => ({ name: a.name, content: a.content })),
       });
 
       return Response.json({
@@ -105,31 +112,51 @@ export async function POST(request: Request) {
 
     const allApps = await getApplications();
 
-    // Filter by role if specified
-    let targetPool = roleId && roleId !== "all" ? allApps.filter((a) => a.role === roleId) : allApps;
+    // Filter by individual or audience cohort
+    let targetPool: Application[] = [];
 
-    // Filter by audience cohort
-    if (audienceFilter === "invited_unconfirmed") {
-      targetPool = targetPool.filter(
-        (a) => Boolean(a.invitedAt) && !a.testSlot && a.status !== "archived",
+    if (audienceFilter === "individual" || candidateId || candidateEmail) {
+      targetPool = allApps.filter(
+        (a) =>
+          (candidateId && a.id === candidateId) ||
+          (candidateEmail && a.email.trim().toLowerCase() === candidateEmail.trim().toLowerCase()),
       );
-    } else if (audienceFilter === "booked_confirmed") {
-      targetPool = targetPool.filter(
-        (a) => Boolean(a.testSlot) && a.status !== "archived",
-      );
-    } else if (audienceFilter === "all_invited") {
-      targetPool = targetPool.filter(
-        (a) => Boolean(a.invitedAt) && a.status !== "archived",
-      );
-    } else if (audienceFilter === "disqualified") {
-      targetPool = targetPool.filter((a) => a.status === "archived");
-    } else if (audienceFilter === "all_applied") {
-      targetPool = targetPool.filter((a) => a.status !== "archived");
-    }
+    } else {
+      // Filter by role if specified
+      targetPool = roleId && roleId !== "all" ? allApps.filter((a) => a.role === roleId) : allApps;
 
-    // Filter by gender
-    if (genderFilter !== "all") {
-      targetPool = targetPool.filter((a) => a.sex === genderFilter);
+      // Filter by audience cohort
+      if (audienceFilter === "invited_unconfirmed") {
+        targetPool = targetPool.filter(
+          (a) => Boolean(a.invitedAt) && !a.testSlot && a.status !== "archived",
+        );
+      } else if (audienceFilter === "booked_confirmed") {
+        targetPool = targetPool.filter(
+          (a) => Boolean(a.testSlot) && a.status !== "archived",
+        );
+      } else if (audienceFilter === "all_invited") {
+        targetPool = targetPool.filter(
+          (a) => Boolean(a.invitedAt) && a.status !== "archived",
+        );
+      } else if (audienceFilter === "next_phase") {
+        targetPool = targetPool.filter(
+          (a) =>
+            a.status === "next_phase_selected" ||
+            a.status === "next_phase_invited" ||
+            a.status === "interest_confirmed" ||
+            a.status === "awaiting_response" ||
+            a.status === "interview",
+        );
+      } else if (audienceFilter === "disqualified") {
+        targetPool = targetPool.filter((a) => a.status === "archived");
+      } else if (audienceFilter === "all_applied") {
+        targetPool = targetPool.filter((a) => a.status !== "archived");
+      }
+
+      // Filter by gender
+      if (genderFilter !== "all") {
+        targetPool = targetPool.filter((a) => a.sex === genderFilter);
+      }
     }
 
     // Deduplicate by email address and exclude deactivated candidate
@@ -176,6 +203,7 @@ export async function POST(request: Request) {
           subject: subject.trim(),
           htmlContent: html,
           textContent: message.trim(),
+          attachment: attachments?.map((a) => ({ name: a.name, content: a.content })),
         });
 
         sentCount++;

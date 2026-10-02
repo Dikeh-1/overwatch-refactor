@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 import { useActiveRole } from "./ActiveRoleContext";
+import { useNavigationLoading } from "./NavigationLoadingContext";
 
 interface AdminSidebarProps {
   lang: "pt" | "en";
@@ -51,8 +52,16 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const t = (en: string, pt: string) => (lang === "en" ? en : pt);
 
   const { roles, activeRoleId, activeRole, setActiveRoleId, roleStats } = useActiveRole();
+  const { isNavigating, activeTargetHref, startNavigating } = useNavigationLoading();
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const handleNavClick = (label: string, href: string) => {
+    if (pathname !== href) {
+      startNavigating(label, href);
+    }
+    onCloseMobile();
+  };
 
   // Close role dropdown when clicking outside
   useEffect(() => {
@@ -82,6 +91,50 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     "interview",
     "hired",
   ];
+
+  const NavLinkItem = ({
+    href,
+    label,
+    icon: Icon,
+    isActiveMatch,
+    badge,
+    badgeClass,
+  }: {
+    href: string;
+    label: string;
+    icon: React.ComponentType<{ size: number; className?: string }>;
+    isActiveMatch: boolean;
+    badge?: React.ReactNode;
+    badgeClass?: string;
+  }) => {
+    const isTargetNavigating = isNavigating && activeTargetHref === href;
+    return (
+      <Link
+        href={href}
+        onClick={() => handleNavClick(label, href)}
+        className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+          isActiveMatch
+            ? "bg-white/[0.1] text-white font-semibold"
+            : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
+        }`}
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          <Icon size={15} className={isActiveMatch ? "text-[#00ded3]" : "text-slate-400"} />
+          <span className="truncate">{label}</span>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {isTargetNavigating && (
+            <span className="w-1.5 h-1.5 rounded-full bg-[#00ded3] animate-ping" />
+          )}
+          {badge !== undefined && badge !== null && (
+            <span className={badgeClass || "px-1.5 py-0.2 rounded text-[0.65rem] font-bold bg-white/10 text-slate-200"}>
+              {badge}
+            </span>
+          )}
+        </div>
+      </Link>
+    );
+  };
 
   return (
     <>
@@ -117,18 +170,16 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 admin-scrollbar">
           {/* Main Overview */}
           <div className="space-y-1">
-            <Link
+            <NavLinkItem
               href="/admin"
-              onClick={onCloseMobile}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                isActive("/admin") && !pathname?.startsWith("/admin/recruitment") && !pathname?.startsWith("/admin/settings")
-                  ? "bg-white/[0.1] text-white font-semibold"
-                  : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
-              }`}
-            >
-              <LayoutDashboard size={16} className="text-slate-400" />
-              <span>{t("Global Overview", "Visão Geral Global")}</span>
-            </Link>
+              label={t("Global Overview", "Visão Geral Global")}
+              icon={LayoutDashboard}
+              isActiveMatch={
+                isActive("/admin") &&
+                !pathname?.startsWith("/admin/recruitment") &&
+                !pathname?.startsWith("/admin/settings")
+              }
+            />
           </div>
 
           {/* ACTIVE ROLE WORKSPACE SELECTOR */}
@@ -194,6 +245,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                         onClick={() => {
                           setActiveRoleId(r.id);
                           setRoleMenuOpen(false);
+                          startNavigating(
+                            lang === "en" ? `Workspace: ${r.en || r.pt}` : `Funil: ${r.pt || r.en}`,
+                          );
                         }}
                         className={`w-full flex items-center justify-between p-2 rounded-lg text-xs transition-colors text-left cursor-pointer ${
                           isSelected
@@ -217,7 +271,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                       href="/admin/recruitment/roles"
                       onClick={() => {
                         setRoleMenuOpen(false);
-                        onCloseMobile();
+                        handleNavClick(t("Manage & Add Job Roles", "Gerir & Criar Novas Vagas"), "/admin/recruitment/roles");
                       }}
                       className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] text-sky-400 hover:bg-white/5 font-semibold transition-colors"
                     >
@@ -237,103 +291,74 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             </div>
 
             {/* Role Overview */}
-            <Link
-              href={activeRole ? `/admin/recruitment?role=${activeRole.id}` : "/admin/recruitment"}
-              onClick={onCloseMobile}
-              className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                pathname === "/admin/recruitment"
-                  ? "bg-white/[0.1] text-white font-semibold"
-                  : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <LayoutDashboard size={15} className="text-slate-400" />
-                <span>{t("Overview & Funnel", "Visão Geral da Vaga")}</span>
-              </div>
-            </Link>
+            {(() => {
+              const href = activeRole ? `/admin/recruitment?role=${activeRole.id}` : "/admin/recruitment";
+              return (
+                <NavLinkItem
+                  href={href}
+                  label={t("Overview & Funnel", "Visão Geral da Vaga")}
+                  icon={LayoutDashboard}
+                  isActiveMatch={pathname === "/admin/recruitment"}
+                />
+              );
+            })()}
 
             {/* Candidates */}
-            <Link
-              href={activeRole ? `/admin/recruitment/candidates?role=${activeRole.id}` : "/admin/recruitment/candidates"}
-              onClick={onCloseMobile}
-              className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                pathname?.startsWith("/admin/recruitment/candidates")
-                  ? "bg-white/[0.1] text-white font-semibold"
-                  : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Users size={15} className="text-slate-400" />
-                <span>{t("Candidates Intake", "Candidaturas")}</span>
-              </div>
-              {currentRoleStats && currentRoleStats.total > 0 && (
-                <span className="px-1.5 py-0.2 rounded text-[0.65rem] font-bold bg-white/10 text-slate-200">
-                  {currentRoleStats.total}
-                </span>
-              )}
-            </Link>
+            {(() => {
+              const href = activeRole ? `/admin/recruitment/candidates?role=${activeRole.id}` : "/admin/recruitment/candidates";
+              return (
+                <NavLinkItem
+                  href={href}
+                  label={t("Candidates Intake", "Candidaturas")}
+                  icon={Users}
+                  isActiveMatch={Boolean(pathname?.startsWith("/admin/recruitment/candidates"))}
+                  badge={currentRoleStats && currentRoleStats.total > 0 ? currentRoleStats.total : undefined}
+                />
+              );
+            })()}
 
             {/* Testing Stage (Shown only if role includes testing) */}
-            {stages.includes("testing") && (
-              <Link
-                href={activeRole ? `/admin/recruitment/testing?role=${activeRole.id}` : "/admin/recruitment/testing"}
-                onClick={onCloseMobile}
-                className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                  pathname?.startsWith("/admin/recruitment/testing")
-                    ? "bg-white/[0.1] text-white font-semibold"
-                    : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <CalendarCheck size={15} className="text-slate-400" />
-                  <span>{t("Testing & Attendance", "Escala & Presenças")}</span>
-                </div>
-                {currentRoleStats && currentRoleStats.testing > 0 && (
-                  <span className="px-1.5 py-0.2 rounded text-[0.65rem] font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30">
-                    {currentRoleStats.testing}
-                  </span>
-                )}
-              </Link>
-            )}
+            {stages.includes("testing") && (() => {
+              const href = activeRole ? `/admin/recruitment/testing?role=${activeRole.id}` : "/admin/recruitment/testing";
+              return (
+                <NavLinkItem
+                  href={href}
+                  label={t("Testing & Attendance", "Escala & Presenças")}
+                  icon={CalendarCheck}
+                  isActiveMatch={Boolean(pathname?.startsWith("/admin/recruitment/testing"))}
+                  badge={currentRoleStats && currentRoleStats.testing > 0 ? currentRoleStats.testing : undefined}
+                  badgeClass="px-1.5 py-0.2 rounded text-[0.65rem] font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30"
+                />
+              );
+            })()}
 
             {/* Next Phase Stage (Shown only if role includes next_phase) */}
-            {stages.includes("next_phase") && (
-              <Link
-                href={activeRole ? `/admin/recruitment/next-phase?role=${activeRole.id}` : "/admin/recruitment/next-phase"}
-                onClick={onCloseMobile}
-                className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                  pathname?.startsWith("/admin/recruitment/next-phase")
-                    ? "bg-white/[0.1] text-white font-semibold"
-                    : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <Award size={15} className="text-slate-400" />
-                  <span>{t("Next Phase Cohort", "Turma Próxima Fase")}</span>
-                </div>
-                {currentRoleStats && currentRoleStats.nextPhase > 0 && (
-                  <span className="px-1.5 py-0.2 rounded text-[0.65rem] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    {currentRoleStats.nextPhase}
-                  </span>
-                )}
-              </Link>
-            )}
+            {stages.includes("next_phase") && (() => {
+              const href = activeRole ? `/admin/recruitment/next-phase?role=${activeRole.id}` : "/admin/recruitment/next-phase";
+              return (
+                <NavLinkItem
+                  href={href}
+                  label={t("Next Phase Cohort", "Turma Próxima Fase")}
+                  icon={Award}
+                  isActiveMatch={Boolean(pathname?.startsWith("/admin/recruitment/next-phase"))}
+                  badge={currentRoleStats && currentRoleStats.nextPhase > 0 ? currentRoleStats.nextPhase : undefined}
+                  badgeClass="px-1.5 py-0.2 rounded text-[0.65rem] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                />
+              );
+            })()}
 
             {/* Communications */}
-            <Link
-              href={activeRole ? `/admin/recruitment/communications?role=${activeRole.id}` : "/admin/recruitment/communications"}
-              onClick={onCloseMobile}
-              className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                pathname?.startsWith("/admin/recruitment/communications")
-                  ? "bg-white/[0.1] text-white font-semibold"
-                  : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Mail size={15} className="text-slate-400" />
-                <span>{t("Communications", "Comunicações")}</span>
-              </div>
-            </Link>
+            {(() => {
+              const href = activeRole ? `/admin/recruitment/communications?role=${activeRole.id}` : "/admin/recruitment/communications";
+              return (
+                <NavLinkItem
+                  href={href}
+                  label={t("Communications Studio", "Comunicações & Minutas")}
+                  icon={Mail}
+                  isActiveMatch={Boolean(pathname?.startsWith("/admin/recruitment/communications"))}
+                />
+              );
+            })()}
           </div>
 
           {/* ALL ROLES & ARCHIVES SECTION */}
@@ -342,38 +367,20 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               {t("Roles & Archives", "Vagas & Histórico")}
             </div>
 
-            <Link
+            <NavLinkItem
               href="/admin/recruitment/roles"
-              onClick={onCloseMobile}
-              className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                pathname?.startsWith("/admin/recruitment/roles")
-                  ? "bg-white/[0.1] text-white font-semibold"
-                  : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Briefcase size={15} className="text-slate-400" />
-                <span>{t("All Job Roles", "Todas as Vagas")}</span>
-              </div>
-              <span className="px-1.5 py-0.2 rounded text-[0.65rem] font-bold bg-white/10 text-slate-300">
-                {roles.length}
-              </span>
-            </Link>
+              label={t("All Job Roles", "Todas as Vagas")}
+              icon={Briefcase}
+              isActiveMatch={Boolean(pathname?.startsWith("/admin/recruitment/roles"))}
+              badge={roles.length}
+            />
 
-            <Link
+            <NavLinkItem
               href="/admin/recruitment/archive"
-              onClick={onCloseMobile}
-              className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                pathname?.startsWith("/admin/recruitment/archive")
-                  ? "bg-white/[0.1] text-white font-semibold"
-                  : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Archive size={15} className="text-slate-400" />
-                <span>{t("Archive Vault", "Cofre de Arquivo")}</span>
-              </div>
-            </Link>
+              label={t("Archive Vault", "Cofre de Arquivo")}
+              icon={Archive}
+              isActiveMatch={Boolean(pathname?.startsWith("/admin/recruitment/archive"))}
+            />
           </div>
 
           {/* System & Utilities */}
@@ -395,20 +402,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               <ExternalLink size={12} className="text-slate-500" />
             </Link>
 
-            <Link
+            <NavLinkItem
               href="/admin/settings"
-              onClick={onCloseMobile}
-              className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                pathname?.startsWith("/admin/settings")
-                  ? "bg-white/[0.1] text-white font-semibold"
-                  : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Settings size={15} className="text-slate-400" />
-                <span>{t("Settings", "Configurações")}</span>
-              </div>
-            </Link>
+              label={t("Settings", "Configurações")}
+              icon={Settings}
+              isActiveMatch={Boolean(pathname?.startsWith("/admin/settings"))}
+            />
           </div>
         </div>
 

@@ -12,6 +12,7 @@ import Link from "next/link";
 import { Application, Role, APPROVED_NEXT_PHASE_CANDIDATES } from "@/lib/careers";
 import { AdminLanguageProvider, useAdminLanguage } from "./AdminLanguageContext";
 import { ActiveRoleProvider, useActiveRole } from "./ActiveRoleContext";
+import { NavigationLoadingProvider, useNavigationLoading } from "./NavigationLoadingContext";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 import { useLiveRecruitmentFeed } from "@/components/admin/hooks/useLiveRecruitmentFeed";
 
@@ -24,6 +25,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
   const router = useRouter();
 
   const { lang, setLang, toggleLang, t } = useAdminLanguage();
+  const { isNavigating, navLabel } = useNavigationLoading();
   const [auth, setAuth] = useState<boolean | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
@@ -327,6 +329,28 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
 
   return (
     <ActiveRoleProvider applications={applications}>
+      {/* Instant Route Navigation Heads-Up Top Progress Bar */}
+      {isNavigating && (
+        <div className="fixed top-0 left-0 right-0 z-[9999] h-[3px] bg-gradient-to-r from-sky-500 via-[#00ded3] to-sky-400 shadow-[0_0_12px_#00ded3] animate-pulse pointer-events-none" />
+      )}
+
+      {/* Instant Route Navigation Floating Heads-Up Pill */}
+      {isNavigating && (
+        <aside
+          role="status"
+          aria-live="polite"
+          className="fixed top-3 right-4 sm:right-6 z-[9999] flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-[#0a1128]/95 border border-[#00ded3]/40 shadow-xl text-white text-xs font-semibold backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-150"
+        >
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00ded3] opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00ded3]"></span>
+          </span>
+          <span className="text-[11px] text-slate-100 font-medium">
+            {navLabel || (lang === "pt" ? "A carregar secção..." : "Loading section...")}
+          </span>
+        </aside>
+      )}
+
       <div className="min-h-screen bg-[#F7F8FA] text-slate-900 flex">
         {/* Sidebar */}
         <AdminSidebar
@@ -460,7 +484,10 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
 export const AdminShell: React.FC<AdminShellProps> = ({ children }) => {
   return (
     <AdminLanguageProvider>
-      <AdminShellInner>{children}</AdminShellInner>
+      <NavigationLoadingProvider>
+        <AdminShellInner>{children}</AdminShellInner>
+      </NavigationLoadingProvider>
     </AdminLanguageProvider>
   );
 };
+

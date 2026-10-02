@@ -11,7 +11,6 @@ import {
   XCircle,
   AlertTriangle,
   RefreshCw,
-  Sparkles,
   Phone,
   Mail,
   Check,

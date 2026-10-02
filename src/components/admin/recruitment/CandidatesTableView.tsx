@@ -21,7 +21,6 @@ import {
   X,
   Award,
   Loader2,
-  Sparkles,
 } from "lucide-react";
 import { Application, Role, stages, formatPhoneDisplay, formatSlotDisplay } from "@/lib/careers";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
@@ -457,7 +456,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
               }}
               className="px-2.5 py-1 rounded bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-semibold transition-colors inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
             >
-              <Sparkles size={13} />
+              <Award size={13} />
               <span>{t("Advance to Next Phase", "Avançar p/ Próx. Fase")}</span>
             </button>
 
