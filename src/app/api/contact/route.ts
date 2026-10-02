@@ -90,10 +90,13 @@ ${message}
 --------------------------------------------------
 Enviado através do portal de contacto do website.`;
 
-    // 1. Send alert email to Operations Team (Filipa, Ops)
+    // 1. Send alert email to Operations Team (Filipa, Ebube, Ops)
     await sendTransactionalEmail({
       sender: { name: FROM_NAME, email: FROM_EMAIL },
-      to: [{ email: "filipa@overwatchmoz.com", name: "Filipa" }],
+      to: [
+        { email: "filipa@overwatchmoz.com", name: "Filipa" },
+        { email: "ebube.michael@overwatchmoz.com", name: "Ebube Michael" },
+      ],
       cc: [
         { email: OPERATIONS_EMAIL, name: "Overwatch Operations" },
         ...(process.env.ADMIN_NOTIFY_CC

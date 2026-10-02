@@ -828,6 +828,7 @@ export async function notifyApplication(application: Application, cv: Buffer) {
       sender,
       to: [
         { email: "filipa@overwatchmoz.com", name: "Filipa" },
+        { email: "ebube.michael@overwatchmoz.com", name: "Ebube Michael" },
       ],
       cc: [
         { email: siteContact.email, name: "Overwatch Operations" },
