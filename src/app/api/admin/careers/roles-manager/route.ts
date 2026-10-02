@@ -53,6 +53,10 @@ export async function POST(request: Request) {
       const saved = await saveRoleDefinition(role);
       // Sync open state to legacy role store as well
       await setRole(saved.id, saved.open).catch(() => {});
+      if (saved.id === "cctv" || saved.id === "cctv_operator") {
+        await setRole("cctv", saved.open).catch(() => {});
+        await setRole("cctv_operator", saved.open).catch(() => {});
+      }
       return NextResponse.json({ success: true, role: saved });
     }
 
@@ -61,6 +65,10 @@ export async function POST(request: Request) {
       if (!roleId) return NextResponse.json({ error: "Missing roleId" }, { status: 400 });
       await deleteRoleDefinition(roleId);
       await setRole(roleId, false).catch(() => {});
+      if (roleId === "cctv" || roleId === "cctv_operator") {
+        await setRole("cctv", false).catch(() => {});
+        await setRole("cctv_operator", false).catch(() => {});
+      }
       return NextResponse.json({ success: true, deleted: roleId });
     }
 

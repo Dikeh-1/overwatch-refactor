@@ -10,6 +10,7 @@ import {
   DEFAULT_SCREENING_RULES_BY_ROLE,
 } from "./careers-models";
 import { roles as legacyRoles } from "./careers";
+import { getApplications, bulkSaveApplications, setRole } from "./careers-store";
 
 const directory = path.join(process.cwd(), ".careers-data");
 
@@ -270,20 +271,25 @@ export async function openRoleCohort(
   customCohortName?: string,
 ): Promise<{ role: CareerRoleDefinition; cohort: CareerCohort }> {
   const roles = await getRoleDefinitions();
-  const role = roles.find((r) => r.id === roleId);
-  if (!role) throw new Error("Role not found");
+  const role = roles.find(
+    (r) =>
+      r.id === roleId ||
+      (roleId === "cctv" && r.id === "cctv_operator") ||
+      (roleId === "cctv_operator" && r.id === "cctv"),
+  );
+  if (!role) throw new Error(`Role not found: ${roleId}`);
 
   const now = new Date();
   const dateStr = now.toLocaleDateString("pt-MZ", { month: "short", year: "numeric" });
-  const cohortId = `${roleId}_${now.getFullYear()}_${now.getMonth() + 1}_${Date.now().toString(36)}`;
+  const cohortId = `${role.id}_${now.getFullYear()}_${now.getMonth() + 1}_${Date.now().toString(36)}`;
 
   const cohortName =
-    customCohortName ||
+    customCohortName?.trim() ||
     `${role.pt} — Lote ${dateStr.charAt(0).toUpperCase() + dateStr.slice(1)}`;
 
   const cohort: CareerCohort = {
     id: cohortId,
-    roleId,
+    roleId: role.id,
     name: cohortName,
     openedAt: now.toISOString(),
     status: "active",
@@ -297,8 +303,16 @@ export async function openRoleCohort(
     ...role,
     open: true,
     activeCohortId: cohortId,
+    updatedAt: now.toISOString(),
   };
   await saveRoleDefinition(updatedRole);
+
+  // Synchronize open state in legacy roles and all aliases
+  await setRole(role.id, true).catch(() => {});
+  if (role.id === "cctv" || role.id === "cctv_operator") {
+    await setRole("cctv", true).catch(() => {});
+    await setRole("cctv_operator", true).catch(() => {});
+  }
 
   return { role: updatedRole, cohort };
 }
@@ -313,31 +327,90 @@ export async function closeAndArchiveRoleCohort(
   archiveNotes?: string,
 ): Promise<{ role: CareerRoleDefinition; archivedCohort: CareerCohort | null }> {
   const roles = await getRoleDefinitions();
-  const role = roles.find((r) => r.id === roleId);
-  if (!role) throw new Error("Role not found");
+  const role = roles.find(
+    (r) =>
+      r.id === roleId ||
+      (roleId === "cctv" && r.id === "cctv_operator") ||
+      (roleId === "cctv_operator" && r.id === "cctv"),
+  );
+  if (!role) throw new Error(`Role not found: ${roleId}`);
 
-  let archivedCohort: CareerCohort | null = null;
+  const cohorts = await getAllCohorts();
+  const now = new Date().toISOString();
 
-  if (role.activeCohortId) {
-    const cohorts = await getAllCohorts();
-    const active = cohorts.find((c) => c.id === role.activeCohortId);
-    if (active) {
-      archivedCohort = {
-        ...active,
-        status: "archived",
-        closedAt: new Date().toISOString(),
-        notes: archiveNotes || active.notes,
-      };
-      await saveCohort(archivedCohort);
+  // Find existing active cohort or synthesize one so it always saves to vault
+  let cohortToArchive = role.activeCohortId
+    ? cohorts.find((c) => c.id === role.activeCohortId)
+    : null;
+
+  if (!cohortToArchive) {
+    const cohortId = role.activeCohortId || `${role.id}_cohort_${Date.now().toString(36)}`;
+    cohortToArchive = {
+      id: cohortId,
+      roleId: role.id,
+      name: `${role.pt} — Concurso Encerrado`,
+      openedAt: role.createdAt || now,
+      closedAt: now,
+      status: "archived",
+      stages: role.pipelineStages,
+      screeningRules: role.screeningRules,
+      notes: archiveNotes || "",
+    };
+  } else {
+    cohortToArchive = {
+      ...cohortToArchive,
+      status: "archived",
+      closedAt: now,
+      notes: archiveNotes || cohortToArchive.notes || "",
+    };
+  }
+
+  await saveCohort(cohortToArchive);
+
+  // Seal all current candidates belonging to this role cohort
+  try {
+    const allApps = await getApplications();
+    let updatedAny = false;
+    const targetCohortId = cohortToArchive.id;
+
+    const updatedApps = allApps.map((app) => {
+      const isThisRole =
+        app.role === role.id ||
+        (role.id === "cctv" && (!app.role || app.role === "cctv" || app.role === "cctv_operator")) ||
+        (role.id === "cctv_operator" && (!app.role || app.role === "cctv" || app.role === "cctv_operator"));
+
+      if (isThisRole && (!app.cohortId || app.cohortId === role.activeCohortId)) {
+        updatedAny = true;
+        return {
+          ...app,
+          cohortId: targetCohortId,
+          status: (app.status === "hired" ? "hired" : "archived") as any,
+        };
+      }
+      return app;
+    });
+
+    if (updatedAny) {
+      await bulkSaveApplications(updatedApps);
     }
+  } catch (err) {
+    console.warn("Could not seal applications to cohort:", err);
   }
 
   const updatedRole: CareerRoleDefinition = {
     ...role,
     open: false,
     activeCohortId: null,
+    updatedAt: now,
   };
   await saveRoleDefinition(updatedRole);
 
-  return { role: updatedRole, archivedCohort };
+  // Synchronize closed state in legacy roles and all aliases
+  await setRole(role.id, false).catch(() => {});
+  if (role.id === "cctv" || role.id === "cctv_operator") {
+    await setRole("cctv", false).catch(() => {});
+    await setRole("cctv_operator", false).catch(() => {});
+  }
+
+  return { role: updatedRole, archivedCohort: cohortToArchive };
 }

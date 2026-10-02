@@ -256,6 +256,7 @@ const ROLE_FORM_CONFIGS: Record<string, RoleConfig> = {
 interface CareersFormProps {
   initialLocale?: string;
   defaultRoleId?: string;
+  initialRoles?: Role[];
   hideHero?: boolean;
 }
 
@@ -269,6 +270,7 @@ function formatNumberWithCommas(val: string): string {
 export default function CareersForm({
   initialLocale,
   defaultRoleId = "cctv_technical_manager",
+  initialRoles,
   hideHero = false,
 }: CareersFormProps) {
   const currentLocale = useLocale();
@@ -277,8 +279,16 @@ export default function CareersForm({
 
   const t = (en: string, ptText: string) => (pt ? ptText : en);
 
-  const [roles, setRoles] = useState<Role[]>(defaultRoles);
-  const [selectedRoleId, setSelectedRoleId] = useState(defaultRoleId);
+  const [roles, setRoles] = useState<Role[]>(() => {
+    return initialRoles && initialRoles.length > 0 ? initialRoles : defaultRoles;
+  });
+  const [selectedRoleId, setSelectedRoleId] = useState(() => {
+    const list = initialRoles && initialRoles.length > 0 ? initialRoles : defaultRoles;
+    const directMatch = list.find((r) => r.id === defaultRoleId);
+    if (directMatch && directMatch.open) return directMatch.id;
+    const firstOpen = list.find((r) => r.open);
+    return firstOpen ? firstOpen.id : defaultRoleId;
+  });
   const [error, setError] = useState("");
   const [submitSuccessAnimation, setSubmitSuccessAnimation] = useState<any>(null);
 

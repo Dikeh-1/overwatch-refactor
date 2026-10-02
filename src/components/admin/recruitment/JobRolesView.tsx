@@ -18,6 +18,7 @@ import {
   Layers,
   PlayCircle,
   ArrowUpRight,
+  Loader2,
 } from "lucide-react";
 import type { CareerRoleDefinition, CareerCohort, PipelineStageKey } from "@/lib/careers-models";
 import { DEFAULT_SCREENING_RULES_BY_ROLE } from "@/lib/careers-models";
@@ -61,10 +62,14 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
   const [archiveModalOpen, setArchiveModalOpen] = useState(false);
   const [archiveTargetRole, setArchiveTargetRole] = useState<CareerRoleDefinition | null>(null);
   const [archiveNotes, setArchiveNotes] = useState("");
+  const [isSubmittingArchive, setIsSubmittingArchive] = useState(false);
+  const [archiveError, setArchiveError] = useState("");
 
   const [openModalOpen, setOpenModalOpen] = useState(false);
   const [openTargetRole, setOpenTargetRole] = useState<CareerRoleDefinition | null>(null);
   const [newCohortBatchName, setNewCohortBatchName] = useState("");
+  const [isSubmittingOpen, setIsSubmittingOpen] = useState(false);
+  const [openError, setOpenError] = useState("");
 
   // Processing loader state
   const [processingState, setProcessingState] = useState<{
@@ -176,6 +181,8 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
 
   const handleConfirmCloseAndArchive = async () => {
     if (!archiveTargetRole) return;
+    setIsSubmittingArchive(true);
+    setArchiveError("");
     setProcessingState({
       busy: true,
       label: t("Archiving cohort to vault...", "A arquivar lote no cofre histórico..."),
@@ -186,13 +193,22 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
       setArchiveTargetRole(null);
       setArchiveNotes("");
       await onRefresh();
+    } catch (err: any) {
+      console.error("Failed to close cohort:", err);
+      setArchiveError(
+        err?.message ||
+          t("Failed to close & archive cohort. Please try again.", "Erro ao encerrar & arquivar lote. Tente novamente."),
+      );
     } finally {
+      setIsSubmittingArchive(false);
       setProcessingState({ busy: false, label: "" });
     }
   };
 
   const handleConfirmOpenCohort = async () => {
     if (!openTargetRole) return;
+    setIsSubmittingOpen(true);
+    setOpenError("");
     setProcessingState({
       busy: true,
       label: t("Opening new recruitment cohort...", "A abrir novo ciclo de candidaturas..."),
@@ -203,7 +219,14 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
       setOpenTargetRole(null);
       setNewCohortBatchName("");
       await onRefresh();
+    } catch (err: any) {
+      console.error("Failed to open cohort:", err);
+      setOpenError(
+        err?.message ||
+          t("Failed to open recruitment cohort. Please try again.", "Erro ao abrir ciclo de recrutamento. Tente novamente."),
+      );
     } finally {
+      setIsSubmittingOpen(false);
       setProcessingState({ busy: false, label: "" });
     }
   };
@@ -231,11 +254,6 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
 
   return (
     <div className="space-y-6 relative">
-      {/* Universal Overwatch Processing Overlay */}
-      {processingState.busy && (
-        <OverwatchOrbitLoader label={processingState.label} size="md" fullscreen />
-      )}
-
       {/* Header Info with Action Buttons */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
@@ -538,23 +556,39 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
               />
             </div>
 
+            {archiveError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-700 animate-in fade-in duration-150">
+                {archiveError}
+              </div>
+            )}
+
             <div className="flex items-center justify-end gap-2.5 pt-2">
               <button
                 type="button"
+                disabled={isSubmittingArchive}
                 onClick={() => {
                   setArchiveModalOpen(false);
                   setArchiveTargetRole(null);
+                  setArchiveError("");
                 }}
-                className="px-3.5 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
+                className="px-3.5 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {t("Cancel", "Cancelar")}
               </button>
               <button
                 type="button"
+                disabled={isSubmittingArchive}
                 onClick={handleConfirmCloseAndArchive}
-                className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
               >
-                {t("Confirm Close & Archive", "Confirmar Fecho & Arquivar")}
+                {isSubmittingArchive ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin" />
+                    <span>{t("Closing & Archiving...", "A encerrar & arquivar...")}</span>
+                  </>
+                ) : (
+                  <span>{t("Confirm Close & Archive", "Confirmar Fecho & Arquivar")}</span>
+                )}
               </button>
             </div>
           </div>
@@ -592,37 +626,59 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
               </label>
               <input
                 type="text"
+                disabled={isSubmittingOpen}
                 value={newCohortBatchName}
                 onChange={(e) => setNewCohortBatchName(e.target.value)}
                 placeholder={t(
                   `e.g. ${(lang === "en" ? openTargetRole.en : openTargetRole.pt) || openTargetRole.pt} — Batch 2026`,
                   `ex.: ${openTargetRole.pt} — Turma 2026`,
                 )}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0a1128] focus:border-[#0a1128]"
+                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0a1128] focus:border-[#0a1128] disabled:opacity-50"
               />
             </div>
+
+            {openError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-700 animate-in fade-in duration-150">
+                {openError}
+              </div>
+            )}
 
             <div className="flex items-center justify-end gap-2.5 pt-2">
               <button
                 type="button"
+                disabled={isSubmittingOpen}
                 onClick={() => {
                   setOpenModalOpen(false);
                   setOpenTargetRole(null);
+                  setOpenError("");
                 }}
-                className="px-3.5 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
+                className="px-3.5 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {t("Cancel", "Cancelar")}
               </button>
               <button
                 type="button"
+                disabled={isSubmittingOpen}
                 onClick={handleConfirmOpenCohort}
-                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
               >
-                {t("Open Recruitment Cycle", "Abrir Ciclo de Recrutamento")}
+                {isSubmittingOpen ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin" />
+                    <span>{t("Opening Cycle...", "A abrir ciclo...")}</span>
+                  </>
+                ) : (
+                  <span>{t("Open Recruitment Cycle", "Abrir Ciclo de Recrutamento")}</span>
+                )}
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Universal Overwatch Processing Overlay - Placed at DOM bottom so it always overlays on top */}
+      {processingState.busy && (
+        <OverwatchOrbitLoader label={processingState.label} size="md" fullscreen />
       )}
     </div>
   );

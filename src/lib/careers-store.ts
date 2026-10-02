@@ -77,29 +77,57 @@ export function exclusive<T>(fn: () => Promise<T>): Promise<T> {
   return result;
 }
 export async function getRoles(): Promise<Role[]> {
+  try {
+    const defs = await read<any[]>("roles_def.json", []);
+    if (Array.isArray(defs) && defs.length > 0) {
+      return defs.map((r) => ({
+        id: r.id,
+        en: r.en || r.title_en || r.id,
+        pt: r.pt || r.title_pt || r.id,
+        open: Boolean(r.open),
+      }));
+    }
+  } catch {}
+
   if (!isRemote()) return read("roles.json", roles);
-  const rows = (await (
-    await api("/rest/v1/career_roles?select=id,open")
-  ).json()) as { id: string; open: boolean }[];
-  return roles.map((role) => ({
-    ...role,
-    open: rows.find((r) => r.id === role.id)?.open ?? false,
-  }));
+
+  try {
+    const rows = (await (
+      await api("/rest/v1/career_roles?select=id,open")
+    ).json()) as { id: string; open: boolean }[];
+    return roles.map((role) => ({
+      ...role,
+      open: rows.find((r) => r.id === role.id)?.open ?? false,
+    }));
+  } catch {
+    return read("roles.json", roles);
+  }
 }
+
 export async function setRole(id: string, open: boolean) {
   if (isRemote()) {
-    await api(`/rest/v1/career_roles?id=eq.${id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ open }),
-    });
-    return;
+    try {
+      await api(`/rest/v1/career_roles?id=eq.${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ open }),
+      });
+    } catch {}
   }
-  await exclusive(async () =>
-    write(
-      "roles.json",
-      (await getRoles()).map((r) => (r.id === id ? { ...r, open } : r)),
-    ),
-  );
+  await exclusive(async () => {
+    // 1. Update roles.json
+    const currentLegacy = await read("roles.json", roles);
+    const updatedLegacy = currentLegacy.map((r) => (r.id === id ? { ...r, open } : r));
+    await write("roles.json", updatedLegacy);
+
+    // 2. Also ensure roles_def.json stays in sync if present
+    try {
+      const defs = await read<any[]>("roles_def.json", []);
+      if (Array.isArray(defs) && defs.length > 0) {
+        const updatedDefs = defs.map((r) => (r.id === id ? { ...r, open } : r));
+        await write("roles_def.json", updatedDefs);
+      }
+    } catch {}
+  });
 }
 export const SYSTEM_DELETED_NEXT_PHASE_UUID = "00000000-0000-0000-0000-000000000001";
 export const SYSTEM_TEST_SLOTS_UUID = "00000000-0000-0000-0000-000000000002";
@@ -217,6 +245,25 @@ export async function updateApplication(
     );
     return merged;
   });
+}
+
+export async function bulkSaveApplications(applications: Application[]): Promise<void> {
+  if (!isRemote()) {
+    await exclusive(async () => write("applications.json", applications));
+    return;
+  }
+  const chunkSize = 25;
+  for (let i = 0; i < applications.length; i += chunkSize) {
+    const chunk = applications.slice(i, i + chunkSize);
+    await Promise.allSettled(
+      chunk.map((app) =>
+        api(`/rest/v1/career_applications?id=eq.${app.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ data: app }),
+        })
+      )
+    );
+  }
 }
 
 export async function deleteApplications(ids: string[]): Promise<void> {

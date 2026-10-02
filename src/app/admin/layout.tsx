@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { AdminShell } from "@/components/admin/shell/AdminShell";
+import NavigationProgressBar from "@/components/layout/NavigationProgressBar";
+import AdminLaunchExperience from "@/components/admin/ui/AdminLaunchExperience";
 import "../globals.css";
 import "./admin.css";
 
@@ -16,6 +18,8 @@ export default function AdminRootLayout({
   return (
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col admin-body antialiased bg-[#F7F8FA]">
+        <AdminLaunchExperience />
+        <NavigationProgressBar />
         <AdminShell>{children}</AdminShell>
       </body>
     </html>

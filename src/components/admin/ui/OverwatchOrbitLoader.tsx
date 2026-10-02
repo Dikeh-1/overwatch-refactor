@@ -93,7 +93,7 @@ export default function OverwatchOrbitLoader({
 
   if (fullscreen) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+      <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
         <div className="flex flex-col items-center justify-center p-8 rounded-2xl bg-[#0a1128] border border-white/15 shadow-2xl">
           {content}
         </div>

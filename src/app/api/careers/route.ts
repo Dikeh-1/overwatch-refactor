@@ -36,7 +36,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ code: "INVALID" }, { status: 400 });
     }
 
-    if (!(await getRoles()).find((r) => r.id === role)?.open) {
+    const currentRoles = await getRoles();
+    const matchedRole = currentRoles.find(
+      (r) =>
+        r.id === role ||
+        (role === "cctv" && r.id === "cctv_operator") ||
+        (role === "cctv_operator" && r.id === "cctv"),
+    );
+    if (!matchedRole?.open) {
       return NextResponse.json({ code: "ROLE_CLOSED" }, { status: 409 });
     }
 
