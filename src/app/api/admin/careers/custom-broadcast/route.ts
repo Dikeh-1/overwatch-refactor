@@ -7,7 +7,18 @@ import type { Application } from "@/lib/careers";
 export const dynamic = "force-dynamic";
 
 interface BroadcastRequest {
-  audienceFilter: "invited_unconfirmed" | "booked_confirmed" | "all_invited" | "all_applied" | "disqualified" | "next_phase" | "individual";
+  audienceFilter:
+    | "invited_unconfirmed"
+    | "shortlisted_unbooked"
+    | "booked_confirmed"
+    | "all_invited"
+    | "all_applied"
+    | "all_role"
+    | "screened"
+    | "interview"
+    | "disqualified"
+    | "next_phase"
+    | "individual";
   genderFilter?: "all" | "female" | "male";
   roleId?: string;
   candidateId?: string;
@@ -123,12 +134,12 @@ export async function POST(request: Request) {
       );
     } else {
       // Filter by role if specified
-      targetPool = roleId && roleId !== "all" ? allApps.filter((a) => a.role === roleId) : allApps;
+      targetPool = roleId && roleId !== "all" ? allApps.filter((a) => a.role === roleId || (roleId === "cctv" && !a.role)) : allApps;
 
       // Filter by audience cohort
-      if (audienceFilter === "invited_unconfirmed") {
+      if (audienceFilter === "invited_unconfirmed" || audienceFilter === "shortlisted_unbooked") {
         targetPool = targetPool.filter(
-          (a) => Boolean(a.invitedAt) && !a.testSlot && a.status !== "archived",
+          (a) => !a.testSlot && a.status !== "archived" && a.status !== "rejected",
         );
       } else if (audienceFilter === "booked_confirmed") {
         targetPool = targetPool.filter(
@@ -137,6 +148,22 @@ export async function POST(request: Request) {
       } else if (audienceFilter === "all_invited") {
         targetPool = targetPool.filter(
           (a) => Boolean(a.invitedAt) && a.status !== "archived",
+        );
+      } else if (audienceFilter === "screened") {
+        targetPool = targetPool.filter(
+          (a) =>
+            a.status !== "archived" &&
+            a.status !== "rejected" &&
+            (Boolean(a.screeningResult?.passedMandatory) ||
+              (typeof a.screeningScore === "number" && a.screeningScore >= 50) ||
+              a.status === "shortlisted" ||
+              a.status === "screening" ||
+              a.status === "interview" ||
+              a.status === "hired"),
+        );
+      } else if (audienceFilter === "interview") {
+        targetPool = targetPool.filter(
+          (a) => a.status === "interview",
         );
       } else if (audienceFilter === "next_phase") {
         targetPool = targetPool.filter(
@@ -149,7 +176,7 @@ export async function POST(request: Request) {
         );
       } else if (audienceFilter === "disqualified") {
         targetPool = targetPool.filter((a) => a.status === "archived");
-      } else if (audienceFilter === "all_applied") {
+      } else if (audienceFilter === "all_applied" || audienceFilter === "all_role") {
         targetPool = targetPool.filter((a) => a.status !== "archived");
       }
 

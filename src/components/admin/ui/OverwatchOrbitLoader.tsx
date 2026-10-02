@@ -16,9 +16,9 @@ interface OverwatchOrbitLoaderProps {
 }
 
 const sizeMap = {
-  sm: { container: 96, dot: 12, text: "text-xs font-semibold" },
-  md: { container: 160, dot: 20, text: "text-sm font-bold" },
-  lg: { container: 220, dot: 28, text: "text-base font-bold" },
+  sm: { container: 80, dot: 14, text: "text-xs font-medium" },
+  md: { container: 130, dot: 20, text: "text-xs font-semibold" },
+  lg: { container: 180, dot: 26, text: "text-sm font-semibold" },
 };
 
 export default function OverwatchOrbitLoader({
@@ -39,8 +39,8 @@ export default function OverwatchOrbitLoader({
   }, [isDark]);
 
   const content = (
-    <div className={`inline-flex flex-col items-center justify-center select-none gap-3 ${className}`}>
-      {/* Prominent Large Customized Rotate Orbit Lottie */}
+    <div className={`inline-flex flex-col items-center justify-center select-none gap-2.5 ${className}`}>
+      {/* Refined Sleek Rotate Orbit Lottie */}
       <div
         className="relative flex items-center justify-center shrink-0"
         style={{ width: cfg.container, height: cfg.container }}
@@ -52,17 +52,29 @@ export default function OverwatchOrbitLoader({
           className="w-full h-full"
         />
 
-        {/* Crisp Overwatch "O" Center Core */}
+        {/* Sleek Overwatch "O" Center Core (Hollow, slim ring) */}
         <div
           className="absolute inset-0 flex items-center justify-center pointer-events-none"
           aria-hidden="true"
         >
           <div
-            className={`rounded-full shadow-sm transition-colors ${
-              isDark ? "bg-white" : "bg-[#0a1128]"
+            className={`rounded-full border-[2px] transition-colors flex items-center justify-center ${
+              isDark
+                ? "border-white/90 shadow-[0_0_8px_rgba(255,255,255,0.3)]"
+                : "border-[#0a1128] shadow-[0_0_8px_rgba(10,17,40,0.15)]"
             }`}
             style={{ width: cfg.dot, height: cfg.dot }}
-          />
+          >
+            <div
+              className={`rounded-full ${
+                isDark ? "bg-[#00ded3]" : "bg-[#0a1128]"
+              }`}
+              style={{
+                width: Math.max(3, Math.round(cfg.dot * 0.25)),
+                height: Math.max(3, Math.round(cfg.dot * 0.25)),
+              }}
+            />
+          </div>
         </div>
       </div>
 

@@ -17,6 +17,7 @@ import {
   Layers,
   SlidersHorizontal,
   FolderOpen,
+  ShieldCheck,
 } from "lucide-react";
 import { Application, Role, APPROVED_NEXT_PHASE_CANDIDATES } from "@/lib/careers";
 import type { CareerRoleDefinition, CareerCohort } from "@/lib/careers-models";
@@ -46,7 +47,7 @@ export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
   const lang = propLang ?? contextLang;
   const t = (en: string, pt: string) => (lang === "en" ? en : pt);
 
-  const { activeRoleId, setActiveRoleId } = useActiveRole();
+  const { activeRoleId, activeRole, setActiveRoleId } = useActiveRole();
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>(activeRoleId || "all");
   const [modalOpen, setModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -67,10 +68,49 @@ export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
     );
   }, [applications, selectedRoleFilter]);
 
+  // Active role definition and stage capabilities
+  const activeRoleDef = roleDefs.find((r) => r.id === selectedRoleFilter) || (selectedRoleFilter === "all" ? null : activeRole);
+  const stages = activeRoleDef?.pipelineStages || (selectedRoleFilter === "all" ? ["applications", "screening", "testing", "gate_checkin", "next_phase", "interview", "hired"] : ["applications", "screening", "interview", "hired"]);
+  const hasTesting = stages.includes("testing");
+  const hasNextPhase = stages.includes("next_phase");
+
   // Exact database calculations
   const totalApps = activeApplications.length;
   const testsBooked = activeApplications.filter((a) => Boolean(a.testSlot) && a.status !== "archived" && a.status !== "rejected").length;
   const testsCompleted = activeApplications.filter((a) => Boolean(a.attendedAt)).length;
+
+  const cvScreenedCount = activeApplications.filter(
+    (a) =>
+      a.status !== "archived" &&
+      a.status !== "rejected" &&
+      (Boolean(a.screeningResult?.passedMandatory) ||
+        (typeof a.screeningScore === "number" && a.screeningScore >= 50) ||
+        a.status === "shortlisted" ||
+        a.status === "screening" ||
+        a.status === "interview" ||
+        a.status === "hired")
+  ).length;
+
+  const inReviewCount = activeApplications.filter(
+    (a) =>
+      a.status !== "archived" &&
+      a.status !== "rejected" &&
+      a.status !== "interview" &&
+      a.status !== "hired" &&
+      (!a.screeningResult || !a.screeningResult.passedMandatory)
+  ).length;
+
+  const interviewCount = activeApplications.filter(
+    (a) => a.status === "interview"
+  ).length;
+
+  const hiredCount = activeApplications.filter(
+    (a) => a.status === "hired"
+  ).length;
+
+  const archivedCount = activeApplications.filter(
+    (a) => a.status === "archived" || a.status === "rejected"
+  ).length;
 
   // Dynamic next phase cohort metrics derived from DB applications & roster
   const nextPhaseStats = useMemo(() => {
@@ -131,50 +171,165 @@ export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
   const awaitingResponse = activeApplications.filter((a) => a.nextPhaseInvitedAt && !a.nextPhaseResponse).length;
   const confirmedInterest = activeApplications.filter((a) => a.nextPhaseResponse === "yes").length;
 
-  const metrics = [
-    {
-      label: t("Total Applications", "Total de Candidaturas"),
-      value: totalApps,
-      sub: t("In current workspace", "No funil selecionado"),
-      href: selectedRoleFilter === "all" ? "/admin/recruitment/candidates?view=all" : `/admin/recruitment/candidates?role=${selectedRoleFilter}`,
-      icon: Users,
-    },
-    {
-      label: t("Tests Booked", "Testes Agendados"),
-      value: testsBooked,
-      sub: t("Confirmed in-person slots", "Turnos com presença marcada"),
-      href: "/admin/recruitment/testing",
-      icon: CalendarCheck,
-    },
-    {
-      label: t("Tests Completed", "Testes Realizados"),
-      value: testsCompleted,
-      sub: t("Verified gate attendance", "Presença confirmada no portão"),
-      href: "/admin/recruitment/testing",
-      icon: CheckCircle2,
-    },
-    {
-      label: t("Next Phase Approved", "Aprovados Próx. Fase"),
-      value: nextPhaseSelected,
-      sub: t("Approved cohort roster", "Lista aprovada pela administração"),
-      href: "/admin/recruitment/next-phase",
-      icon: Award,
-    },
-    {
-      label: t("Awaiting Response", "Aguardando Resposta"),
-      value: awaitingResponse,
-      sub: t("Sent conditions notice", "Notificação de condições enviada"),
-      href: "/admin/recruitment/next-phase",
-      icon: Clock,
-    },
-    {
-      label: t("Confirmed Interest", "Interesse Confirmado"),
-      value: confirmedInterest,
-      sub: t("Accepted terms", "Aceitaram termos"),
-      href: "/admin/recruitment/next-phase",
-      icon: ThumbsUp,
-    },
-  ];
+  const metrics = useMemo(() => {
+    // 1. Role has physical testing & next phase (e.g. CCO)
+    if (hasTesting && hasNextPhase) {
+      return [
+        {
+          label: t("Total Applications", "Total de Candidaturas"),
+          value: totalApps,
+          sub: t("In current workspace", "No funil selecionado"),
+          href: selectedRoleFilter === "all" ? "/admin/recruitment/candidates?view=all" : `/admin/recruitment/candidates?role=${selectedRoleFilter}`,
+          icon: Users,
+        },
+        {
+          label: t("Tests Booked", "Testes Agendados"),
+          value: testsBooked,
+          sub: t("Confirmed in-person slots", "Turnos com presença marcada"),
+          href: `/admin/recruitment/testing?role=${selectedRoleFilter}`,
+          icon: CalendarCheck,
+        },
+        {
+          label: t("Tests Completed", "Testes Realizados"),
+          value: testsCompleted,
+          sub: t("Verified gate attendance", "Presença confirmada no portão"),
+          href: `/admin/recruitment/testing?role=${selectedRoleFilter}`,
+          icon: CheckCircle2,
+        },
+        {
+          label: t("Next Phase Approved", "Aprovados Próx. Fase"),
+          value: nextPhaseSelected,
+          sub: t("Approved cohort roster", "Lista aprovada pela administração"),
+          href: `/admin/recruitment/next-phase?role=${selectedRoleFilter}`,
+          icon: Award,
+        },
+        {
+          label: t("Awaiting Response", "Aguardando Resposta"),
+          value: awaitingResponse,
+          sub: t("Sent conditions notice", "Notificação de condições enviada"),
+          href: `/admin/recruitment/next-phase?role=${selectedRoleFilter}`,
+          icon: Clock,
+        },
+        {
+          label: t("Confirmed Interest", "Interesse Confirmado"),
+          value: confirmedInterest,
+          sub: t("Accepted terms", "Aceitaram termos"),
+          href: `/admin/recruitment/next-phase?role=${selectedRoleFilter}`,
+          icon: ThumbsUp,
+        },
+      ];
+    }
+
+    // 2. Global View ("all")
+    if (selectedRoleFilter === "all") {
+      return [
+        {
+          label: t("Total Applications", "Total de Candidaturas"),
+          value: totalApps,
+          sub: t("Across all active positions", "Todas as vagas ativas"),
+          href: "/admin/recruitment/candidates?view=all",
+          icon: Users,
+        },
+        {
+          label: t("CV Screened / Qualified", "Triagem / Qualificados"),
+          value: cvScreenedCount,
+          sub: t("Met criteria across roles", "Critérios validados"),
+          href: "/admin/recruitment/candidates?stage=shortlisted",
+          icon: CheckCircle2,
+        },
+        {
+          label: t("Tests Booked (CCO)", "Testes Agendados (CCO)"),
+          value: testsBooked,
+          sub: t("Confirmed test sessions", "Sessões agendadas"),
+          href: "/admin/recruitment/testing",
+          icon: CalendarCheck,
+        },
+        {
+          label: t("Next Phase Roster (CCO)", "Turma Próx. Fase (CCO)"),
+          value: nextPhaseSelected,
+          sub: t("Approved finalists", "Finalistas aprovadas"),
+          href: "/admin/recruitment/next-phase",
+          icon: Award,
+        },
+        {
+          label: t("Interviews", "Entrevistas"),
+          value: interviewCount,
+          sub: t("Under panel review", "Em avaliação técnica"),
+          href: "/admin/recruitment/candidates?stage=interview",
+          icon: Clock,
+        },
+        {
+          label: t("Hired & Admitted", "Contratados"),
+          value: hiredCount,
+          sub: t("Admitted into Overwatch", "Admitidos na equipa"),
+          href: "/admin/recruitment/candidates?stage=hired",
+          icon: Award,
+        },
+      ];
+    }
+
+    // 3. Direct Professional Pipeline without testing (like CCTV Technical Manager)
+    return [
+      {
+        label: t("Total Applications", "Total de Candidaturas"),
+        value: totalApps,
+        sub: t("Received for this role", "Recebidas para esta vaga"),
+        href: `/admin/recruitment/candidates?role=${selectedRoleFilter}`,
+        icon: Users,
+      },
+      {
+        label: t("CV Screened / Qualified", "Triagem / Qualificados"),
+        value: cvScreenedCount,
+        sub: t("Met technical criteria", "Cumprem requisitos técnicos"),
+        href: `/admin/recruitment/candidates?role=${selectedRoleFilter}&view=screened`,
+        icon: CheckCircle2,
+      },
+      {
+        label: t("Pending Review", "Pendente Avaliação"),
+        value: inReviewCount,
+        sub: t("Awaiting recruiter action", "Aguardando triagem técnica"),
+        href: `/admin/recruitment/candidates?role=${selectedRoleFilter}&view=active`,
+        icon: Clock,
+      },
+      {
+        label: t("Technical Interview", "Entrevista Técnica"),
+        value: interviewCount,
+        sub: t("In-person panel review", "Painel com direção técnica"),
+        href: `/admin/recruitment/candidates?role=${selectedRoleFilter}&view=interview`,
+        icon: CalendarCheck,
+      },
+      {
+        label: t("Hired & Admitted", "Contratados"),
+        value: hiredCount,
+        sub: t("Successful offers", "Admissão confirmada"),
+        href: `/admin/recruitment/candidates?role=${selectedRoleFilter}&view=hired`,
+        icon: Award,
+      },
+      {
+        label: t("Archived / Closed", "Arquivados"),
+        value: archivedCount,
+        sub: t("Not advancing in cycle", "Fora do processo activo"),
+        href: `/admin/recruitment/candidates?role=${selectedRoleFilter}&view=archived`,
+        icon: Archive,
+      },
+    ];
+  }, [
+    hasTesting,
+    hasNextPhase,
+    selectedRoleFilter,
+    totalApps,
+    testsBooked,
+    testsCompleted,
+    nextPhaseSelected,
+    awaitingResponse,
+    confirmedInterest,
+    cvScreenedCount,
+    inReviewCount,
+    interviewCount,
+    hiredCount,
+    archivedCount,
+    lang,
+  ]);
 
   const handleSaveRole = async (newRole: CareerRoleDefinition) => {
     setIsSaving(true);
@@ -405,54 +560,111 @@ export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
           </div>
         </div>
 
-        {/* Right: Next Phase Cohort Quick Access */}
-        <div className="lg:col-span-4 bg-white border border-slate-200 rounded-xl p-5 flex flex-col justify-between shadow-xs">
-          <div>
-            <div className="flex items-center gap-2 text-slate-900 font-bold text-sm mb-1">
-              <Award size={16} className="text-sky-600" />
-              <span>{t("Next Phase Cohort", "Turma da Próxima Fase")}</span>
-            </div>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              {t(
-                `Management has approved ${nextPhaseStats.totalCount} candidates for the CCO practical training pipeline (Scores: ${nextPhaseStats.minScore}% - ${nextPhaseStats.maxScore}%).`,
-                `A administração aprovou ${nextPhaseStats.totalCount} candidatas para a formação prática de CCO (Pontuações: ${nextPhaseStats.minScore}% - ${nextPhaseStats.maxScore}%).`
-              )}
-            </p>
+        {/* Right: Next Phase Cohort or Active Role Pipeline Summary */}
+        {hasNextPhase ? (
+          <div className="lg:col-span-4 bg-white border border-slate-200 rounded-xl p-5 flex flex-col justify-between shadow-xs">
+            <div>
+              <div className="flex items-center gap-2 text-slate-900 font-bold text-sm mb-1">
+                <Award size={16} className="text-sky-600" />
+                <span>{t("Next Phase Cohort (CCO)", "Turma da Próxima Fase (CCO)")}</span>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                {t(
+                  `Management has approved ${nextPhaseStats.totalCount} candidates for the CCO practical training pipeline (Scores: ${nextPhaseStats.minScore}% - ${nextPhaseStats.maxScore}%).`,
+                  `A administração aprovou ${nextPhaseStats.totalCount} candidatas para a formação prática de CCO (Pontuações: ${nextPhaseStats.minScore}% - ${nextPhaseStats.maxScore}%).`
+                )}
+              </p>
 
-            <div className="mt-4 p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
-              <div className="flex justify-between text-slate-600">
-                <span>{t("Approved Candidates:", "Candidatas Aprovadas:")}</span>
-                <strong className="text-slate-900 font-mono">{nextPhaseStats.totalCount}</strong>
+              <div className="mt-4 p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
+                <div className="flex justify-between text-slate-600">
+                  <span>{t("Approved Candidates:", "Candidatas Aprovadas:")}</span>
+                  <strong className="text-slate-900 font-mono">{nextPhaseStats.totalCount}</strong>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>{t("Confirmed YES:", "Confirmaram SIM:")}</span>
+                  <strong className="text-emerald-700 font-mono">{confirmedInterest}</strong>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>{t("Awaiting Response:", "Aguardando Resposta:")}</span>
+                  <strong className="text-amber-700 font-mono">{awaitingResponse}</strong>
+                </div>
               </div>
-              <div className="flex justify-between text-slate-600">
-                <span>{t("Confirmed YES:", "Confirmaram SIM:")}</span>
-                <strong className="text-emerald-700 font-mono">{confirmedInterest}</strong>
-              </div>
-              <div className="flex justify-between text-slate-600">
-                <span>{t("Awaiting Response:", "Aguardando Resposta:")}</span>
-                <strong className="text-amber-700 font-mono">{awaitingResponse}</strong>
-              </div>
+            </div>
+
+            <div className="pt-4 mt-4 border-t border-slate-100">
+              <Link
+                href="/admin/recruitment/next-phase"
+                className="w-full py-2.5 px-3 rounded-lg bg-[#0a1128] hover:bg-[#101b3d] text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+              >
+                <span>{t("Open Next Phase Workflow", "Abrir Fluxo da Próxima Fase")}</span>
+                <ArrowRight size={13} />
+              </Link>
             </div>
           </div>
+        ) : (
+          <div className="lg:col-span-4 bg-white border border-slate-200 rounded-xl p-5 flex flex-col justify-between shadow-xs">
+            <div>
+              <div className="flex items-center gap-2 text-slate-900 font-bold text-sm mb-1">
+                <ShieldCheck size={16} className="text-emerald-600" />
+                <span>
+                  {activeRoleDef ? (lang === "pt" ? activeRoleDef.pt : activeRoleDef.en) : t("Technical Pipeline", "Funil Técnico")}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                {t(
+                  "Direct operational pipeline without physical aptitude test booking. Screened on technical qualifications and direct interview panels.",
+                  "Fluxo de recrutamento directo sem convocatórias de testes físicos. Filtrado por critérios técnicos comprovados e entrevistas com a direção."
+                )}
+              </p>
 
-          <div className="pt-4 mt-4 border-t border-slate-100">
-            <Link
-              href="/admin/recruitment/next-phase"
-              className="w-full py-2.5 px-3 rounded-lg bg-[#0a1128] hover:bg-[#101b3d] text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
-            >
-              <span>{t("Open Next Phase Workflow", "Abrir Fluxo da Próxima Fase")}</span>
-              <ArrowRight size={13} />
-            </Link>
+              <div className="mt-4 p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
+                <div className="flex justify-between text-slate-600">
+                  <span>{t("Total In Intake:", "Total de Candidaturas:")}</span>
+                  <strong className="text-slate-900 font-mono">{totalApps}</strong>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>{t("Qualified / Screened:", "Qualificados na Triagem:")}</span>
+                  <strong className="text-emerald-700 font-mono">{cvScreenedCount}</strong>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>{t("In Interview Stage:", "Em Entrevista Técnica:")}</span>
+                  <strong className="text-sky-700 font-mono">{interviewCount}</strong>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>{t("Admitted / Hired:", "Admitidos na Equipa:")}</span>
+                  <strong className="text-purple-700 font-mono">{hiredCount}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 mt-4 border-t border-slate-100 space-y-2">
+              <Link
+                href={`/admin/recruitment/candidates?role=${selectedRoleFilter}`}
+                className="w-full py-2.5 px-3 rounded-lg bg-[#0a1128] hover:bg-[#101b3d] text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+              >
+                <span>{t("Review Role Candidates", "Rever Candidatos da Vaga")}</span>
+                <ArrowRight size={13} />
+              </Link>
+              <Link
+                href="/admin/recruitment/roles"
+                className="w-full py-2 px-3 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors text-center"
+              >
+                <span>{t("Configure Screening Rules", "Configurar Regras de Triagem")}</span>
+              </Link>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Role Config Modal */}
-      <RoleConfigModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSaveRole={handleSaveRole}
-      />
+      {modalOpen && (
+        <RoleConfigModal
+          key="new-role"
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onSaveRole={handleSaveRole}
+        />
+      )}
     </div>
   );
 };

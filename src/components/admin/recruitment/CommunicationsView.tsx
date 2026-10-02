@@ -67,12 +67,22 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
 
   // Audience Target State
   const [selectedRole, setSelectedRole] = useState<string>(activeRoleId || "cctv");
-  const [targetAudience, setTargetAudience] = useState<
-    "next_phase" | "all_role" | "shortlisted_unbooked" | "booked_confirmed" | "individual"
-  >("next_phase");
+  const [targetAudience, setTargetAudience] = useState<string>("all_role");
   const [individualSearch, setIndividualSearch] = useState("");
   const [selectedIndividualId, setSelectedIndividualId] = useState<string>("");
   const [selectedSlot, setSelectedSlot] = useState<string>("");
+
+  // Role capability flags for active selection
+  const currentRoleDef = useMemo(() => {
+    return roles.find((r) => r.id === selectedRole) || (selectedRole === "all" ? null : activeRole);
+  }, [roles, selectedRole, activeRole]);
+
+  const pipelineStages = useMemo(() => {
+    return currentRoleDef?.pipelineStages || (selectedRole === "all" ? ["applications", "screening", "testing", "gate_checkin", "next_phase", "interview", "hired"] : ["applications", "screening", "interview", "hired"]);
+  }, [currentRoleDef, selectedRole]);
+
+  const roleHasTesting = pipelineStages.includes("testing");
+  const roleHasNextPhase = pipelineStages.includes("next_phase");
 
   // Letterhead State
   const [subject, setSubject] = useState(
@@ -138,8 +148,13 @@ Agradecemos que consulte as instruções e confirme a sua disponibilidade.`
   useEffect(() => {
     if (activeRoleId) {
       setSelectedRole(activeRoleId);
+      const def = roles.find((r) => r.id === activeRoleId);
+      const st = def?.pipelineStages || [];
+      if (!st.includes("next_phase")) {
+        setTargetAudience("all_role");
+      }
     }
-  }, [activeRoleId]);
+  }, [activeRoleId, roles]);
 
   // Load custom templates from localStorage
   useEffect(() => {
@@ -182,6 +197,54 @@ Agradecemos que consulte as instruções e confirme a sua disponibilidade.`
 
   // Pre-configured Built-in Templates
   const builtInTemplates = [
+    {
+      id: "interview_convocation",
+      name: t("Technical Interview Convocation", "Convocatória Entrevista Técnica"),
+      badge: "ENTREVISTA",
+      subject:
+        lang === "en"
+          ? "Technical Interview Convocation — Overwatch"
+          : "Convocatória para Entrevista Técnica — Overwatch",
+      body:
+        lang === "en"
+          ? `Dear {{candidate_name}},
+
+Following our screening of your application for the position of {{role_title}}, we are pleased to invite you to an in-person technical interview with our engineering and operations leadership.
+
+Location: Overwatch Headquarters, Av. Paulo Samuel Kankhomba, N.º 1948, Maputo.
+Requirements: Original Identification (BI/Passport), proof of technical certifications, and updated CV.
+
+Please arrive 15 minutes before your scheduled interview appointment.`
+          : `Prezado(a) {{candidate_name}},
+
+Na sequência da triagem da sua candidatura para a posição de {{role_title}}, temos a satisfação de convocá-lo(a) para a entrevista técnica presencial com a direção técnica e de operações da Overwatch.
+
+Local: Sede Overwatch Moçambique, Av. Paulo Samuel Kankhomba, N.º 1948, Maputo.
+Requisitos: Documento de identificação original (BI/Passaporte), certificados de habilitações técnicas e CV impresso.
+
+Solicitamos a comparência com 15 minutos de antecedência.`,
+    },
+    {
+      id: "screening_passed",
+      name: t("Screening Qualified Notice", "Qualificação na Triagem Técnica"),
+      badge: "TRIAGEM",
+      subject:
+        lang === "en"
+          ? "Application Screening Update — Overwatch"
+          : "Actualização da Triagem de Candidatura — Overwatch",
+      body:
+        lang === "en"
+          ? `Dear {{candidate_name}},
+
+We have reviewed your application for the position of {{role_title}} and are pleased to inform you that your profile meets our technical criteria.
+
+Our recruitment team is currently finalizing interview schedules and will contact you shortly with your confirmed appointment slot.`
+          : `Prezado(a) {{candidate_name}},
+
+Analisámos a sua candidatura para a posição de {{role_title}} e informamos que o seu perfil preenche os requisitos técnicos obrigatórios estipulados para esta função.
+
+A nossa equipa de recrutamento está a consolidar o cronograma de avaliações e entrará em contacto brevemente com os detalhes da etapa seguinte.`,
+    },
     {
       id: "next_phase",
       name: t("Next Phase Convocation", "Convocatória Próxima Fase"),
@@ -356,7 +419,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
 
     let pool = applications;
     if (selectedRole && selectedRole !== "all") {
-      pool = pool.filter((a) => a.role === selectedRole);
+      pool = pool.filter((a) => a.role === selectedRole || (selectedRole === "cctv" && !a.role));
     }
 
     if (targetAudience === "next_phase") {
@@ -403,6 +466,24 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       });
 
       return list;
+    }
+
+    if (targetAudience === "screened") {
+      return pool.filter(
+        (a) =>
+          a.status !== "archived" &&
+          a.status !== "rejected" &&
+          (Boolean(a.screeningResult?.passedMandatory) ||
+            (typeof a.screeningScore === "number" && a.screeningScore >= 50) ||
+            a.status === "shortlisted" ||
+            a.status === "screening" ||
+            a.status === "interview" ||
+            a.status === "hired")
+      );
+    }
+
+    if (targetAudience === "interview") {
+      return pool.filter((a) => a.status === "interview");
     }
 
     if (targetAudience === "shortlisted_unbooked") {
@@ -693,7 +774,18 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
               </label>
               <select
                 value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value)}
+                onChange={(e) => {
+                  const newRole = e.target.value;
+                  setSelectedRole(newRole);
+                  const def = roles.find((r) => r.id === newRole);
+                  const st = def?.pipelineStages || [];
+                  if (!st.includes("next_phase") && targetAudience === "next_phase") {
+                    setTargetAudience("all_role");
+                  }
+                  if (!st.includes("testing") && (targetAudience === "shortlisted_unbooked" || targetAudience === "booked_confirmed")) {
+                    setTargetAudience("all_role");
+                  }
+                }}
                 className="w-full text-xs rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 font-medium focus:outline-none focus:ring-1 focus:ring-[#0a1128]"
               >
                 <option value="all">{t("All Roles / Global", "Todas as Vagas / Global")}</option>
@@ -711,28 +803,52 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                 {t("Recipient Group:", "Grupo Alvo:")}
               </label>
               <div className="grid grid-cols-1 gap-1.5 text-xs">
-                {[
-                  {
-                    id: "next_phase",
-                    label: t("Next Phase Finalists (15 Cohort)", "Turma Próxima Fase (15 Seleccionadas)"),
-                  },
-                  {
+                {(() => {
+                  const list: { id: string; label: string }[] = [];
+
+                  if (roleHasNextPhase) {
+                    list.push({
+                      id: "next_phase",
+                      label: t("Next Phase Finalists (15 Cohort)", "Turma Próxima Fase (15 Seleccionadas)"),
+                    });
+                  }
+
+                  list.push({
                     id: "all_role",
                     label: t("All Applicants in this Role", "Todas as Candidaturas desta Vaga"),
-                  },
-                  {
-                    id: "shortlisted_unbooked",
-                    label: t("Shortlisted (Awaiting Booking)", "Convocadas (Pendente Agendamento)"),
-                  },
-                  {
-                    id: "booked_confirmed",
-                    label: t("Booked Test Sessions (Escala)", "Testes Agendados (Escala Confirmada)"),
-                  },
-                  {
+                  });
+
+                  if (roleHasTesting) {
+                    list.push(
+                      {
+                        id: "shortlisted_unbooked",
+                        label: t("Shortlisted (Awaiting Booking)", "Convocadas (Pendente Agendamento)"),
+                      },
+                      {
+                        id: "booked_confirmed",
+                        label: t("Booked Test Sessions (Escala)", "Testes Agendados (Escala Confirmada)"),
+                      }
+                    );
+                  } else {
+                    list.push(
+                      {
+                        id: "screened",
+                        label: t("Qualified / Screened Applicants", "Candidatos Qualificados na Triagem"),
+                      },
+                      {
+                        id: "interview",
+                        label: t("In Interview Stage", "Candidatos em Entrevista"),
+                      }
+                    );
+                  }
+
+                  list.push({
                     id: "individual",
                     label: t("Individual Specific Applicant", "Candidato Específico (Individual)"),
-                  },
-                ].map((aud) => (
+                  });
+
+                  return list;
+                })().map((aud) => (
                   <label
                     key={aud.id}
                     className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${
@@ -746,7 +862,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                       name="audienceGroup"
                       value={aud.id}
                       checked={targetAudience === aud.id}
-                      onChange={() => setTargetAudience(aud.id as any)}
+                      onChange={() => setTargetAudience(aud.id)}
                       className="accent-[#0a1128]"
                     />
                     <span className="text-[11px]">{aud.label}</span>

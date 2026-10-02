@@ -29,6 +29,7 @@ export type Role = (typeof roles)[number];
 export const stages = [
   "new",
   "reviewing",
+  "screening",
   "shortlisted",
   "test_invited",
   "test_booked",
@@ -135,6 +136,7 @@ export type Application = {
   largestProjectDescription?: string;
   technicalData?: Record<string, any>;
   screeningResult?: ScreeningEvaluationResult;
+  screeningScore?: number;
   testScore?: number;
   nextPhaseStatus?: "selected" | "invited" | "confirmed" | "declined" | "not_advancing";
   nextPhaseToken?: string;

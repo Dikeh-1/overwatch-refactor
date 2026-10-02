@@ -310,11 +310,8 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
 
   if (auth === null) {
     return (
-      <div className="min-h-screen bg-[#070b14] flex items-center justify-center">
-        <OverwatchOrbitLoader
-          label={lang === "pt" ? "A inicializar consola de segurança..." : "Initializing security console..."}
-          size="lg"
-        />
+      <div className="min-h-screen bg-[#F7F8FA] flex items-center justify-center">
+        <Loader2 size={24} className="animate-spin text-slate-400" />
       </div>
     );
   }

@@ -21,9 +21,11 @@ import {
   X,
   Award,
   Loader2,
+  CalendarCheck,
 } from "lucide-react";
 import { Application, Role, stages, formatPhoneDisplay, formatSlotDisplay } from "@/lib/careers";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
+import { useActiveRole } from "../shell/ActiveRoleContext";
 import CelebrationOverlay from "@/components/admin/ui/CelebrationOverlay";
 
 interface CandidatesTableViewProps {
@@ -114,18 +116,49 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
     setRoleFilter(r);
   }, [searchParams]);
 
-  // Saved Views Definitions
-  const savedViews = [
-    { id: "all", label: t("All Candidates", "Todos") },
-    { id: "active", label: t("Active Pipeline", "Funil Ativo") },
-    { id: "awaiting_booking", label: t("Awaiting Test Booking", "Pendente Agendamento") },
-    { id: "test_booked", label: t("Test Booked", "Teste Agendado") },
-    { id: "tested", label: t("Tested", "Testados") },
-    { id: "next_phase", label: t("Next Phase", "Próxima Fase") },
-    { id: "confirmed", label: t("Confirmed (YES)", "Confirmados (SIM)") },
-    { id: "declined", label: t("Declined (NO)", "Recusados (NÃO)") },
-    { id: "archived", label: t("Archived", "Arquivados") },
-  ];
+  const { activeRole, roles: roleDefs } = useActiveRole();
+
+  // Find active role capabilities
+  const currentRoleDef = roleDefs.find((r) => r.id === roleFilter) || (roleFilter === "all" ? null : activeRole);
+  const pipelineStages = currentRoleDef?.pipelineStages || (roleFilter === "all" ? ["applications", "screening", "testing", "gate_checkin", "next_phase", "interview", "hired"] : ["applications", "screening", "interview", "hired"]);
+  const hasTesting = pipelineStages.includes("testing");
+  const hasNextPhase = pipelineStages.includes("next_phase");
+
+  // Saved Views Definitions dynamically tailored to role
+  const savedViews = useMemo(() => {
+    const list = [
+      { id: "all", label: t("All Candidates", "Todos") },
+      { id: "active", label: t("Active Pipeline", "Funil Ativo") },
+    ];
+
+    if (hasTesting) {
+      list.push(
+        { id: "awaiting_booking", label: t("Awaiting Test Booking", "Pendente Agendamento") },
+        { id: "test_booked", label: t("Test Booked", "Teste Agendado") },
+        { id: "tested", label: t("Tested", "Testados") }
+      );
+    } else {
+      list.push(
+        { id: "screened", label: t("CV Screened / Qualified", "Triagem / Qualificados") },
+        { id: "interview", label: t("Interview Stage", "Em Entrevista") }
+      );
+    }
+
+    if (hasNextPhase) {
+      list.push(
+        { id: "next_phase", label: t("Next Phase Cohort", "Turma Próxima Fase") },
+        { id: "confirmed", label: t("Confirmed (YES)", "Confirmados (SIM)") },
+        { id: "declined", label: t("Declined (NO)", "Recusados (NÃO)") }
+      );
+    } else {
+      list.push(
+        { id: "hired", label: t("Hired & Admitted", "Contratados") }
+      );
+    }
+
+    list.push({ id: "archived", label: t("Archived", "Arquivados") });
+    return list;
+  }, [hasTesting, hasNextPhase, lang]);
 
   // Filter candidates
   const filteredCandidates = useMemo(() => {
@@ -133,6 +166,20 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
       // 1. Saved view logic
       if (activeView === "active") {
         if (cand.status === "archived" || cand.status === "rejected") return false;
+      } else if (activeView === "screened") {
+        if (cand.status === "archived" || cand.status === "rejected") return false;
+        const isScreened =
+          Boolean(cand.screeningResult?.passedMandatory) ||
+          (typeof cand.screeningScore === "number" && cand.screeningScore >= 50) ||
+          cand.status === "shortlisted" ||
+          cand.status === "screening" ||
+          cand.status === "interview" ||
+          cand.status === "hired";
+        if (!isScreened) return false;
+      } else if (activeView === "interview") {
+        if (cand.status !== "interview") return false;
+      } else if (activeView === "hired") {
+        if (cand.status !== "hired") return false;
       } else if (activeView === "awaiting_booking") {
         if (cand.status === "archived" || cand.status === "rejected" || cand.testSlot) return false;
       } else if (activeView === "test_booked") {
@@ -428,37 +475,71 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
               )}
             </button>
 
-            <button
-              type="button"
-              disabled={bulkActionBusy}
-              onClick={async () => {
-                if (onBulkStatusChange) {
-                  setBulkActionBusy(true);
-                  try {
-                    await onBulkStatusChange(Array.from(selectedIds), "next_phase_selected");
-                    setCelebrationState({
-                      show: true,
-                      variant: "next_phase",
-                      title: t(
-                        `${selectedIds.size} Candidates Advanced to Next Phase!`,
-                        `${selectedIds.size} Candidatos Avançados para a Próxima Fase!`,
-                      ),
-                      subtitle: t(
-                        "Candidates are now selected and approved for next-phase training and assessment.",
-                        "Os candidatos foram selecionados e aprovados para a convocatória da próxima fase.",
-                      ),
-                    });
-                    setSelectedIds(new Set());
-                  } finally {
-                    setBulkActionBusy(false);
+            {hasNextPhase ? (
+              <button
+                type="button"
+                disabled={bulkActionBusy}
+                onClick={async () => {
+                  if (onBulkStatusChange) {
+                    setBulkActionBusy(true);
+                    try {
+                      await onBulkStatusChange(Array.from(selectedIds), "next_phase_selected");
+                      setCelebrationState({
+                        show: true,
+                        variant: "next_phase",
+                        title: t(
+                          `${selectedIds.size} Candidates Advanced to Next Phase!`,
+                          `${selectedIds.size} Candidatos Avançados para a Próxima Fase!`,
+                        ),
+                        subtitle: t(
+                          "Candidates are now selected and approved for next-phase training and assessment.",
+                          "Os candidatos foram selecionados e aprovados para a convocatória da próxima fase.",
+                        ),
+                      });
+                      setSelectedIds(new Set());
+                    } finally {
+                      setBulkActionBusy(false);
+                    }
                   }
-                }
-              }}
-              className="px-2.5 py-1 rounded bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-semibold transition-colors inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
-            >
-              <Award size={13} />
-              <span>{t("Advance to Next Phase", "Avançar p/ Próx. Fase")}</span>
-            </button>
+                }}
+                className="px-2.5 py-1 rounded bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-semibold transition-colors inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
+              >
+                <Award size={13} />
+                <span>{t("Advance to Next Phase", "Avançar p/ Próx. Fase")}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={bulkActionBusy}
+                onClick={async () => {
+                  if (onBulkStatusChange) {
+                    setBulkActionBusy(true);
+                    try {
+                      await onBulkStatusChange(Array.from(selectedIds), "interview");
+                      setCelebrationState({
+                        show: true,
+                        variant: "next_phase",
+                        title: t(
+                          `${selectedIds.size} Candidates Advanced to Interview!`,
+                          `${selectedIds.size} Candidatos Convocados para Entrevista!`,
+                        ),
+                        subtitle: t(
+                          "Candidates are now placed in the interview pipeline for technical evaluation.",
+                          "Os candidatos estão agora na etapa de entrevistas presenciais para avaliação técnica.",
+                        ),
+                      });
+                      setSelectedIds(new Set());
+                    } finally {
+                      setBulkActionBusy(false);
+                    }
+                  }
+                }}
+                className="px-2.5 py-1 rounded bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-semibold transition-colors inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
+              >
+                <CalendarCheck size={13} />
+                <span>{t("Advance to Interview", "Convocar para Entrevista")}</span>
+              </button>
+            )}
 
             <button
               type="button"
@@ -500,7 +581,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                 <th className="px-4 py-2.5">{t("Contact", "Contacto")}</th>
                 <th className="px-4 py-2.5">{t("Date Applied", "Data")}</th>
                 <th className="px-4 py-2.5">{t("Stage", "Estado")}</th>
-                <th className="px-4 py-2.5">{t("Test Score", "Pontuação")}</th>
+                <th className="px-4 py-2.5">{hasTesting ? t("Test Score", "Pontuação") : t("Technical Match", "Match Técnico")}</th>
                 <th className="px-4 py-2.5 text-right">{t("Action", "Ação")}</th>
               </tr>
             </thead>

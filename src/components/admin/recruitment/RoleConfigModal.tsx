@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   X,
   Plus,
@@ -59,6 +59,44 @@ export default function RoleConfigModal({
       ? roleToEdit.screeningRules
       : (roleToEdit?.id ? (DEFAULT_SCREENING_RULES_BY_ROLE[roleToEdit.id] || []) : []),
   );
+
+  // Synchronize state whenever roleToEdit or isOpen changes
+  useEffect(() => {
+    if (!isOpen) return;
+    if (roleToEdit) {
+      setId(roleToEdit.id || "");
+      setPt(roleToEdit.pt || "");
+      setEn(roleToEdit.en || "");
+      setDepartment(
+        roleToEdit.department || (lang === "en" ? "Operations" : "Operações"),
+      );
+      setDescriptionPt(roleToEdit.descriptionPt || "");
+      setOpen(roleToEdit.open ?? true);
+      setStages(
+        roleToEdit.pipelineStages && roleToEdit.pipelineStages.length > 0
+          ? roleToEdit.pipelineStages
+          : ["applications", "screening", "interview", "hired"],
+      );
+      const initialRules =
+        roleToEdit.screeningRules && roleToEdit.screeningRules.length > 0
+          ? roleToEdit.screeningRules
+          : (roleToEdit.id && DEFAULT_SCREENING_RULES_BY_ROLE[roleToEdit.id])
+            ? DEFAULT_SCREENING_RULES_BY_ROLE[roleToEdit.id]
+            : [];
+      setRules(initialRules);
+    } else {
+      setId("");
+      setPt("");
+      setEn("");
+      setDepartment(lang === "en" ? "Operations" : "Operações");
+      setDescriptionPt("");
+      setOpen(true);
+      setStages(["applications", "screening", "interview", "hired"]);
+      setRules([]);
+    }
+    setErrorMsg("");
+    setActiveTab("details");
+  }, [roleToEdit, isOpen, lang]);
 
   // New Rule form state
   const [newRuleField, setNewRuleField] = useState("");
@@ -175,7 +213,7 @@ export default function RoleConfigModal({
             <div>
               <h3 className="text-base font-bold text-slate-900">
                 {isEditing
-                  ? `${t("Configure Role:", "Configurar Vaga:")} ${lang === "en" && en ? en : pt}`
+                  ? `${t("Configure Role:", "Configurar Vaga:")} ${lang === "en" ? (en || pt || roleToEdit?.en || roleToEdit?.pt || id) : (pt || en || roleToEdit?.pt || roleToEdit?.en || id)}`
                   : t("Create New Recruitment Role", "Criar Nova Vaga de Recrutamento")}
               </h3>
               <p className="text-xs text-slate-500">

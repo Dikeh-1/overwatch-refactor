@@ -184,13 +184,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
           {/* ACTIVE ROLE WORKSPACE SELECTOR */}
           <div className="space-y-2 pt-1 border-t border-white/[0.08]" ref={menuRef}>
-            <div className="flex items-center justify-between px-1">
+            <div className="px-1">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                 {t("Role Workspace", "Funil da Vaga")}
-              </span>
-              <span className="text-[9px] font-mono text-emerald-400 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                {t("ACTIVE", "ATIVA")}
               </span>
             </div>
 
@@ -414,10 +410,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         {/* Footer info & session */}
         <div className="p-3 border-t border-white/[0.08] space-y-2 bg-[#080d20]">
           <div className="flex items-center justify-between px-2 py-1 text-xs">
-            {/* Subtle, soft Live Sync Indicator (no harsh neon glare) */}
+            {/* Subtle, clean Live Sync Indicator with brand cyan accent */}
             <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 opacity-90" />
-              <span className="text-slate-400 font-mono text-[10px] tracking-wider uppercase">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00ded3]" />
+              <span className="text-slate-400 text-[10px] font-semibold tracking-wider uppercase">
                 {t("Live Sync", "Tempo Real")}
               </span>
             </div>

@@ -129,6 +129,16 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
     return {
       total: roleApps.length,
       active: roleApps.filter((a) => a.status !== "archived" && a.status !== "rejected").length,
+      screened: roleApps.filter(
+        (a) =>
+          a.status !== "archived" &&
+          (Boolean(a.screeningResult?.passedMandatory) ||
+            (typeof a.screeningScore === "number" && a.screeningScore >= 50) ||
+            a.status === "shortlisted" ||
+            a.status === "screening" ||
+            a.status === "interview" ||
+            a.status === "hired")
+      ).length,
       booked: roleApps.filter((a) => Boolean(a.testSlot) && a.status !== "archived").length,
       hired: roleApps.filter((a) => a.status === "hired").length,
     };
@@ -424,7 +434,9 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-100">
                 <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex flex-col justify-between">
                   <span className="text-[0.65rem] font-semibold text-slate-500 uppercase tracking-wider">
-                    {t("Active Cohort Intake", "Candidaturas no Lote")}
+                    {role.pipelineStages?.includes("next_phase")
+                      ? t("Active Cohort Intake", "Candidaturas no Lote")
+                      : t("Total Applications", "Total de Candidaturas")}
                   </span>
                   <span className="text-base font-bold text-slate-900 font-mono mt-0.5">
                     {metrics.total}
@@ -442,10 +454,12 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
 
                 <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex flex-col justify-between">
                   <span className="text-[0.65rem] font-semibold text-slate-500 uppercase tracking-wider">
-                    {t("Tests Booked", "Testes Agendados")}
+                    {role.pipelineStages?.includes("testing")
+                      ? t("Tests Booked", "Testes Agendados")
+                      : t("CV Screened", "Triagem / Qualificados")}
                   </span>
                   <span className="text-base font-bold text-sky-700 font-mono mt-0.5">
-                    {metrics.booked}
+                    {role.pipelineStages?.includes("testing") ? metrics.booked : metrics.screened}
                   </span>
                 </div>
 
@@ -464,12 +478,18 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
       </div>
 
       {/* Role Config Modal */}
-      <RoleConfigModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        roleToEdit={editingRole}
-        onSaveRole={handleSaveFromModal}
-      />
+      {modalOpen && (
+        <RoleConfigModal
+          key={editingRole?.id || "new-role"}
+          isOpen={modalOpen}
+          onClose={() => {
+            setModalOpen(false);
+            setEditingRole(null);
+          }}
+          roleToEdit={editingRole}
+          onSaveRole={handleSaveFromModal}
+        />
+      )}
 
       {/* Close & Archive Cohort Modal - Clean Light Theme */}
       {archiveModalOpen && archiveTargetRole && (

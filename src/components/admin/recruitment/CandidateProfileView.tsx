@@ -179,7 +179,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
   const tabs = [
     { id: "overview", label: t("Overview", "Visão Geral") },
     { id: "application", label: t("Application & Questionnaire", "Candidatura & Respostas") },
-    { id: "test", label: t("Test & Scores", "Teste Presencial") },
+    ...(isTechnicalRole ? [] : [{ id: "test", label: t("Test & Scores", "Teste Presencial") }]),
     { id: "documents", label: t("Documents & CV", "Documentos & CV") },
     { id: "communications", label: t("Communications", "Comunicações") },
     { id: "activity", label: t("Activity Log", "Histórico de Auditoria") },
