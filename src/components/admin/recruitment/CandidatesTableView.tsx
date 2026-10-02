@@ -20,13 +20,13 @@ import {
   SlidersHorizontal,
   X,
   Award,
-  Loader2,
   CalendarCheck,
 } from "lucide-react";
 import { Application, Role, stages, formatPhoneDisplay, formatSlotDisplay } from "@/lib/careers";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import { useActiveRole } from "../shell/ActiveRoleContext";
 import CelebrationOverlay from "@/components/admin/ui/CelebrationOverlay";
+import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 
 interface CandidatesTableViewProps {
   applications: Application[];
@@ -467,7 +467,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
             >
               {bulkActionBusy ? (
                 <>
-                  <Loader2 size={12} className="animate-spin text-white" />
+                  <OverwatchOrbitLoader size="xs" theme="dark" className="shrink-0" />
                   <span>{t("Processing...", "A processar...")}</span>
                 </>
               ) : (
@@ -811,7 +811,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
               >
                 {bulkActionBusy ? (
                   <>
-                    <Loader2 size={13} className="animate-spin text-white" />
+                    <OverwatchOrbitLoader size="xs" theme="dark" className="shrink-0" />
                     <span>{t("Archiving...", "A arquivar...")}</span>
                   </>
                 ) : (

@@ -19,10 +19,10 @@ import {
   SlidersHorizontal,
   Plus,
   Trash2,
-  Loader2,
 } from "lucide-react";
 import { Application, normalizeSlot, formatSlotDisplay, formatPhoneDisplay } from "@/lib/careers";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
+import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 
 interface TestingAttendanceViewProps {
   applications: Application[];
@@ -372,7 +372,7 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
                       >
                         {togglingAttendanceId === candidate.id ? (
                           <>
-                            <Loader2 size={13} className="animate-spin text-sky-600" />
+                            <OverwatchOrbitLoader size="xs" theme="light" className="shrink-0" />
                             <span>{t("Saving...", "A guardar...")}</span>
                           </>
                         ) : isPresent ? (

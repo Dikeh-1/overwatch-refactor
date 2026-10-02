@@ -28,12 +28,12 @@ import {
   Smartphone,
   Copy,
   Edit2,
-  Loader2,
   Trash2,
 } from "lucide-react";
 import { formatPhoneDisplay } from "@/lib/careers";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import Logo from "@/components/ui/Logo";
+import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 
 interface NextPhaseCandidate {
   id: string;
@@ -524,11 +524,8 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
 
   if (loading && candidates.length === 0) {
     return (
-      <div className="py-24 flex flex-col items-center justify-center space-y-3 bg-white border border-slate-200 rounded-lg p-8">
-        <Loader2 size={26} className="animate-spin text-sky-600" />
-        <p className="text-xs font-semibold text-slate-600">
-          {t("Loading Next Phase candidate cohort...", "A carregar turma da Próxima Fase...")}
-        </p>
+      <div className="py-24 flex items-center justify-center bg-white border border-slate-200 rounded-lg p-8">
+        <OverwatchOrbitLoader label={t("Loading Next Phase candidate cohort...", "A carregar turma da Próxima Fase...")} size="md" />
       </div>
     );
   }
@@ -2245,7 +2242,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
               >
                 {isDeletingCandidate ? (
                   <>
-                    <Loader2 size={13} className="animate-spin" />
+                    <OverwatchOrbitLoader size="xs" theme="dark" className="shrink-0" />
                     <span>{t("Deleting...", "A eliminar...")}</span>
                   </>
                 ) : (
@@ -2327,7 +2324,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
               >
                 {isBulkDeleting ? (
                   <>
-                    <Loader2 size={13} className="animate-spin" />
+                    <OverwatchOrbitLoader size="xs" theme="dark" className="shrink-0" />
                     <span>{t("Deleting...", "A eliminar...")}</span>
                   </>
                 ) : (

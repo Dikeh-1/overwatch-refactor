@@ -15,6 +15,7 @@ import PhoneInput from "react-phone-input-2";
 import phoneLocalePt from "react-phone-input-2/lang/pt.json";
 import "react-phone-input-2/lib/style.css";
 import { getSiteAddress, siteContact } from "@/lib/site-config";
+import OverwatchOrbitLoader from "@/components/ui/OverwatchOrbitLoader";
 
 type FormStatus = "idle" | "submitting" | "success" | "error";
 
@@ -252,8 +253,17 @@ export default function ContactForm() {
               disabled={status === "submitting"}
               className="inline-flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-foreground px-5 text-sm font-bold text-background shadow-sm transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-foreground/88 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/40 focus-visible:ring-offset-4 focus-visible:ring-offset-card disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 sm:w-auto"
             >
-              {status === "submitting" ? t("form.submitting") : t("form.submit")}
-              <Send size={16} aria-hidden="true" />
+              {status === "submitting" ? (
+                <>
+                  <OverwatchOrbitLoader size="xs" theme="dark" className="shrink-0" />
+                  <span>{t("form.submitting")}</span>
+                </>
+              ) : (
+                <>
+                  <span>{t("form.submit")}</span>
+                  <Send size={16} aria-hidden="true" />
+                </>
+              )}
             </button>
           </form>
         )}

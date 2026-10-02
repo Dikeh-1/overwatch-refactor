@@ -18,7 +18,6 @@ import {
   Layers,
   PlayCircle,
   ArrowUpRight,
-  Loader2,
 } from "lucide-react";
 import type { CareerRoleDefinition, CareerCohort, PipelineStageKey } from "@/lib/careers-models";
 import { DEFAULT_SCREENING_RULES_BY_ROLE } from "@/lib/careers-models";
@@ -583,7 +582,7 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
               >
                 {isSubmittingArchive ? (
                   <>
-                    <Loader2 size={13} className="animate-spin" />
+                    <OverwatchOrbitLoader size="xs" theme="dark" className="shrink-0" />
                     <span>{t("Closing & Archiving...", "A encerrar & arquivar...")}</span>
                   </>
                 ) : (
@@ -664,7 +663,7 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
               >
                 {isSubmittingOpen ? (
                   <>
-                    <Loader2 size={13} className="animate-spin" />
+                    <OverwatchOrbitLoader size="xs" theme="dark" className="shrink-0" />
                     <span>{t("Opening Cycle...", "A abrir ciclo...")}</span>
                   </>
                 ) : (

@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   FileText,
   LockKeyhole,
-  Loader2,
   Radio,
   ShieldCheck,
   Upload,
@@ -34,6 +33,7 @@ import { darkEyebrowClassName } from "@/components/ui/eyebrow";
 import TechGrid from "@/components/ui/TechGrid";
 import LazyVideo from "@/components/ui/LazyVideo";
 import { IMAGES } from "@/lib/constants";
+import OverwatchOrbitLoader from "@/components/ui/OverwatchOrbitLoader";
 
 interface RoleConfig {
   grade12Question: { en: string; pt: string };
@@ -635,7 +635,7 @@ export default function CareersForm({
     <div className="min-h-screen bg-background text-foreground">
       {/* ─── HERO SECTION ────────────────────────────────────────────── */}
       {!hideHero && (
-        <section className="dark relative isolate overflow-hidden bg-[#090d16] text-white min-h-[calc(100vh-5rem)] flex flex-col justify-center py-20 sm:py-24 lg:py-28">
+        <section className="dark relative isolate overflow-hidden bg-[#090d16] pb-16 pt-28 text-white sm:pb-20 sm:pt-32 lg:pb-24 lg:pt-36">
           {/* Authentic Security Surveillance Background Video */}
           <div className="absolute inset-0 z-0 opacity-35 pointer-events-none">
             <LazyVideo
@@ -711,7 +711,7 @@ export default function CareersForm({
       {/* ─── OPPORTUNITIES & APPLICATION (FAQ STICKY-SCROLL ARCHITECTURE) ── */}
       <section
         id="opportunities"
-        className="relative scroll-mt-20 overflow-clip bg-background py-12 sm:py-16 lg:py-20"
+        className="relative scroll-mt-20 overflow-clip bg-background py-16 sm:py-20 lg:py-24"
       >
         <div className="absolute inset-0 tech-grid opacity-30 pointer-events-none" />
         <div className="absolute -left-32 top-24 h-72 w-72 rounded-full bg-foreground/[0.02] blur-3xl pointer-events-none" />
@@ -1495,7 +1495,7 @@ export default function CareersForm({
                                 disabled={busy || isSelectedRoleClosed || !connection}
                                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-foreground px-7 text-xs font-bold text-background shadow-lg hover:bg-foreground/90 transition-all disabled:opacity-50 cursor-pointer"
                               >
-                                {busy ? <Loader2 className="animate-spin" size={16} /> : null}
+                                {busy ? <OverwatchOrbitLoader size="xs" theme="dark" className="shrink-0" /> : null}
                                 <span>{busy ? t("Submitting…", "A submeter…") : t("Submit Application", "Submeter Candidatura")}</span>
                                 {!busy && <ArrowRight size={15} />}
                               </button>
@@ -1712,7 +1712,7 @@ export default function CareersForm({
                             disabled={busy || isSelectedRoleClosed || !connection}
                             className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-foreground px-7 text-xs font-bold text-background shadow-lg hover:bg-foreground/90 transition-all disabled:opacity-50 cursor-pointer"
                           >
-                            {busy ? <Loader2 className="animate-spin" size={16} /> : null}
+                            {busy ? <OverwatchOrbitLoader size="xs" theme="dark" className="shrink-0" /> : null}
                             <span>
                               {busy
                                 ? t("Submitting your application…", "A submeter candidatura…")

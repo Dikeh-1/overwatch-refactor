@@ -4,7 +4,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { CandidateProfileView } from "@/components/admin/recruitment/CandidateProfileView";
 import { Application, Role, roles as defaultRoles, ArchiveReason } from "@/lib/careers";
-import { Loader2, AlertCircle, ArrowLeft } from "lucide-react";
+import { AlertCircle, ArrowLeft } from "lucide-react";
+import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 import Link from "next/link";
 
 export default function CandidateDetailPage() {
@@ -101,7 +102,7 @@ export default function CandidateDetailPage() {
   if (loading) {
     return (
       <div className="py-24 flex items-center justify-center">
-        <Loader2 size={24} className="animate-spin text-slate-400" />
+        <OverwatchOrbitLoader label="A carregar perfil do candidato..." size="md" />
       </div>
     );
   }

@@ -78,6 +78,19 @@ export function exclusive<T>(fn: () => Promise<T>): Promise<T> {
 }
 export async function getRoles(): Promise<Role[]> {
   try {
+    const { getRoleDefinitions } = await import("./careers-campaign-store");
+    const roleDefs = await getRoleDefinitions().catch(() => null);
+    if (roleDefs && roleDefs.length > 0) {
+      return roleDefs.map((r) => ({
+        id: r.id,
+        en: r.en || r.id,
+        pt: r.pt || r.id,
+        open: Boolean(r.open),
+      }));
+    }
+  } catch {}
+
+  try {
     const defs = await read<any[]>("roles_def.json", []);
     if (Array.isArray(defs) && defs.length > 0) {
       return defs.map((r) => ({
@@ -95,10 +108,18 @@ export async function getRoles(): Promise<Role[]> {
     const rows = (await (
       await api("/rest/v1/career_roles?select=id,open")
     ).json()) as { id: string; open: boolean }[];
-    return roles.map((role) => ({
-      ...role,
-      open: rows.find((r) => r.id === role.id)?.open ?? false,
-    }));
+    return roles.map((role) => {
+      const match = rows.find(
+        (r) =>
+          r.id === role.id ||
+          (role.id === "cctv" && r.id === "cctv_operator") ||
+          (role.id === "cctv_operator" && r.id === "cctv"),
+      );
+      return {
+        ...role,
+        open: match !== undefined ? Boolean(match.open) : role.open,
+      };
+    });
   } catch {
     return read("roles.json", roles);
   }
@@ -107,23 +128,51 @@ export async function getRoles(): Promise<Role[]> {
 export async function setRole(id: string, open: boolean) {
   if (isRemote()) {
     try {
-      await api(`/rest/v1/career_roles?id=eq.${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ open }),
+      await api(`/rest/v1/career_roles`, {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates" },
+        body: JSON.stringify({ id, open }),
       });
-    } catch {}
+      if (id === "cctv" || id === "cctv_operator") {
+        const alias = id === "cctv" ? "cctv_operator" : "cctv";
+        await api(`/rest/v1/career_roles`, {
+          method: "POST",
+          headers: { Prefer: "resolution=merge-duplicates" },
+          body: JSON.stringify({ id: alias, open }),
+        }).catch(() => {});
+      }
+    } catch {
+      try {
+        await api(`/rest/v1/career_roles?id=eq.${id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ open }),
+        });
+      } catch {}
+    }
   }
   await exclusive(async () => {
     // 1. Update roles.json
     const currentLegacy = await read("roles.json", roles);
-    const updatedLegacy = currentLegacy.map((r) => (r.id === id ? { ...r, open } : r));
+    const updatedLegacy = currentLegacy.map((r) =>
+      r.id === id ||
+      (id === "cctv" && r.id === "cctv_operator") ||
+      (id === "cctv_operator" && r.id === "cctv")
+        ? { ...r, open }
+        : r
+    );
     await write("roles.json", updatedLegacy);
 
     // 2. Also ensure roles_def.json stays in sync if present
     try {
       const defs = await read<any[]>("roles_def.json", []);
       if (Array.isArray(defs) && defs.length > 0) {
-        const updatedDefs = defs.map((r) => (r.id === id ? { ...r, open } : r));
+        const updatedDefs = defs.map((r) =>
+          r.id === id ||
+          (id === "cctv" && r.id === "cctv_operator") ||
+          (id === "cctv_operator" && r.id === "cctv")
+            ? { ...r, open }
+            : r
+        );
         await write("roles_def.json", updatedDefs);
       }
     } catch {}
@@ -252,17 +301,25 @@ export async function bulkSaveApplications(applications: Application[]): Promise
     await exclusive(async () => write("applications.json", applications));
     return;
   }
-  const chunkSize = 25;
+  const chunkSize = 50;
   for (let i = 0; i < applications.length; i += chunkSize) {
     const chunk = applications.slice(i, i + chunkSize);
-    await Promise.allSettled(
-      chunk.map((app) =>
-        api(`/rest/v1/career_applications?id=eq.${app.id}`, {
-          method: "PATCH",
-          body: JSON.stringify({ data: app }),
-        })
-      )
-    );
+    try {
+      await api("/rest/v1/career_applications", {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates" },
+        body: JSON.stringify(chunk.map((app) => ({ id: app.id, data: app }))),
+      });
+    } catch {
+      await Promise.allSettled(
+        chunk.map((app) =>
+          api(`/rest/v1/career_applications?id=eq.${app.id}`, {
+            method: "PATCH",
+            body: JSON.stringify({ data: app }),
+          })
+        )
+      );
+    }
   }
 }
 

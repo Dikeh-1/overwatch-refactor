@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader2, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
+import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 
 interface DocxViewerProps {
   url: string;
@@ -56,8 +57,7 @@ export default function DocxViewer({ url, className = "" }: DocxViewerProps) {
     <div className={`relative w-full h-80 sm:h-96 overflow-y-auto bg-[#181d28] p-3 sm:p-5 ${className}`}>
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-xs text-white gap-2.5 z-10">
-          <Loader2 className="animate-spin text-white/80" size={24} />
-          <span className="text-xs text-white/70 font-medium">Rendering Word Document…</span>
+          <OverwatchOrbitLoader label="A processar documento Word…" size="sm" theme="dark" />
         </div>
       )}
 

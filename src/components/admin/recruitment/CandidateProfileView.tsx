@@ -21,7 +21,6 @@ import {
   AlertCircle,
   ExternalLink,
   ChevronDown,
-  Loader2,
   Check,
   X,
 } from "lucide-react";
@@ -30,6 +29,7 @@ import { screenCandidate } from "@/lib/careers-screening";
 import DocxViewer from "../DocxViewer";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import CelebrationOverlay from "@/components/admin/ui/CelebrationOverlay";
+import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 
 interface CandidateProfileViewProps {
   candidate: Application;
@@ -223,7 +223,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
             {/* Visual Processing State */}
             {isUpdatingStatus && (
               <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[0.68rem] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
-                <Loader2 size={12} className="animate-spin text-sky-600" />
+                <OverwatchOrbitLoader size="xs" theme="light" className="shrink-0" />
                 <span>{t("Processing update...", "A processar alteração...")}</span>
               </span>
             )}
@@ -818,7 +818,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                 >
                   {isSavingScore ? (
                     <>
-                      <Loader2 size={13} className="animate-spin" />
+                      <OverwatchOrbitLoader size="xs" theme="dark" className="shrink-0" />
                       <span>{t("Saving...", "A gravar...")}</span>
                     </>
                   ) : (
@@ -1023,7 +1023,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
               >
                 {isArchiving ? (
                   <>
-                    <Loader2 size={13} className="animate-spin text-white" />
+                    <OverwatchOrbitLoader size="xs" theme="dark" className="shrink-0" />
                     <span>{t("Archiving...", "A arquivar...")}</span>
                   </>
                 ) : (
@@ -1075,7 +1075,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
               >
                 {isDeleting ? (
                   <>
-                    <Loader2 size={13} className="animate-spin text-white" />
+                    <OverwatchOrbitLoader size="xs" theme="dark" className="shrink-0" />
                     <span>{t("Deleting...", "A eliminar...")}</span>
                   </>
                 ) : (

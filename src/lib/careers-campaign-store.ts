@@ -133,7 +133,26 @@ export async function getRoleDefinitions(): Promise<CareerRoleDefinition[]> {
         }));
       }
     } catch {
-      // Fallback to local or defaults if table not yet migrated
+      // Fallback to legacy career_roles table in Supabase
+      try {
+        const res = await api("/rest/v1/career_roles?select=id,open");
+        const rows = await res.json();
+        if (Array.isArray(rows) && rows.length > 0) {
+          const defaults = buildDefaultRoles();
+          return defaults.map((role) => {
+            const row = rows.find(
+              (r) =>
+                r.id === role.id ||
+                (role.id === "cctv" && r.id === "cctv_operator") ||
+                (role.id === "cctv_operator" && r.id === "cctv"),
+            );
+            return {
+              ...role,
+              open: row ? Boolean(row.open) : role.open,
+            };
+          });
+        }
+      } catch {}
     }
   }
 
@@ -185,6 +204,22 @@ export async function saveRoleDefinition(
     } catch (e) {
       console.warn("Could not sync role to Supabase:", e);
     }
+
+    try {
+      await api("/rest/v1/career_roles", {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates" },
+        body: JSON.stringify({ id: updatedRole.id, open: updatedRole.open }),
+      });
+      if (updatedRole.id === "cctv" || updatedRole.id === "cctv_operator") {
+        const alias = updatedRole.id === "cctv" ? "cctv_operator" : "cctv";
+        await api("/rest/v1/career_roles", {
+          method: "POST",
+          headers: { Prefer: "resolution=merge-duplicates" },
+          body: JSON.stringify({ id: alias, open: updatedRole.open }),
+        }).catch(() => {});
+      }
+    } catch {}
   }
 
   return updatedRole;

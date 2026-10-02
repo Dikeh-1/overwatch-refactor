@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { CandidatesTableView } from "@/components/admin/recruitment/CandidatesTableView";
 import { Application, Role, roles as defaultRoles, ArchiveReason } from "@/lib/careers";
-import { Loader2 } from "lucide-react";
+import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 
 export default function CandidatesPage() {
   const [applications, setApplications] = useState<Application[]>([]);
@@ -68,7 +68,7 @@ export default function CandidatesPage() {
   if (loading) {
     return (
       <div className="py-24 flex items-center justify-center">
-        <Loader2 size={24} className="animate-spin text-slate-400" />
+        <OverwatchOrbitLoader label="A carregar candidatos..." size="md" />
       </div>
     );
   }

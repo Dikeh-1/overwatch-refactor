@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { Check, Loader2, AlertCircle } from "lucide-react";
+import { Check, AlertCircle } from "lucide-react";
+import OverwatchOrbitLoader from "@/components/ui/OverwatchOrbitLoader";
 
 /* ================================================================
    CANDIDATE RESPONSE / CONFIRMATION PAGE
@@ -91,10 +92,7 @@ export default function NextPhaseCandidatePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F6F7F9] flex items-center justify-center">
-        <div className="flex items-center gap-3 text-slate-500 text-sm">
-          <Loader2 size={20} className="animate-spin" />
-          <span>A verificar...</span>
-        </div>
+        <OverwatchOrbitLoader label="A verificar convite..." size="md" />
       </div>
     );
   }
@@ -308,7 +306,7 @@ export default function NextPhaseCandidatePage() {
                     >
                       {submitting ? (
                         <>
-                          <Loader2 size={16} className="animate-spin" />
+                          <OverwatchOrbitLoader size="xs" theme="dark" className="shrink-0" />
                           <span>A registar resposta...</span>
                         </>
                       ) : (

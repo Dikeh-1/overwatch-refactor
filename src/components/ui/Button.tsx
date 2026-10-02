@@ -1,9 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Link as NextIntlLink } from "@/i18n/navigation";
+import { usePathname } from "next/navigation";
+import OverwatchOrbitLoader from "@/components/ui/OverwatchOrbitLoader";
 
 type ButtonProps = {
   href?: string;
@@ -13,8 +15,10 @@ type ButtonProps = {
   children: React.ReactNode;
   type?: "button" | "submit";
   disabled?: boolean;
-  onClick?: () => void;
+  onClick?: (e?: React.MouseEvent) => void;
   external?: boolean;
+  loading?: boolean;
+  loadingText?: string;
 };
 
 const variants = {
@@ -73,7 +77,18 @@ export default function Button({
   disabled,
   onClick,
   external,
+  loading,
+  loadingText,
 }: ButtonProps) {
+  const pathname = usePathname();
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  useEffect(() => {
+    setIsNavigating(false);
+  }, [pathname]);
+
+  const isLoading = Boolean(loading || isNavigating);
+
   const {
     ref: magnetRef,
     style: magnetStyle,
@@ -83,6 +98,7 @@ export default function Button({
 
   const classes = cn(
     "inline-flex max-w-full touch-manipulation items-center justify-center rounded-lg text-center transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-primary-dark disabled:cursor-not-allowed disabled:opacity-50 select-none",
+    isLoading && "pointer-events-none opacity-90",
     variants[variant],
     sizes[size],
     className
@@ -91,6 +107,35 @@ export default function Button({
   const motionProps = {
     whileTap: { scale: 0.95 },
   };
+
+  const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (href && !href.startsWith("#") && !isExternalHref(href)) {
+      setIsNavigating(true);
+      setTimeout(() => setIsNavigating(false), 6000);
+    }
+    onClick?.(e);
+  };
+
+  const handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (disabled || isLoading) {
+      e.preventDefault();
+      return;
+    }
+    onClick?.(e);
+  };
+
+  const content = (
+    <span className="inline-flex items-center justify-center gap-2">
+      {isLoading && (
+        <OverwatchOrbitLoader
+          size="xs"
+          theme={variant === "primary" ? "light" : "dark"}
+          className="shrink-0"
+        />
+      )}
+      <span>{loadingText && isLoading ? loadingText : children}</span>
+    </span>
+  );
 
   if (href) {
     if (external || isExternalHref(href)) {
@@ -102,12 +147,13 @@ export default function Button({
           rel="noopener noreferrer"
           ref={magnetRef as React.RefObject<HTMLAnchorElement>}
           style={magnetStyle}
-          onClick={() => onClick?.()}
+          onClick={(e) => onClick?.(e)}
           onMouseMove={onMouseMove}
           onMouseLeave={onMouseLeave}
+          aria-busy={isLoading}
           {...motionProps}
         >
-          {children}
+          {content}
         </motion.a>
       );
     }
@@ -118,12 +164,13 @@ export default function Button({
         className={classes}
         ref={magnetRef as React.RefObject<HTMLAnchorElement>}
         style={magnetStyle}
-        onClick={() => onClick?.()}
+        onClick={handleLinkClick}
         onMouseMove={onMouseMove}
         onMouseLeave={onMouseLeave}
+        aria-busy={isLoading}
         {...motionProps}
       >
-        {children}
+        {content}
       </MotionLink>
     );
   }
@@ -132,15 +179,16 @@ export default function Button({
     <motion.button
       type={type}
       className={classes}
-      disabled={disabled}
-      onClick={onClick}
+      disabled={disabled || isLoading}
+      onClick={handleButtonClick}
       ref={magnetRef as React.RefObject<HTMLButtonElement>}
       style={magnetStyle}
       onMouseMove={onMouseMove}
       onMouseLeave={onMouseLeave}
+      aria-busy={isLoading}
       {...motionProps}
     >
-      {children}
+      {content}
     </motion.button>
   );
 }

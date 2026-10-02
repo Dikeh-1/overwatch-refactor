@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AdminSidebar } from "./AdminSidebar";
-import { LockKeyhole, Loader2, AlertCircle, RefreshCw, Menu, ShieldCheck, ArrowRight, ExternalLink, X } from "lucide-react";
+import { LockKeyhole, AlertCircle, RefreshCw, Menu, ShieldCheck, ArrowRight, ExternalLink, X } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 import LazyVideo from "@/components/ui/LazyVideo";
 import TechGrid from "@/components/ui/TechGrid";
@@ -285,7 +285,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
               disabled={authLoading}
               className="w-full flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-3.5 text-sm font-semibold text-[#090d16] shadow-lg shadow-black/30 transition-all hover:bg-white/90 active:scale-[0.99] disabled:opacity-50 cursor-pointer"
             >
-              {authLoading ? <RefreshCw className="animate-spin" size={16} /> : null}
+              {authLoading ? <OverwatchOrbitLoader size="xs" theme="light" className="shrink-0" /> : null}
               <span>{authLoading ? t("Authenticating…", "A autenticar…") : t("Enter Workspace", "Entrar no Portal")}</span>
               {!authLoading && <ArrowRight size={16} />}
             </button>
@@ -311,7 +311,10 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
   if (auth === null) {
     return (
       <div className="min-h-screen bg-[#F7F8FA] flex items-center justify-center">
-        <Loader2 size={24} className="animate-spin text-slate-400" />
+        <OverwatchOrbitLoader
+          label={t("Verifying security clearance...", "A verificar credenciais de segurança...")}
+          size="md"
+        />
       </div>
     );
   }
