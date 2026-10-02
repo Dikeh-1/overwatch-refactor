@@ -558,8 +558,7 @@ export async function notifyApplication(application: Application, cv: Buffer) {
           <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden;">
             <div style="height: 4px; background: #0b1329;"></div>
             <div style="padding: 32px;">
-              <h1 style="font-size: 20px; font-weight: 700; color: #090d16; margin: 0 0 16px 0;">Application Received – CCTV Installation &amp; Technical Manager</h1>
-              <p style="margin: 0 0 14px 0; font-size: 14px; color: #1e293b;">Dear ${escapeHtml(application.name)},</p>
+              <p style="margin: 0 0 16px 0; font-size: 15px; font-weight: 600; color: #090d16;">Dear ${escapeHtml(application.name)},</p>
               <p style="margin: 0 0 14px 0; font-size: 14px; color: #334155;">Thank you for applying for the position of <strong>CCTV Installation &amp; Technical Manager</strong> with Overwatch.</p>
               <p style="margin: 0 0 14px 0; font-size: 14px; color: #334155;">We confirm that your application has been received successfully.</p>
               <p style="margin: 0 0 14px 0; font-size: 14px; color: #334155;">Our team will review your application against the technical and experience requirements for the role. Candidates selected to proceed to the next stage will be contacted with further instructions.</p>
@@ -599,8 +598,7 @@ export async function notifyApplication(application: Application, cv: Buffer) {
           <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden;">
             <div style="height: 4px; background: #0b1329;"></div>
             <div style="padding: 32px;">
-              <h1 style="font-size: 20px; font-weight: 700; color: #090d16; margin: 0 0 16px 0;">Candidatura Recebida – Gestor Técnico e Instalação de CCTV</h1>
-              <p style="margin: 0 0 14px 0; font-size: 14px; color: #1e293b;">Estimado(a) ${escapeHtml(application.name)},</p>
+              <p style="margin: 0 0 16px 0; font-size: 15px; font-weight: 600; color: #090d16;">Estimado(a) ${escapeHtml(application.name)},</p>
               <p style="margin: 0 0 14px 0; font-size: 14px; color: #334155;">Agradecemos a sua candidatura para a posição de <strong>Gestor Técnico e Instalação de CCTV</strong> na Overwatch.</p>
               <p style="margin: 0 0 14px 0; font-size: 14px; color: #334155;">Confirmamos que a sua candidatura foi recebida com sucesso.</p>
               <p style="margin: 0 0 14px 0; font-size: 14px; color: #334155;">A nossa equipa irá analisar a sua candidatura relativamente aos requisitos técnicos e de experiência para a função. Os candidatos selecionados para avançar para a próxima fase serão contactados com instruções adicionais.</p>
@@ -794,8 +792,7 @@ export async function notifyApplication(application: Application, cv: Buffer) {
           <div style="height: 4px; background: #090d16;"></div>
           
           <div style="padding: 32px;">
-            <h1 style="font-size: 20px; font-weight: 700; color: #090d16; margin: 0 0 16px 0;">${candidateCopy.title}</h1>
-            <p style="margin: 0 0 12px 0;">${candidateCopy.greeting}</p>
+            <p style="margin: 0 0 16px 0; font-size: 15px; font-weight: 600; color: #090d16;">${candidateCopy.greeting}</p>
             <p style="margin: 0 0 12px 0;">${candidateCopy.p1}</p>
             <p style="margin: 0 0 12px 0;">${candidateCopy.p2}</p>
             <p style="margin: 0 0 16px 0;">${candidateCopy.p3}</p>
@@ -834,7 +831,9 @@ export async function notifyApplication(application: Application, cv: Buffer) {
       ],
       cc: [
         { email: siteContact.email, name: "Overwatch Operations" },
-        { email: "ebube.michael@overwatchmoz.com", name: "Ebube Michael" },
+        ...(process.env.ADMIN_NOTIFY_CC
+          ? [{ email: process.env.ADMIN_NOTIFY_CC.trim(), name: "Operations Admin" }]
+          : []),
       ],
       replyTo: { name: application.name, email: application.email },
       subject: adminSubject,
