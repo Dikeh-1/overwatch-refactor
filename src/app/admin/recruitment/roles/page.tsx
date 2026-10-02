@@ -48,7 +48,10 @@ export default function RolesPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "create_or_update_role", role }),
     });
-    if (!res.ok) throw new Error("Failed to save role");
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Failed to save role");
+    }
   };
 
   const handleDeleteRole = async (roleId: string) => {
@@ -57,7 +60,10 @@ export default function RolesPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "delete_role", roleId }),
     });
-    if (!res.ok) throw new Error("Failed to delete role");
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Failed to delete role");
+    }
   };
 
   const handleOpenCohort = async (roleId: string, cohortName?: string) => {
@@ -66,7 +72,10 @@ export default function RolesPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "open_role", roleId, cohortName }),
     });
-    if (!res.ok) throw new Error("Failed to open role cohort");
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Failed to open role cohort");
+    }
   };
 
   const handleCloseCohort = async (roleId: string, notes?: string) => {
@@ -75,7 +84,10 @@ export default function RolesPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "close_role", roleId, notes }),
     });
-    if (!res.ok) throw new Error("Failed to close role cohort");
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Failed to close role cohort");
+    }
   };
 
   if (loading) {

@@ -77,6 +77,10 @@ export async function POST(request: Request) {
       if (!roleId) return NextResponse.json({ error: "Missing roleId" }, { status: 400 });
       const res = await openRoleCohort(roleId, cohortName);
       await setRole(roleId, true).catch(() => {});
+      if (roleId === "cctv" || roleId === "cctv_operator") {
+        await setRole("cctv", true).catch(() => {});
+        await setRole("cctv_operator", true).catch(() => {});
+      }
       return NextResponse.json({ success: true, ...res });
     }
 
@@ -85,6 +89,10 @@ export async function POST(request: Request) {
       if (!roleId) return NextResponse.json({ error: "Missing roleId" }, { status: 400 });
       const res = await closeAndArchiveRoleCohort(roleId, notes);
       await setRole(roleId, false).catch(() => {});
+      if (roleId === "cctv" || roleId === "cctv_operator") {
+        await setRole("cctv", false).catch(() => {});
+        await setRole("cctv_operator", false).catch(() => {});
+      }
       return NextResponse.json({ success: true, ...res });
     }
 

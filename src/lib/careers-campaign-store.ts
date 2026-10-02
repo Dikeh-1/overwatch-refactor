@@ -34,6 +34,14 @@ function isRemote() {
   return Boolean(getSupabaseUrl() && getSupabaseKey() && getSupabaseKey().length > 10);
 }
 
+function isServerless() {
+  return Boolean(
+    process.env.VERCEL ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    process.env.NODE_ENV === "production"
+  );
+}
+
 async function api(endpoint: string, init: RequestInit = {}) {
   const baseUrl = getSupabaseUrl();
   const key = getSupabaseKey();
@@ -61,18 +69,27 @@ async function api(endpoint: string, init: RequestInit = {}) {
   return response;
 }
 
+// In-memory runtime cache for serverless environments
+let inMemoryRoleDefs: CareerRoleDefinition[] | null = null;
+let inMemoryCohorts: CareerCohort[] | null = null;
+
 async function readLocal<T>(file: string, fallback: T): Promise<T> {
+  if (isRemote() || isServerless()) return fallback;
   try {
     return JSON.parse(await readFile(path.join(directory, file), "utf8"));
-  } catch (e: any) {
-    if (e.code === "ENOENT") return fallback;
-    throw e;
+  } catch {
+    return fallback;
   }
 }
 
 async function writeLocal(file: string, value: unknown) {
-  await mkdir(directory, { recursive: true });
-  await writeFile(path.join(directory, file), JSON.stringify(value, null, 2));
+  if (isRemote() || isServerless()) return;
+  try {
+    await mkdir(directory, { recursive: true });
+    await writeFile(path.join(directory, file), JSON.stringify(value, null, 2));
+  } catch (e) {
+    // Silently ignore filesystem errors in environments where disk write is restricted
+  }
 }
 
 // Generate default initial roles if storage is fresh
@@ -108,14 +125,17 @@ function buildDefaultRoles(): CareerRoleDefinition[] {
 
 export async function getRoleDefinitions(): Promise<CareerRoleDefinition[]> {
   if (isRemote()) {
+    let remoteConfigs: CareerRoleDefinition[] | null = null;
+
+    // 1. Try to fetch from rich config table if it exists in Supabase
     try {
       const res = await api("/rest/v1/career_roles_config?select=*&order=created_at.asc");
       const rows = await res.json();
       if (Array.isArray(rows) && rows.length > 0) {
-        return rows.map((r: any) => ({
+        remoteConfigs = rows.map((r: any) => ({
           id: r.id,
-          en: r.en || r.title_en,
-          pt: r.pt || r.title_pt,
+          en: r.en || r.title_en || r.id,
+          pt: r.pt || r.title_pt || r.id,
           department: r.department || "Operações",
           descriptionEn: r.description_en,
           descriptionPt: r.description_pt,
@@ -127,35 +147,83 @@ export async function getRoleDefinitions(): Promise<CareerRoleDefinition[]> {
             "interview",
             "hired",
           ],
-          screeningRules: r.screening_rules || [],
-          createdAt: r.created_at,
-          updatedAt: r.updated_at,
+          screeningRules: r.screening_rules || DEFAULT_SCREENING_RULES_BY_ROLE[r.id] || [],
+          createdAt: r.created_at || new Date().toISOString(),
+          updatedAt: r.updated_at || new Date().toISOString(),
         }));
       }
     } catch {
-      // Fallback to legacy career_roles table in Supabase
-      try {
-        const res = await api("/rest/v1/career_roles?select=id,open");
-        const rows = await res.json();
-        if (Array.isArray(rows) && rows.length > 0) {
-          const defaults = buildDefaultRoles();
-          return defaults.map((role) => {
-            const row = rows.find(
-              (r) =>
-                r.id === role.id ||
-                (role.id === "cctv" && r.id === "cctv_operator") ||
-                (role.id === "cctv_operator" && r.id === "cctv"),
-            );
-            return {
-              ...role,
-              open: row ? Boolean(row.open) : role.open,
-            };
-          });
-        }
-      } catch {}
+      // Table may not exist yet or not migrated
     }
+
+    // 2. Fetch authoritative open/closed status from Supabase career_roles
+    const remoteOpenMap: Record<string, boolean> = {};
+    try {
+      const res = await api("/rest/v1/career_roles?select=id,open");
+      const rows = await res.json();
+      if (Array.isArray(rows)) {
+        for (const row of rows) {
+          if (row.id) {
+            remoteOpenMap[row.id] = Boolean(row.open);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Could not query career_roles from Supabase:", e);
+    }
+
+    // Combine configs or fallback to defaults
+    let roles: CareerRoleDefinition[] = remoteConfigs
+      ? [...remoteConfigs]
+      : inMemoryRoleDefs
+      ? [...inMemoryRoleDefs]
+      : buildDefaultRoles();
+
+    // Ensure all standard default roles exist
+    const defaultRoles = buildDefaultRoles();
+    for (const def of defaultRoles) {
+      const exists = roles.some(
+        (r) =>
+          r.id === def.id ||
+          (def.id === "cctv" && r.id === "cctv_operator") ||
+          (def.id === "cctv_operator" && r.id === "cctv"),
+      );
+      if (!exists) {
+        roles.push(def);
+      }
+    }
+
+    // Synchronize open state from Supabase career_roles
+    roles = roles.map((role) => {
+      let open = role.open;
+      if (role.id in remoteOpenMap) {
+        open = remoteOpenMap[role.id];
+      } else if (role.id === "cctv" && "cctv_operator" in remoteOpenMap) {
+        open = remoteOpenMap["cctv_operator"];
+      } else if (role.id === "cctv_operator" && "cctv" in remoteOpenMap) {
+        open = remoteOpenMap["cctv"];
+      }
+
+      const activeCohortId = open
+        ? (role.activeCohortId || `${role.id}_cohort`)
+        : null;
+
+      return {
+        ...role,
+        open,
+        activeCohortId,
+        screeningRules:
+          role.screeningRules && role.screeningRules.length > 0
+            ? role.screeningRules
+            : DEFAULT_SCREENING_RULES_BY_ROLE[role.id] || [],
+      };
+    });
+
+    inMemoryRoleDefs = roles;
+    return roles;
   }
 
+  // Local development
   const local = await readLocal<CareerRoleDefinition[]>("roles_def.json", []);
   if (local.length > 0) return local;
 
@@ -168,18 +236,24 @@ export async function saveRoleDefinition(
   role: CareerRoleDefinition,
 ): Promise<CareerRoleDefinition> {
   const roles = await getRoleDefinitions();
-  const existingIdx = roles.findIndex((r) => r.id === role.id);
+  const existingIdx = roles.findIndex(
+    (r) =>
+      r.id === role.id ||
+      (role.id === "cctv" && r.id === "cctv_operator") ||
+      (role.id === "cctv_operator" && r.id === "cctv"),
+  );
   const now = new Date().toISOString();
   const updatedRole = { ...role, updatedAt: now };
 
   let nextRoles: CareerRoleDefinition[];
   if (existingIdx >= 0) {
-    nextRoles = roles.map((r) => (r.id === role.id ? updatedRole : r));
+    nextRoles = roles.map((r, idx) => (idx === existingIdx ? updatedRole : r));
   } else {
     updatedRole.createdAt = now;
     nextRoles = [...roles, updatedRole];
   }
 
+  inMemoryRoleDefs = nextRoles;
   await writeLocal("roles_def.json", nextRoles);
 
   if (isRemote()) {
@@ -202,7 +276,7 @@ export async function saveRoleDefinition(
         }),
       });
     } catch (e) {
-      console.warn("Could not sync role to Supabase:", e);
+      console.warn("Could not sync role to Supabase career_roles_config:", e);
     }
 
     try {
@@ -219,7 +293,9 @@ export async function saveRoleDefinition(
           body: JSON.stringify({ id: alias, open: updatedRole.open }),
         }).catch(() => {});
       }
-    } catch {}
+    } catch (e) {
+      console.warn("Could not sync role to Supabase career_roles:", e);
+    }
   }
 
   return updatedRole;
@@ -227,12 +303,23 @@ export async function saveRoleDefinition(
 
 export async function deleteRoleDefinition(roleId: string): Promise<void> {
   const roles = await getRoleDefinitions();
-  const nextRoles = roles.filter((r) => r.id !== roleId);
+  const nextRoles = roles.filter(
+    (r) =>
+      r.id !== roleId &&
+      !(roleId === "cctv" && r.id === "cctv_operator") &&
+      !(roleId === "cctv_operator" && r.id === "cctv"),
+  );
+  inMemoryRoleDefs = nextRoles;
   await writeLocal("roles_def.json", nextRoles);
 
   if (isRemote()) {
     try {
       await api(`/rest/v1/career_roles_config?id=eq.${roleId}`, {
+        method: "DELETE",
+      });
+    } catch {}
+    try {
+      await api(`/rest/v1/career_roles?id=eq.${roleId}`, {
         method: "DELETE",
       });
     } catch {}
@@ -249,7 +336,7 @@ export async function getAllCohorts(): Promise<CareerCohort[]> {
       const res = await api("/rest/v1/career_cohorts?select=*&order=opened_at.desc");
       const rows = await res.json();
       if (Array.isArray(rows) && rows.length > 0) {
-        return rows.map((r: any) => ({
+        const remote = rows.map((r: any) => ({
           id: r.id,
           roleId: r.role_id,
           name: r.name,
@@ -260,8 +347,13 @@ export async function getAllCohorts(): Promise<CareerCohort[]> {
           screeningRules: r.screening_rules || [],
           notes: r.notes,
         }));
+        inMemoryCohorts = remote;
+        return remote;
       }
     } catch {}
+
+    if (inMemoryCohorts) return inMemoryCohorts;
+    return [];
   }
 
   return readLocal<CareerCohort[]>("cohorts.json", []);
@@ -272,6 +364,7 @@ export async function saveCohort(cohort: CareerCohort): Promise<CareerCohort> {
   const idx = cohorts.findIndex((c) => c.id === cohort.id);
   const next = idx >= 0 ? cohorts.map((c) => (c.id === cohort.id ? cohort : c)) : [cohort, ...cohorts];
 
+  inMemoryCohorts = next;
   await writeLocal("cohorts.json", next);
 
   if (isRemote()) {
@@ -291,7 +384,9 @@ export async function saveCohort(cohort: CareerCohort): Promise<CareerCohort> {
           notes: cohort.notes,
         }),
       });
-    } catch {}
+    } catch (e) {
+      console.warn("Could not sync cohort to Supabase career_cohorts:", e);
+    }
   }
 
   return cohort;
@@ -332,7 +427,11 @@ export async function openRoleCohort(
     screeningRules: role.screeningRules,
   };
 
-  await saveCohort(cohort);
+  try {
+    await saveCohort(cohort);
+  } catch (err) {
+    console.warn("Failed saving cohort:", err);
+  }
 
   const updatedRole: CareerRoleDefinition = {
     ...role,
@@ -400,7 +499,11 @@ export async function closeAndArchiveRoleCohort(
     };
   }
 
-  await saveCohort(cohortToArchive);
+  try {
+    await saveCohort(cohortToArchive);
+  } catch (err) {
+    console.warn("Failed saving archived cohort:", err);
+  }
 
   // Seal all current candidates belonging to this role cohort
   try {

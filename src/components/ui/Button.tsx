@@ -109,10 +109,43 @@ export default function Button({
   };
 
   const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (href && !href.startsWith("#") && !isExternalHref(href)) {
-      setIsNavigating(true);
-      setTimeout(() => setIsNavigating(false), 6000);
+    if (!href) {
+      onClick?.(e);
+      return;
     }
+
+    if (isExternalHref(href) || href.startsWith("#")) {
+      onClick?.(e);
+      return;
+    }
+
+    // Check if link is to current page with hash (e.g. "/contact#assessment-form" when already on "/en/contact")
+    if (href.includes("#")) {
+      const [path, hash] = href.split("#");
+      const currentPath = (pathname || "").replace(/^\/(?:en|pt)/, "") || "/";
+      const targetPath = (path || "").replace(/^\/(?:en|pt)/, "") || "/";
+      if (currentPath === targetPath) {
+        const targetEl = document.getElementById(hash);
+        if (targetEl) {
+          e.preventDefault();
+          targetEl.scrollIntoView({ behavior: "smooth" });
+          history.pushState(null, "", `#${hash}`);
+        }
+        onClick?.(e);
+        return;
+      }
+    }
+
+    // If navigating to the exact same page without hash, don't trigger loading state
+    const currentPath = (pathname || "").replace(/^\/(?:en|pt)/, "") || "/";
+    const targetPath = (href || "").replace(/^\/(?:en|pt)/, "") || "/";
+    if (currentPath === targetPath) {
+      onClick?.(e);
+      return;
+    }
+
+    setIsNavigating(true);
+    setTimeout(() => setIsNavigating(false), 4000);
     onClick?.(e);
   };
 
@@ -148,6 +181,34 @@ export default function Button({
           ref={magnetRef as React.RefObject<HTMLAnchorElement>}
           style={magnetStyle}
           onClick={(e) => onClick?.(e)}
+          onMouseMove={onMouseMove}
+          onMouseLeave={onMouseLeave}
+          aria-busy={isLoading}
+          {...motionProps}
+        >
+          {content}
+        </motion.a>
+      );
+    }
+
+    // Handle pure hash links like #assessment-form directly with native smooth scroll
+    if (href.startsWith("#")) {
+      return (
+        <motion.a
+          href={href}
+          className={classes}
+          ref={magnetRef as React.RefObject<HTMLAnchorElement>}
+          style={magnetStyle}
+          onClick={(e) => {
+            const targetId = href.slice(1);
+            const targetEl = document.getElementById(targetId);
+            if (targetEl) {
+              e.preventDefault();
+              targetEl.scrollIntoView({ behavior: "smooth" });
+              history.pushState(null, "", href);
+            }
+            onClick?.(e);
+          }}
           onMouseMove={onMouseMove}
           onMouseLeave={onMouseLeave}
           aria-busy={isLoading}
