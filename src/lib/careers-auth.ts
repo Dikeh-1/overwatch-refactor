@@ -23,6 +23,7 @@ export async function authenticated() {
     !!signature && Number(expiry) > Date.now() && equal(signature, sign(expiry))
   );
 }
+export const checkAdminSession = authenticated;
 export async function login() {
   const expiry = String(Date.now() + 8 * 60 * 60 * 1000);
   (await cookies()).set(cookie, `${expiry}.${sign(expiry)}`, {

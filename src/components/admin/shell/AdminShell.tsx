@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AdminSidebar } from "./AdminSidebar";
-import { LockKeyhole, Loader2, AlertCircle, RefreshCw, Menu, ShieldCheck, ArrowRight, ExternalLink } from "lucide-react";
+import { LockKeyhole, Loader2, AlertCircle, RefreshCw, Menu, ShieldCheck, ArrowRight, ExternalLink, X } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 import LazyVideo from "@/components/ui/LazyVideo";
 import TechGrid from "@/components/ui/TechGrid";
@@ -11,6 +11,8 @@ import { IMAGES } from "@/lib/constants";
 import Link from "next/link";
 import { Application, Role, APPROVED_NEXT_PHASE_CANDIDATES } from "@/lib/careers";
 import { AdminLanguageProvider, useAdminLanguage } from "./AdminLanguageContext";
+import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
+import { useLiveRecruitmentFeed } from "@/components/admin/hooks/useLiveRecruitmentFeed";
 
 interface AdminShellProps {
   children: React.ReactNode;
@@ -30,6 +32,12 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [deletedNextPhase, setDeletedNextPhase] = useState<string[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Live real-time radar sync & instant new applicant notification
+  const { liveAlert, dismissAlert } = useLiveRecruitmentFeed({
+    enabled: Boolean(auth),
+    onRefreshData: () => loadSummaryData(),
+  });
 
   const handleToggleLang = () => {
     toggleLang();
@@ -299,8 +307,11 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
 
   if (auth === null) {
     return (
-      <div className="min-h-screen bg-[#F7F8FA] flex items-center justify-center">
-        <Loader2 size={24} className="animate-spin text-slate-400" />
+      <div className="min-h-screen bg-[#070b14] flex items-center justify-center">
+        <OverwatchOrbitLoader
+          label={lang === "pt" ? "A inicializar consola de segurança..." : "Initializing security console..."}
+          size="lg"
+        />
       </div>
     );
   }
@@ -393,6 +404,52 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
           {children}
         </main>
       </div>
+
+      {/* Realtime New Applicant Radar Alert */}
+      {liveAlert && (
+        <aside
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-3.5 rounded-2xl border border-sky-400/40 bg-[#0a1128]/95 p-4 text-white shadow-2xl shadow-sky-950/60 backdrop-blur-md animate-in slide-in-from-bottom-5 duration-300"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-500/20 text-sky-400 border border-sky-500/30">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-sky-400"></span>
+            </span>
+          </div>
+
+          <div className="min-w-0 pr-2">
+            <div className="flex items-center gap-1.5 text-[0.68rem] font-bold uppercase tracking-wider text-sky-400">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-sky-400" />
+              <span>{t("New Candidate Application", "Nova Candidatura Recebida")}</span>
+            </div>
+            <div className="text-xs font-semibold text-white truncate max-w-xs mt-0.5">
+              {liveAlert.name}
+            </div>
+            <div className="text-[0.68rem] text-slate-400 truncate">
+              {liveAlert.role || t("General Pipeline", "Funil Geral")}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 pl-3 border-l border-white/10">
+            <Link
+              href={`/admin/recruitment/candidates/${liveAlert.id}`}
+              onClick={dismissAlert}
+              className="rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-sky-400 transition-colors shadow-xs"
+            >
+              {t("Review", "Rever")}
+            </Link>
+            <button
+              onClick={dismissAlert}
+              className="rounded-lg p-1.5 text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              title={t("Dismiss", "Fechar")}
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </aside>
+      )}
     </div>
   );
 };

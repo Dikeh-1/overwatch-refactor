@@ -21,9 +21,11 @@ import {
   X,
   Award,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 import { Application, Role, stages, formatPhoneDisplay, formatSlotDisplay } from "@/lib/careers";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
+import CelebrationOverlay from "@/components/admin/ui/CelebrationOverlay";
 
 interface CandidatesTableViewProps {
   applications: Application[];
@@ -70,6 +72,12 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
   const [bulkActionBusy, setBulkActionBusy] = useState(false);
   const [archiveModalOpen, setArchiveModalOpen] = useState(false);
   const [archiveReason, setArchiveReason] = useState<string>("Not Selected for Next Phase");
+  const [celebrationState, setCelebrationState] = useState<{
+    show: boolean;
+    variant: "next_phase" | "hired";
+    title?: string;
+    subtitle?: string;
+  }>({ show: false, variant: "next_phase" });
 
   // Keep URL search params in sync
   const updateUrlParams = (updates: Record<string, string | number | null>) => {
@@ -418,6 +426,38 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
 
             <button
               type="button"
+              disabled={bulkActionBusy}
+              onClick={async () => {
+                if (onBulkStatusChange) {
+                  setBulkActionBusy(true);
+                  try {
+                    await onBulkStatusChange(Array.from(selectedIds), "next_phase_selected");
+                    setCelebrationState({
+                      show: true,
+                      variant: "next_phase",
+                      title: t(
+                        `${selectedIds.size} Candidates Advanced to Next Phase!`,
+                        `${selectedIds.size} Candidatos Avançados para a Próxima Fase!`,
+                      ),
+                      subtitle: t(
+                        "Candidates are now selected and approved for next-phase training and assessment.",
+                        "Os candidatos foram selecionados e aprovados para a convocatória da próxima fase.",
+                      ),
+                    });
+                    setSelectedIds(new Set());
+                  } finally {
+                    setBulkActionBusy(false);
+                  }
+                }
+              }}
+              className="px-2.5 py-1 rounded bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-semibold transition-colors inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
+            >
+              <Sparkles size={13} />
+              <span>{t("Advance to Next Phase", "Avançar p/ Próx. Fase")}</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setArchiveModalOpen(true)}
               className="px-2.5 py-1 rounded bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors flex items-center gap-1"
             >
@@ -697,6 +737,15 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Celebration Confetti Pop Overlay */}
+      <CelebrationOverlay
+        show={celebrationState.show}
+        onClose={() => setCelebrationState((prev) => ({ ...prev, show: false }))}
+        title={celebrationState.title}
+        subtitle={celebrationState.subtitle}
+        variant={celebrationState.variant}
+      />
     </div>
   );
 };

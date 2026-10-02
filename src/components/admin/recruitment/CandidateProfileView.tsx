@@ -29,6 +29,7 @@ import { Application, Role, stages, formatPhoneDisplay, formatSlotDisplay, Archi
 import { screenCandidate } from "@/lib/careers-screening";
 import DocxViewer from "../DocxViewer";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
+import CelebrationOverlay from "@/components/admin/ui/CelebrationOverlay";
 
 interface CandidateProfileViewProps {
   candidate: Application;
@@ -67,6 +68,10 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
   const [statusErrorMsg, setStatusErrorMsg] = useState<string | null>(null);
   const [isArchiving, setIsArchiving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [celebrationState, setCelebrationState] = useState<{
+    show: boolean;
+    variant: "next_phase" | "hired";
+  }>({ show: false, variant: "next_phase" });
 
   // Dynamic test score state
   const [savedScore, setSavedScore] = useState<number | undefined>(candidate.testScore);
@@ -154,6 +159,14 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
     try {
       await onStatusChange(candidate.id, newStatus);
       setStatusSuccessMsg(t("Stage updated", "Estado actualizado"));
+
+      // Trigger celebration moments
+      if (newStatus === "next_phase_selected" || newStatus === "next_phase_invited") {
+        setCelebrationState({ show: true, variant: "next_phase" });
+      } else if (newStatus === "hired") {
+        setCelebrationState({ show: true, variant: "hired" });
+      }
+
       setTimeout(() => setStatusSuccessMsg(null), 3000);
     } catch (err: any) {
       setStatusErrorMsg(t("Update failed", "Falha na actualização"));
@@ -1073,6 +1086,15 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Celebration Confetti Pop Overlay */}
+      <CelebrationOverlay
+        show={celebrationState.show}
+        onClose={() => setCelebrationState((prev) => ({ ...prev, show: false }))}
+        candidateName={candidate.name}
+        roleName={candidate.role}
+        variant={celebrationState.variant}
+      />
     </div>
   );
 };

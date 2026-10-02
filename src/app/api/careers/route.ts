@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { MAX_CV, type Application } from "@/lib/careers";
 import { getRoles, saveApplication } from "@/lib/careers-store";
 import { evaluateTechnicalScreening, hasTechnicalScreening } from "@/lib/screening-engine";
+import { getRoleDefinitions } from "@/lib/careers-campaign-store";
+import { evaluateApplicationWithRules } from "@/lib/careers-evaluator";
 
 export const runtime = "nodejs";
 
@@ -93,8 +95,18 @@ export async function POST(request: Request) {
         return NextResponse.json({ code: "INVALID" }, { status: 400 });
       }
 
-      // Automatic screening evaluation
-      const screening = evaluateTechnicalScreening(role, technicalData);
+      const roleDefs = await getRoleDefinitions().catch(() => []);
+      const currentRoleDef = roleDefs.find((r) => r.id === role);
+      const activeCohortId = currentRoleDef?.activeCohortId || undefined;
+
+      // Automatic screening evaluation (dynamic custom rules override default)
+      let screening = evaluateTechnicalScreening(role, technicalData);
+      if (currentRoleDef?.screeningRules && currentRoleDef.screeningRules.length > 0) {
+        screening = evaluateApplicationWithRules(
+          { ...technicalData, coverLetter },
+          currentRoleDef.screeningRules,
+        );
+      }
       const status = screening.passedMandatory ? "shortlisted" : "not_advancing";
 
       const application: Application = {
@@ -104,6 +116,7 @@ export async function POST(request: Request) {
         email,
         whatsapp,
         role,
+        cohortId: activeCohortId,
         locale,
         coverLetter,
         status,
@@ -154,16 +167,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ code: "INVALID" }, { status: 400 });
     }
 
+    const roleDefs = await getRoleDefinitions().catch(() => []);
+    const currentRoleDef = roleDefs.find((r) => r.id === role);
+    const activeCohortId = currentRoleDef?.activeCohortId || undefined;
+
     // Auto criteria check for Operator: Female or Male with CCTV experience are auto-shortlisted
-    const meetsCriteria =
+    let meetsCriteria =
       values.sex === "female" ||
       (values.sex === "male" && values.experience === "yes");
+
+    let customScreening = undefined;
+    if (currentRoleDef?.screeningRules && currentRoleDef.screeningRules.length > 0) {
+      customScreening = evaluateApplicationWithRules(
+        { ...values, coverLetter },
+        currentRoleDef.screeningRules,
+      );
+      meetsCriteria = customScreening.passedMandatory;
+    }
 
     const application: Application = {
       ...values,
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
+      cohortId: activeCohortId,
       status: meetsCriteria ? "shortlisted" : "new",
+      screeningResult: customScreening,
       cvName,
       cvSize: cv.size,
       cvType,

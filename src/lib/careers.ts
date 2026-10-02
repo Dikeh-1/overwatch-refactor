@@ -99,6 +99,7 @@ export type Application = {
   email: string;
   whatsapp: string;
   role: string;
+  cohortId?: string;
   locale: "en" | "pt";
   // CCTV Operator fields (optional for other roles)
   grade12?: "yes" | "no";

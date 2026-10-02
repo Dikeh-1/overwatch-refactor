@@ -1,37 +1,51 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { RecruitmentOverviewView } from "@/components/admin/recruitment/RecruitmentOverviewView";
 import { Application, Role, roles as defaultRoles } from "@/lib/careers";
-import { Loader2 } from "lucide-react";
+import type { CareerRoleDefinition, CareerCohort } from "@/lib/careers-models";
+import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 
 export default function RecruitmentOverviewPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [roles, setRoles] = useState<Role[]>(defaultRoles);
+  const [roleDefs, setRoleDefs] = useState<CareerRoleDefinition[]>([]);
+  const [cohorts, setCohorts] = useState<CareerCohort[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch(`/api/admin/careers?t=${Date.now()}`, { cache: "no-store" });
-        if (res.ok) {
-          const data = await res.json();
-          setApplications(data.applications || []);
-          if (data.roles) setRoles(data.roles);
-        }
-      } catch (err) {
-        console.error("Failed to load recruitment overview data:", err);
-      } finally {
-        setLoading(false);
+  const load = useCallback(async () => {
+    try {
+      const [careersRes, managerRes] = await Promise.all([
+        fetch(`/api/admin/careers?t=${Date.now()}`, { cache: "no-store" }),
+        fetch(`/api/admin/careers/roles-manager?t=${Date.now()}`, { cache: "no-store" }),
+      ]);
+
+      if (careersRes.ok) {
+        const data = await careersRes.json();
+        setApplications(data.applications || []);
+        if (data.roles) setRoles(data.roles);
       }
+
+      if (managerRes.ok) {
+        const mData = await managerRes.json();
+        if (mData.roles) setRoleDefs(mData.roles);
+        if (mData.cohorts) setCohorts(mData.cohorts);
+      }
+    } catch (err) {
+      console.error("Failed to load recruitment overview data:", err);
+    } finally {
+      setLoading(false);
     }
-    load();
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   if (loading) {
     return (
       <div className="py-24 flex items-center justify-center">
-        <Loader2 size={24} className="animate-spin text-slate-400" />
+        <OverwatchOrbitLoader label="A carregar operações de recrutamento..." size="md" />
       </div>
     );
   }
@@ -40,6 +54,9 @@ export default function RecruitmentOverviewPage() {
     <RecruitmentOverviewView
       applications={applications}
       roles={roles}
+      roleDefs={roleDefs}
+      cohorts={cohorts}
+      onRefresh={load}
     />
   );
 }
