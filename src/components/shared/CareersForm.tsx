@@ -29,7 +29,7 @@ import {
   Calendar,
   DollarSign,
 } from "lucide-react";
-import { type Role, MAX_CV } from "@/lib/careers";
+import { type Role, roles as defaultRoles, MAX_CV } from "@/lib/careers";
 import { darkEyebrowClassName } from "@/components/ui/eyebrow";
 import TechGrid from "@/components/ui/TechGrid";
 import LazyVideo from "@/components/ui/LazyVideo";
@@ -277,50 +277,7 @@ export default function CareersForm({
 
   const t = (en: string, ptText: string) => (pt ? ptText : en);
 
-  const [roles, setRoles] = useState<Role[]>([
-    {
-      id: "cctv_technical_manager",
-      en: "CCTV Installation & Technical Manager",
-      pt: "Gestor Técnico e Instalação de CCTV",
-      open: true,
-    },
-    {
-      id: "cctv",
-      en: "CCTV Monitoring Operator",
-      pt: "Operador de Monitoramento CCTV",
-      open: false,
-    },
-    {
-      id: "patrol_driver",
-      en: "Patrol Driver",
-      pt: "Motorista de Patrulha",
-      open: false,
-    },
-    {
-      id: "control_room_supervisor",
-      en: "Control Room Supervisor",
-      pt: "Supervisor de Sala de Controlo",
-      open: false,
-    },
-    {
-      id: "armed_response_officer",
-      en: "Armed Response Officer",
-      pt: "Oficial de Resposta Armada",
-      open: false,
-    },
-    {
-      id: "cctv_technician",
-      en: "CCTV Technician",
-      pt: "Técnico de CCTV",
-      open: false,
-    },
-    {
-      id: "sales",
-      en: "Sales & Business Development",
-      pt: "Vendas e Desenvolvimento de Negócios",
-      open: false,
-    },
-  ]);
+  const [roles, setRoles] = useState<Role[]>(defaultRoles);
   const [selectedRoleId, setSelectedRoleId] = useState(defaultRoleId);
   const [error, setError] = useState("");
   const [submitSuccessAnimation, setSubmitSuccessAnimation] = useState<any>(null);

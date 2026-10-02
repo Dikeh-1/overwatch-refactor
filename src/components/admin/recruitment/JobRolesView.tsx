@@ -120,11 +120,17 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
   });
 
   const getRoleMetrics = (roleId: string, activeCohortId?: string | null) => {
-    const roleApps = applications.filter(
-      (a) =>
-        (activeCohortId && a.cohortId === activeCohortId) ||
-        (!activeCohortId && (a.role === roleId || (roleId === "cctv" && !a.role))),
-    );
+    const roleApps = applications.filter((a) => {
+      const matchesRole =
+        a.role === roleId ||
+        (roleId === "cctv" && (!a.role || a.role === "cctv" || a.role === "cctv_operator"));
+      if (!matchesRole) return false;
+      // If candidate has a specific cohortId from a closed/different cohort, exclude
+      if (activeCohortId && a.cohortId && a.cohortId !== activeCohortId) {
+        return false;
+      }
+      return true;
+    });
 
     return {
       total: roleApps.length,
@@ -331,7 +337,7 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
                         }`}
                       >
                         <span
-                          className={`w-1.5 h-1.5 rounded-full ${role.open ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`}
+                          className={`w-1.5 h-1.5 rounded-full ${role.open ? "bg-emerald-500" : "bg-slate-400"}`}
                         />
                         <span>
                           {role.open

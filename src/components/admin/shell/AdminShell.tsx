@@ -328,7 +328,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
     <ActiveRoleProvider applications={applications}>
       {/* Instant Route Navigation Heads-Up Top Progress Bar */}
       {isNavigating && (
-        <div className="fixed top-0 left-0 right-0 z-[9999] h-[3px] bg-gradient-to-r from-sky-500 via-[#00ded3] to-sky-400 shadow-[0_0_12px_#00ded3] animate-pulse pointer-events-none" />
+        <div className="fixed top-0 left-0 right-0 z-[9999] h-[3px] bg-gradient-to-r from-sky-500 via-[#00ded3] to-sky-400 shadow-[0_0_12px_#00ded3] pointer-events-none" />
       )}
 
       {/* Instant Route Navigation Floating Heads-Up Pill */}

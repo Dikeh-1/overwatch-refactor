@@ -410,13 +410,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         {/* Footer info & session */}
         <div className="p-3 border-t border-white/[0.08] space-y-2 bg-[#080d20]">
           <div className="flex items-center justify-between px-2 py-1 text-xs">
-            {/* Subtle, clean Live Sync Indicator with brand cyan accent */}
-            <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#00ded3]" />
-              <span className="text-slate-400 text-[10px] font-semibold tracking-wider uppercase">
-                {t("Live Sync", "Tempo Real")}
-              </span>
-            </div>
+            <span className="text-slate-400 text-[11px] font-medium tracking-wide">
+              Overwatch Console
+            </span>
             <button
               type="button"
               onClick={onToggleLang}

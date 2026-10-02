@@ -56,12 +56,11 @@ async function api(endpoint: string, init: RequestInit = {}) {
   return response;
 }
 async function read<T>(file: string, fallback: T): Promise<T> {
-  localOnly();
   try {
+    localOnly();
     return JSON.parse(await readFile(path.join(directory, file), "utf8"));
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return fallback;
-    throw e;
+    return fallback;
   }
 }
 async function write(file: string, value: unknown) {

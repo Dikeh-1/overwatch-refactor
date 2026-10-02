@@ -1,12 +1,33 @@
+import { getRoleDefinitions } from "@/lib/careers-campaign-store";
 import { getRoles } from "@/lib/careers-store";
+import { roles as fallbackRoles } from "@/lib/careers";
+
 export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
-    return Response.json(
-      { roles: await getRoles() },
-      { headers: { "Cache-Control": "no-store" } },
-    );
+    const roleDefs = await getRoleDefinitions().catch(() => null);
+    if (roleDefs && roleDefs.length > 0) {
+      return Response.json(
+        {
+          roles: roleDefs.map((r) => ({
+            id: r.id,
+            en: r.en,
+            pt: r.pt,
+            open: Boolean(r.open),
+          })),
+        },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    }
+
+    const legacy = await getRoles().catch(() => null);
+    if (legacy && legacy.length > 0) {
+      return Response.json({ roles: legacy }, { headers: { "Cache-Control": "no-store" } });
+    }
+
+    return Response.json({ roles: fallbackRoles }, { headers: { "Cache-Control": "no-store" } });
   } catch {
-    return Response.json({ error: "Unavailable" }, { status: 503 });
+    return Response.json({ roles: fallbackRoles }, { headers: { "Cache-Control": "no-store" } });
   }
 }
