@@ -33,6 +33,8 @@ interface CriterionPreset {
   key: string;
   labelPt: string;
   labelEn: string;
+  instructionPt?: string;
+  instructionEn?: string;
   group: string;
   type: "boolean" | "number" | "string";
   mandatory: boolean;
@@ -53,6 +55,8 @@ const PRESET_CRITERIA: CriterionPreset[] = [
     key: "yearsCctvExperience",
     labelPt: "Experiência Prática em CCTV (mínimo 1 ano)",
     labelEn: "Hands-on CCTV Experience (min 1 year)",
+    instructionPt: "Quantos anos de experiência prática comprovada possui na instalação e manutenção de sistemas CCTV?",
+    instructionEn: "How many years of proven hands-on experience do you have in CCTV installation and maintenance?",
     group: "CCTV & Engenharia Técnica",
     type: "number",
     mandatory: true,
@@ -62,6 +66,8 @@ const PRESET_CRITERIA: CriterionPreset[] = [
     key: "ipCctv",
     labelPt: "Sistemas CCTV IP e Protocolos Digitais",
     labelEn: "IP CCTV Systems & Network Protocols",
+    instructionPt: "Possui experiência prática comprovada em câmaras IP, endereçamento de rede e protocolos ONVIF/RTSP?",
+    instructionEn: "Do you have proven practical experience with IP cameras, network addressing and ONVIF/RTSP protocols?",
     group: "CCTV & Engenharia Técnica",
     type: "boolean",
     mandatory: true,
@@ -71,6 +77,8 @@ const PRESET_CRITERIA: CriterionPreset[] = [
     key: "nvrDvr",
     labelPt: "Configuração de NVRs/DVRs e Armazenamento",
     labelEn: "NVR/DVR Setup & Storage Sizing",
+    instructionPt: "Sabe dimensionar armazenamento RAID e configurar NVRs e DVRs multi-canal?",
+    instructionEn: "Can you size RAID storage and configure multi-channel NVRs and DVRs?",
     group: "CCTV & Engenharia Técnica",
     type: "boolean",
     mandatory: true,
@@ -80,6 +88,8 @@ const PRESET_CRITERIA: CriterionPreset[] = [
     key: "networking",
     labelPt: "Redes IP (Switches, VLANs, Routers)",
     labelEn: "IP Networking (Switches, VLANs, Routers)",
+    instructionPt: "Tem domínio prático de configuração de switches geridos, criação de VLANs de segurança e routers?",
+    instructionEn: "Are you proficient in configuring managed switches, creating security VLANs, and routers?",
     group: "CCTV & Engenharia Técnica",
     type: "boolean",
     mandatory: true,
@@ -89,6 +99,8 @@ const PRESET_CRITERIA: CriterionPreset[] = [
     key: "hikvision",
     labelPt: "Ecossistema Hikvision (iVMS, AcuSense)",
     labelEn: "Hikvision Ecosystem (iVMS, AcuSense)",
+    instructionPt: "Possui experiência com o ecossistema Hikvision, iVMS-4200, Hik-Connect ou câmaras AcuSense / ColorVu?",
+    instructionEn: "Do you have experience with Hikvision ecosystem, iVMS-4200, Hik-Connect, or AcuSense / ColorVu cameras?",
     group: "CCTV & Engenharia Técnica",
     type: "boolean",
     mandatory: false,
@@ -98,6 +110,8 @@ const PRESET_CRITERIA: CriterionPreset[] = [
     key: "dahua",
     labelPt: "Plataformas Dahua (DSS, SmartPSS)",
     labelEn: "Dahua Platforms (DSS, SmartPSS)",
+    instructionPt: "Possui experiência prática na instalação e configuração de plataformas Dahua (SmartPSS, DSS Express)?",
+    instructionEn: "Do you have practical experience configuring Dahua platforms (SmartPSS, DSS Express)?",
     group: "CCTV & Engenharia Técnica",
     type: "boolean",
     mandatory: false,
@@ -107,6 +121,8 @@ const PRESET_CRITERIA: CriterionPreset[] = [
     key: "supervision",
     labelPt: "Supervisão e Liderança de Técnicos em Obra",
     labelEn: "Field Installation Team Supervision",
+    instructionPt: "Tem experiência em coordenação de técnicos em obra, planeamento diário e controlo de qualidade?",
+    instructionEn: "Do you have experience supervising field technicians, daily planning, and quality control?",
     group: "CCTV & Engenharia Técnica",
     type: "boolean",
     mandatory: false,
@@ -116,6 +132,8 @@ const PRESET_CRITERIA: CriterionPreset[] = [
     key: "drivingLicence",
     labelPt: "Carta de Condução Válida",
     labelEn: "Valid Driving Licence",
+    instructionPt: "Possui carta de condução válida e disponibilidade para conduzir viaturas técnicas da empresa?",
+    instructionEn: "Do you have a valid driving licence and willingness to drive company technical vehicles?",
     group: "CCTV & Engenharia Técnica",
     type: "boolean",
     mandatory: false,
@@ -125,6 +143,8 @@ const PRESET_CRITERIA: CriterionPreset[] = [
     key: "aiAnalytics",
     labelPt: "Analítica Perimetral e Câmaras com IA",
     labelEn: "AI Video Analytics & Perimeter Rules",
+    instructionPt: "Já configurou regras analíticas de vídeo inteligente (Tripwire, Linha Virtual, Detecção Humano/Veículo)?",
+    instructionEn: "Have you configured smart video analytics rules (Tripwire, Intrusion Zone, Human/Vehicle Detection)?",
     group: "CCTV & Engenharia Técnica",
     type: "boolean",
     mandatory: false,
@@ -134,6 +154,8 @@ const PRESET_CRITERIA: CriterionPreset[] = [
     key: "boqScopes",
     labelPt: "Elaboração de BoQs e Cadernos de Encargos",
     labelEn: "Preparation of BoQs & Scopes of Work",
+    instructionPt: "Sabe realizar levantamentos técnicos no cliente e redigir listas de material (BoQ) e propostas técnicas?",
+    instructionEn: "Can you perform site surveys and compile Bills of Quantities (BoQs) and scopes of work?",
     group: "CCTV & Engenharia Técnica",
     type: "boolean",
     mandatory: false,
@@ -143,6 +165,8 @@ const PRESET_CRITERIA: CriterionPreset[] = [
     key: "structuredCabling",
     labelPt: "Cablagem Estruturada e Fibra Óptica",
     labelEn: "Structured Cabling & Fiber Optics",
+    instructionPt: "Possui experiência em conectorização de fibra óptica, esteiramento e organização de bastidores?",
+    instructionEn: "Do you have experience with fiber optic termination, cable trays, and rack organization?",
     group: "CCTV & Engenharia Técnica",
     type: "boolean",
     mandatory: false,
@@ -152,6 +176,8 @@ const PRESET_CRITERIA: CriterionPreset[] = [
     key: "troubleshooting",
     labelPt: "Diagnóstico e Resolução de Falhas de Hardware",
     labelEn: "Hardware Diagnostics & Troubleshooting",
+    instructionPt: "Tem capacidade avançada de diagnóstico de loops de terra, interferências de sinal e falhas de fontes?",
+    instructionEn: "Do you have advanced capability in diagnosing ground loops, signal noise, and power failures?",
     group: "CCTV & Engenharia Técnica",
     type: "boolean",
     mandatory: false,
@@ -163,6 +189,8 @@ const PRESET_CRITERIA: CriterionPreset[] = [
     key: "grade12",
     labelPt: "Conclusão da 12.ª Classe",
     labelEn: "Grade 12 High School Completion",
+    instructionPt: "Tem a 12ª Classe concluída com certificado escolar comprovativo?",
+    instructionEn: "Have you completed Grade 12 with a valid completion certificate?",
     group: "Operações & Monitoramento",
     type: "boolean",
     mandatory: true,
@@ -172,6 +200,8 @@ const PRESET_CRITERIA: CriterionPreset[] = [
     key: "shifts",
     labelPt: "Disponibilidade para Escala de Turnos 12h (2D/2N/2F)",
     labelEn: "Shift Schedule Availability 12h (2D/2N/2O)",
+    instructionPt: "Tem disponibilidade total para cumprir escala rotativa contínua de 12 horas (2 Dias, 2 Noites, 2 Folgas)?",
+    instructionEn: "Are you fully available for continuous 12-hour rotating shifts (2 Days, 2 Nights, 2 Off)?",
     group: "Operações & Monitoramento",
     type: "boolean",
     mandatory: true,
@@ -181,6 +211,8 @@ const PRESET_CRITERIA: CriterionPreset[] = [
     key: "gender",
     labelPt: "Género Feminino (Requisito da Vaga CCO)",
     labelEn: "Female Gender Requirement (CCO Position)",
+    instructionPt: "Identifica-se com o género feminino (requisito para este lote afirmativo de CCO)?",
+    instructionEn: "Do you identify as female (affirmative cohort requirement for CCO)?",
     group: "Operações & Monitoramento",
     type: "string",
     mandatory: true,
@@ -190,6 +222,8 @@ const PRESET_CRITERIA: CriterionPreset[] = [
     key: "currentLocation",
     labelPt: "Residência no Grande Maputo / Matola",
     labelEn: "Resident in Greater Maputo / Matola",
+    instructionPt: "Reside actualmente no perímetro do Grande Maputo ou Município da Matola?",
+    instructionEn: "Do you currently reside within Greater Maputo or Matola municipality?",
     group: "Operações & Monitoramento",
     type: "boolean",
     mandatory: true,
@@ -199,6 +233,8 @@ const PRESET_CRITERIA: CriterionPreset[] = [
     key: "experience",
     labelPt: "Experiência Prévia em CCTV ou Vigilância",
     labelEn: "Prior CCTV or Security Experience",
+    instructionPt: "Possui experiência profissional prévia comprovada em salas de controlo de CCTV ou vigilância patrimonial?",
+    instructionEn: "Do you have prior proven professional experience in CCTV control rooms or surveillance?",
     group: "Operações & Monitoramento",
     type: "boolean",
     mandatory: false,
@@ -208,6 +244,8 @@ const PRESET_CRITERIA: CriterionPreset[] = [
     key: "ai",
     labelPt: "Capacidade de Utilização de Ferramentas de IA",
     labelEn: "Ability to Use Artificial Intelligence Tools",
+    instructionPt: "Tem facilidade e interesse em utilizar ferramentas modernas de inteligência artificial na rotina de trabalho?",
+    instructionEn: "Are you comfortable and eager to use modern AI tools in daily operations?",
     group: "Operações & Monitoramento",
     type: "boolean",
     mandatory: false,
@@ -217,6 +255,8 @@ const PRESET_CRITERIA: CriterionPreset[] = [
     key: "computerLiteracy",
     labelPt: "Conhecimentos Básicos de Informática e Digitação",
     labelEn: "Basic Computer & Typing Literacy",
+    instructionPt: "Possui conhecimentos de informática na óptica do utilizador e boa velocidade de digitação?",
+    instructionEn: "Do you have basic user-level computer literacy and good typing speed?",
     group: "Operações & Monitoramento",
     type: "boolean",
     mandatory: false,
@@ -228,6 +268,8 @@ const PRESET_CRITERIA: CriterionPreset[] = [
     key: "managementExperience",
     labelPt: "Experiência em Gestão Operacional de Segurança (mínimo 3 anos)",
     labelEn: "Security Operations Management (min 3 years)",
+    instructionPt: "Quantos anos de experiência em chefia e coordenação operacional de segurança possui?",
+    instructionEn: "How many years of experience in security operations leadership and coordination do you have?",
     group: "Gestão & Liderança",
     type: "number",
     mandatory: true,
@@ -237,6 +279,8 @@ const PRESET_CRITERIA: CriterionPreset[] = [
     key: "incidentResponse",
     labelPt: "Coordenação de Resposta a Incidentes Críticos",
     labelEn: "Critical Incident Coordination & Response",
+    instructionPt: "Tem experiência comprovada na coordenação táctica de resposta a alarmes e incidentes críticos?",
+    instructionEn: "Do you have proven experience in tactical incident response coordination?",
     group: "Gestão & Liderança",
     type: "boolean",
     mandatory: true,
@@ -246,6 +290,8 @@ const PRESET_CRITERIA: CriterionPreset[] = [
     key: "techSupportExp",
     labelPt: "Experiência em Suporte Técnico de Hardware/Redes",
     labelEn: "Technical Hardware & Network Support Experience",
+    instructionPt: "Possui experiência no atendimento e resolução remota/presencial de chamados técnicos de TI?",
+    instructionEn: "Do you have experience troubleshooting and resolving IT/hardware support tickets?",
     group: "Suporte Técnico",
     type: "boolean",
     mandatory: true,
@@ -255,6 +301,8 @@ const PRESET_CRITERIA: CriterionPreset[] = [
     key: "b2bExperience",
     labelPt: "Experiência em Vendas B2B de Segurança Eletrónica",
     labelEn: "B2B Electronic Security Systems Sales Experience",
+    instructionPt: "Tem experiência comprovada em prospecção e fecho de contratos comerciais B2B de segurança electrónica?",
+    instructionEn: "Do you have proven experience prospecting and closing B2B corporate security system deals?",
     group: "Comercial & Vendas",
     type: "boolean",
     mandatory: true,
@@ -301,18 +349,22 @@ export default function RoleConfigModal({
   );
 
   // Screening Criteria Presets & Custom Criteria State
+  const [ruleBuilderMode, setRuleBuilderMode] = useState<"preset" | "custom">("preset");
   const [savedCustomCriteria, setSavedCustomCriteria] = useState<CriterionPreset[]>([]);
   const [selectedCriterionPreset, setSelectedCriterionPreset] = useState<string>("");
-  const [isCustomCriterion, setIsCustomCriterion] = useState(false);
   const [saveCriterionForFuture, setSaveCriterionForFuture] = useState(true);
 
   // New Rule form fields
   const [newRuleField, setNewRuleField] = useState("");
   const [newRuleLabelPt, setNewRuleLabelPt] = useState("");
   const [newRuleLabelEn, setNewRuleLabelEn] = useState("");
+  const [newRuleInstructionPt, setNewRuleInstructionPt] = useState("");
+  const [newRuleInstructionEn, setNewRuleInstructionEn] = useState("");
+  const [newRuleEvaluatorGuideline, setNewRuleEvaluatorGuideline] = useState("");
   const [newRuleType, setNewRuleType] = useState<"boolean" | "number" | "string">("boolean");
   const [newRuleMandatory, setNewRuleMandatory] = useState(true);
   const [newRuleValue, setNewRuleValue] = useState("yes");
+  const [customFieldEdited, setCustomFieldEdited] = useState(false);
 
   const [activeTab, setActiveTab] = useState<"details" | "pipeline" | "screening">("details");
   const [isSaving, setIsSaving] = useState(false);
@@ -356,8 +408,8 @@ export default function RoleConfigModal({
       const initialRules =
         roleToEdit.screeningRules && roleToEdit.screeningRules.length > 0
           ? roleToEdit.screeningRules
-          : (roleToEdit.id && DEFAULT_SCREENING_RULES_BY_ROLE[roleToEdit.id])
-            ? DEFAULT_SCREENING_RULES_BY_ROLE[roleToEdit.id]
+          : (roleToEdit.id && (DEFAULT_SCREENING_RULES_BY_ROLE[roleToEdit.id] || DEFAULT_SCREENING_RULES_BY_ROLE[roleToEdit.id.replace("_operator", "")]))
+            ? (DEFAULT_SCREENING_RULES_BY_ROLE[roleToEdit.id] || DEFAULT_SCREENING_RULES_BY_ROLE[roleToEdit.id.replace("_operator", "")])
             : [];
       setRules(initialRules);
     } else {
@@ -375,7 +427,8 @@ export default function RoleConfigModal({
     setErrorMsg("");
     setActiveTab("details");
     setSelectedCriterionPreset("");
-    setIsCustomCriterion(false);
+    setRuleBuilderMode("preset");
+    setCustomFieldEdited(false);
   }, [roleToEdit, isOpen, lang]);
 
   if (!isOpen) return null;
@@ -393,11 +446,12 @@ export default function RoleConfigModal({
     setSelectedCriterionPreset(key);
     setErrorMsg("");
 
-    if (key === "__custom__") {
-      setIsCustomCriterion(true);
+    if (!key) {
       setNewRuleField("");
       setNewRuleLabelPt("");
       setNewRuleLabelEn("");
+      setNewRuleInstructionPt("");
+      setNewRuleInstructionEn("");
       setNewRuleType("boolean");
       setNewRuleMandatory(true);
       setNewRuleValue("yes");
@@ -407,19 +461,56 @@ export default function RoleConfigModal({
     const allPresets = [...PRESET_CRITERIA, ...savedCustomCriteria];
     const found = allPresets.find((c) => c.key === key);
     if (found) {
-      setIsCustomCriterion(false);
       setNewRuleField(found.key);
       setNewRuleLabelPt(found.labelPt);
       setNewRuleLabelEn(found.labelEn || found.labelPt);
+      setNewRuleInstructionPt(found.instructionPt || "");
+      setNewRuleInstructionEn(found.instructionEn || "");
       setNewRuleType(found.type);
       setNewRuleMandatory(found.mandatory);
       setNewRuleValue(String(found.expectedValue));
-    } else {
-      setIsCustomCriterion(false);
-      setNewRuleField("");
-      setNewRuleLabelPt("");
-      setNewRuleLabelEn("");
-      setNewRuleValue("yes");
+    }
+  };
+
+  const handleCustomTitleChange = (val: string) => {
+    setNewRuleLabelPt(val);
+    if (!customFieldEdited) {
+      const slug = val
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "")
+        .slice(0, 32);
+      setNewRuleField(slug);
+    }
+  };
+
+  const toggleRuleMandatory = (ruleId: string) => {
+    setRules((prev) =>
+      prev.map((r) =>
+        r.id === ruleId
+          ? {
+              ...r,
+              mandatory: !r.mandatory,
+              weight: !r.mandatory ? undefined : 1,
+            }
+          : r,
+      ),
+    );
+  };
+
+  const applyRuleTemplate = (tplKey: string) => {
+    if (tplKey === "clear") {
+      setRules([]);
+      return;
+    }
+    const tpl =
+      DEFAULT_SCREENING_RULES_BY_ROLE[tplKey] ||
+      DEFAULT_SCREENING_RULES_BY_ROLE[tplKey.replace("_operator", "")] ||
+      [];
+    if (tpl.length > 0) {
+      setRules([...tpl]);
     }
   };
 
@@ -440,8 +531,8 @@ export default function RoleConfigModal({
     if (!newRuleField.trim() || !newRuleLabelPt.trim()) {
       setErrorMsg(
         t(
-          "Please specify the form field key and rule label.",
-          "Preencha o identificador do campo e o título da regra.",
+          "Please specify the rule title and tied field key.",
+          "Preencha o título da regra e o identificador do campo associado.",
         ),
       );
       return;
@@ -453,8 +544,8 @@ export default function RoleConfigModal({
     if (rules.some((r) => r.field === cleanField)) {
       setErrorMsg(
         t(
-          `A rule for field "${cleanField}" already exists.`,
-          `Já existe uma regra para o campo "${cleanField}".`,
+          `A screening rule for data field "${cleanField}" already exists in this role.`,
+          `Já existe uma regra de triagem para o campo de dados "${cleanField}" nesta vaga.`,
         ),
       );
       return;
@@ -465,6 +556,9 @@ export default function RoleConfigModal({
       field: cleanField,
       labelPt: newRuleLabelPt.trim(),
       labelEn: newRuleLabelEn.trim() || newRuleLabelPt.trim(),
+      instructionPt: newRuleInstructionPt.trim() || undefined,
+      instructionEn: newRuleInstructionEn.trim() || undefined,
+      evaluatorGuideline: newRuleEvaluatorGuideline.trim() || undefined,
       type: newRuleType,
       mandatory: newRuleMandatory,
       expectedValue: newRuleType === "number" ? Number(newRuleValue) || 1 : newRuleValue,
@@ -472,11 +566,13 @@ export default function RoleConfigModal({
     };
 
     // If custom criterion, optionally save for future use in localStorage
-    if (isCustomCriterion && saveCriterionForFuture) {
+    if (ruleBuilderMode === "custom" && saveCriterionForFuture) {
       const newPreset: CriterionPreset = {
         key: cleanField,
         labelPt: newRuleLabelPt.trim(),
         labelEn: newRuleLabelEn.trim() || newRuleLabelPt.trim(),
+        instructionPt: newRuleInstructionPt.trim() || undefined,
+        instructionEn: newRuleInstructionEn.trim() || undefined,
         group: "Critérios Personalizados",
         type: newRuleType,
         mandatory: newRuleMandatory,
@@ -491,11 +587,14 @@ export default function RoleConfigModal({
 
     setRules([...rules, newRule]);
     setSelectedCriterionPreset("");
-    setIsCustomCriterion(false);
     setNewRuleField("");
     setNewRuleLabelPt("");
     setNewRuleLabelEn("");
+    setNewRuleInstructionPt("");
+    setNewRuleInstructionEn("");
+    setNewRuleEvaluatorGuideline("");
     setNewRuleValue(newRuleType === "number" ? "1" : "yes");
+    setCustomFieldEdited(false);
     setErrorMsg("");
   };
 
@@ -851,161 +950,345 @@ export default function RoleConfigModal({
           {/* TAB 3: CUSTOM SCREENING RULES */}
           {activeTab === "screening" && (
             <div className="space-y-6">
+              {/* Header and Templates Bar */}
               <div>
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                    {t("Active CV Screening Rules", "Regras Ativas de Triagem Automática")}
-                  </h4>
-                  {roleToEdit?.id && DEFAULT_SCREENING_RULES_BY_ROLE[roleToEdit.id] && (
-                    <button
-                      type="button"
-                      onClick={() => setRules(DEFAULT_SCREENING_RULES_BY_ROLE[roleToEdit.id] || [])}
-                      className="px-2.5 py-1 rounded-md border border-slate-300 hover:bg-slate-50 text-[11px] font-semibold text-slate-700 transition-colors cursor-pointer"
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                      {t("Active CV Screening Rules", "Regras Ativas de Triagem Automática")}
+                    </h4>
+                    <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700">
+                      {rules.length}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Quick Template Loader */}
+                    <select
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          applyRuleTemplate(e.target.value);
+                          e.target.value = "";
+                        }
+                      }}
+                      defaultValue=""
+                      className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 focus:border-[#0a1128] focus:outline-none cursor-pointer"
                     >
-                      {t("Restore Role Defaults", "Restaurar Padrão da Vaga")}
-                    </button>
-                  )}
+                      <option value="" disabled>
+                        {t("Load Template...", "Carregar Modelo / Template...")}
+                      </option>
+                      <option value="cctv_technical_manager">
+                        {t("CCTV Technical Manager Template (10 rules)", "Modelo: Gestor Técnico e Instalação (10 regras)")}
+                      </option>
+                      <option value="cctv">
+                        {t("CCTV Operator Template (4 rules)", "Modelo: Operadora de CCTV CCO (4 regras)")}
+                      </option>
+                      <option value="operations">
+                        {t("Security Operations Template (3 rules)", "Modelo: Gestão de Operações (3 regras)")}
+                      </option>
+                      <option value="technical">
+                        {t("Technical Support Template (2 rules)", "Modelo: Suporte Técnico & Hardware (2 regras)")}
+                      </option>
+                      <option value="sales">
+                        {t("Commercial Sales Template (2 rules)", "Modelo: Vendas B2B de Segurança (2 regras)")}
+                      </option>
+                      <option value="clear">
+                        {t("Clear All Rules (Start Fresh)", "Limpar Todas as Regras (Começar do Zero)")}
+                      </option>
+                    </select>
+
+                    {roleToEdit?.id && (DEFAULT_SCREENING_RULES_BY_ROLE[roleToEdit.id] || DEFAULT_SCREENING_RULES_BY_ROLE[roleToEdit.id.replace("_operator", "")]) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const def = DEFAULT_SCREENING_RULES_BY_ROLE[roleToEdit.id] || DEFAULT_SCREENING_RULES_BY_ROLE[roleToEdit.id.replace("_operator", "")];
+                          if (def) setRules([...def]);
+                        }}
+                        className="px-2.5 py-1 rounded-md border border-slate-300 hover:bg-slate-50 text-[11px] font-semibold text-slate-700 transition-colors cursor-pointer"
+                      >
+                        {t("Restore Role Defaults", "Restaurar Padrão da Vaga")}
+                      </button>
+                    )}
+                  </div>
                 </div>
+
                 <p className="text-xs text-slate-500 mb-4">
                   {t(
-                    "The system automatically screens incoming applications using these rules. Mandatory rules immediately flag unqualified candidates.",
-                    "O sistema avalia cada candidato automaticamente com base nestes critérios. Requisitos mandatórios causam exclusão direta caso não sejam cumpridos.",
+                    "The system automatically screens incoming applications using these rules. Mandatory rules immediately knockout unqualified candidates, while preferred rules add bonus matching points.",
+                    "O sistema avalia cada candidato automaticamente com base nestes critérios. Requisitos obrigatórios desqualificam candidatos que não cumpram, enquanto critérios preferenciais somam pontos de compatibilidade.",
                   )}
                 </p>
 
+                {/* Rules List */}
                 {rules.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-xs text-slate-500">
-                    {t(
-                      "No screening rules configured. All applicants will pass screening by default.",
-                      "Nenhuma regra configurada. Todas as candidaturas serão marcadas como aptas por padrão.",
-                    )}
+                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-6 text-center text-xs text-slate-500 space-y-2">
+                    <p className="font-semibold text-slate-700">
+                      {t("No screening rules configured for this role.", "Nenhuma regra de triagem configurada para esta vaga.")}
+                    </p>
+                    <p className="text-[11px] text-slate-500 max-w-md mx-auto">
+                      {t(
+                        "All applicant profiles will pass initial screening by default. Use 'Load Template' above or add custom criteria below.",
+                        "Todas as candidaturas serão marcadas como aptas por defeito. Utilize 'Carregar Modelo' acima ou adicione regras abaixo.",
+                      )}
+                    </p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
                     {rules.map((rule, idx) => (
                       <div
                         key={rule.id || idx}
-                        className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-3"
+                        className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-2xs hover:border-slate-300 transition-colors"
                       >
-                        <div className="flex items-center gap-3">
-                          <span
-                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${
-                              rule.mandatory
-                                ? "border-rose-200 bg-rose-50 text-rose-700"
-                                : "border-blue-200 bg-blue-50 text-blue-700"
-                            }`}
-                          >
-                            {rule.mandatory
-                              ? t("Mandatory (Pass/Fail)", "Obrigatório (Pass/Fail)")
-                              : t("Preferred (Score)", "Preferencial (Pontuação)")}
-                          </span>
-                          <div>
-                            <span className="text-xs font-bold text-slate-900 block">
-                              {lang === "en" && rule.labelEn ? rule.labelEn : rule.labelPt}
-                            </span>
-                            <span className="text-[10px] text-slate-500 font-mono">
-                              {t("Field:", "Campo:")} {rule.field} = {String(rule.expectedValue)}
-                            </span>
-                          </div>
-                        </div>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1.5 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <button
+                                type="button"
+                                onClick={() => toggleRuleMandatory(rule.id)}
+                                title={t("Click to toggle Mandatory / Preferred", "Clique para alternar entre Obrigatório e Preferencial")}
+                                className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border cursor-pointer transition-all hover:scale-102 ${
+                                  rule.mandatory
+                                    ? "border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                                    : "border-sky-300 bg-sky-50 text-sky-700 hover:bg-sky-100"
+                                }`}
+                              >
+                                {rule.mandatory
+                                  ? t("🔴 Mandatory (Knockout)", "🔴 Obrigatório (Pass/Fail)")
+                                  : t("🔵 Preferred (Score)", "🔵 Preferencial (Pontuação)")}
+                              </button>
 
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteRule(rule.id)}
-                          className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
-                          title={t("Delete rule", "Remover regra")}
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                              <span className="text-xs font-bold text-slate-900">
+                                {lang === "en" && rule.labelEn ? rule.labelEn : rule.labelPt}
+                              </span>
+                            </div>
+
+                            {/* Candidate Form Question / Prompt */}
+                            {(rule.instructionPt || rule.instructionEn) && (
+                              <p className="text-[11px] text-slate-600 bg-slate-50 rounded-lg px-2.5 py-1.5 border border-slate-200/70 italic">
+                                <strong className="font-semibold not-italic text-slate-700">{t("Form Question:", "Pergunta no Formulário:")}</strong>{" "}
+                                “{lang === "en" && rule.instructionEn ? rule.instructionEn : rule.instructionPt}”
+                              </p>
+                            )}
+
+                            {/* Technical Field Binding Tag */}
+                            <div className="flex items-center gap-2 text-[10px] text-slate-500 font-mono flex-wrap pt-0.5">
+                              <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-slate-700">
+                                {t("Field:", "Campo:")} <strong>{rule.field}</strong>
+                              </span>
+                              <span>•</span>
+                              <span>
+                                {t("Type:", "Tipo:")} <strong>{rule.type === "number" ? t("Number (Min)", "Número (Mín)") : t("Yes/No", "Sim/Não")}</strong>
+                              </span>
+                              <span>•</span>
+                              <span>
+                                {t("Passing Condition:", "Condição:")} <strong>{rule.type === "number" ? `>= ${rule.expectedValue}` : `= ${String(rule.expectedValue)}`}</strong>
+                              </span>
+                              {rule.evaluatorGuideline && (
+                                <>
+                                  <span>•</span>
+                                  <span className="text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 not-italic font-sans">
+                                    {rule.evaluatorGuideline}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteRule(rule.id)}
+                            className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer shrink-0"
+                            title={t("Delete rule", "Remover regra")}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
 
-              {/* Add New Rule Form with Smart Dropdown */}
-              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-3.5">
-                <div className="flex items-center justify-between">
+              {/* Add New Rule Builder */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 space-y-4">
+                {/* Segmented Mode Switch */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-200">
                   <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
                     <Plus size={14} />
-                    <span>{t("Add New Screening Rule", "Adicionar Nova Regra de Triagem")}</span>
+                    <span>{t("Add Screening Rule", "Adicionar Regra de Triagem")}</span>
                   </div>
-                  <span className="text-[10px] text-slate-500">
-                    {t("Select from known form fields or create custom", "Selecione campos do formulário ou crie personalizados")}
-                  </span>
+
+                  <div className="inline-flex rounded-lg bg-slate-200/80 p-0.5 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRuleBuilderMode("preset");
+                        setErrorMsg("");
+                      }}
+                      className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer ${
+                        ruleBuilderMode === "preset"
+                          ? "bg-white text-slate-900 shadow-xs"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      {t("Select Form Field", "📋 Selecionar Campo Existente")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRuleBuilderMode("custom");
+                        setSelectedCriterionPreset("");
+                        setNewRuleField("");
+                        setNewRuleLabelPt("");
+                        setNewRuleLabelEn("");
+                        setNewRuleInstructionPt("");
+                        setNewRuleInstructionEn("");
+                        setNewRuleEvaluatorGuideline("");
+                        setNewRuleType("boolean");
+                        setNewRuleMandatory(true);
+                        setNewRuleValue("yes");
+                        setCustomFieldEdited(false);
+                        setErrorMsg("");
+                      }}
+                      className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer ${
+                        ruleBuilderMode === "custom"
+                          ? "bg-white text-slate-900 shadow-xs"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      {t("+ Create Custom Rule", "✨ + Criar Regra Personalizada")}
+                    </button>
+                  </div>
                 </div>
 
-                {/* Primary Criterion Dropdown */}
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                    {t("Select Form Field / Evaluation Criterion *", "Selecionar Critério de Triagem / Campo *")}
-                  </label>
-                  <select
-                    value={isCustomCriterion ? "__custom__" : selectedCriterionPreset}
-                    onChange={(e) => handleSelectCriterionPreset(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none font-medium"
-                  >
-                    <option value="">
-                      {t("-- Choose an evaluation criterion from form --", "-- Escolha um critério de avaliação do formulário --")}
-                    </option>
-
-                    <optgroup label={t("CCTV & Technical Engineering Criteria", "Critérios de CCTV & Engenharia Técnica")}>
-                      {PRESET_CRITERIA.filter((c) => c.group.includes("CCTV")).map((c) => (
-                        <option key={c.key} value={c.key}>
-                          {lang === "en" ? c.labelEn : c.labelPt} [{c.type === "number" ? "Number" : "Yes/No"}]
+                {/* MODE A: SELECT FROM APPLICATION FIELDS */}
+                {ruleBuilderMode === "preset" && (
+                  <div className="space-y-3 animate-in fade-in duration-150">
+                    <div>
+                      <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                        {t("Select Application Form Field / Criterion *", "Selecionar Campo do Formulário / Pergunta da Candidatura *")}
+                      </label>
+                      <select
+                        value={selectedCriterionPreset}
+                        onChange={(e) => handleSelectCriterionPreset(e.target.value)}
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none font-medium"
+                      >
+                        <option value="">
+                          {t("-- Choose an application criterion from form --", "-- Escolha um critério do formulário de candidatura --")}
                         </option>
-                      ))}
-                    </optgroup>
 
-                    <optgroup label={t("Operations & Monitoring Criteria", "Critérios de Operações & Monitoramento")}>
-                      {PRESET_CRITERIA.filter((c) => c.group.includes("Operações")).map((c) => (
-                        <option key={c.key} value={c.key}>
-                          {lang === "en" ? c.labelEn : c.labelPt} [{c.type === "number" ? "Number" : "Yes/No"}]
-                        </option>
-                      ))}
-                    </optgroup>
+                        <optgroup label={t("CCTV & Technical Engineering (Field & Management)", "🛠️ Engenharia Técnica & Instalação CCTV")}>
+                          {PRESET_CRITERIA.filter((c) => c.group.includes("CCTV")).map((c) => (
+                            <option key={c.key} value={c.key}>
+                              {lang === "en" ? c.labelEn : c.labelPt} [{c.type === "number" ? "Number" : "Yes/No"}] ({c.key})
+                            </option>
+                          ))}
+                        </optgroup>
 
-                    <optgroup label={t("Management & Commercial Criteria", "Critérios de Gestão & Comercial")}>
-                      {PRESET_CRITERIA.filter((c) => c.group.includes("Gestão") || c.group.includes("Suporte") || c.group.includes("Comercial")).map((c) => (
-                        <option key={c.key} value={c.key}>
-                          {lang === "en" ? c.labelEn : c.labelPt} [{c.type === "number" ? "Number" : "Yes/No"}]
-                        </option>
-                      ))}
-                    </optgroup>
+                        <optgroup label={t("Operations & Monitoring (CCO & Control Room)", "📋 Operações & Sala de Monitoramento")}>
+                          {PRESET_CRITERIA.filter((c) => c.group.includes("Operações")).map((c) => (
+                            <option key={c.key} value={c.key}>
+                              {lang === "en" ? c.labelEn : c.labelPt} [{c.type === "number" ? "Number" : "Yes/No"}] ({c.key})
+                            </option>
+                          ))}
+                        </optgroup>
 
-                    {savedCustomCriteria.length > 0 && (
-                      <optgroup label={t("Saved Custom Criteria", "Critérios Personalizados Guardados")}>
-                        {savedCustomCriteria.map((c) => (
-                          <option key={c.key} value={c.key}>
-                            {lang === "en" ? c.labelEn : c.labelPt} ({c.key})
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
+                        <optgroup label={t("Management & Commercial Criteria", "🏢 Gestão, Suporte & Comercial")}>
+                          {PRESET_CRITERIA.filter((c) => c.group.includes("Gestão") || c.group.includes("Suporte") || c.group.includes("Comercial")).map((c) => (
+                            <option key={c.key} value={c.key}>
+                              {lang === "en" ? c.labelEn : c.labelPt} [{c.type === "number" ? "Number" : "Yes/No"}] ({c.key})
+                            </option>
+                          ))}
+                        </optgroup>
 
-                    <option value="__custom__">
-                      {t("+ Other (Enter Custom Field & Title Manually...)", "+ Outro (Inserir Campo e Título Manualmente...)")}
-                    </option>
-                  </select>
-                </div>
+                        {savedCustomCriteria.length > 0 && (
+                          <optgroup label={t("Saved Custom Criteria", "💡 Critérios Personalizados Guardados")}>
+                            {savedCustomCriteria.map((c) => (
+                              <option key={c.key} value={c.key}>
+                                {lang === "en" ? c.labelEn : c.labelPt} ({c.key})
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                      </select>
+                    </div>
 
-                {/* If custom criterion chosen, or for manual editing */}
-                {isCustomCriterion && (
-                  <div className="p-3 rounded-lg border border-slate-200 bg-white space-y-3 animate-in fade-in duration-150">
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div>
-                        <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                          {t("Form Field Key *", "Identificador do Campo (Formulário) *")}
-                        </label>
-                        <input
-                          type="text"
-                          value={newRuleField}
-                          onChange={(e) => setNewRuleField(e.target.value)}
-                          placeholder="e.g. fiberSplicing, accessControl"
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 font-mono focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
-                        />
+                    {selectedCriterionPreset && (
+                      <div className="p-3.5 rounded-lg border border-slate-200 bg-white space-y-3">
+                        <div className="space-y-1">
+                          <span className="text-[11px] font-semibold text-slate-700 block">
+                            {t("Question / Form Instruction to Candidate:", "Pergunta / Instrução ao Candidato no Formulário:")}
+                          </span>
+                          <p className="text-xs text-slate-800 bg-slate-50 p-2 rounded border border-slate-200 italic font-medium">
+                            “{newRuleInstructionPt || newRuleLabelPt}”
+                          </p>
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-3">
+                          <div>
+                            <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                              {t("Tied Data Field Key", "Campo de Dados Associado")}
+                            </label>
+                            <input
+                              type="text"
+                              disabled
+                              value={newRuleField}
+                              className="w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-xs text-slate-700 font-mono"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                              {t("Rule Classification *", "Classificação da Regra *")}
+                            </label>
+                            <select
+                              value={newRuleMandatory ? "mandatory" : "preferred"}
+                              onChange={(e) => setNewRuleMandatory(e.target.value === "mandatory")}
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none font-semibold"
+                            >
+                              <option value="mandatory">🔴 {t("Mandatory (Knockout Pass/Fail)", "Obrigatório (Pass/Fail Eliminatório)")}</option>
+                              <option value="preferred">🔵 {t("Preferred (Score Bonus)", "Preferencial (Bónus de Pontuação)")}</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                              {t("Passing Value *", "Valor para Aprovação *")}
+                            </label>
+                            <input
+                              type="text"
+                              value={newRuleValue}
+                              onChange={(e) => setNewRuleValue(e.target.value)}
+                              placeholder={newRuleType === "number" ? "1" : "yes"}
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 font-mono focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={handleAddRule}
+                          className="rounded-lg bg-[#0a1128] hover:bg-[#121c3d] px-4 py-2 text-xs font-bold text-white transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
+                        >
+                          <Plus size={14} />
+                          <span>{t("Add Selected Rule to Role", "Adicionar Regra à Vaga")}</span>
+                        </button>
                       </div>
+                    )}
+                  </div>
+                )}
 
+                {/* MODE B: CREATE COMPLETELY CUSTOM RULE */}
+                {ruleBuilderMode === "custom" && (
+                  <div className="p-3.5 rounded-lg border border-slate-200 bg-white space-y-3.5 animate-in fade-in duration-150">
+                    <p className="text-[11px] text-slate-500">
+                      {t(
+                        "Define any custom mandatory or preferred screening rule. Specify the candidate form instruction, data field key, and passing condition.",
+                        "Adicione qualquer requisito eliminatório ou preferencial à sua medida. Especifique a instrução apresentada ao candidato, o campo de dados e o valor de aprovação.",
+                      )}
+                    </p>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
                       <div>
                         <label className="text-[11px] font-semibold text-slate-700 block mb-1">
                           {t("Rule Title (Portuguese) *", "Título da Regra (Português) *")}
@@ -1013,22 +1296,116 @@ export default function RoleConfigModal({
                         <input
                           type="text"
                           value={newRuleLabelPt}
-                          onChange={(e) => setNewRuleLabelPt(e.target.value)}
-                          placeholder="Ex: Fusão de Fibra Óptica"
+                          onChange={(e) => handleCustomTitleChange(e.target.value)}
+                          placeholder="Ex: Certificação de Trabalho em Altura"
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                          {t("Rule Title (English - Optional)", "Título da Regra (Inglês - Opcional)")}
+                        </label>
+                        <input
+                          type="text"
+                          value={newRuleLabelEn}
+                          onChange={(e) => setNewRuleLabelEn(e.target.value)}
+                          placeholder="e.g. Working at Heights Certification"
                           className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
                         />
                       </div>
                     </div>
 
+                    {/* Candidate Form Question / Prompt */}
                     <div>
                       <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                        {t("Rule Title (English - Optional)", "Título da Regra (Inglês - Opcional)")}
+                        {t("Question / Instruction to Candidate on Application Form *", "Pergunta ou Instrução ao Candidato no Formulário *")}
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={newRuleInstructionPt}
+                        onChange={(e) => setNewRuleInstructionPt(e.target.value)}
+                        placeholder="Ex: Possui certificado de segurança válido para trabalhos em altura emitido por entidade acreditada?"
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Data Field Key & Answer Controls */}
+                    <div className="grid gap-3 sm:grid-cols-4">
+                      <div>
+                        <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                          {t("Data Field Key *", "Chave do Campo de Dados *")}
+                        </label>
+                        <input
+                          type="text"
+                          value={newRuleField}
+                          onChange={(e) => {
+                            setCustomFieldEdited(true);
+                            setNewRuleField(e.target.value);
+                          }}
+                          placeholder="e.g. trabalho_em_altura"
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 font-mono focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
+                        />
+                        <span className="text-[9px] text-slate-400 mt-0.5 block">{t("Saved in candidate data", "Guardado nos dados do candidato")}</span>
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                          {t("Answer Type *", "Tipo de Resposta *")}
+                        </label>
+                        <select
+                          value={newRuleType}
+                          onChange={(e) => {
+                            const val = e.target.value as "boolean" | "number" | "string";
+                            setNewRuleType(val);
+                            setNewRuleValue(val === "number" ? "1" : val === "boolean" ? "yes" : "sim");
+                          }}
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
+                        >
+                          <option value="boolean">{t("Yes / No (Boolean)", "Sim / Não (Booleano)")}</option>
+                          <option value="number">{t("Numeric Value (Minimum)", "Valor Numérico (Mínimo)")}</option>
+                          <option value="string">{t("Short Text / Response", "Texto / Resposta Livre")}</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                          {t("Rule Classification *", "Classificação da Regra *")}
+                        </label>
+                        <select
+                          value={newRuleMandatory ? "mandatory" : "preferred"}
+                          onChange={(e) => setNewRuleMandatory(e.target.value === "mandatory")}
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none font-semibold"
+                        >
+                          <option value="mandatory">🔴 {t("Mandatory (Knockout)", "Obrigatório (Knockout)")}</option>
+                          <option value="preferred">🔵 {t("Preferred (Score Bonus)", "Preferencial (Bónus)")}</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                          {t("Passing Value *", "Valor para Aprovação *")}
+                        </label>
+                        <input
+                          type="text"
+                          value={newRuleValue}
+                          onChange={(e) => setNewRuleValue(e.target.value)}
+                          placeholder={newRuleType === "number" ? "1" : "yes"}
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 font-mono focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Evaluator Internal Notes */}
+                    <div>
+                      <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                        {t("Internal Evaluator Guideline (Optional)", "Instruções Internas para o Avaliador (Opcional)")}
                       </label>
                       <input
                         type="text"
-                        value={newRuleLabelEn}
-                        onChange={(e) => setNewRuleLabelEn(e.target.value)}
-                        placeholder="e.g. Fiber Optic Splicing"
+                        value={newRuleEvaluatorGuideline}
+                        onChange={(e) => setNewRuleEvaluatorGuideline(e.target.value)}
+                        placeholder="Ex: Exigir apresentação do documento original antes da entrevista presencial"
                         className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
                       />
                     </div>
@@ -1040,68 +1417,20 @@ export default function RoleConfigModal({
                         onChange={(e) => setSaveCriterionForFuture(e.target.checked)}
                         className="rounded border-slate-300 accent-[#0a1128]"
                       />
-                      <span>{t("Save this criterion to reuse in future roles", "Guardar este critério para reutilizar noutras vagas")}</span>
+                      <span>{t("Save this criterion to reuse in future roles", "Guardar este critério na lista rápida para reutilizar noutras vagas")}</span>
                     </label>
+
+                    <button
+                      type="button"
+                      onClick={handleAddRule}
+                      disabled={!newRuleField.trim() || !newRuleLabelPt.trim()}
+                      className="rounded-lg bg-[#0a1128] hover:bg-[#121c3d] disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 text-xs font-bold text-white transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
+                    >
+                      <Plus size={14} />
+                      <span>{t("Add Custom Rule to Role", "Adicionar Regra Personalizada")}</span>
+                    </button>
                   </div>
                 )}
-
-                {/* Verification classification, type, and expected value */}
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div>
-                    <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                      {t("Verification Type", "Tipo de Verificação")}
-                    </label>
-                    <select
-                      value={newRuleType}
-                      onChange={(e) => {
-                        const val = e.target.value as "boolean" | "number";
-                        setNewRuleType(val);
-                        setNewRuleValue(val === "number" ? "1" : "yes");
-                      }}
-                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
-                    >
-                      <option value="boolean">{t("Yes / No (Boolean)", "Sim / Não (Booleano)")}</option>
-                      <option value="number">{t("Numeric Value (Minimum)", "Valor Numérico (Mínimo)")}</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                      {t("Rule Classification", "Classificação da Regra")}
-                    </label>
-                    <select
-                      value={newRuleMandatory ? "mandatory" : "preferred"}
-                      onChange={(e) => setNewRuleMandatory(e.target.value === "mandatory")}
-                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
-                    >
-                      <option value="mandatory">{t("Mandatory (Pass / Fail)", "Obrigatório (Pass / Fail)")}</option>
-                      <option value="preferred">{t("Preferred (Score Bonus)", "Preferencial (Bónus / Score)")}</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                      {t("Expected Value", "Valor Esperado")}
-                    </label>
-                    <input
-                      type="text"
-                      value={newRuleValue}
-                      onChange={(e) => setNewRuleValue(e.target.value)}
-                      placeholder={newRuleType === "number" ? "1" : "yes"}
-                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 font-mono focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleAddRule}
-                  disabled={!newRuleField.trim()}
-                  className="rounded-lg bg-slate-900 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 text-xs font-semibold text-white transition-colors cursor-pointer flex items-center gap-1.5"
-                >
-                  <Plus size={14} />
-                  <span>{t("Add Rule to Pipeline", "Adicionar Regra à Vaga")}</span>
-                </button>
               </div>
             </div>
           )}

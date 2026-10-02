@@ -31,11 +31,21 @@ export function evaluateApplicationWithRules(
   }> = [];
 
   for (const rule of rules) {
-    const rawVal = (app as Record<string, any>)[rule.field];
+    const rawVal =
+      (app as Record<string, any>)[rule.field] ??
+      ((app as any).technicalData && (app as any).technicalData[rule.field]);
     let passed = false;
 
     if (rule.type === "boolean") {
-      passed = String(rawVal).toLowerCase() === String(rule.expectedValue).toLowerCase();
+      const s = String(rawVal ?? "").trim().toLowerCase();
+      const exp = String(rule.expectedValue ?? "yes").trim().toLowerCase();
+      if (exp === "yes" || exp === "true" || exp === "sim" || exp === "1") {
+        passed = s === "yes" || s === "true" || s === "sim" || s === "1";
+      } else if (exp === "no" || exp === "false" || exp === "não" || exp === "nao" || exp === "0") {
+        passed = s === "no" || s === "false" || s === "não" || s === "nao" || s === "0";
+      } else {
+        passed = s === exp;
+      }
     } else if (rule.type === "number") {
       const num = Number(rawVal) || 0;
       const target = Number(rule.expectedValue) || 0;

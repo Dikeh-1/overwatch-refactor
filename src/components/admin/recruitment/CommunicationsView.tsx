@@ -1304,7 +1304,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                 <div className="text-left sm:text-right text-[11px] text-slate-500 font-mono">
                   <span>Av. Paulo Samuel Kankhomba, 1948</span>
                   <span className="block">Maputo, Moçambique</span>
-                  <span className="block text-slate-700 font-semibold">carreiras@overwatchmoz.com</span>
+                  <span className="block text-slate-700 font-semibold">info@overwatchmoz.com</span>
                 </div>
               </div>
             </div>

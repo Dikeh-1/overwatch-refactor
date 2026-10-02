@@ -105,7 +105,7 @@ export async function POST(request: Request) {
       });
 
       await sendTransactionalEmail({
-        sender: { name: "Overwatch Recrutamento", email: "carreiras@overwatchmoz.com" },
+        sender: { name: "Overwatch Recrutamento", email: "info@overwatchmoz.com" },
         to: [{ email: recipient, name: sampleCandidate.name }],
         subject: `[TEST PREVIEW] ${subject.trim()}`,
         htmlContent: html,
@@ -225,7 +225,7 @@ export async function POST(request: Request) {
         });
 
         await sendTransactionalEmail({
-          sender: { name: "Overwatch Recrutamento", email: "carreiras@overwatchmoz.com" },
+          sender: { name: "Overwatch Recrutamento", email: "info@overwatchmoz.com" },
           to: [{ email: candidate.email.trim(), name: candidate.name.trim() }],
           subject: subject.trim(),
           htmlContent: html,
