@@ -188,11 +188,7 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
     <div className="space-y-6 relative">
       {/* Universal Overwatch Processing Overlay */}
       {processingState.busy && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs">
-          <div className="rounded-2xl border border-sky-500/30 bg-[#0a1128] p-8 shadow-2xl">
-            <OverwatchOrbitLoader label={processingState.label} size="lg" />
-          </div>
-        </div>
+        <OverwatchOrbitLoader label={processingState.label} size="md" fullscreen />
       )}
 
       {/* Header Info with Action Buttons */}
