@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Users,
@@ -21,6 +21,7 @@ import {
 import { Application, Role, APPROVED_NEXT_PHASE_CANDIDATES } from "@/lib/careers";
 import type { CareerRoleDefinition, CareerCohort } from "@/lib/careers-models";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
+import { useActiveRole } from "../shell/ActiveRoleContext";
 import RoleConfigModal from "./RoleConfigModal";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 
@@ -45,9 +46,16 @@ export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
   const lang = propLang ?? contextLang;
   const t = (en: string, pt: string) => (lang === "en" ? en : pt);
 
-  const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>("all");
+  const { activeRoleId, setActiveRoleId } = useActiveRole();
+  const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>(activeRoleId || "all");
   const [modalOpen, setModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (activeRoleId) {
+      setSelectedRoleFilter(activeRoleId);
+    }
+  }, [activeRoleId]);
 
   // Filter applications by active role workspace if selected
   const activeApplications = useMemo(() => {
@@ -238,7 +246,10 @@ export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
 
           <button
             type="button"
-            onClick={() => setSelectedRoleFilter("all")}
+            onClick={() => {
+              setSelectedRoleFilter("all");
+              setActiveRoleId("all");
+            }}
             className={`px-3 py-1.5 rounded-lg font-semibold shrink-0 transition-all cursor-pointer ${
               selectedRoleFilter === "all"
                 ? "bg-[#0a1128] text-white shadow-xs"
@@ -259,7 +270,10 @@ export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
               <button
                 key={r.id}
                 type="button"
-                onClick={() => setSelectedRoleFilter(r.id)}
+                onClick={() => {
+                  setSelectedRoleFilter(r.id);
+                  setActiveRoleId(r.id);
+                }}
                 className={`px-3 py-1.5 rounded-lg font-semibold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 ${
                   isSelected
                     ? "bg-[#0a1128] text-white shadow-xs"

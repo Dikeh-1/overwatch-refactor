@@ -110,6 +110,11 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
     updateUrlParams({ role, page: 1 });
   };
 
+  useEffect(() => {
+    const r = searchParams.get("role") || "all";
+    setRoleFilter(r);
+  }, [searchParams]);
+
   // Saved Views Definitions
   const savedViews = [
     { id: "all", label: t("All Candidates", "Todos") },

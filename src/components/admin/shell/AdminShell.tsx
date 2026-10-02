@@ -11,6 +11,7 @@ import { IMAGES } from "@/lib/constants";
 import Link from "next/link";
 import { Application, Role, APPROVED_NEXT_PHASE_CANDIDATES } from "@/lib/careers";
 import { AdminLanguageProvider, useAdminLanguage } from "./AdminLanguageContext";
+import { ActiveRoleProvider, useActiveRole } from "./ActiveRoleContext";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 import { useLiveRecruitmentFeed } from "@/components/admin/hooks/useLiveRecruitmentFeed";
 
@@ -325,19 +326,20 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F8FA] text-slate-900 flex">
-      {/* Sidebar */}
-      <AdminSidebar
-        lang={lang}
-        onToggleLang={handleToggleLang}
-        onLogout={handleLogout}
-        isOpenMobile={mobileSidebarOpen}
-        onCloseMobile={() => setMobileSidebarOpen(false)}
-        counts={sidebarCounts}
-      />
+    <ActiveRoleProvider applications={applications}>
+      <div className="min-h-screen bg-[#F7F8FA] text-slate-900 flex">
+        {/* Sidebar */}
+        <AdminSidebar
+          lang={lang}
+          onToggleLang={handleToggleLang}
+          onLogout={handleLogout}
+          isOpenMobile={mobileSidebarOpen}
+          onCloseMobile={() => setMobileSidebarOpen(false)}
+          counts={sidebarCounts}
+        />
 
-      {/* Main Area */}
-      <div className="flex-1 lg:pl-60 flex flex-col min-w-0">
+        {/* Main Area */}
+        <div className="flex-1 lg:pl-64 flex flex-col min-w-0">
         {/* Top Header */}
         <header className="sticky top-0 z-30 bg-white border-b border-slate-200 px-4 sm:px-6 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
@@ -450,7 +452,8 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
           </div>
         </aside>
       )}
-    </div>
+      </div>
+    </ActiveRoleProvider>
   );
 };
 

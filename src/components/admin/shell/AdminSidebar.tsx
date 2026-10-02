@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -15,12 +15,17 @@ import {
   ExternalLink,
   LogOut,
   Globe,
-  Radio,
   X,
-  ChevronRight,
+  ChevronDown,
+  Check,
+  Plus,
   Archive,
+  Layers,
+  Sliders,
+  CheckCircle2,
 } from "lucide-react";
 import Logo from "@/components/ui/Logo";
+import { useActiveRole } from "./ActiveRoleContext";
 
 interface AdminSidebarProps {
   lang: "pt" | "en";
@@ -35,30 +40,30 @@ interface AdminSidebarProps {
   };
 }
 
-interface NavItem {
-  href: string;
-  label: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
-  badge?: string | null;
-  highlight?: boolean;
-  external?: boolean;
-}
-
-interface NavGroup {
-  title: string | null;
-  items: NavItem[];
-}
-
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   lang,
   onToggleLang,
   onLogout,
   isOpenMobile,
   onCloseMobile,
-  counts,
 }) => {
   const pathname = usePathname();
   const t = (en: string, pt: string) => (lang === "en" ? en : pt);
+
+  const { roles, activeRoleId, activeRole, setActiveRoleId, roleStats } = useActiveRole();
+  const [roleMenuOpen, setRoleMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close role dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setRoleMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const isActive = (path: string) => {
     if (path === "/admin/recruitment" && pathname === "/admin/recruitment") return true;
@@ -67,82 +72,15 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     return false;
   };
 
-  const navGroups: NavGroup[] = [
-    {
-      title: null,
-      items: [
-        {
-          href: "/admin",
-          label: t("Overview", "Visão Geral"),
-          icon: LayoutDashboard,
-          badge: null,
-        },
-      ],
-    },
-    {
-      title: t("Recruitment", "Recrutamento"),
-      items: [
-        {
-          href: "/admin/recruitment",
-          label: t("Recruitment Overview", "Visão Geral do Módulo"),
-          icon: LayoutDashboard,
-          badge: null,
-        },
-        {
-          href: "/admin/recruitment/candidates",
-          label: t("Candidates", "Candidaturas"),
-          icon: Users,
-          badge: counts?.totalCandidates ? String(counts.totalCandidates) : null,
-        },
-        {
-          href: "/admin/recruitment/testing",
-          label: t("Testing & Attendance", "Escala & Presenças"),
-          icon: CalendarCheck,
-          badge: counts?.bookedSessions ? String(counts.bookedSessions) : null,
-        },
-        {
-          href: "/admin/recruitment/next-phase",
-          label: t("Next Phase", "Próxima Fase"),
-          icon: Award,
-          badge: counts?.nextPhaseCount ? String(counts.nextPhaseCount) : null,
-          highlight: true,
-        },
-        {
-          href: "/admin/recruitment/communications",
-          label: t("Communications", "Comunicações"),
-          icon: Mail,
-          badge: null,
-        },
-        {
-          href: "/admin/recruitment/roles",
-          label: t("Job Roles", "Vagas & Funções"),
-          icon: Briefcase,
-          badge: null,
-        },
-        {
-          href: "/admin/recruitment/archive",
-          label: t("Archive Vault", "Cofre de Arquivo"),
-          icon: Archive,
-          badge: null,
-        },
-      ],
-    },
-    {
-      title: t("System & Utilities", "Sistema & Utilitários"),
-      items: [
-        {
-          href: "/gate",
-          label: t("Security Gate Portal", "Portal de Portaria"),
-          icon: Shield,
-          external: true,
-        },
-        {
-          href: "/admin/settings",
-          label: t("Settings", "Configurações"),
-          icon: Settings,
-        },
-      ],
-    },
+  const currentRoleStats = activeRole ? roleStats[activeRole.id] : null;
+  const stages = activeRole?.pipelineStages || [
+    "applications",
+    "screening",
+    "testing",
+    "gate_checkin",
+    "next_phase",
+    "interview",
+    "hired",
   ];
 
   return (
@@ -157,7 +95,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
       {/* Sidebar container */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 w-60 bg-[#0a1128] border-r border-white/[0.08] flex flex-col transition-transform duration-200 ease-out lg:translate-x-0 ${
+        className={`fixed top-0 bottom-0 left-0 z-50 w-64 bg-[#0a1128] border-r border-white/[0.08] flex flex-col transition-transform duration-200 ease-out lg:translate-x-0 ${
           isOpenMobile ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -175,72 +113,313 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           </button>
         </div>
 
-        {/* Navigation List */}
+        {/* Scrollable Navigation */}
         <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 admin-scrollbar">
-          {navGroups.map((group, gIdx) => (
-            <div key={gIdx} className="space-y-1">
-              {group.title && (
-                <div className="px-3 pb-1 text-[0.65rem] font-bold uppercase tracking-wider text-slate-400">
-                  {group.title}
+          {/* Main Overview */}
+          <div className="space-y-1">
+            <Link
+              href="/admin"
+              onClick={onCloseMobile}
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                isActive("/admin") && !pathname?.startsWith("/admin/recruitment") && !pathname?.startsWith("/admin/settings")
+                  ? "bg-white/[0.1] text-white font-semibold"
+                  : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
+              }`}
+            >
+              <LayoutDashboard size={16} className="text-slate-400" />
+              <span>{t("Global Overview", "Visão Geral Global")}</span>
+            </Link>
+          </div>
+
+          {/* ACTIVE ROLE WORKSPACE SELECTOR */}
+          <div className="space-y-2 pt-1 border-t border-white/[0.08]" ref={menuRef}>
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                {t("Role Workspace", "Funil da Vaga")}
+              </span>
+              <span className="text-[9px] font-mono text-emerald-400 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                {t("ACTIVE", "ATIVA")}
+              </span>
+            </div>
+
+            {/* Dropdown Button */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setRoleMenuOpen(!roleMenuOpen)}
+                className="w-full flex items-center justify-between gap-2 p-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.1] text-white text-xs font-semibold transition-all text-left shadow-xs cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-6 h-6 rounded-md bg-[#121c3b] flex items-center justify-center text-sky-400 shrink-0 border border-sky-500/20">
+                    <Briefcase size={12} />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="block truncate text-xs font-bold text-white leading-tight">
+                      {activeRole
+                        ? lang === "en"
+                          ? activeRole.en || activeRole.pt
+                          : activeRole.pt || activeRole.en
+                        : t("Select Role...", "Selecionar Vaga...")}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-normal">
+                      {currentRoleStats ? `${currentRoleStats.total} ${t("applicants", "candidaturas")}` : ""}
+                    </span>
+                  </div>
+                </div>
+                <ChevronDown
+                  size={14}
+                  className={`text-slate-400 shrink-0 transition-transform ${
+                    roleMenuOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {/* Dropdown Menu */}
+              {roleMenuOpen && (
+                <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-xl bg-[#0c1326] border border-white/15 shadow-2xl p-1.5 space-y-1 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                    {t("Select Recruitment Role", "Selecionar Vaga de Recrutamento")}
+                  </div>
+
+                  {roles.map((r) => {
+                    const isSelected = activeRoleId === r.id;
+                    const rTitle = lang === "en" ? r.en || r.pt : r.pt || r.en;
+                    const count = roleStats[r.id]?.total || 0;
+
+                    return (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() => {
+                          setActiveRoleId(r.id);
+                          setRoleMenuOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between p-2 rounded-lg text-xs transition-colors text-left cursor-pointer ${
+                          isSelected
+                            ? "bg-white/15 text-white font-bold"
+                            : "text-slate-300 hover:text-white hover:bg-white/[0.06]"
+                        }`}
+                      >
+                        <div className="min-w-0 pr-2">
+                          <span className="block truncate">{rTitle}</span>
+                          <span className="text-[10px] text-slate-400 block font-normal">
+                            {count} {t("candidates", "candidatos")}
+                          </span>
+                        </div>
+                        {isSelected && <Check size={14} className="text-emerald-400 shrink-0" />}
+                      </button>
+                    );
+                  })}
+
+                  <div className="border-t border-white/10 pt-1 mt-1">
+                    <Link
+                      href="/admin/recruitment/roles"
+                      onClick={() => {
+                        setRoleMenuOpen(false);
+                        onCloseMobile();
+                      }}
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] text-sky-400 hover:bg-white/5 font-semibold transition-colors"
+                    >
+                      <Plus size={12} />
+                      <span>{t("Manage & Add Job Roles", "Gerir & Criar Novas Vagas")}</span>
+                    </Link>
+                  </div>
                 </div>
               )}
-              {group.items.map((item, iIdx) => {
-                const active = isActive(item.href);
-                const Icon = item.icon;
-
-                return (
-                  <Link
-                    key={iIdx}
-                    href={item.href}
-                    target={item.external ? "_blank" : undefined}
-                    onClick={onCloseMobile}
-                    className={`flex items-center justify-between px-3 py-2 rounded-md text-xs font-medium transition-colors ${
-                      active
-                        ? "bg-white/[0.1] text-white font-semibold"
-                        : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <Icon
-                        size={16}
-                        className={active ? "text-sky-400" : "text-slate-400"}
-                      />
-                      <span className="truncate">{item.label}</span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {item.badge && (
-                        <span
-                          className={`px-1.5 py-0.2 rounded text-[0.65rem] font-bold ${
-                            item.highlight
-                              ? "bg-sky-500/20 text-sky-300 border border-sky-500/30"
-                              : "bg-white/10 text-slate-300"
-                          }`}
-                        >
-                          {item.badge}
-                        </span>
-                      )}
-                      {item.external && (
-                        <ExternalLink size={12} className="text-slate-500" />
-                      )}
-                    </div>
-                  </Link>
-                );
-              })}
             </div>
-          ))}
+          </div>
+
+          {/* TAILORED PIPELINE STAGES FOR ACTIVE ROLE */}
+          <div className="space-y-1">
+            <div className="px-3 pb-1 text-[0.65rem] font-bold uppercase tracking-wider text-slate-400">
+              {t("Role Pipeline", "Pipeline da Vaga")}
+            </div>
+
+            {/* Role Overview */}
+            <Link
+              href={activeRole ? `/admin/recruitment?role=${activeRole.id}` : "/admin/recruitment"}
+              onClick={onCloseMobile}
+              className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                pathname === "/admin/recruitment"
+                  ? "bg-white/[0.1] text-white font-semibold"
+                  : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <LayoutDashboard size={15} className="text-slate-400" />
+                <span>{t("Overview & Funnel", "Visão Geral da Vaga")}</span>
+              </div>
+            </Link>
+
+            {/* Candidates */}
+            <Link
+              href={activeRole ? `/admin/recruitment/candidates?role=${activeRole.id}` : "/admin/recruitment/candidates"}
+              onClick={onCloseMobile}
+              className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                pathname?.startsWith("/admin/recruitment/candidates")
+                  ? "bg-white/[0.1] text-white font-semibold"
+                  : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Users size={15} className="text-slate-400" />
+                <span>{t("Candidates Intake", "Candidaturas")}</span>
+              </div>
+              {currentRoleStats && currentRoleStats.total > 0 && (
+                <span className="px-1.5 py-0.2 rounded text-[0.65rem] font-bold bg-white/10 text-slate-200">
+                  {currentRoleStats.total}
+                </span>
+              )}
+            </Link>
+
+            {/* Testing Stage (Shown only if role includes testing) */}
+            {stages.includes("testing") && (
+              <Link
+                href={activeRole ? `/admin/recruitment/testing?role=${activeRole.id}` : "/admin/recruitment/testing"}
+                onClick={onCloseMobile}
+                className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                  pathname?.startsWith("/admin/recruitment/testing")
+                    ? "bg-white/[0.1] text-white font-semibold"
+                    : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <CalendarCheck size={15} className="text-slate-400" />
+                  <span>{t("Testing & Attendance", "Escala & Presenças")}</span>
+                </div>
+                {currentRoleStats && currentRoleStats.testing > 0 && (
+                  <span className="px-1.5 py-0.2 rounded text-[0.65rem] font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                    {currentRoleStats.testing}
+                  </span>
+                )}
+              </Link>
+            )}
+
+            {/* Next Phase Stage (Shown only if role includes next_phase) */}
+            {stages.includes("next_phase") && (
+              <Link
+                href={activeRole ? `/admin/recruitment/next-phase?role=${activeRole.id}` : "/admin/recruitment/next-phase"}
+                onClick={onCloseMobile}
+                className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                  pathname?.startsWith("/admin/recruitment/next-phase")
+                    ? "bg-white/[0.1] text-white font-semibold"
+                    : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Award size={15} className="text-slate-400" />
+                  <span>{t("Next Phase Cohort", "Turma Próxima Fase")}</span>
+                </div>
+                {currentRoleStats && currentRoleStats.nextPhase > 0 && (
+                  <span className="px-1.5 py-0.2 rounded text-[0.65rem] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    {currentRoleStats.nextPhase}
+                  </span>
+                )}
+              </Link>
+            )}
+
+            {/* Communications */}
+            <Link
+              href={activeRole ? `/admin/recruitment/communications?role=${activeRole.id}` : "/admin/recruitment/communications"}
+              onClick={onCloseMobile}
+              className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                pathname?.startsWith("/admin/recruitment/communications")
+                  ? "bg-white/[0.1] text-white font-semibold"
+                  : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Mail size={15} className="text-slate-400" />
+                <span>{t("Communications", "Comunicações")}</span>
+              </div>
+            </Link>
+          </div>
+
+          {/* ALL ROLES & ARCHIVES SECTION */}
+          <div className="space-y-1 pt-1 border-t border-white/[0.08]">
+            <div className="px-3 pb-1 text-[0.65rem] font-bold uppercase tracking-wider text-slate-400">
+              {t("Roles & Archives", "Vagas & Histórico")}
+            </div>
+
+            <Link
+              href="/admin/recruitment/roles"
+              onClick={onCloseMobile}
+              className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                pathname?.startsWith("/admin/recruitment/roles")
+                  ? "bg-white/[0.1] text-white font-semibold"
+                  : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Briefcase size={15} className="text-slate-400" />
+                <span>{t("All Job Roles", "Todas as Vagas")}</span>
+              </div>
+              <span className="px-1.5 py-0.2 rounded text-[0.65rem] font-bold bg-white/10 text-slate-300">
+                {roles.length}
+              </span>
+            </Link>
+
+            <Link
+              href="/admin/recruitment/archive"
+              onClick={onCloseMobile}
+              className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                pathname?.startsWith("/admin/recruitment/archive")
+                  ? "bg-white/[0.1] text-white font-semibold"
+                  : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Archive size={15} className="text-slate-400" />
+                <span>{t("Archive Vault", "Cofre de Arquivo")}</span>
+              </div>
+            </Link>
+          </div>
+
+          {/* System & Utilities */}
+          <div className="space-y-1 pt-1 border-t border-white/[0.08]">
+            <div className="px-3 pb-1 text-[0.65rem] font-bold uppercase tracking-wider text-slate-400">
+              {t("System & Utilities", "Sistema & Utilitários")}
+            </div>
+
+            <Link
+              href="/gate"
+              target="_blank"
+              onClick={onCloseMobile}
+              className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-white/[0.05] transition-colors"
+            >
+              <div className="flex items-center gap-2.5">
+                <Shield size={15} className="text-slate-400" />
+                <span>{t("Security Gate Portal", "Portal de Portaria")}</span>
+              </div>
+              <ExternalLink size={12} className="text-slate-500" />
+            </Link>
+
+            <Link
+              href="/admin/settings"
+              onClick={onCloseMobile}
+              className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                pathname?.startsWith("/admin/settings")
+                  ? "bg-white/[0.1] text-white font-semibold"
+                  : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Settings size={15} className="text-slate-400" />
+                <span>{t("Settings", "Configurações")}</span>
+              </div>
+            </Link>
+          </div>
         </div>
 
         {/* Footer info & session */}
         <div className="p-3 border-t border-white/[0.08] space-y-2 bg-[#080d20]">
           <div className="flex items-center justify-between px-2 py-1 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
-              </span>
-              <span className="text-emerald-400 font-medium text-[0.7rem] tracking-wide">
-                {t("LIVE SYNC", "EM TEMPO REAL")}
+            {/* Subtle, soft Live Sync Indicator (no harsh neon glare) */}
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 opacity-90" />
+              <span className="text-slate-400 font-mono text-[10px] tracking-wider uppercase">
+                {t("Live Sync", "Tempo Real")}
               </span>
             </div>
             <button
