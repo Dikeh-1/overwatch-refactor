@@ -4,9 +4,11 @@ import React, { useState, useEffect, useCallback } from "react";
 import { JobRolesView } from "@/components/admin/recruitment/JobRolesView";
 import type { CareerRoleDefinition, CareerCohort } from "@/lib/careers-models";
 import { Application } from "@/lib/careers";
+import { useAdminLanguage } from "@/components/admin/shell/AdminLanguageContext";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 
 export default function RolesPage() {
+  const { t } = useAdminLanguage();
   const [roleDefs, setRoleDefs] = useState<CareerRoleDefinition[]>([]);
   const [cohorts, setCohorts] = useState<CareerCohort[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
@@ -79,7 +81,10 @@ export default function RolesPage() {
   if (loading) {
     return (
       <div className="py-24 flex items-center justify-center">
-        <OverwatchOrbitLoader label="A carregar vagas e configurações..." size="md" />
+        <OverwatchOrbitLoader
+          label={t("Loading job roles & pipelines...", "A carregar vagas e configurações...")}
+          size="md"
+        />
       </div>
     );
   }

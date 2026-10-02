@@ -4,9 +4,11 @@ import React, { useState, useEffect, useCallback } from "react";
 import { RecruitmentOverviewView } from "@/components/admin/recruitment/RecruitmentOverviewView";
 import { Application, Role, roles as defaultRoles } from "@/lib/careers";
 import type { CareerRoleDefinition, CareerCohort } from "@/lib/careers-models";
+import { useAdminLanguage } from "@/components/admin/shell/AdminLanguageContext";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 
 export default function RecruitmentOverviewPage() {
+  const { t } = useAdminLanguage();
   const [applications, setApplications] = useState<Application[]>([]);
   const [roles, setRoles] = useState<Role[]>(defaultRoles);
   const [roleDefs, setRoleDefs] = useState<CareerRoleDefinition[]>([]);
@@ -45,7 +47,10 @@ export default function RecruitmentOverviewPage() {
   if (loading) {
     return (
       <div className="py-24 flex items-center justify-center">
-        <OverwatchOrbitLoader label="A carregar operações de recrutamento..." size="md" />
+        <OverwatchOrbitLoader
+          label={t("Loading recruitment command center...", "A carregar operações de recrutamento...")}
+          size="md"
+        />
       </div>
     );
   }

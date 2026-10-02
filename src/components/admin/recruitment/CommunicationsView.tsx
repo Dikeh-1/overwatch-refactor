@@ -75,7 +75,28 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
   const [composeAudience, setComposeAudience] = useState<"next_phase_15" | "session_slot" | "shortlisted_unbooked" | "individual">("next_phase_15");
   const [composeSlot, setComposeSlot] = useState<string>("");
   const [composeSingleId, setComposeSingleId] = useState<string>("");
-  const [composeSubject, setComposeSubject] = useState<string>("Próxima Fase – Processo de Selecção Overwatch");
+  const defaultSubjects: Record<string, { en: string; pt: string }> = {
+    next_phase: {
+      en: "Next Phase – Overwatch Selection Process",
+      pt: "Próxima Fase – Processo de Selecção Overwatch",
+    },
+    convocation: {
+      en: "In-Person Test Convocation — Overwatch",
+      pt: "Convocatória para Teste Presencial — Overwatch",
+    },
+    confirmation: {
+      en: "Confirmation – Overwatch Selection Process",
+      pt: "Confirmação – Processo de Selecção Overwatch",
+    },
+    closure: {
+      en: "Overwatch Selection Process Update",
+      pt: "Processo de Selecção Overwatch",
+    },
+  };
+
+  const [composeSubject, setComposeSubject] = useState<string>(
+    lang === "en" ? defaultSubjects.next_phase.en : defaultSubjects.next_phase.pt,
+  );
   const [composeDispatching, setComposeDispatching] = useState(false);
   const [composeConfirmOpen, setComposeConfirmOpen] = useState(false);
   const [composeResult, setComposeResult] = useState<{ sentCount: number; failedCount: number } | null>(null);
@@ -698,11 +719,10 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
                   <select
                     value={composeTemplate}
                     onChange={(e) => {
-                      setComposeTemplate(e.target.value);
-                      if (e.target.value === "next_phase") setComposeSubject("Próxima Fase – Processo de Selecção Overwatch");
-                      else if (e.target.value === "convocation") setComposeSubject("Convocatória para Teste Presencial — Overwatch");
-                      else if (e.target.value === "confirmation") setComposeSubject("Confirmação – Processo de Selecção Overwatch");
-                      else setComposeSubject("Processo de Selecção Overwatch");
+                      const tpl = e.target.value;
+                      setComposeTemplate(tpl);
+                      const s = defaultSubjects[tpl] || defaultSubjects.next_phase;
+                      setComposeSubject(lang === "en" ? s.en : s.pt);
                     }}
                     className="w-full px-3 py-2 text-xs rounded-md border border-slate-300 text-slate-900 bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
                   >
@@ -768,7 +788,7 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  {t("Subject Line (Official PT-MZ)", "Linha de Assunto")}
+                  {t("Subject Line", "Linha de Assunto")}
                 </label>
                 <input
                   type="text"

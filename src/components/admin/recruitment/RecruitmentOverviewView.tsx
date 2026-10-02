@@ -204,9 +204,9 @@ export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
         <div className="flex items-center gap-2.5">
           <Link
             href="/admin/recruitment/archive"
-            className="px-3 py-1.5 rounded-lg border border-slate-300 hover:border-slate-400 bg-white text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
+            className="px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 bg-white text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
           >
-            <Archive size={14} className="text-purple-600" />
+            <Archive size={14} className="text-slate-600" />
             <span>{t("Archive Vault", "Cofre de Arquivo")}</span>
           </Link>
 

@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import dynamic from "next/dynamic";
 import { CheckCircle2, Sparkles, X } from "lucide-react";
+import { useAdminLanguage } from "../shell/AdminLanguageContext";
 
 const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
 
@@ -25,6 +26,7 @@ export default function CelebrationOverlay({
   roleName,
   variant = "next_phase",
 }: CelebrationOverlayProps) {
+  const { t } = useAdminLanguage();
   const [animationData, setAnimationData] = useState<any>(null);
   const lottieRef = useRef<any>(null);
 
@@ -53,16 +55,22 @@ export default function CelebrationOverlay({
 
   const defaultTitle =
     variant === "hired"
-      ? "Candidato Contratado com Sucesso!"
-      : "Avançado para a Próxima Fase!";
+      ? t("Candidate Successfully Hired!", "Candidato Contratado com Sucesso!")
+      : t("Advanced to Next Phase!", "Avançado para a Próxima Fase!");
 
   const defaultSubtitle =
     variant === "hired"
-      ? "O candidato foi admitido formalmente na equipa Overwatch."
-      : "O candidato foi aprovado na triagem e selecionado para a fase de testes e entrevistas.";
+      ? t(
+          "The candidate has been formally offered and admitted into the Overwatch team.",
+          "O candidato foi admitido formalmente na equipa Overwatch.",
+        )
+      : t(
+          "Candidate passed screening and was selected for in-person testing and interview phases.",
+          "O candidato foi aprovado na triagem e selecionado para a fase de testes e entrevistas.",
+        );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#070b14]/80 backdrop-blur-md p-4 animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in zoom-in-95 duration-200">
       {/* Confetti Animation Canvas Overlay */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden">
         {animationData && (
@@ -76,40 +84,40 @@ export default function CelebrationOverlay({
         )}
       </div>
 
-      {/* Celebratory Dialog Card */}
-      <div className="relative z-10 w-full max-w-md rounded-2xl border border-emerald-500/30 bg-[#0c1322]/95 p-6 sm:p-8 shadow-2xl shadow-emerald-950/60 text-center select-none">
+      {/* Celebratory Dialog Card - Light & Professional */}
+      <div className="relative z-10 w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-2xl text-center select-none">
         {/* Dismiss Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 rounded-lg p-1.5 text-muted-foreground hover:text-white hover:bg-white/10 transition-colors"
-          title="Fechar"
+          className="absolute top-4 right-4 rounded-lg p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+          title={t("Close", "Fechar")}
         >
           <X size={18} />
         </button>
 
         {/* Milestone Icon */}
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shadow-[0_0_24px_rgba(16,185,129,0.35)] animate-bounce">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 shadow-sm animate-bounce">
           {variant === "hired" ? (
-            <Sparkles size={32} className="text-emerald-400" />
+            <Sparkles size={32} className="text-emerald-600" />
           ) : (
-            <CheckCircle2 size={32} className="text-emerald-400" />
+            <CheckCircle2 size={32} className="text-emerald-600" />
           )}
         </div>
 
         {/* Headline */}
-        <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">
+        <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
           {title || defaultTitle}
         </h3>
 
         {/* Candidate Detail */}
         {candidateName && (
-          <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 text-xs font-bold text-emerald-300">
+          <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-1.5 text-xs font-semibold text-slate-800">
             <span>{candidateName}</span>
-            {roleName && <span className="text-emerald-400/60">• {roleName}</span>}
+            {roleName && <span className="text-slate-400">• {roleName}</span>}
           </div>
         )}
 
-        <p className="mt-3 text-xs sm:text-sm text-slate-300 leading-relaxed">
+        <p className="mt-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
           {subtitle || defaultSubtitle}
         </p>
 
@@ -117,9 +125,9 @@ export default function CelebrationOverlay({
         <div className="mt-6 flex justify-center">
           <button
             onClick={onClose}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-2.5 text-xs sm:text-sm font-bold text-white shadow-lg shadow-emerald-900/40 hover:from-emerald-400 hover:to-teal-400 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0a1128] hover:bg-[#121c3b] px-6 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm transition-all"
           >
-            Continuar no Painel
+            {t("Continue to Dashboard", "Continuar no Painel")}
           </button>
         </div>
       </div>

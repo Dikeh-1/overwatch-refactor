@@ -13,9 +13,9 @@ interface OverwatchOrbitLoaderProps {
 }
 
 const sizeMap = {
-  sm: { size: 44, text: "text-[0.68rem]" },
-  md: { size: 68, text: "text-xs" },
-  lg: { size: 92, text: "text-xs" },
+  sm: { container: 48, dot: 6, text: "text-[11px]" },
+  md: { container: 72, dot: 8, text: "text-xs" },
+  lg: { container: 104, dot: 12, text: "text-xs" },
 };
 
 export default function OverwatchOrbitLoader({
@@ -43,11 +43,11 @@ export default function OverwatchOrbitLoader({
   }, []);
 
   const content = (
-    <div className={`inline-flex flex-col items-center justify-center select-none gap-2.5 ${className}`}>
-      {/* Original Rotate Orbit Lottie customized with Overwatch O */}
+    <div className={`inline-flex flex-col items-center justify-center select-none gap-2 ${className}`}>
+      {/* Pristine Rotate Orbit Lottie with Overwatch Center Mark */}
       <div
         className="relative flex items-center justify-center shrink-0"
-        style={{ width: cfg.size, height: cfg.size }}
+        style={{ width: cfg.container, height: cfg.container }}
       >
         {animationData ? (
           <Lottie
@@ -58,16 +58,27 @@ export default function OverwatchOrbitLoader({
           />
         ) : (
           <div
-            className="rounded-full border-2 border-slate-300 dark:border-white/20 border-t-sky-500 animate-spin"
-            style={{ width: cfg.size * 0.7, height: cfg.size * 0.7 }}
+            className="rounded-full border-2 border-slate-200 border-t-[#0a1128] animate-spin"
+            style={{ width: cfg.container * 0.6, height: cfg.container * 0.6 }}
           />
         )}
+
+        {/* Crisp Overwatch "O" Center Core */}
+        <div
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          aria-hidden="true"
+        >
+          <div
+            className="rounded-full bg-[#0a1128] shadow-xs"
+            style={{ width: cfg.dot, height: cfg.dot }}
+          />
+        </div>
       </div>
 
       {/* Tiny Operational Status Label Underneath */}
       {label && (
         <span
-          className={`font-mono text-slate-400 dark:text-slate-300 font-medium tracking-wide ${cfg.text} text-center`}
+          className={`font-medium text-slate-600 dark:text-slate-300 ${cfg.text} text-center tracking-tight`}
         >
           {label}
         </span>
@@ -77,8 +88,8 @@ export default function OverwatchOrbitLoader({
 
   if (fullscreen) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
-        <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-[#0a1128]/95 border border-white/10 shadow-2xl">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+        <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl">
           {content}
         </div>
       </div>
