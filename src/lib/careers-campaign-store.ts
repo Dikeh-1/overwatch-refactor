@@ -80,7 +80,6 @@ let inMemoryRoleDefs: CareerRoleDefinition[] | null = null;
 let inMemoryCohorts: CareerCohort[] | null = null;
 
 async function readLocal<T>(file: string, fallback: T): Promise<T> {
-  if (isRemote() || isServerless()) return fallback;
   try {
     return JSON.parse(await readFile(path.join(directory, file), "utf8"));
   } catch {
@@ -89,7 +88,6 @@ async function readLocal<T>(file: string, fallback: T): Promise<T> {
 }
 
 async function writeLocal(file: string, value: unknown) {
-  if (isRemote() || isServerless()) return;
   try {
     await mkdir(directory, { recursive: true });
     await writeFile(path.join(directory, file), JSON.stringify(value, null, 2));
@@ -264,6 +262,38 @@ export async function saveRoleDefinition(
 
   let nextRoles: CareerRoleDefinition[];
   if (existingIdx >= 0) {
+    const prevRole = roles[existingIdx];
+    // If role was previously open, but is now closed directly, ensure its active cohort is sealed and saved to archive vault
+    if (prevRole.open && !role.open) {
+      try {
+        const cohorts = await getAllCohorts();
+        const activeCohort = cohorts.find(
+          (c) => (c.roleId === role.id || (role.id === "cctv" && c.roleId === "cctv_operator")) && c.status === "active",
+        ) || (prevRole.activeCohortId ? cohorts.find((c) => c.id === prevRole.activeCohortId) : null);
+
+        if (activeCohort) {
+          await saveCohort({
+            ...activeCohort,
+            status: "archived",
+            closedAt: now,
+          });
+        } else {
+          const cohortId = prevRole.activeCohortId || `${role.id}_cohort_${Date.now().toString(36)}`;
+          await saveCohort({
+            id: cohortId,
+            roleId: role.id,
+            name: `${role.pt || role.en} — Concurso Encerrado`,
+            openedAt: prevRole.createdAt || now,
+            closedAt: now,
+            status: "archived",
+            stages: role.pipelineStages || [],
+            screeningRules: role.screeningRules || [],
+          });
+        }
+      } catch (cohortErr) {
+        console.warn("Could not auto-seal cohort on role close:", cohortErr);
+      }
+    }
     nextRoles = roles.map((r, idx) => (idx === existingIdx ? updatedRole : r));
   } else {
     updatedRole.createdAt = now;
@@ -400,7 +430,12 @@ export async function getAllCohorts(): Promise<CareerCohort[]> {
       }
     } catch {}
 
-    if (inMemoryCohorts) return inMemoryCohorts;
+    if (inMemoryCohorts && inMemoryCohorts.length > 0) return inMemoryCohorts;
+    const localFallback = await readLocal<CareerCohort[]>("cohorts.json", []);
+    if (localFallback.length > 0) {
+      inMemoryCohorts = localFallback;
+      return localFallback;
+    }
     return [];
   }
 

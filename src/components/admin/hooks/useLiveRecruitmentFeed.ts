@@ -26,28 +26,9 @@ export function useLiveRecruitmentFeed({
   const lastTimeRef = useRef<string>(new Date().toISOString());
   const initialMountRef = useRef<boolean>(true);
 
-  // Play a soft high-tech radar ping sound using Web Audio API (zero audio files needed)
+  // Radar chime disabled for quiet, disturbance-free admin experience
   const playRadarChime = useCallback(() => {
-    try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(880, ctx.currentTime); // A5 note
-      osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.12); // glide to E6
-
-      gain.gain.setValueAtTime(0.08, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.start();
-      osc.stop(ctx.currentTime + 0.36);
-    } catch {}
+    // No-op
   }, []);
 
   useEffect(() => {

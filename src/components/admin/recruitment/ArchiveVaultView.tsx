@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Archive,
   Search,
@@ -11,6 +13,9 @@ import {
   ArrowLeft,
   FileText,
   Filter,
+  ArrowUpRight,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
@@ -21,24 +26,35 @@ interface ArchiveVaultViewProps {
 
 export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewProps) {
   const { lang, t } = useAdminLanguage();
+  const searchParams = useSearchParams();
+  const initialRoleParam = searchParams?.get("role") || "all";
+
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [archivedCohorts, setArchivedCohorts] = useState<any[]>([]);
   const [selectedCohort, setSelectedCohort] = useState<any | null>(null);
   const [cohortApps, setCohortApps] = useState<any[]>([]);
   const [appsLoading, setAppsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterRole, setFilterRole] = useState("all");
+  const [filterRole, setFilterRole] = useState(initialRoleParam);
 
   const loadArchiveSummary = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await fetch("/api/admin/careers/archive");
-      const data = await res.json();
-      if (data.success) {
-        setArchivedCohorts(data.archivedCohorts || []);
+      if (!res.ok) {
+        throw new Error(`Archive API error (${res.status})`);
       }
-    } catch (err) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.archivedCohorts)) {
+        setArchivedCohorts(data.archivedCohorts);
+      } else {
+        setArchivedCohorts([]);
+      }
+    } catch (err: any) {
       console.warn("Failed to load archive:", err);
+      setLoadError(err?.message || "Failed to load archive data");
     } finally {
       setLoading(false);
     }
@@ -47,6 +63,12 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
   useEffect(() => {
     loadArchiveSummary();
   }, []);
+
+  useEffect(() => {
+    if (initialRoleParam && initialRoleParam !== "all") {
+      setFilterRole(initialRoleParam);
+    }
+  }, [initialRoleParam]);
 
   const openCohortDossier = async (cohort: any) => {
     setSelectedCohort(cohort);

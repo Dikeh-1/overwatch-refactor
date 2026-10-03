@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Application, normalizeSlot, formatSlotDisplay, formatPhoneDisplay } from "@/lib/careers";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
+import { useActiveRole } from "../shell/ActiveRoleContext";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 
 interface TestingAttendanceViewProps {
@@ -82,12 +83,19 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
     return Array.from(set).filter(Boolean);
   }, [broadcastSlots, applications]);
 
-  // Candidates in active session
+  const { activeRoleId } = useActiveRole();
+
+  // Candidates in active session filtered by active role workspace
   const bookedCandidates = useMemo(() => {
-    return applications.filter(
-      (a) => Boolean(a.testSlot) && a.status !== "archived" && a.status !== "rejected"
-    );
-  }, [applications]);
+    return applications.filter((a) => {
+      if (!Boolean(a.testSlot) || a.status === "archived" || a.status === "rejected") return false;
+      if (!activeRoleId || activeRoleId === "all") return true;
+      if (activeRoleId === "cctv" || activeRoleId === "cctv_operator") {
+        return !a.role || a.role === "cctv" || a.role === "cctv_operator";
+      }
+      return a.role === activeRoleId;
+    });
+  }, [applications, activeRoleId]);
 
   const slotCandidates = useMemo(() => {
     let list = bookedCandidates;

@@ -89,9 +89,7 @@ export async function POST(request: Request) {
           !a.attendedAt &&
           a.attendanceStatus !== "present" &&
           a.status !== "rejected" &&
-          a.status !== "archived" &&
-          a.id !== "6548b28d-9e3b-41c0-bfcf-47c992fa0956" &&
-          a.email.toLowerCase() !== "inociowilson7@gmail.com"
+          a.status !== "archived"
       );
     } else if (typeof body.candidateId === "string" && body.candidateId.trim()) {
       const target = allApps.find((a) => a.id === body.candidateId.trim());
@@ -101,9 +99,7 @@ export async function POST(request: Request) {
         !target.attendedAt &&
         target.attendanceStatus !== "present" &&
         target.status !== "rejected" &&
-        target.status !== "archived" &&
-        target.id !== "6548b28d-9e3b-41c0-bfcf-47c992fa0956" &&
-        target.email.toLowerCase() !== "inociowilson7@gmail.com"
+        target.status !== "archived"
       ) {
         candidatesToDispatch = [target];
       }
@@ -111,7 +107,6 @@ export async function POST(request: Request) {
       // STRICT FILTER:
       // - Must have a booked test slot
       // - Must NOT be archived or rejected
-      // - Must NOT be Inocio Wilson (silently blocked)
       // - Must NOT have already attended/checked-in or completed the test
       // - Slot MUST match the next day (targetDay / tomorrow)
       // - STRICTLY EXCLUDE today's candidates and past days
@@ -119,7 +114,6 @@ export async function POST(request: Request) {
         if (!a.testSlot) return false;
         if (a.status === "rejected" || a.status === "archived") return false;
         if (a.email.endsWith(".invalid")) return false;
-        if (a.id === "6548b28d-9e3b-41c0-bfcf-47c992fa0956" || a.email.toLowerCase() === "inociowilson7@gmail.com") return false;
 
         // Skip candidates who have already attended, written, or checked in for the test
         if (a.attendedAt || a.attendanceStatus === "present") return false;

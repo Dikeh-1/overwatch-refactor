@@ -140,8 +140,6 @@ export async function POST(request: Request) {
         a.attendanceStatus !== "present" &&
         a.status !== "rejected" &&
         a.status !== "archived" &&
-        a.id !== "6548b28d-9e3b-41c0-bfcf-47c992fa0956" &&
-        a.email.toLowerCase() !== "inociowilson7@gmail.com" &&
         !a.email.endsWith(".invalid")
     );
 

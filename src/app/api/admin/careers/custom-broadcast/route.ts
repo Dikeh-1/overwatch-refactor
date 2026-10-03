@@ -168,11 +168,17 @@ export async function POST(request: Request) {
       } else if (audienceFilter === "next_phase") {
         targetPool = targetPool.filter(
           (a) =>
-            a.status === "next_phase_selected" ||
-            a.status === "next_phase_invited" ||
-            a.status === "interest_confirmed" ||
-            a.status === "awaiting_response" ||
-            a.status === "interview",
+            a.status !== "archived" &&
+            a.status !== "rejected" &&
+            (a.status === "next_phase_selected" ||
+              a.status === "next_phase_invited" ||
+              a.status === "awaiting_response" ||
+              a.status === "interest_confirmed" ||
+              a.status === "interest_declined" ||
+              a.nextPhaseStatus === "selected" ||
+              a.nextPhaseStatus === "invited" ||
+              a.nextPhaseStatus === "confirmed" ||
+              a.nextPhaseStatus === "declined"),
         );
       } else if (audienceFilter === "disqualified") {
         targetPool = targetPool.filter((a) => a.status === "archived");
@@ -192,12 +198,6 @@ export async function POST(request: Request) {
 
     for (const app of targetPool) {
       const normEmail = app.email.trim().toLowerCase();
-      if (
-        normEmail === "inociowilson7@gmail.com" ||
-        app.id === "6548b28d-9e3b-41c0-bfcf-47c992fa0956"
-      ) {
-        continue;
-      }
       if (!seenEmails.has(normEmail)) {
         seenEmails.add(normEmail);
         deduplicatedCandidates.push(app);

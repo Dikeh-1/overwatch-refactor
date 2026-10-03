@@ -106,7 +106,7 @@ export async function PATCH(request: Request) {
     else if (
       data.kind === "status" &&
       stages.includes(data.status) &&
-      /^[\da-f-]{36}$/.test(data.id)
+      typeof data.id === "string" && /^[\w-]{6,64}$/i.test(data.id.trim())
     ) {
       await setStatus(data.id, data.status);
       if (data.status === "next_phase_selected" || data.status === "next_phase_invited") {
@@ -129,7 +129,7 @@ export async function PATCH(request: Request) {
       data.ids.length > 0
     ) {
       for (const id of data.ids) {
-        if (/^[\da-f-]{36}$/.test(id)) {
+        if (typeof id === "string" && /^[\w-]{6,64}$/i.test(id.trim())) {
           await setStatus(id, data.status);
           if (data.status === "next_phase_selected" || data.status === "next_phase_invited") {
             const app = await getApplication(id);
@@ -148,14 +148,14 @@ export async function PATCH(request: Request) {
     }
     else if (
       data.kind === "clear_slot" &&
-      /^[\da-f-]{36}$/.test(data.id)
+      typeof data.id === "string" && /^[\w-]{6,64}$/i.test(data.id.trim())
     ) {
       // Clear booked test slot without changing candidate status
       await updateApplication(data.id, { testSlot: undefined, testBookedAt: undefined });
     }
     else if (
       data.kind === "score" &&
-      /^[\da-f-]{36}$/.test(data.id) &&
+      typeof data.id === "string" && /^[\w-]{6,64}$/i.test(data.id.trim()) &&
       typeof data.score === "number"
     ) {
       const sanitizedScore = Math.max(0, Math.min(100, Math.round(data.score)));
@@ -182,7 +182,7 @@ export async function PATCH(request: Request) {
       if (
         data.id &&
         typeof data.id === "string" &&
-        /^[\da-f-]{36}$/i.test(data.id)
+        /^[\w-]{6,64}$/i.test(data.id.trim())
       ) {
         await deleteApplication(data.id);
         return Response.json({ success: true, count: 1 });
@@ -192,7 +192,7 @@ export async function PATCH(request: Request) {
       ) {
         const validIds = data.ids.filter(
           (id: unknown): id is string =>
-            typeof id === "string" && /^[\da-f-]{36}$/i.test(id),
+            typeof id === "string" && /^[\w-]{6,64}$/i.test(id.trim()),
         );
         if (!validIds.length) {
           return Response.json(

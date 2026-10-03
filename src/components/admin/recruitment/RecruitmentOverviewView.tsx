@@ -19,7 +19,7 @@ import {
   FolderOpen,
   ShieldCheck,
 } from "lucide-react";
-import { Application, Role, APPROVED_NEXT_PHASE_CANDIDATES } from "@/lib/careers";
+import { Application, Role } from "@/lib/careers";
 import type { CareerRoleDefinition, CareerCohort } from "@/lib/careers-models";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import { useActiveRole } from "../shell/ActiveRoleContext";
@@ -114,30 +114,7 @@ export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
 
   // Dynamic next phase cohort metrics derived from DB applications & roster
   const nextPhaseStats = useMemo(() => {
-    const matchedAppIds = new Set<string>();
-    const scores: number[] = [];
-
-    APPROVED_NEXT_PHASE_CANDIDATES.forEach((seed) => {
-      let score = seed.score;
-      if (seed.matchedId) {
-        matchedAppIds.add(seed.matchedId);
-        const m = activeApplications.find((a) => a.id === seed.matchedId);
-        if (m && typeof m.testScore === "number") score = m.testScore;
-      } else {
-        const normSeed = seed.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-        const m = activeApplications.find(
-          (a) => a.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === normSeed
-        );
-        if (m) {
-          matchedAppIds.add(m.id);
-          if (typeof m.testScore === "number") score = m.testScore;
-        }
-      }
-      scores.push(score);
-    });
-
-    const additionalNextPhase = activeApplications.filter((a) => {
-      if (matchedAppIds.has(a.id)) return false;
+    const nextPhaseApps = activeApplications.filter((a) => {
       if (a.status === "archived" || a.status === "rejected") return false;
       return (
         a.status === "next_phase_selected" ||
@@ -152,20 +129,16 @@ export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
       );
     });
 
-    additionalNextPhase.forEach((a) => {
-      if (typeof a.testScore === "number") scores.push(a.testScore);
-    });
+    const scores = nextPhaseApps
+      .map((a) => a.testScore)
+      .filter((s): s is number => typeof s === "number");
 
-    const totalCount =
-      selectedRoleFilter === "all" || selectedRoleFilter === "cctv"
-        ? APPROVED_NEXT_PHASE_CANDIDATES.length + additionalNextPhase.length
-        : additionalNextPhase.length;
-
+    const totalCount = nextPhaseApps.length;
     const minScore = scores.length > 0 ? Math.min(...scores) : 0;
     const maxScore = scores.length > 0 ? Math.max(...scores) : 100;
 
     return { totalCount, minScore, maxScore };
-  }, [activeApplications, selectedRoleFilter]);
+  }, [activeApplications]);
 
   const nextPhaseSelected = nextPhaseStats.totalCount;
   const awaitingResponse = activeApplications.filter((a) => a.nextPhaseInvitedAt && !a.nextPhaseResponse).length;

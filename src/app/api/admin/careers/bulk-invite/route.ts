@@ -61,7 +61,7 @@ Overwatch Moçambique`;
       [];
 
     for (const id of candidateIds) {
-      if (!/^[\da-f-]{36}$/i.test(id)) {
+      if (typeof id !== "string" || !/^[\w-]{6,64}$/i.test(id.trim())) {
         results.push({ id, name: "Unknown", success: false, error: "ID inválido" });
         continue;
       }

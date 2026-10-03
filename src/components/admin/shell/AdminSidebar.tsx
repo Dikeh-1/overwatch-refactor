@@ -125,7 +125,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {isTargetNavigating && (
-            <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+            <span className="w-1.5 h-1.5 rounded-full bg-white" />
           )}
           {badge !== undefined && badge !== null && (
             <span className={badgeClass || "px-1.5 py-0.2 rounded text-[0.65rem] font-bold bg-white/10 text-slate-200"}>
@@ -357,19 +357,15 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               );
             })()}
 
-            {/* Application Form Builder for this designated role workspace */}
+            {/* Application Form Builder Studio */}
             {activeRole && (() => {
-              const href = `/admin/recruitment/roles?builder=${activeRole.id}`;
+              const href = `/admin/recruitment/form-builder?role=${activeRole.id}`;
               return (
                 <NavLinkItem
                   href={href}
                   label={t("Application Form Builder", "Construtor de Formulário")}
                   icon={SlidersHorizontal}
-                  isActiveMatch={Boolean(
-                    pathname === "/admin/recruitment/roles" &&
-                    typeof window !== "undefined" &&
-                    new URLSearchParams(window.location.search).get("builder") === activeRole.id
-                  )}
+                  isActiveMatch={Boolean(pathname?.startsWith("/admin/recruitment/form-builder"))}
                   badge={activeRole.screeningRules?.length ? `${activeRole.screeningRules.length} Qs` : undefined}
                   badgeClass="px-1.5 py-0.2 rounded text-[0.65rem] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30"
                 />

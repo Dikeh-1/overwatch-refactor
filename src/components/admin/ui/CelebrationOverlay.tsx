@@ -96,7 +96,7 @@ export default function CelebrationOverlay({
         </button>
 
         {/* Milestone Icon */}
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 shadow-sm animate-bounce">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 shadow-sm">
           {variant === "hired" ? (
             <Award size={32} className="text-emerald-600" />
           ) : (

@@ -37,9 +37,8 @@ export async function GET() {
 
     // Categorize candidates
     const missedCandidates = allApps.filter((a) => {
-      // Exclude archived/rejected/Inocio
+      // Exclude archived/rejected candidates
       if (a.status === "archived" || a.status === "rejected") return false;
-      if (a.id === "6548b28d-9e3b-41c0-bfcf-47c992fa0956" || a.email?.toLowerCase() === "inociowilson7@gmail.com") return false;
 
       // Candidates who already successfully rebooked
       const isRebooked =
@@ -205,11 +204,6 @@ export async function POST(request: Request) {
           const candidate = await getApplication(id);
           if (!candidate) {
             results.push({ id, name: id, success: false, error: "Não encontrado" });
-            continue;
-          }
-
-          // Skip Inocio Wilson
-          if (candidate.id === "6548b28d-9e3b-41c0-bfcf-47c992fa0956" || candidate.email?.toLowerCase() === "inociowilson7@gmail.com") {
             continue;
           }
 

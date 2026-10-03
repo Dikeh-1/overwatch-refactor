@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 
-    if (!id || !/^[\da-f-]{36}$/i.test(id)) {
+    if (!id || typeof id !== "string" || !/^[\w-]{6,64}$/i.test(id.trim())) {
       return Response.json(
         { error: "Identificador de candidatura inválido." },
         { status: 400 },
@@ -27,23 +27,8 @@ export async function GET(request: Request) {
       );
     }
 
-    // Silently block deactivated candidates or Inocio Wilson (Inosse Lamula)
-    const isInocio =
-      id === "6548b28d-9e3b-41c0-bfcf-47c992fa0956" ||
-      candidate.email.toLowerCase() === "inociowilson7@gmail.com";
-
-    if (isInocio && candidate.status !== "archived") {
-      // Silently ensure his record is marked archived
-      updateApplication(candidate.id, {
-        status: "archived",
-        testSlot: undefined,
-        testBookedAt: undefined,
-        attendedAt: undefined,
-        attendanceStatus: undefined,
-      }).catch(() => {});
-    }
-
-    if (isInocio || DEACTIVATED_STATUSES.includes(candidate.status as any)) {
+    // Block booking link if candidate status is deactivated or archived
+    if (DEACTIVATED_STATUSES.includes(candidate.status as any)) {
       return Response.json(
         {
           error: "Este link de convocatória foi desactivado.",
@@ -124,7 +109,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { id, slot } = body;
 
-    if (!id || !/^[\da-f-]{36}$/i.test(id)) {
+    if (!id || typeof id !== "string" || !/^[\w-]{6,64}$/i.test(id.trim())) {
       return Response.json(
         { error: "Identificador de candidatura inválido." },
         { status: 400 },
@@ -146,12 +131,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Block booking for deactivated candidates or Inocio Wilson
-    const isInocio =
-      id === "6548b28d-9e3b-41c0-bfcf-47c992fa0956" ||
-      candidate.email.toLowerCase() === "inociowilson7@gmail.com";
-
-    if (isInocio || DEACTIVATED_STATUSES.includes(candidate.status as any)) {
+    // Block booking for deactivated or archived candidates
+    if (DEACTIVATED_STATUSES.includes(candidate.status as any)) {
       return Response.json(
         {
           error: "Este link de agendamento foi desactivado. Contacte o departamento de RH para mais informações.",

@@ -28,7 +28,7 @@ import {
   FolderPlus,
   RefreshCw,
 } from "lucide-react";
-import { Application, formatSlotDisplay, normalizeSlot, APPROVED_NEXT_PHASE_CANDIDATES } from "@/lib/careers";
+import { Application, formatSlotDisplay, normalizeSlot } from "@/lib/careers";
 import Logo from "@/components/ui/Logo";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import { useActiveRole } from "../shell/ActiveRoleContext";
@@ -423,49 +423,20 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
     }
 
     if (targetAudience === "next_phase") {
-      const matchedAppIds = new Set<string>();
-      const list: Application[] = [];
-
-      APPROVED_NEXT_PHASE_CANDIDATES.forEach((seed) => {
-        let m: Application | undefined;
-        if (seed.matchedId) m = applications.find((a) => a.id === seed.matchedId);
-        if (!m) {
-          const normSeed = seed.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-          m = applications.find(
-            (a) => a.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === normSeed
-          );
-        }
-        if (m) {
-          matchedAppIds.add(m.id);
-          list.push(m);
-        } else {
-          list.push({
-            id: `seed_${seed.name}`,
-            name: seed.name,
-            email: "",
-            whatsapp: "",
-            role: "cctv",
-            status: "shortlisted",
-            createdAt: new Date().toISOString(),
-          } as Application);
-        }
-      });
-
-      applications.forEach((a) => {
-        if (matchedAppIds.has(a.id)) return;
-        if (a.status === "archived" || a.status === "rejected") return;
-        if (
+      return pool.filter((a) => {
+        if (a.status === "archived" || a.status === "rejected") return false;
+        return (
           a.status === "next_phase_selected" ||
           a.status === "next_phase_invited" ||
           a.status === "awaiting_response" ||
           a.status === "interest_confirmed" ||
-          a.status === "interview"
-        ) {
-          list.push(a);
-        }
+          a.status === "interest_declined" ||
+          a.nextPhaseStatus === "selected" ||
+          a.nextPhaseStatus === "invited" ||
+          a.nextPhaseStatus === "confirmed" ||
+          a.nextPhaseStatus === "declined"
+        );
       });
-
-      return list;
     }
 
     if (targetAudience === "screened") {
@@ -1163,7 +1134,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
             {isDragOverLetterhead && (
               <div className="absolute inset-0 z-40 bg-sky-950/70 backdrop-blur-xs flex items-center justify-center p-6 text-center text-white">
                 <div className="p-4 rounded-xl bg-sky-900 border border-sky-400 shadow-xl flex flex-col items-center gap-2">
-                  <FileText size={32} className="text-sky-300 animate-bounce" />
+                  <FileText size={32} className="text-sky-300" />
                   <span className="text-sm font-bold">
                     {t("Drop template to load into letterhead", "Solte o modelo para carregar na minuta")}
                   </span>

@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       new URL(request.url).origin;
 
     const idsToRestore = new Set<string>(
-      Array.isArray(body.ids) ? body.ids.filter((id: unknown) => typeof id === "string" && /^[\da-f-]{36}$/i.test(id)) : []
+      Array.isArray(body.ids) ? body.ids.filter((id: unknown) => typeof id === "string" && /^[\w-]{6,64}$/i.test(id.trim())) : []
     );
 
     // If requesting automatic restore of all mistakenly archived female applicants

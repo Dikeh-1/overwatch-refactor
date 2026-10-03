@@ -91,7 +91,7 @@ export async function POST(request: Request) {
     let failedCount = 0;
 
     for (const id of candidateIds) {
-      if (!/^[\da-f-]{36}$/i.test(id)) {
+      if (typeof id !== "string" || !/^[\w-]{6,64}$/i.test(id.trim())) {
         failedCount++;
         continue;
       }

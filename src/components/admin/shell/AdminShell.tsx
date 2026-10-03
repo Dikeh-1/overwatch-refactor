@@ -9,7 +9,7 @@ import LazyVideo from "@/components/ui/LazyVideo";
 import TechGrid from "@/components/ui/TechGrid";
 import { IMAGES } from "@/lib/constants";
 import Link from "next/link";
-import { Application, Role, APPROVED_NEXT_PHASE_CANDIDATES } from "@/lib/careers";
+import { Application, Role } from "@/lib/careers";
 import { AdminLanguageProvider, useAdminLanguage } from "./AdminLanguageContext";
 import { ActiveRoleProvider, useActiveRole } from "./ActiveRoleContext";
 import { NavigationLoadingProvider, useNavigationLoading } from "./NavigationLoadingContext";
@@ -91,30 +91,10 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
 
   const nextPhaseCount = useMemo(() => {
     const deletedSet = new Set(deletedNextPhase);
-    const matchedAppIds = new Set<string>();
-
-    const activeSeeds = APPROVED_NEXT_PHASE_CANDIDATES.filter((seed, index) => {
-      if (seed.matchedId && deletedSet.has(seed.matchedId)) return false;
-      if (deletedSet.has(`seed_${index + 1}`)) return false;
-      const norm = seed.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-      if (deletedSet.has(norm) || deletedSet.has(seed.name)) return false;
-      return true;
-    });
-
-    activeSeeds.forEach((seed) => {
-      if (seed.matchedId) matchedAppIds.add(seed.matchedId);
-      const normSeed = seed.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-      const m = applications.find(
-        (a) => a.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === normSeed
-      );
-      if (m) matchedAppIds.add(m.id);
-    });
-
-    const additionalNextPhase = applications.filter((a) => {
-      if (matchedAppIds.has(a.id)) return false;
+    return applications.filter((a) => {
       if (deletedSet.has(a.id)) return false;
-      const normApp = a.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-      if (deletedSet.has(normApp)) return false;
+      const norm = a.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+      if (deletedSet.has(norm) || deletedSet.has(a.name)) return false;
       if (a.status === "archived" || a.status === "rejected") return false;
       return (
         a.status === "next_phase_selected" ||
@@ -127,9 +107,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
         a.nextPhaseStatus === "confirmed" ||
         a.nextPhaseStatus === "declined"
       );
-    });
-
-    return activeSeeds.length + additionalNextPhase.length;
+    }).length;
   }, [applications, deletedNextPhase]);
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -336,10 +314,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
           aria-live="polite"
           className="fixed top-3 right-4 sm:right-6 z-[9999] flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-[#0a1128]/95 border border-white/20 shadow-xl text-white text-xs font-semibold backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-150"
         >
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
-          </span>
+          <span className="inline-flex rounded-full h-2 w-2 bg-white"></span>
           <span className="text-[11px] text-slate-100 font-medium">
             {navLabel || (lang === "pt" ? "A carregar secção..." : "Loading section...")}
           </span>
@@ -434,10 +409,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
           className="fixed bottom-6 right-6 z-50 flex items-center gap-3.5 rounded-2xl border border-sky-400/40 bg-[#0a1128]/95 p-4 text-white shadow-2xl shadow-sky-950/60 backdrop-blur-md animate-in slide-in-from-bottom-5 duration-300"
         >
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-500/20 text-sky-400 border border-sky-500/30">
-            <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-sky-400"></span>
-            </span>
+            <span className="inline-flex rounded-full h-2.5 w-2.5 bg-sky-400"></span>
           </div>
 
           <div className="min-w-0 pr-2">

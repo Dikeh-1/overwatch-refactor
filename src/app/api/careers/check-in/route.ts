@@ -12,7 +12,7 @@ export async function GET(request: Request) {
 
     let candidate = null;
 
-    if (id && /^[\da-f-]{36}$/i.test(id)) {
+    if (id && /^[\w-]{6,64}$/i.test(id.trim())) {
       candidate = await getApplication(id);
     } else if (query) {
       const qStr = String(query).trim();
@@ -50,9 +50,7 @@ export async function GET(request: Request) {
     const isToday = isBooked && bookedDay === today.day;
     const isDeactivated =
       candidate.status === "rejected" ||
-      candidate.status === "archived" ||
-      candidate.id === "6548b28d-9e3b-41c0-bfcf-47c992fa0956" ||
-      candidate.email.toLowerCase() === "inociowilson7@gmail.com";
+      candidate.status === "archived";
     const isAlreadyAttended = Boolean(candidate.attendedAt);
 
     return Response.json({
@@ -92,7 +90,7 @@ export async function POST(request: Request) {
 
     let candidate = null;
 
-    if (id && /^[\da-f-]{36}$/i.test(id)) {
+    if (id && /^[\w-]{6,64}$/i.test(id.trim())) {
       candidate = await getApplication(id);
     } else if (query) {
       const qStr = String(query).trim();
@@ -127,9 +125,7 @@ export async function POST(request: Request) {
     // Safeguard 1: Disqualified / Archived or blocked
     if (
       candidate.status === "rejected" ||
-      candidate.status === "archived" ||
-      candidate.id === "6548b28d-9e3b-41c0-bfcf-47c992fa0956" ||
-      candidate.email.toLowerCase() === "inociowilson7@gmail.com"
+      candidate.status === "archived"
     ) {
       return Response.json(
         {

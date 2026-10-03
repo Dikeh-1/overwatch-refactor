@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { formatPhoneDisplay } from "@/lib/careers";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
+import { useActiveRole } from "../shell/ActiveRoleContext";
 import Logo from "@/components/ui/Logo";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 
@@ -70,6 +71,7 @@ interface NextPhaseViewProps {
 
 export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) => {
   const { lang: contextLang } = useAdminLanguage();
+  const { activeRoleId } = useActiveRole();
   const lang = propLang ?? contextLang;
   const t = (en: string, pt: string) => (lang === "en" ? en : pt);
 
@@ -138,7 +140,8 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
   const loadData = async (isManual = false) => {
     if (isManual) setIsRefreshing(true);
     try {
-      const res = await fetch("/api/admin/careers/next-phase");
+      const url = activeRoleId ? `/api/admin/careers/next-phase?role=${encodeURIComponent(activeRoleId)}` : "/api/admin/careers/next-phase";
+      const res = await fetch(url);
       const data = await res.json();
       if (res.ok) {
         setCandidates(data.candidates || []);
@@ -156,7 +159,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 8000);
+    const interval = setInterval(() => loadData(), 8000);
     const handleAdminUpdate = () => {
       loadData();
     };
@@ -165,7 +168,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
       clearInterval(interval);
       window.removeEventListener("admin:careers-updated", handleAdminUpdate);
     };
-  }, []);
+  }, [activeRoleId]);
 
   // Filtered candidate list based on metric card click + dropdowns + search query
   const filteredCandidates = useMemo(() => {
@@ -370,6 +373,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
         body: JSON.stringify({
           action: "dispatch",
           subject: emailSubject,
+          role: activeRoleId,
         }),
       });
       const data = await res.json();

@@ -112,7 +112,7 @@ export const ActiveRoleProvider: React.FC<{
 
     roles.forEach((r) => {
       const roleApps = applications.filter(
-        (a) => a.role === r.id || (r.id === "cctv" && !a.role),
+        (a) => a.role === r.id || (r.id === "cctv" && (!a.role || a.role === "cctv" || a.role === "cctv_operator" || a.role === "cco-operator-maputo")),
       );
       stats[r.id] = {
         total: roleApps.filter((a) => a.status !== "archived").length,
@@ -122,7 +122,13 @@ export const ActiveRoleProvider: React.FC<{
           (a) =>
             a.status === "next_phase_selected" ||
             a.status === "next_phase_invited" ||
-            a.status === "interest_confirmed",
+            a.status === "awaiting_response" ||
+            a.status === "interest_confirmed" ||
+            a.status === "interest_declined" ||
+            a.nextPhaseStatus === "selected" ||
+            a.nextPhaseStatus === "invited" ||
+            a.nextPhaseStatus === "confirmed" ||
+            a.nextPhaseStatus === "declined",
         ).length,
       };
     });

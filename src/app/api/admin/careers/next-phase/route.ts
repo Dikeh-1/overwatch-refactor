@@ -14,15 +14,29 @@ function normalizeName(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   if (!(await authenticated())) return new Response(null, { status: 401 });
 
   try {
-    const [applications, deletedRaw] = await Promise.all([
+    const { searchParams } = new URL(request.url);
+    const roleParam = searchParams.get("role");
+
+    const [allApplications, deletedRaw] = await Promise.all([
       getApplications(),
       getDeletedNextPhaseIdentifiers(),
     ]);
     const deletedIdentifiers = new Set(deletedRaw);
+
+    // Filter applications by role if specified
+    const applications = allApplications.filter((a) => {
+      if (!roleParam || roleParam === "all") return true;
+      if (roleParam === "cctv" || roleParam === "cctv_operator") {
+        return !a.role || a.role === "cctv" || a.role === "cctv_operator";
+      }
+      return a.role === roleParam;
+    });
+
+    const isCctvRole = !roleParam || roleParam === "all" || roleParam === "cctv" || roleParam === "cctv_operator";
 
     const isDeleted = (id?: string, name?: string) => {
       if (id && deletedIdentifiers.has(id)) return true;
@@ -35,13 +49,15 @@ export async function GET() {
 
     const matchedAppIds = new Set<string>();
 
-    // Map each of the approved seed candidates to their live application record
-    const activeSeeds = APPROVED_NEXT_PHASE_CANDIDATES.filter((seed, index) => {
-      if (seed.matchedId && isDeleted(seed.matchedId, seed.name)) return false;
-      if (isDeleted(`seed_${index + 1}`, seed.name)) return false;
-      if (isDeleted(undefined, seed.name)) return false;
-      return true;
-    });
+    // Map each of the approved seed candidates to their live application record if in CCTV role workspace
+    const activeSeeds = isCctvRole
+      ? APPROVED_NEXT_PHASE_CANDIDATES.filter((seed, index) => {
+          if (seed.matchedId && isDeleted(seed.matchedId, seed.name)) return false;
+          if (isDeleted(`seed_${index + 1}`, seed.name)) return false;
+          if (isDeleted(undefined, seed.name)) return false;
+          return true;
+        })
+      : [];
 
     const seededCandidates = await Promise.all(
       activeSeeds.map(async (seed, index) => {
@@ -59,21 +75,23 @@ export async function GET() {
           });
         }
 
-        if (matchedApp) {
-          matchedAppIds.add(matchedApp.id);
+        if (!matchedApp) {
+          return null;
         }
 
+        matchedAppIds.add(matchedApp.id);
+
         // Ensure token exists on candidate record so live links are 100% stable
-        let token = matchedApp?.nextPhaseToken;
-        if (matchedApp && !token) {
+        let token = matchedApp.nextPhaseToken;
+        if (!token) {
           token = crypto.randomBytes(16).toString("hex");
           await updateApplication(matchedApp.id, { nextPhaseToken: token });
         }
 
-        const id = matchedApp ? matchedApp.id : `seed_${index + 1}`;
-        const name = matchedApp ? matchedApp.name : seed.name;
-        const email = matchedApp ? matchedApp.email : "";
-        const phone = matchedApp ? normalizePhone(matchedApp.whatsapp) : "";
+        const id = matchedApp.id;
+        const name = matchedApp.name;
+        const email = matchedApp.email || "";
+        const phone = normalizePhone(matchedApp.whatsapp);
         const score = matchedApp?.testScore ?? seed.score;
         const nextPhaseStatus = matchedApp?.nextPhaseStatus || "selected";
         const invitationStatus: "not_sent" | "sent" = matchedApp?.nextPhaseInvitedAt ? "sent" : "not_sent";
@@ -178,7 +196,7 @@ export async function GET() {
       })
     );
 
-    const candidates = [...seededCandidates, ...additionalCandidates].map((cand, idx) => ({
+    const candidates = [...(seededCandidates.filter(Boolean) as any[]), ...additionalCandidates].map((cand, idx) => ({
       ...cand,
       seedIndex: idx + 1,
     }));
@@ -204,7 +222,19 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const action = body.action as "preview" | "dispatch" | "reconcile" | "update_contact" | "delete_candidate" | "bulk_delete" | "delete_candidates";
-    const applications = await getApplications();
+    const [applications, deletedRaw] = await Promise.all([
+      getApplications(),
+      getDeletedNextPhaseIdentifiers(),
+    ]);
+    const deletedIdentifiers = new Set(deletedRaw);
+    const isDeleted = (id?: string, name?: string) => {
+      if (id && deletedIdentifiers.has(id)) return true;
+      if (name) {
+        const norm = normalizeName(name);
+        if (deletedIdentifiers.has(norm) || deletedIdentifiers.has(name)) return true;
+      }
+      return false;
+    };
 
     const url = new URL(request.url);
     const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || url.host;
@@ -403,6 +433,9 @@ export async function POST(request: Request) {
       const results: any[] = [];
       const handledAppIds = new Set<string>();
 
+      const roleParam = body.role ? String(body.role) : undefined;
+      const isCctvRole = !roleParam || roleParam === "all" || roleParam === "cctv" || roleParam === "cctv_operator";
+
       interface DispatchTarget {
         app: Application;
         score?: number;
@@ -410,30 +443,38 @@ export async function POST(request: Request) {
 
       const targets: DispatchTarget[] = [];
 
-      for (const seed of APPROVED_NEXT_PHASE_CANDIDATES) {
-        let app: Application | undefined;
-        if (seed.matchedId) {
-          app = applications.find((a) => a.id === seed.matchedId);
-        }
-        if (!app) {
-          const normSeed = normalizeName(seed.name);
-          app = applications.find((a) => normalizeName(a.name) === normSeed);
-        }
+      if (isCctvRole) {
+        for (const seed of APPROVED_NEXT_PHASE_CANDIDATES) {
+          if (seed.matchedId && isDeleted(seed.matchedId, seed.name)) continue;
+          if (isDeleted(undefined, seed.name)) continue;
 
-        if (!app || !app.email) {
-          failedCount++;
-          results.push({ name: seed.name, status: "skipped_no_email" });
-          continue;
-        }
+          let app: Application | undefined;
+          if (seed.matchedId) {
+            app = applications.find((a) => a.id === seed.matchedId);
+          }
+          if (!app) {
+            const normSeed = normalizeName(seed.name);
+            app = applications.find((a) => normalizeName(a.name) === normSeed);
+          }
 
-        handledAppIds.add(app.id);
-        targets.push({ app, score: seed.score });
+          if (!app || !app.email) {
+            failedCount++;
+            results.push({ name: seed.name, status: "skipped_no_email" });
+            continue;
+          }
+
+          handledAppIds.add(app.id);
+          targets.push({ app, score: seed.score });
+        }
       }
 
-      // Also dispatch to any other dynamically added Next Phase applicants
+      // Also dispatch to any other dynamically added Next Phase applicants matching role
       for (const a of applications) {
         if (handledAppIds.has(a.id)) continue;
+        if (isDeleted(a.id, a.name)) continue;
         if (a.status === "archived" || a.status === "rejected") continue;
+        if (roleParam && roleParam !== "all" && a.role !== roleParam) continue;
+
         const isNextPhase =
           a.status === "next_phase_selected" ||
           a.status === "next_phase_invited" ||

@@ -55,12 +55,9 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
   const lang = propLang ?? contextLang;
   const t = (en: string, pt: string) => (lang === "en" ? en : pt);
 
-  const searchParams = useSearchParams();
-  const builderRoleId = searchParams.get("builder");
-
   const [searchQuery, setSearchQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalInitialTab, setModalInitialTab] = useState<"details" | "pipeline" | "screening" | "form_builder">("details");
+  const [modalInitialTab, setModalInitialTab] = useState<"details" | "pipeline" | "screening">("details");
   const [editingRole, setEditingRole] = useState<CareerRoleDefinition | null>(null);
 
   // Archive / Open confirmation modal state
@@ -117,19 +114,6 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
           : DEFAULT_SCREENING_RULES_BY_ROLE[role.id] || [],
     }));
   }, [roleDefs]);
-
-  useEffect(() => {
-    if (builderRoleId) {
-      const match = effectiveRoles.find(
-        (r) => r.id === builderRoleId || (builderRoleId === "cctv" && r.id === "cctv_operator")
-      );
-      if (match) {
-        setEditingRole(match);
-        setModalInitialTab("form_builder");
-        setModalOpen(true);
-      }
-    }
-  }, [builderRoleId, effectiveRoles]);
 
   const filteredRoles = effectiveRoles.filter((r) => {
     if (!searchQuery.trim()) return true;
@@ -430,18 +414,13 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
                     <span>{t("Configure Pipeline & Rules", "Configurar Fases & Regras")}</span>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingRole(role);
-                      setModalInitialTab("form_builder");
-                      setModalOpen(true);
-                    }}
-                    className="px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 bg-white text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  <Link
+                    href={`/admin/recruitment/form-builder?role=${role.id}`}
+                    className="px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 bg-white text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors"
                   >
-                    <Sparkles size={13} className="text-amber-500" />
-                    <span>{t("Form Builder", "Formulário")}</span>
-                  </button>
+                    <SlidersHorizontal size={13} className="text-amber-600" />
+                    <span>{t("Form Builder Studio ↗", "Estúdio do Formulário ↗")}</span>
+                  </Link>
 
                   {role.open ? (
                     <button
@@ -470,12 +449,23 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
                   )}
 
                   <Link
-                    href={`/admin/recruitment/candidates?role=${role.id}`}
+                    href={role.open ? `/admin/recruitment/candidates?role=${role.id}` : `/admin/recruitment/candidates?role=${role.id}&view=all`}
                     className="px-3 py-1.5 rounded-lg bg-[#0a1128] hover:bg-[#121c3d] text-white text-xs font-semibold flex items-center gap-1 transition-colors"
                   >
-                    <span>{t("Active Pipeline", "Ver Candidatos")}</span>
+                    <span>{role.open ? t("Active Pipeline", "Funil Ativo") : t("View Candidates", "Ver Candidatos")}</span>
                     <ArrowUpRight size={13} />
                   </Link>
+
+                  {!role.open && (
+                    <Link
+                      href={`/admin/recruitment/archive?role=${role.id}`}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                      title={t("View archived cohort in vault", "Ver lote arquivado no cofre")}
+                    >
+                      <Archive size={13} className="text-slate-500" />
+                      <span>{t("Vault Dossier", "Ver no Cofre")}</span>
+                    </Link>
+                  )}
 
                   <button
                     type="button"
@@ -492,8 +482,10 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-100">
                 <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex flex-col justify-between">
                   <span className="text-[0.65rem] font-semibold text-slate-500 uppercase tracking-wider">
-                    {role.pipelineStages?.includes("next_phase")
-                      ? t("Active Cohort Intake", "Candidaturas no Lote")
+                    {role.open
+                      ? (role.pipelineStages?.includes("next_phase")
+                          ? t("Active Cohort Intake", "Candidaturas no Lote")
+                          : t("Total Applications", "Total de Candidaturas"))
                       : t("Total Applications", "Total de Candidaturas")}
                   </span>
                   <span className="text-base font-bold text-slate-900 font-mono mt-0.5">
@@ -503,10 +495,10 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
 
                 <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex flex-col justify-between">
                   <span className="text-[0.65rem] font-semibold text-slate-500 uppercase tracking-wider">
-                    {t("In Active Pipeline", "No Funil Ativo")}
+                    {role.open ? t("In Active Pipeline", "No Funil Ativo") : t("Archived / Closed", "Arquivados / Concluídos")}
                   </span>
                   <span className="text-base font-bold text-slate-800 font-mono mt-0.5">
-                    {metrics.active}
+                    {role.open ? metrics.active : metrics.total - metrics.active}
                   </span>
                 </div>
 
