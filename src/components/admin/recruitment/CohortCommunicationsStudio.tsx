@@ -13,7 +13,6 @@ import {
   FileText,
   Clock,
   ArrowLeft,
-  Sparkles,
   ShieldCheck,
   RefreshCw,
   FolderArchive,
@@ -812,10 +811,10 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
           <div className="p-8 bg-slate-100/60 flex flex-col items-center space-y-4">
             {/* Dynamic Personalization Guarantee Banner */}
             <div className="w-full max-w-2xl rounded-xl border border-sky-200 bg-sky-50/90 p-3.5 shadow-2xs flex items-start gap-3 text-xs text-sky-950">
-              <Sparkles className="text-sky-600 shrink-0 mt-0.5" size={17} />
+              <ShieldCheck className="text-sky-600 shrink-0 mt-0.5" size={17} />
               <div className="space-y-0.5">
                 <div className="font-bold flex items-center gap-1.5">
-                  <span>{t("✨ Dynamic Personalization Guarantee", "✨ Garantia de Personalização Dinâmica")}</span>
+                  <span>{t("Dynamic Personalization Guarantee", "Garantia de Personalização Dinâmica")}</span>
                   <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-200/60 text-sky-900 font-bold uppercase">
                     {t("Automatic", "Automático")}
                   </span>

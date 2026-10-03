@@ -1163,7 +1163,7 @@ export default function RoleConfigModal({
                           : "text-slate-600 hover:text-slate-900"
                       }`}
                     >
-                      {t("+ Create Custom Rule", "✨ + Criar Regra Personalizada")}
+                      {t("+ Create Custom Rule", "+ Criar Regra Personalizada")}
                     </button>
                   </div>
                 </div>

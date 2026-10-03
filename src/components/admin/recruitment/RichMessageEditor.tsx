@@ -18,7 +18,7 @@ import {
   RotateCcw,
   RotateCw,
   RemoveFormatting,
-  Sparkles,
+  Braces,
   Paperclip,
   X,
   FileText,
@@ -516,7 +516,7 @@ export default function RichMessageEditor({
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 text-xs font-bold transition-colors cursor-pointer shadow-2xs"
               title="Insert Dynamic Variable Token"
             >
-              <Sparkles size={12} className="text-sky-600" />
+              <Braces size={13} className="text-sky-600" />
               <span>{lang === "en" ? "Insert Variable" : "Inserir Variável"}</span>
               <ChevronDown size={11} className="text-sky-600" />
             </button>
@@ -692,8 +692,8 @@ export default function RichMessageEditor({
           <span>•</span>
           <span>~{Math.max(1, Math.ceil(wordCount / 180))} min read</span>
         </div>
-        <div className="text-slate-400 text-[10px] flex items-center gap-1">
-          <Sparkles size={11} className="text-sky-500" />
+        <div className="text-slate-500 text-[10px] flex items-center gap-1.5 font-medium">
+          <Braces size={11} className="text-sky-600" />
           <span>{lang === "en" ? "Use {{...}} tokens for dynamic per-candidate values" : "Variáveis {{...}} são substituídas automaticamente por candidato"}</span>
         </div>
       </div>

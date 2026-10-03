@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import dynamic from "next/dynamic";
-import { CheckCircle2, Award, Sparkles, X } from "lucide-react";
+import { CheckCircle2, Award, UserCheck, X } from "lucide-react";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 
 const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
@@ -123,7 +123,7 @@ export default function CelebrationOverlay({
           {variant === "hired" ? (
             <Award size={32} className="text-emerald-600" />
           ) : variant === "shortlisted" ? (
-            <Sparkles size={32} className="text-amber-500" />
+            <UserCheck size={32} className="text-amber-500" />
           ) : (
             <CheckCircle2 size={32} className="text-sky-600" />
           )}
