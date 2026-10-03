@@ -22,7 +22,7 @@ import {
   Monitor,
   ExternalLink,
   X,
-  Sparkles,
+  ListFilter,
   Save,
   HelpCircle,
   Copy,
@@ -759,7 +759,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
               <div>
                 <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-                  <Sparkles size={16} className="text-amber-500" />
+                  <ListFilter size={16} className="text-amber-500" />
                   <span>
                     {adminLang === "en"
                       ? "Screening & Qualification Questions"
@@ -1319,7 +1319,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 bg-slate-50">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-[#0a1128] text-white flex items-center justify-center">
-                  <Sparkles size={16} />
+                  <SlidersHorizontal size={16} />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">

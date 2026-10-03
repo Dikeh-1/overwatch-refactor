@@ -20,7 +20,6 @@ import {
   Download,
   Printer,
   ShieldCheck,
-  Sparkles,
   RotateCcw,
 } from "lucide-react";
 import { siteContact } from "@/lib/site-config";

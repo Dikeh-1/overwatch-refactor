@@ -366,8 +366,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                   label={t("Application Form Builder", "Construtor de Formulário")}
                   icon={SlidersHorizontal}
                   isActiveMatch={Boolean(pathname?.startsWith("/admin/recruitment/form-builder"))}
-                  badge={activeRole.screeningRules?.length ? `${activeRole.screeningRules.length} Qs` : undefined}
-                  badgeClass="px-1.5 py-0.2 rounded text-[0.65rem] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30"
                 />
               );
             })()}

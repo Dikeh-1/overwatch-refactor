@@ -11,7 +11,6 @@ import {
   Layers,
   ShieldCheck,
   Check,
-  Sparkles,
   Briefcase,
   FileText,
   ArrowUp,

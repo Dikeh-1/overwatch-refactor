@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { checkAdminSession } from "@/lib/careers-auth";
 import { getAllCohorts, getRoleDefinitions } from "@/lib/careers-campaign-store";
 import { getApplications } from "@/lib/careers-store";
+import { APPROVED_NEXT_PHASE_CANDIDATES } from "@/lib/careers";
 
 export async function GET(request: Request) {
   const isAuth = await checkAdminSession();
@@ -72,10 +73,34 @@ export async function GET(request: Request) {
           a.cohortId === cohortId ||
           (targetCohort && (a.role === targetCohort.roleId || (targetCohort.roleId === "cctv" && (!a.role || a.role === "cctv" || a.role === "cctv_operator")))),
       );
+
+      // Enrich with approved seed candidate scores, tokens, and response defaults
+      const enrichedApps = cohortApps.map((a: any) => {
+        const seed = APPROVED_NEXT_PHASE_CANDIDATES.find(
+          (s) =>
+            s.matchedId === a.id ||
+            (s.name && a.name && s.name.toLowerCase().trim() === a.name.toLowerCase().trim()),
+        );
+        const testScore = typeof a.testScore === "number" ? a.testScore : seed?.score;
+        const nextPhaseResponseOption =
+          a.nextPhaseResponseOption ||
+          (a.nextPhaseResponse === "yes"
+            ? "Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas."
+            : a.nextPhaseResponse === "no"
+            ? "Não tenho interesse"
+            : null);
+
+        return {
+          ...a,
+          testScore,
+          nextPhaseResponseOption,
+        };
+      });
+
       return NextResponse.json({
         success: true,
         cohort: targetCohort,
-        applications: cohortApps,
+        applications: enrichedApps,
       });
     }
 
@@ -115,5 +140,35 @@ export async function GET(request: Request) {
       { error: error?.message || "Failed to load archive data" },
       { status: 500 },
     );
+  }
+}
+
+export async function PATCH(request: Request) {
+  const isAuth = await checkAdminSession();
+  if (!isAuth) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const { id, status, nextPhaseStatus, notes } = body;
+    if (!id) {
+      return NextResponse.json({ error: "Candidate ID required" }, { status: 400 });
+    }
+
+    const { updateApplication, setStatus } = await import("@/lib/careers-store");
+    if (status) {
+      await setStatus(id, status);
+    }
+    const updates: Record<string, any> = {};
+    if (nextPhaseStatus) updates.nextPhaseStatus = nextPhaseStatus;
+    if (notes !== undefined) updates.archiveReason = notes;
+    if (Object.keys(updates).length > 0) {
+      await updateApplication(id, updates);
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Failed to update candidate" }, { status: 500 });
   }
 }

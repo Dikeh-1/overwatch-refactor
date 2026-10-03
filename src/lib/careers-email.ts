@@ -2842,4 +2842,107 @@ Overwatch Moçambique`;
   });
 }
 
+export async function sendNextPhaseInstructionsEmail(options: {
+  candidate: { id?: string; name: string; email: string; score?: number };
+  instructions: string;
+  baseUrl?: string;
+  customSubject?: string;
+  preview?: boolean;
+  recipientEmail?: string;
+}) {
+  const {
+    candidate,
+    instructions,
+    baseUrl = "https://www.overwatchmoz.com",
+    customSubject,
+    preview = false,
+    recipientEmail,
+  } = options;
+
+  const origin = (baseUrl || process.env.NEXT_PUBLIC_SITE_URL || "https://www.overwatchmoz.com").replace(/\/+$/, "");
+  const logoWhiteUrl = `${origin}/logo-white.png`;
+  const subject = customSubject?.trim() || "Instruções da Próxima Fase – Processo de Selecção Overwatch";
+
+  // Format body text paragraphs into HTML
+  const formattedHtmlParagraphs = instructions
+    .split(/\n\s*\n/)
+    .filter(Boolean)
+    .map((p) => `<p style="font-size: 14px; color: #334155; line-height: 1.6; margin-bottom: 14px;">${p.replace(/\n/g, "<br />")}</p>`)
+    .join("");
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="pt">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${subject}</title>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; -webkit-font-smoothing: antialiased;">
+      <div style="background-color: #f1f5f9; padding: 32px 16px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08); overflow: hidden;">
+          
+          <!-- Official Letterhead Header (Dark Navy) -->
+          <div style="background-color: #0b1329; padding: 18px 24px; border-bottom: 2px solid rgba(255, 255, 255, 0.15);">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="vertical-align: middle;">
+                  <img src="${logoWhiteUrl}" alt="Overwatch" height="22" width="147" style="height: 22px; width: auto; max-width: 145px; display: block; border: 0;" />
+                </td>
+                <td style="vertical-align: middle; text-align: right;">
+                  <span style="display: inline-block; background-color: rgba(255, 255, 255, 0.12); color: #ffffff; font-family: monospace; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.2); letter-spacing: 0.04em;">
+                    REF: CCO-2026/INSTRUÇÕES
+                  </span>
+                  <div style="font-size: 11px; color: #cbd5e1; margin-top: 4px; font-weight: 500;">
+                    Departamento de Recursos Humanos
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Official Subheading Bar -->
+          <div style="background-color: #f8fafc; padding: 10px 24px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #334155;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #334155;">
+                  NOTIFICAÇÃO OFICIAL · INSTRUÇÕES DE FORMAÇÃO & INTEGRAÇÃO
+                </td>
+                <td style="text-align: right; color: #64748b;">
+                  Maputo, Moçambique
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Body Content -->
+          <div style="padding: 28px 24px; background-color: #ffffff;">
+            <p style="font-size: 14px; margin-top: 0; color: #1e293b;">Prezada Candidata <strong>${candidate.name}</strong>,</p>
+
+            ${formattedHtmlParagraphs}
+
+            <div style="margin-top: 28px; padding-top: 18px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #64748b; line-height: 1.5;">
+              <strong>Equipa de Recrutamento & Selecção</strong><br />
+              Overwatch Moçambique<br />
+              Email: recrutamento@overwatchmoz.com · Tel: +258 84 000 0000
+            </div>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const toEmail = preview && recipientEmail ? recipientEmail : candidate.email;
+  const toName = preview ? `[PREVIEW] ${candidate.name}` : candidate.name;
+
+  return sendTransactionalEmail({
+    to: [{ email: toEmail, name: toName }],
+    subject: preview ? `[PREVIEW TEST] ${subject}` : subject,
+    htmlContent,
+    textContent: `Prezada Candidata ${candidate.name},\n\n${instructions}\n\nCom os melhores cumprimentos,\nEquipa de Recrutamento & Selecção\nOverwatch Moçambique`,
+  });
+}
+
+
 

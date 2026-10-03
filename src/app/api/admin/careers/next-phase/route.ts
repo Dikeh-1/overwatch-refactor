@@ -7,7 +7,7 @@ import {
   addDeletedNextPhaseIdentifiers,
 } from "@/lib/careers-store";
 import { APPROVED_NEXT_PHASE_CANDIDATES, Application, normalizePhone } from "@/lib/careers";
-import { sendNextPhaseInvitationEmail } from "@/lib/careers-email";
+import { sendNextPhaseInvitationEmail, sendNextPhaseInstructionsEmail } from "@/lib/careers-email";
 import crypto from "node:crypto";
 
 function normalizeName(s: string) {
@@ -221,7 +221,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const action = body.action as "preview" | "dispatch" | "reconcile" | "update_contact" | "delete_candidate" | "bulk_delete" | "delete_candidates";
+    const action = body.action as "preview" | "dispatch" | "reconcile" | "update_contact" | "delete_candidate" | "bulk_delete" | "delete_candidates" | "send_instructions";
     const [applications, deletedRaw] = await Promise.all([
       getApplications(),
       getDeletedNextPhaseIdentifiers(),
@@ -548,6 +548,123 @@ export async function POST(request: Request) {
         } catch (err: any) {
           failedCount++;
           results.push({ name: app.name, email: app.email, status: "failed", error: err.message });
+        }
+      }
+
+      return Response.json({
+        success: true,
+        sentCount,
+        failedCount,
+        results,
+      });
+    }
+
+    if (action === "send_instructions") {
+      const candidateIds: string[] = Array.isArray(body.candidateIds)
+        ? body.candidateIds
+        : body.candidateId
+        ? [body.candidateId]
+        : [];
+      const subject = body.subject || "Instruções da Próxima Fase – Processo de Selecção Overwatch";
+      const message = body.message || "";
+      const isPreview = Boolean(body.preview);
+      const previewEmail = (body.previewEmail || "").trim();
+
+      if (!message.trim()) {
+        return Response.json({ error: "Instructions message body is required" }, { status: 400 });
+      }
+
+      if (isPreview) {
+        if (!previewEmail || !previewEmail.includes("@")) {
+          return Response.json({ error: "Valid preview email address required" }, { status: 400 });
+        }
+
+        const sampleTarget =
+          applications.find((a) => candidateIds.includes(a.id)) ||
+          applications.find((a) => a.role === "cctv" || !a.role) || {
+            name: "Candidata Modelo",
+            email: previewEmail,
+          };
+
+        const personalizedMessage = message.replace(/\{name\}/gi, sampleTarget.name);
+
+        await sendNextPhaseInstructionsEmail({
+          candidate: { name: sampleTarget.name, email: previewEmail },
+          instructions: personalizedMessage,
+          baseUrl,
+          customSubject: subject,
+          preview: true,
+          recipientEmail: previewEmail,
+        });
+
+        return Response.json({
+          success: true,
+          previewSentTo: previewEmail,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      if (candidateIds.length === 0) {
+        return Response.json({ error: "At least one recipient candidate is required" }, { status: 400 });
+      }
+
+      let sentCount = 0;
+      let failedCount = 0;
+      const results: any[] = [];
+      const now = new Date().toISOString();
+
+      for (const id of candidateIds) {
+        const app = applications.find((a) => a.id === id);
+        if (!app || !app.email) {
+          failedCount++;
+          results.push({ id, name: app?.name || "Unknown", status: "skipped_no_email" });
+          continue;
+        }
+
+        const personalizedMessage = message
+          .replace(/\{name\}/gi, app.name)
+          .replace(/\{token\}/gi, app.nextPhaseToken || "")
+          .replace(/\{role\}/gi, "Operadora de CCO");
+
+        try {
+          await sendNextPhaseInstructionsEmail({
+            candidate: { id: app.id, name: app.name, email: app.email, score: app.testScore },
+            instructions: personalizedMessage,
+            baseUrl,
+            customSubject: subject,
+          });
+
+          const communications = app.communications || [];
+          communications.push({
+            id: crypto.randomUUID(),
+            type: "custom",
+            subject,
+            recipient: app.email,
+            sentAt: now,
+            status: "sent",
+            sender: "Overwatch Recrutamento",
+          });
+
+          const activityLog = (app as any).activityLog || [];
+          activityLog.push({
+            id: crypto.randomUUID(),
+            timestamp: now,
+            action: "Next Phase Further Instructions Dispatched",
+            actor: "Admin",
+            details: `Dispatched operational onboarding/training instructions ("${subject}")`,
+          });
+
+          await updateApplication(app.id, {
+            communications,
+            activityLog,
+            instructionsSentAt: now,
+          } as any);
+
+          sentCount++;
+          results.push({ id: app.id, name: app.name, email: app.email, status: "sent" });
+        } catch (err: any) {
+          failedCount++;
+          results.push({ id: app.id, name: app.name, email: app.email, status: "failed", error: err.message });
         }
       }
 

@@ -17,7 +17,6 @@ import {
   FileText,
   Phone,
   Calendar,
-  Sparkles,
 } from "lucide-react";
 import { formatSlotDisplay } from "@/lib/careers";
 import { useAdminLanguage } from "./shell/AdminLanguageContext";

@@ -23,7 +23,6 @@ import {
   Car,
   Briefcase,
   MapPin,
-  Sparkles,
   Layers,
   Calendar,
   DollarSign,

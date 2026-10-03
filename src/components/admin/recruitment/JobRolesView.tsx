@@ -19,7 +19,6 @@ import {
   Layers,
   PlayCircle,
   ArrowUpRight,
-  Sparkles,
 } from "lucide-react";
 import type { CareerRoleDefinition, CareerCohort, PipelineStageKey } from "@/lib/careers-models";
 import { DEFAULT_SCREENING_RULES_BY_ROLE } from "@/lib/careers-models";
