@@ -1,6 +1,4 @@
 import "server-only";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
 import {
   type CareerRoleDefinition,
   type CareerCohort,
@@ -14,11 +12,13 @@ import {
   getApplications,
   bulkSaveApplications,
   setRole,
-  SYSTEM_COHORTS_UUID,
-  SYSTEM_ROLES_CONFIG_UUID,
 } from "./careers-store";
-
-const directory = path.join(process.cwd(), ".careers-data");
+import {
+  getConfiguredRoles,
+  setConfiguredRoles,
+  getConfiguredCohorts,
+  setConfiguredCohorts,
+} from "./careers-config-store";
 
 function getSupabaseUrl() {
   return (
@@ -79,23 +79,6 @@ async function api(endpoint: string, init: RequestInit = {}) {
 let inMemoryRoleDefs: CareerRoleDefinition[] | null = null;
 let inMemoryCohorts: CareerCohort[] | null = null;
 
-async function readLocal<T>(file: string, fallback: T): Promise<T> {
-  try {
-    return JSON.parse(await readFile(path.join(directory, file), "utf8"));
-  } catch {
-    return fallback;
-  }
-}
-
-async function writeLocal(file: string, value: unknown) {
-  try {
-    await mkdir(directory, { recursive: true });
-    await writeFile(path.join(directory, file), JSON.stringify(value, null, 2));
-  } catch (e) {
-    // Silently ignore filesystem errors in environments where disk write is restricted
-  }
-}
-
 // Generate default initial roles if storage is fresh
 function buildDefaultRoles(): CareerRoleDefinition[] {
   const now = new Date().toISOString();
@@ -128,18 +111,15 @@ function buildDefaultRoles(): CareerRoleDefinition[] {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function getRoleDefinitions(): Promise<CareerRoleDefinition[]> {
+  let remoteConfigs: CareerRoleDefinition[] | null = null;
+
+  // 1. Try dedicated system config store (Supabase storage career-cvs/system-configs/roles_def.json or local)
+  const storedRoles = await getConfiguredRoles();
+  if (Array.isArray(storedRoles) && storedRoles.length > 0) {
+    remoteConfigs = storedRoles;
+  }
+
   if (isRemote()) {
-    let remoteConfigs: CareerRoleDefinition[] | null = null;
-
-    // 1. Try to fetch from SYSTEM_ROLES_CONFIG_UUID in career_applications (Guaranteed remote persistence)
-    try {
-      const res = await api(`/rest/v1/career_applications?id=eq.${SYSTEM_ROLES_CONFIG_UUID}&select=data`);
-      const rows = await res.json();
-      if (Array.isArray(rows) && rows[0]?.data?.roles && Array.isArray(rows[0].data.roles) && rows[0].data.roles.length > 0) {
-        remoteConfigs = rows[0].data.roles;
-      }
-    } catch {}
-
     // 2. Try to fetch from rich config table if it exists in Supabase
     if (!remoteConfigs) {
       try {
@@ -171,7 +151,21 @@ export async function getRoleDefinitions(): Promise<CareerRoleDefinition[]> {
       }
     }
 
-    // 3. Fetch authoritative open/closed status from Supabase career_roles
+    // 3. Graceful one-time migration: check if legacy synthetic row exists in career_applications
+    if (!remoteConfigs) {
+      try {
+        const res = await api(`/rest/v1/career_applications?id=eq.00000000-0000-0000-0000-000000000004&select=data`);
+        const rows = await res.json();
+        if (Array.isArray(rows) && rows[0]?.data?.roles && Array.isArray(rows[0].data.roles) && rows[0].data.roles.length > 0) {
+          remoteConfigs = rows[0].data.roles;
+          if (remoteConfigs) {
+            await setConfiguredRoles(remoteConfigs).catch(() => {});
+          }
+        }
+      } catch {}
+    }
+
+    // 4. Fetch authoritative open/closed status from Supabase career_roles
     const remoteOpenMap: Record<string, boolean> = {};
     try {
       const res = await api("/rest/v1/career_roles?select=id,open");
@@ -239,11 +233,11 @@ export async function getRoleDefinitions(): Promise<CareerRoleDefinition[]> {
   }
 
   // Local development
-  const local = await readLocal<CareerRoleDefinition[]>("roles_def.json", []);
+  const local = await getConfiguredRoles();
   if (local.length > 0) return local;
 
   const defaults = buildDefaultRoles();
-  await writeLocal("roles_def.json", defaults);
+  await setConfiguredRoles(defaults);
   return defaults;
 }
 
@@ -301,29 +295,11 @@ export async function saveRoleDefinition(
   }
 
   inMemoryRoleDefs = nextRoles;
-  await writeLocal("roles_def.json", nextRoles);
+  // Clean persistence to dedicated config store (Supabase storage system-configs/ and local file)
+  await setConfiguredRoles(nextRoles);
 
   if (isRemote()) {
-    // 1. Guaranteed storage in career_applications under SYSTEM_ROLES_CONFIG_UUID
-    try {
-      await api("/rest/v1/career_applications", {
-        method: "POST",
-        headers: { Prefer: "resolution=merge-duplicates" },
-        body: JSON.stringify({
-          id: SYSTEM_ROLES_CONFIG_UUID,
-          data: { id: SYSTEM_ROLES_CONFIG_UUID, roles: nextRoles, updatedAt: now },
-        }),
-      });
-    } catch {
-      await api(`/rest/v1/career_applications?id=eq.${SYSTEM_ROLES_CONFIG_UUID}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          data: { id: SYSTEM_ROLES_CONFIG_UUID, roles: nextRoles, updatedAt: now },
-        }),
-      }).catch(() => {});
-    }
-
-    // 2. Also attempt saving to career_roles_config table
+    // Also attempt saving to career_roles_config table if present
     try {
       await api("/rest/v1/career_roles_config", {
         method: "POST",
@@ -377,7 +353,7 @@ export async function deleteRoleDefinition(roleId: string): Promise<void> {
       !(roleId === "cctv_operator" && r.id === "cctv"),
   );
   inMemoryRoleDefs = nextRoles;
-  await writeLocal("roles_def.json", nextRoles);
+  await setConfiguredRoles(nextRoles);
 
   if (isRemote()) {
     try {
@@ -398,17 +374,14 @@ export async function deleteRoleDefinition(roleId: string): Promise<void> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function getAllCohorts(): Promise<CareerCohort[]> {
-  if (isRemote()) {
-    // 1. Check SYSTEM_COHORTS_UUID in career_applications (Guaranteed persistence)
-    try {
-      const res = await api(`/rest/v1/career_applications?id=eq.${SYSTEM_COHORTS_UUID}&select=data`);
-      const rows = await res.json();
-      if (Array.isArray(rows) && rows[0]?.data?.cohorts && Array.isArray(rows[0].data.cohorts) && rows[0].data.cohorts.length > 0) {
-        inMemoryCohorts = rows[0].data.cohorts;
-        return rows[0].data.cohorts;
-      }
-    } catch {}
+  // 1. Check dedicated config store
+  const stored = await getConfiguredCohorts();
+  if (Array.isArray(stored) && stored.length > 0) {
+    inMemoryCohorts = stored;
+    return stored;
+  }
 
+  if (isRemote()) {
     // 2. Fallback to career_cohorts table if it exists
     try {
       const res = await api("/rest/v1/career_cohorts?select=*&order=opened_at.desc");
@@ -426,20 +399,27 @@ export async function getAllCohorts(): Promise<CareerCohort[]> {
           notes: r.notes,
         }));
         inMemoryCohorts = remote;
+        await setConfiguredCohorts(remote).catch(() => {});
         return remote;
       }
     } catch {}
 
+    // 3. Graceful one-time migration: check if legacy synthetic row exists in career_applications
+    try {
+      const res = await api(`/rest/v1/career_applications?id=eq.00000000-0000-0000-0000-000000000003&select=data`);
+      const rows = await res.json();
+      if (Array.isArray(rows) && rows[0]?.data?.cohorts && Array.isArray(rows[0].data.cohorts) && rows[0].data.cohorts.length > 0) {
+        inMemoryCohorts = rows[0].data.cohorts;
+        await setConfiguredCohorts(rows[0].data.cohorts).catch(() => {});
+        return rows[0].data.cohorts;
+      }
+    } catch {}
+
     if (inMemoryCohorts && inMemoryCohorts.length > 0) return inMemoryCohorts;
-    const localFallback = await readLocal<CareerCohort[]>("cohorts.json", []);
-    if (localFallback.length > 0) {
-      inMemoryCohorts = localFallback;
-      return localFallback;
-    }
     return [];
   }
 
-  return readLocal<CareerCohort[]>("cohorts.json", []);
+  return stored;
 }
 
 export async function saveCohort(cohort: CareerCohort): Promise<CareerCohort> {
@@ -448,29 +428,11 @@ export async function saveCohort(cohort: CareerCohort): Promise<CareerCohort> {
   const next = idx >= 0 ? cohorts.map((c) => (c.id === cohort.id ? cohort : c)) : [cohort, ...cohorts];
 
   inMemoryCohorts = next;
-  await writeLocal("cohorts.json", next);
+  // Clean persistence to dedicated config store (Supabase storage system-configs/ and local file)
+  await setConfiguredCohorts(next);
 
   if (isRemote()) {
-    // 1. Guaranteed storage in career_applications under SYSTEM_COHORTS_UUID
-    try {
-      await api("/rest/v1/career_applications", {
-        method: "POST",
-        headers: { Prefer: "resolution=merge-duplicates" },
-        body: JSON.stringify({
-          id: SYSTEM_COHORTS_UUID,
-          data: { id: SYSTEM_COHORTS_UUID, cohorts: next, updatedAt: new Date().toISOString() },
-        }),
-      });
-    } catch {
-      await api(`/rest/v1/career_applications?id=eq.${SYSTEM_COHORTS_UUID}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          data: { id: SYSTEM_COHORTS_UUID, cohorts: next, updatedAt: new Date().toISOString() },
-        }),
-      }).catch(() => {});
-    }
-
-    // 2. Also try career_cohorts table
+    // Also try syncing to career_cohorts table if present
     try {
       await api("/rest/v1/career_cohorts", {
         method: "POST",

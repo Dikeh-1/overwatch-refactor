@@ -2,6 +2,14 @@ import "server-only";
 import { mkdir, readFile, writeFile, rename, unlink } from "node:fs/promises";
 import path from "node:path";
 import { roles, type Role, type Application, DEFAULT_TEST_SLOTS } from "./careers";
+import {
+  getConfiguredTestSlots,
+  setConfiguredTestSlots,
+  getConfiguredDeletedNextPhase,
+  setConfiguredDeletedNextPhase,
+  purgeLegacySystemRowsFromApplicationsTable,
+  LEGACY_SYSTEM_UUIDS,
+} from "./careers-config-store";
 
 const directory = path.join(process.cwd(), ".careers-data");
 
@@ -195,7 +203,14 @@ const SYSTEM_UUIDS = new Set([
   SYSTEM_ROLES_CONFIG_UUID,
 ]);
 
+let hasPurgedLegacy = false;
+
 export async function getApplications(): Promise<Application[]> {
+  if (!hasPurgedLegacy) {
+    hasPurgedLegacy = true;
+    purgeLegacySystemRowsFromApplicationsTable().catch(() => {});
+  }
+
   if (!isRemote()) {
     const list = await read("applications.json", []);
     return list.filter((a: any) => a && a.role !== "__system_config__" && !SYSTEM_UUIDS.has(a.id));
@@ -384,186 +399,35 @@ export type TestSlotConfig = {
 export const DEFAULT_SLOT_QUOTA = 15;
 
 export async function getTestSlotConfig(): Promise<TestSlotConfig> {
-  const fallback: TestSlotConfig = {
-    slots: [...DEFAULT_TEST_SLOTS],
-    quota: DEFAULT_SLOT_QUOTA,
-  };
-
-  if (isRemote()) {
-    // 1. Check DB row first
-    try {
-      const res = await api(`/rest/v1/career_applications?id=eq.${SYSTEM_TEST_SLOTS_UUID}&select=data`);
-      const rows = await res.json();
-      if (Array.isArray(rows) && rows.length > 0 && rows[0]?.data?.config) {
-        const parsed = rows[0].data.config;
-        const slots = Array.isArray(parsed.slots) && parsed.slots.length > 0
-          ? parsed.slots.map((s: unknown) => String(s).trim()).filter(Boolean)
-          : [...DEFAULT_TEST_SLOTS];
-        const quota = typeof parsed.quota === "number" && parsed.quota > 0 ? parsed.quota : DEFAULT_SLOT_QUOTA;
-        return { slots, quota };
-      }
-    } catch {
-      // ignore
-    }
-
-    // 2. Storage fallback
-    try {
-      const res = await api("/storage/v1/object/career-cvs/test-slots.json");
-      const text = await res.text();
-      const parsed = JSON.parse(text);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return {
-          slots: parsed.map((s) => String(s).trim()).filter(Boolean),
-          quota: DEFAULT_SLOT_QUOTA,
-        };
-      }
-      if (parsed && typeof parsed === "object") {
-        const slots = Array.isArray(parsed.slots) && parsed.slots.length > 0
-          ? parsed.slots.map((s: unknown) => String(s).trim()).filter(Boolean)
-          : [...DEFAULT_TEST_SLOTS];
-        const quota = typeof parsed.quota === "number" && parsed.quota > 0 ? parsed.quota : DEFAULT_SLOT_QUOTA;
-        return { slots, quota };
-      }
-    } catch {
-      // Storage file not found or parse error
-    }
-    return fallback;
-  }
-
-  try {
-    const raw = await read<any>("test-slots.json", fallback);
-    if (Array.isArray(raw)) {
-      return { slots: raw, quota: DEFAULT_SLOT_QUOTA };
-    }
-    if (raw && typeof raw === "object") {
-      return {
-        slots: Array.isArray(raw.slots) ? raw.slots : [...DEFAULT_TEST_SLOTS],
-        quota: typeof raw.quota === "number" && raw.quota > 0 ? raw.quota : DEFAULT_SLOT_QUOTA,
-      };
-    }
-    return fallback;
-  } catch {
-    return fallback;
-  }
+  return getConfiguredTestSlots();
 }
 
 export async function getTestSlots(): Promise<string[]> {
-  const config = await getTestSlotConfig();
+  const config = await getConfiguredTestSlots();
   return config.slots;
 }
 
 export async function saveTestSlotConfig(config: { slots: string[]; quota?: number }): Promise<TestSlotConfig> {
-  const cleanSlots = Array.isArray(config.slots)
-    ? config.slots.map((s) => String(s).trim()).filter(Boolean)
-    : [...DEFAULT_TEST_SLOTS];
-  const quota = typeof config.quota === "number" && config.quota > 0 ? config.quota : DEFAULT_SLOT_QUOTA;
-  const payload: TestSlotConfig = { slots: cleanSlots, quota };
-
-  if (isRemote()) {
-    // 1. Save to DB table career_applications
-    try {
-      const patchRes = await api(`/rest/v1/career_applications?id=eq.${SYSTEM_TEST_SLOTS_UUID}`, {
-        method: "PATCH",
-        headers: { Prefer: "return=representation" },
-        body: JSON.stringify({
-          data: {
-            role: "__system_config__",
-            type: "test_slots",
-            config: payload,
-            updatedAt: new Date().toISOString(),
-          },
-        }),
-      });
-      const patchRows = await patchRes.json().catch(() => []);
-      if (!Array.isArray(patchRows) || patchRows.length === 0) {
-        await api(`/rest/v1/career_applications`, {
-          method: "POST",
-          headers: { Prefer: "resolution=merge-duplicates" },
-          body: JSON.stringify({
-            id: SYSTEM_TEST_SLOTS_UUID,
-            data: {
-              role: "__system_config__",
-              type: "test_slots",
-              config: payload,
-              updatedAt: new Date().toISOString(),
-            },
-          }),
-        });
-      }
-    } catch (dbErr) {
-      console.error("Failed to save test slots to Supabase DB:", dbErr);
-    }
-
-    // 2. Storage backup (safely wrapped)
-    try {
-      const jsonBody = Buffer.from(JSON.stringify(payload), "utf8");
-      await api("/storage/v1/object/career-cvs/test-slots.json", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-upsert": "true",
-        },
-        body: new Uint8Array(jsonBody),
-      });
-    } catch (storageErr) {
-      console.warn("Test slots storage backup note:", storageErr);
-    }
-
-    return payload;
-  }
-
-  await exclusive(async () => {
-    await write("test-slots.json", payload);
-  });
-  return payload;
+  return setConfiguredTestSlots(config);
 }
 
 export async function saveTestSlots(slots: string[], quota?: number): Promise<string[]> {
-  const saved = await saveTestSlotConfig({ slots, quota });
+  const saved = await setConfiguredTestSlots({ slots, quota });
   return saved.slots;
 }
 
 export async function getDeletedNextPhaseIdentifiers(): Promise<string[]> {
   const fallback: string[] = [];
   if (isRemote()) {
-    // 1. Try DB row first
-    try {
-      const res = await api(`/rest/v1/career_applications?id=eq.${SYSTEM_DELETED_NEXT_PHASE_UUID}&select=data`);
-      const rows = await res.json();
-      if (Array.isArray(rows) && rows.length > 0 && Array.isArray(rows[0]?.data?.list)) {
-        return rows[0].data.list.map((s: unknown) => String(s).trim()).filter(Boolean);
-      }
-    } catch {
-      // not found in DB
-    }
-
-    // 2. Try storage backup
-    try {
-      const res = await api("/storage/v1/object/career-cvs/deleted-next-phase.json");
-      const text = await res.text();
-      const parsed = JSON.parse(text);
-      if (Array.isArray(parsed)) {
-        return parsed.map((s: unknown) => String(s).trim()).filter(Boolean);
-      }
-    } catch {
-      // not found in storage
-    }
-    return fallback;
+    // 1. Storage / config fallback
+    return getConfiguredDeletedNextPhase();
   }
 
-  try {
-    const raw = await read<any>("deleted-next-phase.json", fallback);
-    if (Array.isArray(raw)) {
-      return raw.map((s) => String(s).trim()).filter(Boolean);
-    }
-    return fallback;
-  } catch {
-    return fallback;
-  }
+  return getConfiguredDeletedNextPhase();
 }
 
 export async function addDeletedNextPhaseIdentifiers(identifiers: string[]): Promise<string[]> {
-  const current = await getDeletedNextPhaseIdentifiers();
+  const current = await getConfiguredDeletedNextPhase();
   const set = new Set(current);
   identifiers.forEach((id) => {
     if (id && id.trim()) {
@@ -572,66 +436,9 @@ export async function addDeletedNextPhaseIdentifiers(identifiers: string[]): Pro
       if (norm) set.add(norm);
     }
   });
-  const updated = Array.from(set);
-
-  if (isRemote()) {
-    // 1. Persist to DB table career_applications with dedicated UUID
-    try {
-      const patchRes = await api(`/rest/v1/career_applications?id=eq.${SYSTEM_DELETED_NEXT_PHASE_UUID}`, {
-        method: "PATCH",
-        headers: { Prefer: "return=representation" },
-        body: JSON.stringify({
-          data: {
-            role: "__system_config__",
-            type: "deleted_next_phase",
-            list: updated,
-            updatedAt: new Date().toISOString(),
-          },
-        }),
-      });
-      const patchRows = await patchRes.json().catch(() => []);
-      if (!Array.isArray(patchRows) || patchRows.length === 0) {
-        await api(`/rest/v1/career_applications`, {
-          method: "POST",
-          headers: { Prefer: "resolution=merge-duplicates" },
-          body: JSON.stringify({
-            id: SYSTEM_DELETED_NEXT_PHASE_UUID,
-            data: {
-              role: "__system_config__",
-              type: "deleted_next_phase",
-              list: updated,
-              updatedAt: new Date().toISOString(),
-            },
-          }),
-        });
-      }
-    } catch (dbErr) {
-      console.error("Failed to write deleted next phase to Supabase DB:", dbErr);
-    }
-
-    // 2. Also try storage replica (safe catch)
-    try {
-      const jsonBody = Buffer.from(JSON.stringify(updated), "utf8");
-      await api("/storage/v1/object/career-cvs/deleted-next-phase.json", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-upsert": "true",
-        },
-        body: new Uint8Array(jsonBody),
-      });
-    } catch (storageErr) {
-      console.warn("Storage replica save note:", storageErr);
-    }
-
-    return updated;
-  }
-
-  await exclusive(async () => {
-    await write("deleted-next-phase.json", updated);
-  });
-  return updated;
+  return setConfiguredDeletedNextPhase(Array.from(set));
 }
+
 
 
 
