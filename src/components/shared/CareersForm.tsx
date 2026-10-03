@@ -339,6 +339,7 @@ export default function CareersForm({
   const [startDate, setStartDate] = useState("immediate");
   const [salaryExpectation, setSalaryExpectation] = useState("");
   const [largestProjectDescription, setLargestProjectDescription] = useState("");
+  const [dynamicAnswers, setDynamicAnswers] = useState<Record<string, any>>({});
 
   const isTechnicalManager = selectedRoleId === "cctv_technical_manager";
   const totalSteps = isTechnicalManager ? 5 : 3;
@@ -386,9 +387,14 @@ export default function CareersForm({
     `Esta função não se encontra aberta a candidaturas no momento. Por favor, selecione uma vaga aberta.`,
   );
 
+  const hasCustomRules = Boolean(
+    selectedRole?.screeningRules && selectedRole.screeningRules.length > 0,
+  );
+
   function handleSelectRole(roleItem: Role) {
     setSelectedRoleId(roleItem.id);
     setCurrentStep(1);
+    setDynamicAnswers({});
     if (!roleItem.open) {
       setError(closedText);
     } else {
@@ -438,7 +444,7 @@ export default function CareersForm({
           setError(t("Please enter your current location / city.", "Por favor indique a sua localização / cidade actual."));
           return;
         }
-      } else {
+      } else if (selectedRoleId === "cctv") {
         if (!sex) {
           setError(t("Please select your sex.", "Por favor selecione o seu sexo."));
           return;
@@ -453,6 +459,21 @@ export default function CareersForm({
         if (!ipCctv || !nvrDvr || !networking) {
           setError(t("Please answer all required technical questions (marked with *).", "Por favor responda a todas as questões técnicas obrigatórias (marcadas com *)."));
           return;
+        }
+      } else if (hasCustomRules) {
+        for (const rule of (selectedRole?.screeningRules || [])) {
+          if (rule.mandatory) {
+            const val = dynamicAnswers[rule.field];
+            if (val === undefined || val === null || val === "") {
+              setError(
+                t(
+                  `Please answer: "${rule.instructionEn || rule.labelEn}"`,
+                  `Por favor responda: "${rule.instructionPt || rule.labelPt}"`,
+                ),
+              );
+              return;
+            }
+          }
         }
       } else {
         if (!grade12 || !ai || !experience || !shifts || !lastProfession.trim()) {
@@ -533,12 +554,18 @@ export default function CareersForm({
       formData.set("salaryExpectation", salaryExpectation.trim());
       formData.set("largestProjectDescription", largestProjectDescription.trim());
     } else {
-      formData.set("grade12", grade12);
-      formData.set("sex", sex);
-      formData.set("ai", ai);
-      formData.set("experience", experience);
-      formData.set("shifts", shifts);
-      formData.set("lastProfession", lastProfession.trim());
+      for (const [k, v] of Object.entries(dynamicAnswers)) {
+        formData.set(k, String(v));
+      }
+      formData.set("dynamicFields", JSON.stringify(dynamicAnswers));
+
+      if (currentLocation) formData.set("currentLocation", currentLocation.trim());
+      if (grade12) formData.set("grade12", grade12);
+      if (sex) formData.set("sex", sex);
+      if (ai) formData.set("ai", ai);
+      if (experience) formData.set("experience", experience);
+      if (shifts) formData.set("shifts", shifts);
+      if (lastProfession) formData.set("lastProfession", lastProfession.trim());
     }
 
     setBusy(true);
@@ -635,7 +662,7 @@ export default function CareersForm({
     <div className="min-h-screen bg-background text-foreground">
       {/* ─── HERO SECTION ────────────────────────────────────────────── */}
       {!hideHero && (
-        <section className="dark relative isolate overflow-hidden bg-[#090d16] text-white min-h-screen flex flex-col justify-center pt-28 pb-16 sm:pt-32 sm:pb-20 lg:pt-36 lg:pb-24">
+        <section className="dark relative isolate overflow-hidden bg-[#090d16] pb-24 pt-28 text-white sm:pb-32 sm:pt-32 lg:pb-40 lg:pt-36">
           {/* Authentic Security Surveillance Background Video */}
           <div className="absolute inset-0 z-0 opacity-35 pointer-events-none">
             <LazyVideo
@@ -648,7 +675,7 @@ export default function CareersForm({
           <TechGrid className="absolute inset-0 opacity-35 pointer-events-none z-0" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_25%,rgba(255,255,255,0.08),transparent_32%),radial-gradient(circle_at_85%_20%,rgba(255,255,255,0.06),transparent_30%),linear-gradient(to_bottom,transparent_45%,rgba(9,13,22,0.95))] pointer-events-none z-0" />
 
-          <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full">
             <div className="max-w-3xl">
               <span className={darkEyebrowClassName}>
                 <ShieldCheck size={15} className="shrink-0" aria-hidden="true" />
@@ -794,6 +821,7 @@ export default function CareersForm({
                         setAi("");
                         setExperience("");
                         setShifts("");
+                        setDynamicAnswers({});
                         setFile(null);
                         setError("");
                       }}
@@ -820,9 +848,12 @@ export default function CareersForm({
                                 "Step-by-step technical application for CCTV Installation & Technical Manager.",
                                 "Candidatura técnica por etapas para Gestor Técnico e Instalação de CCTV.",
                               )
-                            : t(
-                                "Complete each section to submit your candidacy.",
-                                "Preencha cada secção para submeter a sua candidatura.",
+                            : (selectedRole?.descriptionEn || selectedRole?.descriptionPt
+                                ? (pt ? (selectedRole.descriptionPt || selectedRole.descriptionEn) : (selectedRole.descriptionEn || selectedRole.descriptionPt))
+                                : t(
+                                    "Complete each section to submit your candidacy.",
+                                    "Preencha cada secção para submeter a sua candidatura.",
+                                  )
                               )}
                         </p>
                       </div>
@@ -1164,7 +1195,7 @@ export default function CareersForm({
                             </div>
                           </>
                         ) : (
-                          /* Standard Role Questions */
+                          /* Standard / Dynamic Role Questions */
                           <>
                             <div className="flex items-center justify-between">
                               <h4 className="text-sm font-bold uppercase tracking-wider text-muted flex items-center gap-2">
@@ -1176,55 +1207,119 @@ export default function CareersForm({
                               </span>
                             </div>
 
-                            <div className="grid gap-3 sm:grid-cols-2 pt-1">
-                              {renderYesNo(
-                                pt ? currentConfig.grade12Question.pt : currentConfig.grade12Question.en,
-                                grade12,
-                                setGrade12,
-                                true
-                              )}
-
-                              {renderYesNo(
-                                pt ? currentConfig.aiQuestion.pt : currentConfig.aiQuestion.en,
-                                ai,
-                                setAi,
-                                true
-                              )}
-
-                              {renderYesNo(
-                                pt ? currentConfig.experienceQuestion.pt : currentConfig.experienceQuestion.en,
-                                experience,
-                                setExperience,
-                                true
-                              )}
-
-                              {renderYesNo(
-                                pt ? currentConfig.shiftsQuestion.pt : currentConfig.shiftsQuestion.en,
-                                shifts,
-                                setShifts,
-                                true
-                              )}
-
-                              <label className="space-y-1.5 block sm:col-span-2">
-                                <span className="text-xs font-semibold text-foreground/90 flex items-center gap-1">
-                                  {pt ? currentConfig.lastProfessionLabel.pt : currentConfig.lastProfessionLabel.en}{" "}
-                                  <span className="text-amber-500 font-bold">*</span>
-                                </span>
-                                <input
-                                  type="text"
-                                  value={lastProfession}
-                                  onChange={(e) => setLastProfession(e.target.value)}
-                                  required
-                                  maxLength={200}
-                                  placeholder={
-                                    pt
-                                      ? currentConfig.lastProfessionPlaceholder.pt
-                                      : currentConfig.lastProfessionPlaceholder.en
+                            {hasCustomRules ? (
+                              <div className="grid gap-3 sm:grid-cols-2 pt-1">
+                                {selectedRole?.screeningRules?.map((rule: any) => {
+                                  const label = pt
+                                    ? (rule.instructionPt || rule.labelPt)
+                                    : (rule.instructionEn || rule.labelEn);
+                                  if (rule.type === "boolean") {
+                                    return (
+                                      <div key={rule.id || rule.field} className="sm:col-span-1">
+                                        {renderYesNo(
+                                          label,
+                                          dynamicAnswers[rule.field] || "",
+                                          (val) => setDynamicAnswers((prev) => ({ ...prev, [rule.field]: val })),
+                                          rule.mandatory,
+                                          rule.evaluatorGuideline,
+                                        )}
+                                      </div>
+                                    );
                                   }
-                                  className="min-h-12 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground placeholder:text-muted/60 focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 transition-colors"
-                                />
-                              </label>
-                            </div>
+                                  if (rule.type === "number") {
+                                    return (
+                                      <div
+                                        key={rule.id || rule.field}
+                                        className="space-y-2 p-3.5 rounded-xl border border-border/80 bg-background/50 hover:border-foreground/20 transition-all sm:col-span-2"
+                                      >
+                                        <div className="flex items-start justify-between gap-2">
+                                          <span className="text-xs font-semibold text-foreground/90 leading-tight">
+                                            {label} {rule.mandatory ? <span className="text-amber-500 font-bold">*</span> : null}
+                                          </span>
+                                        </div>
+                                        <input
+                                          type="number"
+                                          value={dynamicAnswers[rule.field] ?? ""}
+                                          onChange={(e) => setDynamicAnswers((prev) => ({ ...prev, [rule.field]: e.target.value }))}
+                                          placeholder={t("Enter number (e.g. years, minimum score)", "Indique um valor numérico")}
+                                          min="0"
+                                          className="min-h-11 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 transition-colors"
+                                        />
+                                      </div>
+                                    );
+                                  }
+                                  return (
+                                    <div
+                                      key={rule.id || rule.field}
+                                      className="space-y-2 p-3.5 rounded-xl border border-border/80 bg-background/50 hover:border-foreground/20 transition-all sm:col-span-2"
+                                    >
+                                      <div className="flex items-start justify-between gap-2">
+                                        <span className="text-xs font-semibold text-foreground/90 leading-tight">
+                                          {label} {rule.mandatory ? <span className="text-amber-500 font-bold">*</span> : null}
+                                        </span>
+                                      </div>
+                                      <input
+                                        type="text"
+                                        value={dynamicAnswers[rule.field] ?? ""}
+                                        onChange={(e) => setDynamicAnswers((prev) => ({ ...prev, [rule.field]: e.target.value }))}
+                                        placeholder={t("Your answer here...", "A sua resposta aqui...")}
+                                        className="min-h-11 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 transition-colors"
+                                      />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <div className="grid gap-3 sm:grid-cols-2 pt-1">
+                                {renderYesNo(
+                                  pt ? currentConfig.grade12Question.pt : currentConfig.grade12Question.en,
+                                  grade12,
+                                  setGrade12,
+                                  true
+                                )}
+
+                                {renderYesNo(
+                                  pt ? currentConfig.aiQuestion.pt : currentConfig.aiQuestion.en,
+                                  ai,
+                                  setAi,
+                                  true
+                                )}
+
+                                {renderYesNo(
+                                  pt ? currentConfig.experienceQuestion.pt : currentConfig.experienceQuestion.en,
+                                  experience,
+                                  setExperience,
+                                  true
+                                )}
+
+                                {renderYesNo(
+                                  pt ? currentConfig.shiftsQuestion.pt : currentConfig.shiftsQuestion.en,
+                                  shifts,
+                                  setShifts,
+                                  true
+                                )}
+
+                                <label className="space-y-1.5 block sm:col-span-2">
+                                  <span className="text-xs font-semibold text-foreground/90 flex items-center gap-1">
+                                    {pt ? currentConfig.lastProfessionLabel.pt : currentConfig.lastProfessionLabel.en}{" "}
+                                    <span className="text-amber-500 font-bold">*</span>
+                                  </span>
+                                  <input
+                                    type="text"
+                                    value={lastProfession}
+                                    onChange={(e) => setLastProfession(e.target.value)}
+                                    required
+                                    maxLength={200}
+                                    placeholder={
+                                      pt
+                                        ? currentConfig.lastProfessionPlaceholder.pt
+                                        : currentConfig.lastProfessionPlaceholder.en
+                                    }
+                                    className="min-h-12 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground placeholder:text-muted/60 focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 transition-colors"
+                                  />
+                                </label>
+                              </div>
+                            )}
                           </>
                         )}
 

@@ -331,7 +331,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
     <ActiveRoleProvider applications={applications}>
       {/* Instant Route Navigation Heads-Up Top Progress Bar */}
       {isNavigating && (
-        <div className="fixed top-0 left-0 right-0 z-[9999] h-[3px] bg-gradient-to-r from-sky-500 via-[#00ded3] to-sky-400 shadow-[0_0_12px_#00ded3] pointer-events-none" />
+        <div className="fixed top-0 left-0 right-0 z-[9999] h-[3px] bg-gradient-to-r from-slate-400 via-white to-slate-300 shadow-[0_0_12px_rgba(255,255,255,0.8)] pointer-events-none" />
       )}
 
       {/* Instant Route Navigation Floating Heads-Up Pill */}
@@ -339,11 +339,11 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
         <aside
           role="status"
           aria-live="polite"
-          className="fixed top-3 right-4 sm:right-6 z-[9999] flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-[#0a1128]/95 border border-[#00ded3]/40 shadow-xl text-white text-xs font-semibold backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-150"
+          className="fixed top-3 right-4 sm:right-6 z-[9999] flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-[#0a1128]/95 border border-white/20 shadow-xl text-white text-xs font-semibold backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-150"
         >
           <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00ded3] opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00ded3]"></span>
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
           </span>
           <span className="text-[11px] text-slate-100 font-medium">
             {navLabel || (lang === "pt" ? "A carregar secção..." : "Loading section...")}

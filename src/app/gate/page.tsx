@@ -924,7 +924,7 @@ function GateSecurityContent() {
               result.success
                 ? "bg-emerald-950/80 border-emerald-500/60 shadow-emerald-950/50 text-emerald-100"
                 : result.alreadyCheckedIn || result.code === "ALREADY_CHECKED_IN"
-                  ? "bg-cyan-950/85 border-cyan-500/60 shadow-cyan-950/50 text-cyan-100"
+                  ? "bg-sky-950/85 border-sky-500/60 shadow-sky-950/50 text-sky-100"
                   : result.code === "WRONG_DAY" || result.code === "BEFORE_NINE_AM"
                     ? "bg-amber-950/85 border-amber-500/60 shadow-amber-950/50 text-amber-100"
                     : "bg-red-950/85 border-red-500/60 shadow-red-950/50 text-red-100"
@@ -936,7 +936,7 @@ function GateSecurityContent() {
                   <CheckCircle2 size={30} />
                 </div>
               ) : result.alreadyCheckedIn || result.code === "ALREADY_CHECKED_IN" ? (
-                <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 border-2 border-cyan-400 flex items-center justify-center text-cyan-300 shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-sky-500/20 border-2 border-sky-400 flex items-center justify-center text-sky-300 shrink-0">
                   <AlertTriangle size={30} />
                 </div>
               ) : result.code === "WRONG_DAY" || result.code === "BEFORE_NINE_AM" ? (
@@ -955,7 +955,7 @@ function GateSecurityContent() {
                     result.success
                       ? "bg-emerald-500/30 text-emerald-300 border border-emerald-500/40"
                       : result.alreadyCheckedIn || result.code === "ALREADY_CHECKED_IN"
-                        ? "bg-cyan-500/30 text-cyan-300 border border-cyan-500/40"
+                        ? "bg-sky-500/30 text-sky-300 border border-sky-500/40"
                         : result.code === "WRONG_DAY"
                           ? "bg-amber-500/30 text-amber-300 border border-amber-500/40"
                           : "bg-red-500/30 text-red-300 border border-red-500/40"
@@ -1006,13 +1006,13 @@ function GateSecurityContent() {
 
                 {/* ALREADY CHECKED IN CASE */}
                 {(result.alreadyCheckedIn || result.code === "ALREADY_CHECKED_IN") && (
-                  <div className="pt-2 mt-2 border-t border-cyan-500/30 space-y-2 text-xs">
+                  <div className="pt-2 mt-2 border-t border-sky-500/30 space-y-2 text-xs">
                     <p className="text-white font-semibold text-sm">
                       {t.alreadyCheckedInMsg}
                     </p>
                     {result.attendedAt && (
-                      <div className="p-3 rounded-xl bg-black/40 border border-cyan-500/30">
-                        <span className="text-[10px] text-cyan-300 uppercase tracking-wide block font-bold">
+                      <div className="p-3 rounded-xl bg-black/40 border border-sky-500/30">
+                        <span className="text-[10px] text-sky-300 uppercase tracking-wide block font-bold">
                           {t.checkedInTimePrefix}
                         </span>
                         <span className="text-sm font-bold text-white block mt-0.5 font-mono">

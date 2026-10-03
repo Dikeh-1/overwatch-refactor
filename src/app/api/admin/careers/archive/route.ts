@@ -23,7 +23,11 @@ export async function GET(request: Request) {
 
     if (cohortId) {
       const targetCohort = allCohorts.find((c) => c.id === cohortId);
-      const cohortApps = allApps.filter((a: any) => a.cohortId === cohortId);
+      const cohortApps = allApps.filter(
+        (a: any) =>
+          a.cohortId === cohortId ||
+          (a.status === "archived" && targetCohort && (a.role === targetCohort.roleId || (targetCohort.roleId === "cctv" && (!a.role || a.role === "cctv_operator")))),
+      );
       return NextResponse.json({
         success: true,
         cohort: targetCohort,
@@ -33,7 +37,11 @@ export async function GET(request: Request) {
 
     // Return list of archived cohorts with metrics
     const summary = archivedCohorts.map((cohort) => {
-      const apps = allApps.filter((a: any) => a.cohortId === cohort.id);
+      const apps = allApps.filter(
+        (a: any) =>
+          a.cohortId === cohort.id ||
+          (a.status === "archived" && (a.role === cohort.roleId || (cohort.roleId === "cctv" && (!a.role || a.role === "cctv_operator")))),
+      );
       const role = roles.find((r) => r.id === cohort.roleId);
       const hiredCount = apps.filter((a) => a.status === "hired").length;
       const testedCount = apps.filter((a) => a.status === "tested" || a.testScore !== undefined).length;

@@ -53,29 +53,19 @@ export default function OverwatchOrbitLoader({
           className="w-full h-full"
         />
 
-        {/* Sleek Overwatch "O" Center Core (Hollow, slim ring) */}
+        {/* Sleek Overwatch "O" Center Core (Hollow slim ring, no balls) */}
         <div
           className="absolute inset-0 flex items-center justify-center pointer-events-none"
           aria-hidden="true"
         >
           <div
-            className={`rounded-full border-[1.5px] transition-colors flex items-center justify-center ${
+            className={`rounded-full border-[1.5px] transition-colors ${
               isDark
-                ? "border-white/90 shadow-[0_0_6px_rgba(255,255,255,0.25)]"
+                ? "border-white/80 shadow-[0_0_6px_rgba(255,255,255,0.2)]"
                 : "border-[#0a1128] shadow-[0_0_6px_rgba(10,17,40,0.12)]"
             }`}
             style={{ width: cfg.dot, height: cfg.dot }}
-          >
-            <div
-              className={`rounded-full ${
-                isDark ? "bg-[#00ded3]" : "bg-[#0a1128]"
-              }`}
-              style={{
-                width: Math.max(2, Math.round(cfg.dot * 0.25)),
-                height: Math.max(2, Math.round(cfg.dot * 0.25)),
-              }}
-            />
-          </div>
+          />
         </div>
       </div>
 

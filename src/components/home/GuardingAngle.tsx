@@ -59,7 +59,7 @@ export default function GuardingAngle() {
 
           {/* To State */}
           <ScrollReveal direction="right" delay={0.2} className="flex-1">
-            <GlowCard techCorners={true} accentColor="cyan" className="mobile-flat-card flex h-full flex-col items-center justify-center border-accent/30 bg-primary-darker/20 p-8 text-center">
+            <GlowCard techCorners={true} accentColor="gold" className="mobile-flat-card flex h-full flex-col items-center justify-center border-accent/30 bg-primary-darker/20 p-8 text-center">
               <div className="flex w-full flex-col md:-translate-y-4">
                 <ShieldCheck className="text-accent mb-4" size={40} />
                 <div className="text-center">

@@ -86,6 +86,12 @@ export async function getRoles(): Promise<Role[]> {
         en: r.en || r.id,
         pt: r.pt || r.id,
         open: Boolean(r.open),
+        department: r.department,
+        descriptionEn: r.descriptionEn,
+        descriptionPt: r.descriptionPt,
+        screeningRules: r.screeningRules,
+        activeCohortId: r.activeCohortId,
+        pipelineStages: r.pipelineStages,
       }));
     }
   } catch {}
@@ -180,7 +186,14 @@ export async function setRole(id: string, open: boolean) {
 }
 export const SYSTEM_DELETED_NEXT_PHASE_UUID = "00000000-0000-0000-0000-000000000001";
 export const SYSTEM_TEST_SLOTS_UUID = "00000000-0000-0000-0000-000000000002";
-const SYSTEM_UUIDS = new Set([SYSTEM_DELETED_NEXT_PHASE_UUID, SYSTEM_TEST_SLOTS_UUID]);
+export const SYSTEM_COHORTS_UUID = "00000000-0000-0000-0000-000000000003";
+export const SYSTEM_ROLES_CONFIG_UUID = "00000000-0000-0000-0000-000000000004";
+const SYSTEM_UUIDS = new Set([
+  SYSTEM_DELETED_NEXT_PHASE_UUID,
+  SYSTEM_TEST_SLOTS_UUID,
+  SYSTEM_COHORTS_UUID,
+  SYSTEM_ROLES_CONFIG_UUID,
+]);
 
 export async function getApplications(): Promise<Application[]> {
   if (!isRemote()) {

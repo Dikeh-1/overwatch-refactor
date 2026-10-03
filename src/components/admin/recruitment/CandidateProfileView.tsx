@@ -541,6 +541,43 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                   </div>
                 )}
               </div>
+            ) : candidate.screeningResult?.details && candidate.screeningResult.details.length > 0 ? (
+              <div className="space-y-2 text-xs">
+                {candidate.sex && (
+                  <div className="py-2 flex items-center justify-between border-b border-slate-100">
+                    <span className="text-slate-500">{t("Gender", "Género")}</span>
+                    <span className="font-semibold text-slate-900">
+                      {candidate.sex === "female" ? t("Female", "Feminino") : t("Male", "Masculino")}
+                    </span>
+                  </div>
+                )}
+                <div className="space-y-1.5 pt-1">
+                  {candidate.screeningResult.details.map((detail, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-2 rounded bg-slate-50 border border-slate-100"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-slate-700 font-medium">{detail.label}</span>
+                        {detail.mandatory && (
+                          <span className="text-[0.6rem] font-bold text-amber-700 bg-amber-50 px-1 py-0.5 rounded border border-amber-200">
+                            {t("Mandatory", "Obrigatório")}
+                          </span>
+                        )}
+                      </div>
+                      <span
+                        className={`px-2 py-0.5 rounded text-[0.65rem] font-bold ${
+                          detail.passed
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            : "bg-red-50 text-red-700 border border-red-200"
+                        }`}
+                      >
+                        {detail.passed ? "✓ PASS" : "✕ FAIL"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             ) : (
               <div className="divide-y divide-slate-100 text-xs">
                 <div className="py-2.5 flex items-center justify-between">

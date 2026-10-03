@@ -115,7 +115,7 @@ export const ActiveRoleProvider: React.FC<{
         (a) => a.role === r.id || (r.id === "cctv" && !a.role),
       );
       stats[r.id] = {
-        total: roleApps.length,
+        total: roleApps.filter((a) => a.status !== "archived").length,
         active: roleApps.filter((a) => a.status !== "archived" && a.status !== "rejected").length,
         testing: roleApps.filter((a) => Boolean(a.testSlot) && a.status !== "archived").length,
         nextPhase: roleApps.filter(

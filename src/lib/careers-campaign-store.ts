@@ -10,7 +10,13 @@ import {
   DEFAULT_SCREENING_RULES_BY_ROLE,
 } from "./careers-models";
 import { roles as legacyRoles } from "./careers";
-import { getApplications, bulkSaveApplications, setRole } from "./careers-store";
+import {
+  getApplications,
+  bulkSaveApplications,
+  setRole,
+  SYSTEM_COHORTS_UUID,
+  SYSTEM_ROLES_CONFIG_UUID,
+} from "./careers-store";
 
 const directory = path.join(process.cwd(), ".careers-data");
 
@@ -127,36 +133,47 @@ export async function getRoleDefinitions(): Promise<CareerRoleDefinition[]> {
   if (isRemote()) {
     let remoteConfigs: CareerRoleDefinition[] | null = null;
 
-    // 1. Try to fetch from rich config table if it exists in Supabase
+    // 1. Try to fetch from SYSTEM_ROLES_CONFIG_UUID in career_applications (Guaranteed remote persistence)
     try {
-      const res = await api("/rest/v1/career_roles_config?select=*&order=created_at.asc");
+      const res = await api(`/rest/v1/career_applications?id=eq.${SYSTEM_ROLES_CONFIG_UUID}&select=data`);
       const rows = await res.json();
-      if (Array.isArray(rows) && rows.length > 0) {
-        remoteConfigs = rows.map((r: any) => ({
-          id: r.id,
-          en: r.en || r.title_en || r.id,
-          pt: r.pt || r.title_pt || r.id,
-          department: r.department || "Operações",
-          descriptionEn: r.description_en,
-          descriptionPt: r.description_pt,
-          open: Boolean(r.open),
-          activeCohortId: r.active_cohort_id,
-          pipelineStages: r.pipeline_stages || [
-            "applications",
-            "screening",
-            "interview",
-            "hired",
-          ],
-          screeningRules: r.screening_rules || DEFAULT_SCREENING_RULES_BY_ROLE[r.id] || [],
-          createdAt: r.created_at || new Date().toISOString(),
-          updatedAt: r.updated_at || new Date().toISOString(),
-        }));
+      if (Array.isArray(rows) && rows[0]?.data?.roles && Array.isArray(rows[0].data.roles) && rows[0].data.roles.length > 0) {
+        remoteConfigs = rows[0].data.roles;
       }
-    } catch {
-      // Table may not exist yet or not migrated
+    } catch {}
+
+    // 2. Try to fetch from rich config table if it exists in Supabase
+    if (!remoteConfigs) {
+      try {
+        const res = await api("/rest/v1/career_roles_config?select=*&order=created_at.asc");
+        const rows = await res.json();
+        if (Array.isArray(rows) && rows.length > 0) {
+          remoteConfigs = rows.map((r: any) => ({
+            id: r.id,
+            en: r.en || r.title_en || r.id,
+            pt: r.pt || r.title_pt || r.id,
+            department: r.department || "Operações",
+            descriptionEn: r.description_en,
+            descriptionPt: r.description_pt,
+            open: Boolean(r.open),
+            activeCohortId: r.active_cohort_id,
+            pipelineStages: r.pipeline_stages || [
+              "applications",
+              "screening",
+              "interview",
+              "hired",
+            ],
+            screeningRules: r.screening_rules || DEFAULT_SCREENING_RULES_BY_ROLE[r.id] || [],
+            createdAt: r.created_at || new Date().toISOString(),
+            updatedAt: r.updated_at || new Date().toISOString(),
+          }));
+        }
+      } catch {
+        // Table may not exist yet or not migrated
+      }
     }
 
-    // 2. Fetch authoritative open/closed status from Supabase career_roles
+    // 3. Fetch authoritative open/closed status from Supabase career_roles
     const remoteOpenMap: Record<string, boolean> = {};
     try {
       const res = await api("/rest/v1/career_roles?select=id,open");
@@ -257,6 +274,26 @@ export async function saveRoleDefinition(
   await writeLocal("roles_def.json", nextRoles);
 
   if (isRemote()) {
+    // 1. Guaranteed storage in career_applications under SYSTEM_ROLES_CONFIG_UUID
+    try {
+      await api("/rest/v1/career_applications", {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates" },
+        body: JSON.stringify({
+          id: SYSTEM_ROLES_CONFIG_UUID,
+          data: { id: SYSTEM_ROLES_CONFIG_UUID, roles: nextRoles, updatedAt: now },
+        }),
+      });
+    } catch {
+      await api(`/rest/v1/career_applications?id=eq.${SYSTEM_ROLES_CONFIG_UUID}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          data: { id: SYSTEM_ROLES_CONFIG_UUID, roles: nextRoles, updatedAt: now },
+        }),
+      }).catch(() => {});
+    }
+
+    // 2. Also attempt saving to career_roles_config table
     try {
       await api("/rest/v1/career_roles_config", {
         method: "POST",
@@ -332,6 +369,17 @@ export async function deleteRoleDefinition(roleId: string): Promise<void> {
 
 export async function getAllCohorts(): Promise<CareerCohort[]> {
   if (isRemote()) {
+    // 1. Check SYSTEM_COHORTS_UUID in career_applications (Guaranteed persistence)
+    try {
+      const res = await api(`/rest/v1/career_applications?id=eq.${SYSTEM_COHORTS_UUID}&select=data`);
+      const rows = await res.json();
+      if (Array.isArray(rows) && rows[0]?.data?.cohorts && Array.isArray(rows[0].data.cohorts) && rows[0].data.cohorts.length > 0) {
+        inMemoryCohorts = rows[0].data.cohorts;
+        return rows[0].data.cohorts;
+      }
+    } catch {}
+
+    // 2. Fallback to career_cohorts table if it exists
     try {
       const res = await api("/rest/v1/career_cohorts?select=*&order=opened_at.desc");
       const rows = await res.json();
@@ -368,6 +416,26 @@ export async function saveCohort(cohort: CareerCohort): Promise<CareerCohort> {
   await writeLocal("cohorts.json", next);
 
   if (isRemote()) {
+    // 1. Guaranteed storage in career_applications under SYSTEM_COHORTS_UUID
+    try {
+      await api("/rest/v1/career_applications", {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates" },
+        body: JSON.stringify({
+          id: SYSTEM_COHORTS_UUID,
+          data: { id: SYSTEM_COHORTS_UUID, cohorts: next, updatedAt: new Date().toISOString() },
+        }),
+      });
+    } catch {
+      await api(`/rest/v1/career_applications?id=eq.${SYSTEM_COHORTS_UUID}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          data: { id: SYSTEM_COHORTS_UUID, cohorts: next, updatedAt: new Date().toISOString() },
+        }),
+      }).catch(() => {});
+    }
+
+    // 2. Also try career_cohorts table
     try {
       await api("/rest/v1/career_cohorts", {
         method: "POST",
@@ -517,7 +585,7 @@ export async function closeAndArchiveRoleCohort(
         (role.id === "cctv" && (!app.role || app.role === "cctv" || app.role === "cctv_operator")) ||
         (role.id === "cctv_operator" && (!app.role || app.role === "cctv" || app.role === "cctv_operator"));
 
-      if (isThisRole && (!app.cohortId || app.cohortId === role.activeCohortId)) {
+      if (isThisRole && (!app.cohortId || app.cohortId === role.activeCohortId || app.status !== "archived")) {
         updatedAny = true;
         return {
           ...app,

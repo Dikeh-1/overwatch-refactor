@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Briefcase,
   Search,
@@ -18,6 +19,7 @@ import {
   Layers,
   PlayCircle,
   ArrowUpRight,
+  Sparkles,
 } from "lucide-react";
 import type { CareerRoleDefinition, CareerCohort, PipelineStageKey } from "@/lib/careers-models";
 import { DEFAULT_SCREENING_RULES_BY_ROLE } from "@/lib/careers-models";
@@ -53,8 +55,12 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
   const lang = propLang ?? contextLang;
   const t = (en: string, pt: string) => (lang === "en" ? en : pt);
 
+  const searchParams = useSearchParams();
+  const builderRoleId = searchParams.get("builder");
+
   const [searchQuery, setSearchQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalInitialTab, setModalInitialTab] = useState<"details" | "pipeline" | "screening" | "form_builder">("details");
   const [editingRole, setEditingRole] = useState<CareerRoleDefinition | null>(null);
 
   // Archive / Open confirmation modal state
@@ -111,6 +117,19 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
           : DEFAULT_SCREENING_RULES_BY_ROLE[role.id] || [],
     }));
   }, [roleDefs]);
+
+  useEffect(() => {
+    if (builderRoleId) {
+      const match = effectiveRoles.find(
+        (r) => r.id === builderRoleId || (builderRoleId === "cctv" && r.id === "cctv_operator")
+      );
+      if (match) {
+        setEditingRole(match);
+        setModalInitialTab("form_builder");
+        setModalOpen(true);
+      }
+    }
+  }, [builderRoleId, effectiveRoles]);
 
   const filteredRoles = effectiveRoles.filter((r) => {
     if (!searchQuery.trim()) return true;
@@ -401,11 +420,27 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
                 <div className="flex items-center gap-2 flex-wrap shrink-0">
                   <button
                     type="button"
-                    onClick={() => handleOpenEdit(role)}
+                    onClick={() => {
+                      setModalInitialTab("details");
+                      handleOpenEdit(role);
+                    }}
                     className="px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 bg-white text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <SlidersHorizontal size={13} className="text-slate-500" />
                     <span>{t("Configure Pipeline & Rules", "Configurar Fases & Regras")}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingRole(role);
+                      setModalInitialTab("form_builder");
+                      setModalOpen(true);
+                    }}
+                    className="px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 bg-white text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Sparkles size={13} className="text-amber-500" />
+                    <span>{t("Form Builder", "Formulário")}</span>
                   </button>
 
                   {role.open ? (
@@ -505,6 +540,7 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
         <RoleConfigModal
           key={editingRole?.id || "new-role"}
           isOpen={modalOpen}
+          initialTab={modalInitialTab}
           onClose={() => {
             setModalOpen(false);
             setEditingRole(null);

@@ -25,7 +25,19 @@ export const roles = [
     open: false,
   },
 ];
-export type Role = (typeof roles)[number];
+
+export type Role = {
+  id: string;
+  en: string;
+  pt: string;
+  open: boolean;
+  department?: string;
+  descriptionEn?: string;
+  descriptionPt?: string;
+  screeningRules?: any[];
+  activeCohortId?: string | null;
+  pipelineStages?: string[];
+};
 export const stages = [
   "new",
   "reviewing",
@@ -168,6 +180,8 @@ export type Application = {
     emailSentAt?: string;
     grantedBy?: string;
   };
+  customFields?: Record<string, any>;
+  [key: string]: any;
 };
 
 export type RebookingGrace = NonNullable<Application["rebookingGrace"]>;

@@ -146,7 +146,83 @@ export async function POST(request: Request) {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Standard / Operator Role Flow
+    // Dynamic Role Screening Flow (Powered by Role Form Builder & Database)
+    // ─────────────────────────────────────────────────────────────────────────
+    const roleDefs = await getRoleDefinitions().catch(() => []);
+    const currentRoleDef = roleDefs.find(
+      (r) =>
+        r.id === role ||
+        (role === "cctv" && r.id === "cctv_operator") ||
+        (role === "cctv_operator" && r.id === "cctv"),
+    );
+    const activeCohortId = currentRoleDef?.activeCohortId || undefined;
+
+    // Collect all submitted fields from FormData
+    const dynamicAnswers: Record<string, any> = {};
+    for (const [key, val] of data.entries()) {
+      if (key !== "cv" && typeof val === "string") {
+        dynamicAnswers[key] = val.trim();
+      }
+    }
+    if (dynamicAnswers.dynamicFields) {
+      try {
+        const parsed = JSON.parse(dynamicAnswers.dynamicFields);
+        Object.assign(dynamicAnswers, parsed);
+      } catch {}
+    }
+
+    if (currentRoleDef?.screeningRules && currentRoleDef.screeningRules.length > 0) {
+      // Validate mandatory rules dynamically
+      for (const rule of currentRoleDef.screeningRules) {
+        if (rule.mandatory) {
+          const val = dynamicAnswers[rule.field];
+          if (val === undefined || val === null || val === "") {
+            return NextResponse.json(
+              { code: "INVALID", field: rule.field, message: `Missing required field: ${rule.labelEn}` },
+              { status: 400 },
+            );
+          }
+        }
+      }
+
+      // Evaluate application against dynamic screening rules
+      const customScreening = evaluateApplicationWithRules(
+        { ...dynamicAnswers, coverLetter },
+        currentRoleDef.screeningRules,
+      );
+      const status = customScreening.passedMandatory ? "shortlisted" : "not_advancing";
+
+      const application: Application = {
+        ...dynamicAnswers,
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+        name,
+        email,
+        whatsapp,
+        role,
+        cohortId: activeCohortId,
+        locale,
+        coverLetter,
+        status,
+        screeningResult: customScreening,
+        customFields: dynamicAnswers,
+        cvName,
+        cvSize: cv.size,
+        cvType,
+      };
+
+      await saveApplication(application, buffer);
+      try {
+        await notifyApplication(application, buffer);
+      } catch (emailErr) {
+        console.error("notifyApplication background delivery error:", emailErr);
+      }
+
+      return NextResponse.json({ success: true, id: application.id });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Legacy / Fallback Standard Flow
     // ─────────────────────────────────────────────────────────────────────────
     const values = {
       name,
@@ -154,43 +230,19 @@ export async function POST(request: Request) {
       whatsapp,
       role,
       locale,
-      grade12: field("grade12") as "yes" | "no",
-      sex: field("sex") as "male" | "female",
-      ai: field("ai") as "yes" | "no",
-      experience: field("experience") as "yes" | "no",
-      lastProfession: field("lastProfession"),
-      shifts: field("shifts") as "yes" | "no",
+      grade12: (field("grade12") || "yes") as "yes" | "no",
+      sex: (field("sex") || "female") as "male" | "female",
+      ai: (field("ai") || "yes") as "yes" | "no",
+      experience: (field("experience") || "yes") as "yes" | "no",
+      lastProfession: field("lastProfession") || "Applicant",
+      shifts: (field("shifts") || "yes") as "yes" | "no",
       coverLetter,
     };
-
-    if (
-      !values.lastProfession ||
-      values.lastProfession.length > 200 ||
-      !["male", "female"].includes(values.sex) ||
-      [values.grade12, values.ai, values.experience, values.shifts].some(
-        (v) => !["yes", "no"].includes(v),
-      )
-    ) {
-      return NextResponse.json({ code: "INVALID" }, { status: 400 });
-    }
-
-    const roleDefs = await getRoleDefinitions().catch(() => []);
-    const currentRoleDef = roleDefs.find((r) => r.id === role);
-    const activeCohortId = currentRoleDef?.activeCohortId || undefined;
 
     // Auto criteria check for Operator: Female or Male with CCTV experience are auto-shortlisted
     let meetsCriteria =
       values.sex === "female" ||
       (values.sex === "male" && values.experience === "yes");
-
-    let customScreening = undefined;
-    if (currentRoleDef?.screeningRules && currentRoleDef.screeningRules.length > 0) {
-      customScreening = evaluateApplicationWithRules(
-        { ...values, coverLetter },
-        currentRoleDef.screeningRules,
-      );
-      meetsCriteria = customScreening.passedMandatory;
-    }
 
     const application: Application = {
       ...values,
@@ -198,7 +250,6 @@ export async function POST(request: Request) {
       createdAt: new Date().toISOString(),
       cohortId: activeCohortId,
       status: meetsCriteria ? "shortlisted" : "new",
-      screeningResult: customScreening,
       cvName,
       cvSize: cv.size,
       cvType,

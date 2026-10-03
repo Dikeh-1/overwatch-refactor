@@ -58,14 +58,14 @@ export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
     }
   }, [activeRoleId]);
 
-  // Filter applications by active role workspace if selected
+  // Filter applications by active role workspace if selected (excluding archived candidates)
   const activeApplications = useMemo(() => {
-    if (selectedRoleFilter === "all") {
-      return applications;
-    }
-    return applications.filter(
-      (a) => a.role === selectedRoleFilter || (selectedRoleFilter === "cctv" && !a.role),
-    );
+    const list = selectedRoleFilter === "all"
+      ? applications
+      : applications.filter(
+          (a) => a.role === selectedRoleFilter || (selectedRoleFilter === "cctv" && !a.role),
+        );
+    return list.filter((a) => a.status !== "archived");
   }, [applications, selectedRoleFilter]);
 
   // Active role definition and stage capabilities
@@ -413,12 +413,12 @@ export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
           >
             <span>{t("All Active Roles", "Todas as Vagas")}</span>
             <span className="ml-1.5 px-1.5 py-0.2 rounded-full text-[0.65rem] bg-white/20">
-              {applications.length}
+              {applications.filter((a) => a.status !== "archived").length}
             </span>
           </button>
 
           {roles.map((r) => {
-            const count = applications.filter((a) => a.role === r.id || (r.id === "cctv" && !a.role)).length;
+            const count = applications.filter((a) => (a.role === r.id || (r.id === "cctv" && !a.role)) && a.status !== "archived").length;
             const isSelected = selectedRoleFilter === r.id;
 
             return (
