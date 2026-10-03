@@ -7,7 +7,9 @@ import {
 } from "@/lib/careers-auth";
 const DEFAULT_ADMIN_PASSWORD = "OverwatchRecruit2026!";
 const ADMIN_PASSWORD =
-  process.env.CAREERS_ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD;
+  process.env.CAREERS_ADMIN_PASSWORD ||
+  process.env.ADMIN_PASSWORD ||
+  DEFAULT_ADMIN_PASSWORD;
 
 const attempts = new Map<string, { count: number; until: number }>();
 export async function GET() {

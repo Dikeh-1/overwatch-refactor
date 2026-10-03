@@ -4,7 +4,9 @@ import { cookies } from "next/headers";
 const cookie = "overwatch_recruitment";
 const DEFAULT_ADMIN_PASSWORD = "OverwatchRecruit2026!";
 const ADMIN_PASSWORD =
-  process.env.CAREERS_ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD;
+  process.env.CAREERS_ADMIN_PASSWORD ||
+  process.env.ADMIN_PASSWORD ||
+  DEFAULT_ADMIN_PASSWORD;
 
 export function equal(a: string, b: string) {
   const left = Buffer.from(a),

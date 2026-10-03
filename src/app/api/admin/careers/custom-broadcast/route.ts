@@ -240,6 +240,9 @@ export async function POST(request: Request) {
           error: (err as Error).message || String(err),
         });
       }
+
+      // Safe pacing between sequential emails to avoid rate limits
+      await new Promise((r) => setTimeout(r, 120));
     }
 
     return Response.json({

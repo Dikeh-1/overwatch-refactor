@@ -549,6 +549,9 @@ export async function POST(request: Request) {
           failedCount++;
           results.push({ name: app.name, email: app.email, status: "failed", error: err.message });
         }
+
+        // Rate limiting throttle between provider API dispatches
+        await new Promise((r) => setTimeout(r, 120));
       }
 
       return Response.json({
@@ -666,6 +669,9 @@ export async function POST(request: Request) {
           failedCount++;
           results.push({ id: app.id, name: app.name, email: app.email, status: "failed", error: err.message });
         }
+
+        // Rate limiting throttle between provider API dispatches
+        await new Promise((r) => setTimeout(r, 120));
       }
 
       return Response.json({
