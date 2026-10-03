@@ -44,6 +44,7 @@ import { Application, Role, roles as defaultRoles, formatPhoneDisplay } from "@/
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 import { CandidateProfileView } from "./CandidateProfileView";
+import CohortCommunicationsStudio from "./CohortCommunicationsStudio";
 
 interface ArchiveVaultViewProps {
   onBackToActive: () => void;
@@ -108,6 +109,9 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
   const [appsLoading, setAppsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterRole, setFilterRole] = useState(initialRoleParam);
+
+  // View mode switcher: "pipeline" vs "communications"
+  const [dossierViewMode, setDossierViewMode] = useState<"pipeline" | "communications">("pipeline");
 
   // Active section tab & filters inside cohort dossier
   const [activeTab, setActiveTab] = useState<SectionTab>("all");
@@ -180,6 +184,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
 
   const openCohortDossier = async (cohort: any) => {
     setSelectedCohort(cohort);
+    setDossierViewMode("pipeline");
     setAppsLoading(true);
     setSelectedCandidateIds(new Set());
     setActiveTab("all");
@@ -199,6 +204,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
 
   const closeDossier = () => {
     setSelectedCohort(null);
+    setDossierViewMode("pipeline");
     setCohortApps([]);
     setSelectedCandidateIds(new Set());
     setProfileCandidate(null);
@@ -477,16 +483,11 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
     downloadDatasetAsCsv(cohortApps, prefix);
   };
 
-  // Open send instructions modal for target candidates
-  const openInstructionsModal = (candidates?: Application[]) => {
-    setInstructionsResult(null);
-    setInstructionsPreviewEmail("");
-    setCopiedWhatsAppSuccess(false);
-
+  // Open Communications Studio for target candidates
+  const openCommunicationsStudio = (candidates?: Application[]) => {
     if (candidates && candidates.length > 0) {
       setSelectedCandidateIds(new Set(candidates.map((c) => c.id)));
     } else if (selectedCandidateIds.size === 0) {
-      // Default: select all candidates who confirmed/accepted conditions
       const confirmedApps = cohortApps.filter(isCandidateConfirmed);
       if (confirmedApps.length > 0) {
         setSelectedCandidateIds(new Set(confirmedApps.map((c) => c.id)));
@@ -494,7 +495,12 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
         setSelectedCandidateIds(new Set(filteredSectionApps.map((c) => c.id)));
       }
     }
-    setInstructionsModalOpen(true);
+    setDossierViewMode("communications");
+  };
+
+  // Open send instructions modal for target candidates
+  const openInstructionsModal = (candidates?: Application[]) => {
+    openCommunicationsStudio(candidates);
   };
 
   // Dispatch instructions execution
@@ -663,6 +669,45 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
 
               {/* Header Action Buttons */}
               <div className="flex flex-wrap items-center gap-2.5">
+                {/* View Mode Toggle: Pipeline vs Communications Studio */}
+                <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setDossierViewMode("pipeline")}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      dossierViewMode === "pipeline"
+                        ? "bg-white text-slate-900 shadow-2xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <Layers size={13} className={dossierViewMode === "pipeline" ? "text-sky-600" : "text-slate-400"} />
+                    <span>{t("Pipeline & Candidates", "Funil & Candidaturas")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openCommunicationsStudio()}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      dossierViewMode === "communications"
+                        ? "bg-[#0a1128] text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <Mail size={13} className={dossierViewMode === "communications" ? "text-sky-300" : "text-slate-400"} />
+                    <span>{t("Communications Studio", "Estúdio de Comunicações")}</span>
+                    {cohortMetrics.confirmedCount > 0 && (
+                      <span
+                        className={`ml-1 rounded-full px-1.5 py-0.2 text-[10px] font-mono font-bold ${
+                          dossierViewMode === "communications"
+                            ? "bg-sky-500/30 text-sky-200"
+                            : "bg-emerald-100 text-emerald-800"
+                        }`}
+                      >
+                        {cohortMetrics.confirmedCount}
+                      </span>
+                    )}
+                  </button>
+                </div>
+
                 <button
                   onClick={reloadCohortApps}
                   disabled={appsLoading}
@@ -683,12 +728,12 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                 </button>
 
                 <button
-                  onClick={() => openInstructionsModal()}
+                  onClick={() => openCommunicationsStudio()}
                   className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0a1128] hover:bg-[#121c3b] text-xs font-bold text-white transition-colors shadow-xs cursor-pointer"
-                  title={t("Dispatch instructions to candidates who accepted conditions", "Enviar instruções para as candidatas que aceitaram as condições")}
+                  title={t("Open Communications Studio to compose, customize, and dispatch letters", "Abrir o Estúdio de Comunicações para redigir, personalizar e enviar cartas")}
                 >
-                  <Send size={13} className="text-sky-300" />
-                  <span>{t("Send Instructions", "Enviar Instruções")}</span>
+                  <Mail size={13} className="text-sky-300" />
+                  <span>{t("Communications Studio", "Estúdio de Comunicações")}</span>
                 </button>
               </div>
             </div>
@@ -839,8 +884,19 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
             </div>
           </div>
 
-          {/* Pipeline Stage Sections Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-slate-200 admin-scrollbar">
+          {/* Dossier Body: Either Communications Studio OR Pipeline Table */}
+          {dossierViewMode === "communications" ? (
+            <CohortCommunicationsStudio
+              cohort={selectedCohort}
+              applications={cohortApps}
+              selectedCandidateIds={selectedCandidateIds}
+              onBackToPipeline={() => setDossierViewMode("pipeline")}
+              onReloadApps={reloadCohortApps}
+            />
+          ) : (
+            <div className="space-y-6">
+              {/* Pipeline Stage Sections Tabs */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-slate-200 admin-scrollbar">
             {[
               { id: "all", labelEn: "All Applications", labelPt: "Todas as Candidaturas", icon: Layers, count: cohortMetrics.total },
               { id: "screening", labelEn: "CV Screening", labelPt: "Triagem & Qualificação", icon: ListFilter, count: cohortMetrics.screened },
@@ -967,21 +1023,22 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                 <span>{t("Download Section Sheet (.csv)", "Descarregar Folha da Secção (.csv)")}</span>
               </button>
 
-              {/* SEND INSTRUCTIONS BUTTON */}
-              {(activeTab === "next_phase" || selectedCandidateIds.size > 0) && (
-                <button
-                  onClick={() => openInstructionsModal()}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold transition-colors shadow-xs cursor-pointer"
-                  title={t("Send further instructions to candidates", "Enviar próximas instruções para as candidatas")}
-                >
-                  <Send size={13} />
-                  <span>
-                    {selectedCandidateIds.size > 0
-                      ? t(`Send Instructions (${selectedCandidateIds.size})`, `Enviar Instruções (${selectedCandidateIds.size})`)
-                      : t("Send Instructions to Confirmed", "Enviar Instruções às Confirmadas")}
-                  </span>
-                </button>
-              )}
+              {/* COMMUNICATIONS STUDIO TRIGGER */}
+              <button
+                onClick={() => openCommunicationsStudio()}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0a1128] hover:bg-[#121c3b] text-white text-xs font-bold transition-colors shadow-xs cursor-pointer"
+                title={t(
+                  "Open Communications Studio to create, customize, and dispatch letters",
+                  "Abrir Estúdio de Comunicações para criar, personalizar e enviar cartas oficiais"
+                )}
+              >
+                <Mail size={13} className="text-sky-300" />
+                <span>
+                  {selectedCandidateIds.size > 0
+                    ? t(`Communications Studio (${selectedCandidateIds.size})`, `Estúdio de Comunicações (${selectedCandidateIds.size})`)
+                    : t("Communications Studio", "Estúdio de Comunicações")}
+                </span>
+              </button>
             </div>
           </div>
 
@@ -1007,12 +1064,27 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
               </p>
             </div>
           ) : (
-            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-slate-700">
-                  <thead className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+            <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+              {/* Horizontal Scroll Helper Hint Banner */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-200 text-[11px] text-slate-500">
+                <span className="font-bold text-slate-700">
+                  {t(
+                    `Showing ${filteredSectionApps.length} candidate(s) in this section`,
+                    `A mostrar ${filteredSectionApps.length} candidata(s) nesta secção`
+                  )}
+                </span>
+                <span className="flex items-center gap-1.5 text-slate-400 font-medium">
+                  <span className="text-xs">←</span>
+                  <span>{t("Scroll horizontally to view all columns, full details & CV downloads", "Deslize horizontalmente para ver todas as colunas, detalhes e download de CV")}</span>
+                  <span className="text-xs">→</span>
+                </span>
+              </div>
+
+              <div className="w-full overflow-x-auto admin-scrollbar pb-2">
+                <table className="w-full min-w-[1280px] text-left text-xs text-slate-700 whitespace-nowrap">
+                  <thead className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
                     <tr>
-                      <th className="px-3.5 py-3.5 w-10 text-center">
+                      <th className="px-3.5 py-3.5 w-10 text-center whitespace-nowrap">
                         <input
                           type="checkbox"
                           checked={
@@ -1023,43 +1095,43 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                           className="rounded border-slate-300 text-[#0a1128] focus:ring-[#0a1128] cursor-pointer"
                         />
                       </th>
-                      <th className="px-4 py-3.5">{t("Candidate", "Candidato")}</th>
-                      <th className="px-4 py-3.5">{t("Contact", "Contacto")}</th>
-                      <th className="px-4 py-3.5">{t("Stage Status", "Estado na Vaga")}</th>
+                      <th className="px-4 py-3.5 min-w-[200px] whitespace-nowrap">{t("Candidate", "Candidato")}</th>
+                      <th className="px-4 py-3.5 min-w-[180px] whitespace-nowrap">{t("Contact", "Contacto")}</th>
+                      <th className="px-4 py-3.5 min-w-[130px] whitespace-nowrap">{t("Stage Status", "Estado na Vaga")}</th>
 
                       {/* Contextual Column: Next Phase Conditions Status & Option */}
                       {activeTab === "next_phase" && (
                         <>
-                          <th className="px-4 py-3.5">{t("Conditions Response", "Resposta às Condições")}</th>
-                          <th className="px-4 py-3.5">{t("Response Text Option", "Opção de Resposta")}</th>
-                          <th className="px-4 py-3.5">{t("Portal Token / Link", "Passe & Link")}</th>
+                          <th className="px-4 py-3.5 min-w-[190px] whitespace-nowrap">{t("Conditions Response", "Resposta às Condições")}</th>
+                          <th className="px-4 py-3.5 min-w-[280px] whitespace-nowrap">{t("Response Text Option", "Opção de Resposta")}</th>
+                          <th className="px-4 py-3.5 min-w-[150px] whitespace-nowrap">{t("Portal Token / Link", "Passe & Link")}</th>
                         </>
                       )}
 
                       {/* Contextual Column: Testing */}
                       {activeTab === "testing" && (
                         <>
-                          <th className="px-4 py-3.5">{t("Test Slot", "Turno Agendado")}</th>
-                          <th className="px-4 py-3.5">{t("Attendance", "Presença")}</th>
-                          <th className="px-4 py-3.5">{t("Test Score", "Pontuação")}</th>
+                          <th className="px-4 py-3.5 min-w-[140px] whitespace-nowrap">{t("Test Slot", "Turno Agendado")}</th>
+                          <th className="px-4 py-3.5 min-w-[110px] whitespace-nowrap">{t("Attendance", "Presença")}</th>
+                          <th className="px-4 py-3.5 min-w-[110px] whitespace-nowrap">{t("Test Score", "Pontuação")}</th>
                         </>
                       )}
 
                       {/* Contextual Column: Screening */}
                       {activeTab === "screening" && (
                         <>
-                          <th className="px-4 py-3.5">{t("Screening Score", "Nota Triagem")}</th>
-                          <th className="px-4 py-3.5">{t("Mandatory Criteria", "Critérios Obrigatórios")}</th>
+                          <th className="px-4 py-3.5 min-w-[120px] whitespace-nowrap">{t("Screening Score", "Nota Triagem")}</th>
+                          <th className="px-4 py-3.5 min-w-[160px] whitespace-nowrap">{t("Mandatory Criteria", "Critérios Obrigatórios")}</th>
                         </>
                       )}
 
                       {/* Attached CV */}
-                      <th className="px-4 py-3.5 text-center">{t("Attached CV", "CV Anexo")}</th>
+                      <th className="px-4 py-3.5 min-w-[130px] text-center whitespace-nowrap">{t("Attached CV", "CV Anexo")}</th>
                       {/* Operational Quick Actions */}
-                      <th className="px-4 py-3.5 text-right">{t("Actions", "Acções")}</th>
+                      <th className="px-4 py-3.5 min-w-[160px] text-right whitespace-nowrap">{t("Actions", "Acções")}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-slate-100 whitespace-nowrap">
                     {filteredSectionApps.map((app) => {
                       const isSelected = selectedCandidateIds.has(app.id);
                       const isConfirmed = isCandidateConfirmed(app);
@@ -1074,7 +1146,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                           }`}
                         >
                           {/* Checkbox */}
-                          <td className="px-3.5 py-3.5 text-center">
+                          <td className="px-3.5 py-3.5 text-center whitespace-nowrap">
                             <input
                               type="checkbox"
                               checked={isSelected}
@@ -1084,7 +1156,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                           </td>
 
                           {/* Candidate Identity */}
-                          <td className="px-4 py-3.5">
+                          <td className="px-4 py-3.5 whitespace-nowrap">
                             <div className="flex items-center gap-2.5">
                               <div className="w-7 h-7 rounded-full bg-[#0a1128] text-white flex items-center justify-center font-bold text-[11px] shrink-0">
                                 {app.name.charAt(0).toUpperCase()}
@@ -1106,7 +1178,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                           </td>
 
                           {/* Contact */}
-                          <td className="px-4 py-3.5">
+                          <td className="px-4 py-3.5 whitespace-nowrap">
                             <div className="space-y-0.5">
                               <a
                                 href={`mailto:${app.email}`}
@@ -1130,7 +1202,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                           </td>
 
                           {/* Pipeline Stage Status */}
-                          <td className="px-4 py-3.5">
+                          <td className="px-4 py-3.5 whitespace-nowrap">
                             <span className="rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-700 inline-block">
                               {app.status || "Arquivado"}
                             </span>
@@ -1145,7 +1217,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                           {/* Contextual Next Phase Details */}
                           {activeTab === "next_phase" && (
                             <>
-                              <td className="px-4 py-3.5">
+                              <td className="px-4 py-3.5 whitespace-nowrap">
                                 {isConfirmed ? (
                                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                     <CheckCircle2 size={11} className="text-emerald-600" />
@@ -1168,8 +1240,8 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                                 )}
                               </td>
 
-                              <td className="px-4 py-3.5 max-w-xs">
-                                <div className="text-[11px] text-slate-600 italic line-clamp-2">
+                              <td className="px-4 py-3.5 max-w-sm whitespace-nowrap">
+                                <div className="text-[11px] text-slate-600 italic truncate max-w-xs" title={app.nextPhaseResponseOption || ""}>
                                   {app.nextPhaseResponseOption ? (
                                     `"${app.nextPhaseResponseOption}"`
                                   ) : isConfirmed ? (
@@ -1185,7 +1257,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                                 )}
                               </td>
 
-                              <td className="px-4 py-3.5 font-mono text-[11px]">
+                              <td className="px-4 py-3.5 font-mono text-[11px] whitespace-nowrap">
                                 {app.nextPhaseToken ? (
                                   <div className="flex items-center gap-1.5">
                                     <span className="text-slate-500 truncate max-w-[100px]">
@@ -1214,10 +1286,10 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                           {/* Contextual Testing Details */}
                           {activeTab === "testing" && (
                             <>
-                              <td className="px-4 py-3.5 font-mono text-[11px] text-slate-600">
+                              <td className="px-4 py-3.5 font-mono text-[11px] text-slate-600 whitespace-nowrap">
                                 {app.testSlot || t("No slot", "Sem agendamento")}
                               </td>
-                              <td className="px-4 py-3.5">
+                              <td className="px-4 py-3.5 whitespace-nowrap">
                                 {app.attendedAt ? (
                                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                     {t("Attended", "Presente")}
@@ -1230,7 +1302,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                                   <span className="text-slate-400">—</span>
                                 )}
                               </td>
-                              <td className="px-4 py-3.5">
+                              <td className="px-4 py-3.5 whitespace-nowrap">
                                 {typeof app.testScore === "number" ? (
                                   <span
                                     className={`px-2 py-0.5 rounded font-mono text-[11px] font-extrabold ${
@@ -1251,10 +1323,10 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                           {/* Contextual Screening Details */}
                           {activeTab === "screening" && (
                             <>
-                              <td className="px-4 py-3.5 font-mono text-[11px] font-bold text-slate-700">
+                              <td className="px-4 py-3.5 font-mono text-[11px] font-bold text-slate-700 whitespace-nowrap">
                                 {typeof app.screeningScore === "number" ? `${app.screeningScore}%` : "N/A"}
                               </td>
-                              <td className="px-4 py-3.5">
+                              <td className="px-4 py-3.5 whitespace-nowrap">
                                 {app.screeningResult?.passedMandatory ? (
                                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                     {t("Passed", "Aprovado")}
@@ -1269,29 +1341,30 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                           )}
 
                           {/* Attached CV */}
-                          <td className="px-4 py-3.5 text-center">
+                          <td className="px-4 py-3.5 text-center whitespace-nowrap">
                             <a
                               href={`/api/admin/cv?id=${app.id}`}
                               target="_blank"
                               rel="noreferrer"
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-[11px] transition-colors shadow-2xs"
-                              title={t("Download CV", "Descarregar CV")}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-[11px] transition-colors shadow-2xs"
+                              title={t("Download candidate CV", "Descarregar CV do candidato")}
                             >
-                              <Download size={12} className="text-slate-500" />
-                              <span>{t("CV", "CV")}</span>
+                              <Download size={12} className="text-slate-600" />
+                              <span>{t("Download CV", "Baixar CV")}</span>
                             </a>
                           </td>
 
                           {/* Operational Row Actions */}
-                          <td className="px-4 py-3.5 text-right">
+                          <td className="px-4 py-3.5 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-1.5">
                               <button
                                 type="button"
-                                onClick={() => openInstructionsModal([app])}
-                                className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-sky-50 text-slate-600 hover:text-sky-700 transition-colors shadow-2xs cursor-pointer"
-                                title={t("Send Instructions", "Enviar Instruções")}
+                                onClick={() => openCommunicationsStudio([app])}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-sky-50 text-slate-700 hover:text-sky-700 text-[11px] font-semibold transition-colors shadow-2xs cursor-pointer"
+                                title={t("Open Communications Studio for this candidate", "Abrir Estúdio de Comunicações para este candidato")}
                               >
-                                <Send size={12} />
+                                <Mail size={12} className="text-sky-600" />
+                                <span>{t("Message", "Mensagem")}</span>
                               </button>
 
                               <button
@@ -1313,7 +1386,9 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
             </div>
           )}
         </div>
-      ) : (
+      )}
+    </div>
+  ) : (
         /* =========================================================================
             VIEW 2: ARCHIVED COHORT CARDS DIRECTORY & OVERVIEW
            ========================================================================= */

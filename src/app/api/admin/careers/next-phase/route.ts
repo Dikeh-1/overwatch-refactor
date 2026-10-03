@@ -589,7 +589,13 @@ export async function POST(request: Request) {
             email: previewEmail,
           };
 
-        const personalizedMessage = message.replace(/\{name\}/gi, sampleTarget.name);
+        const personalizedMessage = message
+          .replace(/\{\{?name\}\}?/gi, sampleTarget.name)
+          .replace(/\{\{?candidate_name\}\}?/gi, sampleTarget.name)
+          .replace(/\{\{?role\}\}?/gi, "Operadora de CCO")
+          .replace(/\{\{?role_title\}\}?/gi, "Operadora de CCO")
+          .replace(/\{\{?date\}\}?/gi, new Date().toLocaleDateString("pt-MZ"))
+          .replace(/\{\{?location\}\}?/gi, "Av. do Trabalho, N.º 1948, Maputo");
 
         await sendNextPhaseInstructionsEmail({
           candidate: { name: sampleTarget.name, email: previewEmail },
@@ -624,10 +630,22 @@ export async function POST(request: Request) {
           continue;
         }
 
+        const roleName =
+          app.role === "cctv" || app.role === "cctv_operator" || !app.role
+            ? "Operadora de CCO"
+            : app.role === "cctv_technical_manager"
+            ? "Gestor Técnico de CCTV"
+            : app.role;
+
         const personalizedMessage = message
-          .replace(/\{name\}/gi, app.name)
-          .replace(/\{token\}/gi, app.nextPhaseToken || "")
-          .replace(/\{role\}/gi, "Operadora de CCO");
+          .replace(/\{\{?name\}\}?/gi, app.name)
+          .replace(/\{\{?candidate_name\}\}?/gi, app.name)
+          .replace(/\{\{?token\}\}?/gi, app.nextPhaseToken || "")
+          .replace(/\{\{?role\}\}?/gi, roleName)
+          .replace(/\{\{?role_title\}\}?/gi, roleName)
+          .replace(/\{\{?slot\}\}?/gi, app.testSlot || "")
+          .replace(/\{\{?date\}\}?/gi, new Date().toLocaleDateString("pt-MZ"))
+          .replace(/\{\{?location\}\}?/gi, "Av. do Trabalho, N.º 1948, Maputo");
 
         try {
           await sendNextPhaseInstructionsEmail({

@@ -109,18 +109,30 @@ export async function PATCH(request: Request) {
       typeof data.id === "string" && /^[\w-]{6,64}$/i.test(data.id.trim())
     ) {
       await setStatus(data.id, data.status);
+      const app = await getApplication(data.id);
+      const updates: Record<string, any> = {};
       if (data.status === "next_phase_selected" || data.status === "next_phase_invited") {
-        const app = await getApplication(data.id);
-        const updates: Record<string, any> = {
-          nextPhaseStatus: data.status === "next_phase_invited" ? "invited" : "selected",
-        };
+        updates.nextPhaseStatus = data.status === "next_phase_invited" ? "invited" : "selected";
         if (!app?.nextPhaseToken) {
           updates.nextPhaseToken = crypto.randomBytes(16).toString("hex");
         }
-        await updateApplication(data.id, updates);
       } else if (data.status === "archived" || data.status === "rejected" || data.status === "not_advancing") {
-        await updateApplication(data.id, { nextPhaseStatus: undefined });
+        updates.nextPhaseStatus = undefined;
       }
+      if (data.status === "hired") {
+        updates.hiredAt = new Date().toISOString();
+      }
+      const currentLog = app?.activityLog || [];
+      updates.activityLog = [
+        ...currentLog,
+        {
+          action: `Stage Transition: ${data.status}`,
+          details: `Candidate stage moved to "${data.status}" via Admin Portal`,
+          actor: "Admin Recruiter",
+          timestamp: new Date().toISOString(),
+        },
+      ];
+      await updateApplication(data.id, updates);
     }
     else if (
       data.kind === "bulk_status" &&
@@ -131,18 +143,30 @@ export async function PATCH(request: Request) {
       for (const id of data.ids) {
         if (typeof id === "string" && /^[\w-]{6,64}$/i.test(id.trim())) {
           await setStatus(id, data.status);
+          const app = await getApplication(id);
+          const updates: Record<string, any> = {};
           if (data.status === "next_phase_selected" || data.status === "next_phase_invited") {
-            const app = await getApplication(id);
-            const updates: Record<string, any> = {
-              nextPhaseStatus: data.status === "next_phase_invited" ? "invited" : "selected",
-            };
+            updates.nextPhaseStatus = data.status === "next_phase_invited" ? "invited" : "selected";
             if (!app?.nextPhaseToken) {
               updates.nextPhaseToken = crypto.randomBytes(16).toString("hex");
             }
-            await updateApplication(id, updates);
           } else if (data.status === "archived" || data.status === "rejected" || data.status === "not_advancing") {
-            await updateApplication(id, { nextPhaseStatus: undefined });
+            updates.nextPhaseStatus = undefined;
           }
+          if (data.status === "hired") {
+            updates.hiredAt = new Date().toISOString();
+          }
+          const currentLog = app?.activityLog || [];
+          updates.activityLog = [
+            ...currentLog,
+            {
+              action: `Stage Transition: ${data.status}`,
+              details: `Bulk transition to "${data.status}" via Admin Portal`,
+              actor: "Admin Recruiter",
+              timestamp: new Date().toISOString(),
+            },
+          ];
+          await updateApplication(id, updates);
         }
       }
     }

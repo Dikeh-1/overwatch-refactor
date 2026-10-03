@@ -156,16 +156,28 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Candidate ID required" }, { status: 400 });
     }
 
-    const { updateApplication, setStatus } = await import("@/lib/careers-store");
+    const { updateApplication, setStatus, getApplication } = await import("@/lib/careers-store");
+    const app = await getApplication(id);
     if (status) {
       await setStatus(id, status);
     }
     const updates: Record<string, any> = {};
     if (nextPhaseStatus) updates.nextPhaseStatus = nextPhaseStatus;
     if (notes !== undefined) updates.archiveReason = notes;
-    if (Object.keys(updates).length > 0) {
-      await updateApplication(id, updates);
+    if (status === "hired") {
+      updates.hiredAt = new Date().toISOString();
     }
+    const currentLog = app?.activityLog || [];
+    updates.activityLog = [
+      ...currentLog,
+      {
+        action: `Stage Transition: ${status || "Updated"}`,
+        details: `Updated in Archive Vault${notes ? ` (Reason: ${notes})` : ""}`,
+        actor: "Admin Recruiter",
+        timestamp: new Date().toISOString(),
+      },
+    ];
+    await updateApplication(id, updates);
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

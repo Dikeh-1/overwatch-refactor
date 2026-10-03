@@ -1,0 +1,976 @@
+"use client";
+
+import React, { useState, useMemo } from "react";
+import {
+  Mail,
+  Send,
+  Users,
+  CheckCircle2,
+  AlertCircle,
+  Copy,
+  Check,
+  Eye,
+  FileText,
+  Clock,
+  ArrowLeft,
+  Sparkles,
+  ShieldCheck,
+  RefreshCw,
+  FolderArchive,
+  MessageSquare,
+  ChevronRight,
+  ExternalLink,
+} from "lucide-react";
+import { Application } from "@/lib/careers";
+import { useAdminLanguage } from "../shell/AdminLanguageContext";
+import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
+
+interface CohortCommunicationsStudioProps {
+  cohort: any;
+  applications: Application[];
+  selectedCandidateIds: Set<string>;
+  onBackToPipeline: () => void;
+  onReloadApps: () => Promise<void>;
+}
+
+export const DEFAULT_INSTRUCTIONS_TEMPLATE = `Prezada Candidata {name},
+
+Acusamos e registamos com agrado a sua confirmação e aceitação das condições para a Próxima Fase do processo de selecção para a função de Operadora de CCO da Overwatch Moçambique.
+
+Vimos por este meio convocar-lhe formalmente para o início do Programa de Formação Inicial e Integração Operacional, que terá lugar de acordo com as seguintes directrizes:
+
+1. LOCAL & PONTO DE ENCONTRO:
+- Centro de Comando e Controlo Overwatch (CCO)
+- Endereço: Av. do Trabalho, N.º 1948, Maputo, Moçambique
+- Ponto de referência: Próximo à Direcção de Transportes
+
+2. HORÁRIO & APRESENTAÇÃO:
+- Horário de comparência: 08h30 (pontualidade rigorosa)
+- Sessão de abertura e credenciação: 09h00
+
+3. DOCUMENTAÇÃO OBRIGATÓRIA A APRESENTAR NO PRIMEIRO DIA:
+- Bilhete de Identidade (BI) ou Cartão de Eleitor (original e 2 cópias);
+- Certificado de Habilitações da 12.ª Classe (original e 1 cópia);
+- Cartão de NUIT;
+- Certificado de Registo Criminal ou comprovativo de pedido;
+- Curriculum Vitae impresso e actualizado;
+- 2 Fotografias tipo passe recentes.
+
+4. CÓDIGO DE VESTUÁRIO (DRESS CODE):
+- Traje formal / executivo sóbrio (calça escura ou saia abaixo do joelho, blusa ou camisa social, calçado fechado e confortável).
+
+5. CANAL DE APOIO & ESCLARECIMENTO DE DÚVIDAS:
+- Para qualquer questão de logística ou confirmação prévia, favor contactar a equipa de RH via WhatsApp ou chamada para o número institucional Overwatch: +258 84 000 0000.
+
+Reiteramos os nossos parabéns pela dedicação demonstrada nas provas de selecção e esperamos contar com o seu melhor desempenho nesta fase decisiva.
+
+Com os melhores cumprimentos,
+Direcção de Recursos Humanos & Operações
+Overwatch Moçambique`;
+
+const PRESET_TEMPLATES = {
+  onboarding: {
+    id: "onboarding",
+    titlePt: "1. Convocatória / Instruções da Formação Inicial",
+    titleEn: "1. Initial Training & Onboarding Convocation",
+    subjectPt: "Instruções Oficiais da Próxima Fase – Vaga de Operadora de CCO | Overwatch Moçambique",
+    subjectEn: "Official Next Phase Instructions – CCTV Operator Role | Overwatch Mozambique",
+    bodyPt: DEFAULT_INSTRUCTIONS_TEMPLATE,
+    bodyEn: `Dear Candidate {name},
+
+We are pleased to formally register your acceptance of the terms for the Next Phase of the CCTV Operator recruitment process at Overwatch Mozambique.
+
+You are hereby invited to attend the commencement of the Initial Training and Operational Integration Program under the following guidelines:
+
+1. VENUE & ASSEMBLY POINT:
+- Overwatch Command & Control Centre (CCO)
+- Address: Av. do Trabalho, No. 1948, Maputo, Mozambique
+- Reference point: Near the Transport Directorate
+
+2. SCHEDULE & REPORTING TIME:
+- Arrival time: 08:30 AM (strict punctuality)
+- Opening session & accreditation: 09:00 AM
+
+3. MANDATORY DOCUMENTS REQUIRED ON DAY ONE:
+- Identification Document (BI / Voter Card) (original and 2 copies);
+- Grade 12 Certificate (original and 1 copy);
+- NUIT Tax Card;
+- Police Criminal Record Certificate or request receipt;
+- Updated printed CV;
+- 2 Recent passport-sized photographs.
+
+4. DRESS CODE:
+- Formal / sober executive business attire (dark trousers or below-the-knee skirt, collared shirt/blouse, closed comfortable shoes).
+
+5. SUPPORT & CONTACT CHANNEL:
+- For logistics inquiries or questions, contact the HR team via WhatsApp or call: +258 84 000 0000.
+
+Congratulations on your dedication during the selection trials. We look forward to your best performance in this decisive stage.
+
+Best regards,
+Human Resources & Operations Directorate
+Overwatch Mozambique`,
+  },
+  conditions: {
+    id: "conditions",
+    titlePt: "2. Notificação das Condições da Próxima Fase",
+    titleEn: "2. Next Phase Conditions & Stipend Notice",
+    subjectPt: "Notificação das Condições – Próxima Fase do Processo de Recrutamento | Overwatch",
+    subjectEn: "Conditions Notice – Next Phase of Recruitment Process | Overwatch",
+    bodyPt: `Prezada Candidata {{name}},
+
+Vimos por este meio comunicar que a sua prova de selecção presencial para a vaga de {{role}} na Overwatch Moçambique obteve avaliação positiva.
+
+Convidamo-la a consultar os termos e directrizes operacionais da fase de formação intensiva:
+
+1. Programa de Formação Intensiva de 10 dias úteis em Maputo;
+2. Escala rotativa contínua de 12 horas (2 Dias, 2 Noites, 2 Folgas);
+3. Atribuição de subsídio de formação e integração na Central de Comando;
+4. Disponibilização de fardamento e equipamento operacional completo.
+
+Favor confirmar a sua disponibilidade e aceitação destas condições para garantia da sua vaga na turma de formação.
+
+Com os melhores cumprimentos,
+Direcção de Recursos Humanos & Operações
+Overwatch Moçambique`,
+    bodyEn: `Dear Candidate {{name}},
+
+We are pleased to inform you that your evaluation for the position of {{role}} at Overwatch Mozambique has met our performance standards.
+
+We invite you to review the operational guidelines for the upcoming intensive training phase:
+
+1. Intensive 10 working days training program in Maputo;
+2. Continuous rotating 12-hour shifts (2 Days, 2 Nights, 2 Off);
+3. Training stipend provided with direct integration into the Command Centre;
+4. Full operational uniform and equipment provided.
+
+Please confirm your availability and acceptance of these conditions to secure your seat.
+
+Best regards,
+Human Resources & Operations Directorate
+Overwatch Mozambique`,
+  },
+  conclusion: {
+    id: "conclusion",
+    titlePt: "3. Notificação de Encerramento do Concurso",
+    titleEn: "3. Recruitment Cycle Conclusion Notice",
+    subjectPt: "Conclusão do Processo de Recrutamento – Overwatch Moçambique",
+    subjectEn: "Recruitment Process Conclusion – Overwatch Mozambique",
+    bodyPt: `Prezada Candidata {{name}},
+
+Agradecemos sinceramente o seu interesse e empenho demonstrados ao longo do concurso de recrutamento para a vaga de {{role}} da Overwatch Moçambique.
+
+Informamos que o ciclo de recrutamento deste lote foi formalmente encerrado e o processo selado no nosso arquivo institucional.
+
+O seu perfil profissional permanecerá registado com elevada consideração na nossa base de talentos para futuros concursos e expansões das operações.
+
+Desejamos-lhe os maiores sucessos na sua carreira profissional.
+
+Com os melhores cumprimentos,
+Direcção de Recursos Humanos
+Overwatch Moçambique`,
+    bodyEn: `Dear Candidate {{name}},
+
+We sincerely thank you for your participation and dedication throughout the recruitment process for {{role}} at Overwatch Mozambique.
+
+Please be advised that the recruitment cycle for this cohort has formally concluded and the records archived.
+
+Your credentials remain in our talent database for consideration in upcoming operational cycles and expansions.
+
+We wish you continued success in your professional career.
+
+Best regards,
+Human Resources Directorate
+Overwatch Mozambique`,
+  },
+  custom: {
+    id: "custom",
+    titlePt: "4. Comunicado Geral Personalizado",
+    titleEn: "4. Custom Official Announcement",
+    subjectPt: "Comunicado Oficial – Overwatch Moçambique",
+    subjectEn: "Official Announcement – Overwatch Mozambique",
+    bodyPt: `Prezada Candidata {{name}},
+
+Vimos por este meio partilhar uma actualização importante relativamente ao processo de selecção para a vaga de {{role}} na Overwatch Moçambique.
+
+[Insira aqui a sua mensagem oficial personalizada...]
+
+Com os melhores cumprimentos,
+Equipa de Recrutamento
+Overwatch Moçambique`,
+    bodyEn: `Dear Candidate {{name}},
+
+We are reaching out with an official update regarding the recruitment process for {{role}} at Overwatch Mozambique.
+
+[Insert your custom official announcement here...]
+
+Best regards,
+Recruitment Team
+Overwatch Mozambique`,
+  },
+};
+
+export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProps> = ({
+  cohort,
+  applications,
+  selectedCandidateIds,
+  onBackToPipeline,
+  onReloadApps,
+}) => {
+  const { lang, t } = useAdminLanguage();
+
+  // Candidate status helpers
+  const isCandidateConfirmed = (a: Application) => {
+    return (
+      a.nextPhaseResponse === "yes" ||
+      a.status === "interest_confirmed" ||
+      a.nextPhaseStatus === "confirmed"
+    );
+  };
+
+  const isCandidateDeclined = (a: Application) => {
+    return (
+      a.nextPhaseResponse === "no" ||
+      a.status === "interest_declined" ||
+      a.nextPhaseStatus === "declined"
+    );
+  };
+
+  const isCandidateAwaiting = (a: Application) => {
+    return (
+      (a.status === "next_phase_invited" || a.nextPhaseStatus === "invited") &&
+      !a.nextPhaseResponse
+    );
+  };
+
+  // Studio states
+  const [audienceFilter, setAudienceFilter] = useState<string>(
+    selectedCandidateIds.size > 0 ? "selected" : "confirmed"
+  );
+  const [activeTemplateKey, setActiveTemplateKey] = useState<keyof typeof PRESET_TEMPLATES>("onboarding");
+  const [canvasTab, setCanvasTab] = useState<"edit" | "preview">("edit");
+  const [subject, setSubject] = useState(
+    lang === "en" ? PRESET_TEMPLATES.onboarding.subjectEn : PRESET_TEMPLATES.onboarding.subjectPt
+  );
+  const [message, setMessage] = useState(
+    lang === "en" ? PRESET_TEMPLATES.onboarding.bodyEn : PRESET_TEMPLATES.onboarding.bodyPt
+  );
+  const [previewEmail, setPreviewEmail] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [dispatchResult, setDispatchResult] = useState<{
+    sentCount: number;
+    failedCount: number;
+    results?: any[];
+  } | null>(null);
+  const [copiedWhatsApp, setCopiedWhatsApp] = useState(false);
+
+  // Audience counts
+  const audienceCounts = useMemo(() => {
+    const confirmed = applications.filter(isCandidateConfirmed).length;
+    const awaiting = applications.filter(isCandidateAwaiting).length;
+    const declined = applications.filter(isCandidateDeclined).length;
+    const tested = applications.filter((a) => Boolean(a.attendedAt)).length;
+    const hired = applications.filter((a) => a.status === "hired").length;
+    const total = applications.length;
+    const selected = selectedCandidateIds.size;
+    const archived = applications.filter((a) => a.status === "archived" || a.status === "rejected").length;
+    return { confirmed, awaiting, declined, tested, hired, total, selected, archived };
+  }, [applications, selectedCandidateIds]);
+
+  // Target candidates according to audience
+  const targetCandidates = useMemo(() => {
+    switch (audienceFilter) {
+      case "confirmed":
+        return applications.filter(isCandidateConfirmed);
+      case "selected":
+        return applications.filter((a) => selectedCandidateIds.has(a.id));
+      case "awaiting":
+        return applications.filter(isCandidateAwaiting);
+      case "declined":
+        return applications.filter(isCandidateDeclined);
+      case "tested":
+        return applications.filter((a) => Boolean(a.attendedAt));
+      case "hired":
+        return applications.filter((a) => a.status === "hired");
+      case "archived":
+        return applications.filter((a) => a.status === "archived" || a.status === "rejected");
+      case "all":
+      default:
+        return applications;
+    }
+  }, [audienceFilter, applications, selectedCandidateIds]);
+
+  // Template switch handler
+  const handleSelectTemplate = (key: keyof typeof PRESET_TEMPLATES) => {
+    setActiveTemplateKey(key);
+    const tpl = PRESET_TEMPLATES[key];
+    setSubject(lang === "en" ? tpl.subjectEn : tpl.subjectPt);
+    setMessage(lang === "en" ? tpl.bodyEn : tpl.bodyPt);
+    setDispatchResult(null);
+  };
+
+  // Variable chip insertion
+  const handleInsertVariable = (varCode: string) => {
+    setMessage((prev) => `${prev} ${varCode}`);
+  };
+
+  // Sample candidate for preview rendering
+  const sampleCandidate = targetCandidates[0] || applications[0] || {
+    id: "preview-id",
+    name: "Palmira João mordinho",
+    role: cohort.roleId || "cctv",
+    email: "palmira.mordinho@exemplo.com",
+    testSlot: "Terça-feira, 22 de Setembro – 10h00",
+  };
+
+  const roleTitleDisplay =
+    lang === "en"
+      ? cohort.roleTitleEn || cohort.roleTitlePt || "CCTV Operator"
+      : cohort.roleTitlePt || cohort.roleTitleEn || "Operadora de CCO";
+
+  // Formatted preview text
+  const renderedPreviewText = useMemo(() => {
+    return message
+      .replace(/\{\{?name\}\}?/gi, sampleCandidate.name)
+      .replace(/\{\{?candidate_name\}\}?/gi, sampleCandidate.name)
+      .replace(/\{\{?role\}\}?/gi, roleTitleDisplay)
+      .replace(/\{\{?role_title\}\}?/gi, roleTitleDisplay)
+      .replace(/\{\{?slot\}\}?/gi, sampleCandidate.testSlot || "Terça-feira, 22 de Setembro – 10h00")
+      .replace(/\{\{?date\}\}?/gi, new Date().toLocaleDateString(lang === "en" ? "en-US" : "pt-MZ"))
+      .replace(/\{\{?location\}\}?/gi, "Av. do Trabalho, N.º 1948, Maputo");
+  }, [message, sampleCandidate, roleTitleDisplay, lang]);
+
+  // WhatsApp template copy
+  const handleCopyWhatsApp = () => {
+    const text = `*OVERWATCH MOÇAMBIQUE | ${subject.toUpperCase()}*\n\nPrezada ${sampleCandidate.name},\n\n${renderedPreviewText}\n\n📍 *Suporte & Dúvidas:* Responda directamente a esta mensagem ou contacte a equipa de RH: +258 84 000 0000.\n\nEquipa de Recursos Humanos & Operações\nOverwatch Moçambique`;
+    navigator.clipboard.writeText(text);
+    setCopiedWhatsApp(true);
+    setTimeout(() => setCopiedWhatsApp(false), 3000);
+  };
+
+  // Dispatch handler
+  const handleDispatch = async (isPreview = false) => {
+    const targetIds = targetCandidates.map((a) => a.id);
+    if (!isPreview && targetIds.length === 0) {
+      alert(t("No candidates found in the selected target audience.", "Nenhum candidato encontrado no público-alvo seleccionado."));
+      return;
+    }
+    if (isPreview && (!previewEmail || !previewEmail.includes("@"))) {
+      alert(t("Please enter a valid preview email address.", "Por favor insira um email de teste válido."));
+      return;
+    }
+
+    setIsSending(true);
+    setDispatchResult(null);
+    try {
+      const res = await fetch("/api/admin/careers/next-phase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "send_instructions",
+          candidateIds: targetIds,
+          subject: subject.trim(),
+          message: message.trim(),
+          preview: isPreview,
+          previewEmail: previewEmail.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        if (isPreview) {
+          alert(
+            t(
+              `Live preview test email sent successfully to ${previewEmail}!`,
+              `Email de teste modelo enviado com sucesso para ${previewEmail}!`
+            )
+          );
+        } else {
+          setDispatchResult({
+            sentCount: data.sentCount || targetIds.length,
+            failedCount: data.failedCount || 0,
+            results: data.results,
+          });
+          await onReloadApps();
+        }
+      } else {
+        alert(data.error || "Failed to dispatch communications");
+      }
+    } catch (err: any) {
+      alert(err.message || "Network error dispatching communications");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-200">
+      {/* Studio Header Card */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3">
+            <button
+              onClick={onBackToPipeline}
+              className="rounded-xl border border-slate-200 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-colors shadow-2xs shrink-0 cursor-pointer"
+              title={t("Back to Cohort Pipeline", "Voltar ao Pipeline do Lote")}
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-slate-900 text-white px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                  {cohort.department || t("Operations", "Operações")}
+                </span>
+                <span className="rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-700 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                  <Mail size={11} />
+                  {t("Communications Studio", "Estúdio de Comunicações")}
+                </span>
+                <span className="rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-700 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                  <FolderArchive size={11} />
+                  {cohort.name}
+                </span>
+              </div>
+              <h2 className="text-lg font-extrabold text-slate-900 mt-1">
+                {t("Archive Cohort Communications Studio", "Estúdio de Comunicações do Lote Arquivado")}
+              </h2>
+              <p className="text-xs text-slate-500">
+                {t(
+                  "Craft, preview in authentic letterhead, and dispatch official onboarding instructions, conditions notices, and cohort broadcasts.",
+                  "Personalize, pré-visualize em papel timbrado oficial e envie instruções de formação, termos e comunicados deste lote."
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onBackToPipeline}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+            >
+              <ArrowLeft size={13} />
+              <span>{t("Back to Candidates Table", "Voltar à Tabela de Candidatos")}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Audience Target Selector Strip */}
+        <div className="pt-3 border-t border-slate-100 space-y-2">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+            <span className="flex items-center gap-1.5">
+              <Users size={14} className="text-sky-600" />
+              <span>{t("Target Recipient Audience", "Público-Alvo Destinatário")}:</span>
+            </span>
+            <span className="text-[11px] font-semibold text-slate-500 font-mono">
+              {targetCandidates.length} {t("candidates targeted", "candidatas seleccionadas")}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+            {/* Audience 1: Confirmed Conditions */}
+            <button
+              type="button"
+              onClick={() => setAudienceFilter("confirmed")}
+              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                audienceFilter === "confirmed"
+                  ? "bg-slate-900 border-slate-900 text-white shadow-xs"
+                  : "bg-slate-50/70 border-slate-200 hover:bg-slate-100 text-slate-800"
+              }`}
+            >
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                {t("Accepted Conditions", "Aceitaram Termos")}
+              </div>
+              <div className="text-base font-extrabold mt-0.5 text-emerald-400">
+                {audienceCounts.confirmed}
+              </div>
+              <span className="text-[9px] block text-slate-400">
+                {t("Primary CCO Group", "Grupo Finalista CCO")}
+              </span>
+            </button>
+
+            {/* Audience 2: Selected from Table */}
+            {selectedCandidateIds.size > 0 && (
+              <button
+                type="button"
+                onClick={() => setAudienceFilter("selected")}
+                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                  audienceFilter === "selected"
+                    ? "bg-slate-900 border-slate-900 text-white shadow-xs"
+                    : "bg-sky-50/70 border-sky-200 hover:bg-sky-100 text-sky-900"
+                }`}
+              >
+                <div className="text-[10px] font-bold uppercase tracking-wider text-sky-500">
+                  {t("Selected from Table", "Marcadas na Tabela")}
+                </div>
+                <div className="text-base font-extrabold mt-0.5 text-sky-600">
+                  {audienceCounts.selected}
+                </div>
+                <span className="text-[9px] block text-sky-500">
+                  {t("Custom Checklist", "Selecção Manual")}
+                </span>
+              </button>
+            )}
+
+            {/* Audience 3: Awaiting Response */}
+            <button
+              type="button"
+              onClick={() => setAudienceFilter("awaiting")}
+              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                audienceFilter === "awaiting"
+                  ? "bg-slate-900 border-slate-900 text-white shadow-xs"
+                  : "bg-slate-50/70 border-slate-200 hover:bg-slate-100 text-slate-800"
+              }`}
+            >
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                {t("Awaiting Response", "Aguardam Resposta")}
+              </div>
+              <div className="text-base font-extrabold mt-0.5 text-amber-500">
+                {audienceCounts.awaiting}
+              </div>
+              <span className="text-[9px] block text-slate-400">
+                {t("Pending Next Phase", "Pendente Aceitação")}
+              </span>
+            </button>
+
+            {/* Audience 4: Attended Physical Test */}
+            <button
+              type="button"
+              onClick={() => setAudienceFilter("tested")}
+              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                audienceFilter === "tested"
+                  ? "bg-slate-900 border-slate-900 text-white shadow-xs"
+                  : "bg-slate-50/70 border-slate-200 hover:bg-slate-100 text-slate-800"
+              }`}
+            >
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                {t("Attended Test", "Fizeram Prova")}
+              </div>
+              <div className="text-base font-extrabold mt-0.5 text-sky-500">
+                {audienceCounts.tested}
+              </div>
+              <span className="text-[9px] block text-slate-400">
+                {t("Verified Gate Check", "Presença no Portão")}
+              </span>
+            </button>
+
+            {/* Audience 5: Hired Finalists */}
+            <button
+              type="button"
+              onClick={() => setAudienceFilter("hired")}
+              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                audienceFilter === "hired"
+                  ? "bg-slate-900 border-slate-900 text-white shadow-xs"
+                  : "bg-slate-50/70 border-slate-200 hover:bg-slate-100 text-slate-800"
+              }`}
+            >
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                {t("Hired Offers", "Admitidos")}
+              </div>
+              <div className="text-base font-extrabold mt-0.5 text-emerald-500">
+                {audienceCounts.hired}
+              </div>
+              <span className="text-[9px] block text-slate-400">
+                {t("Final Offers", "Contratos Finais")}
+              </span>
+            </button>
+
+            {/* Audience 6: Entire Cohort */}
+            <button
+              type="button"
+              onClick={() => setAudienceFilter("all")}
+              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                audienceFilter === "all"
+                  ? "bg-slate-900 border-slate-900 text-white shadow-xs"
+                  : "bg-slate-50/70 border-slate-200 hover:bg-slate-100 text-slate-800"
+              }`}
+            >
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                {t("All Applications", "Todo o Lote")}
+              </div>
+              <div className="text-base font-extrabold mt-0.5 text-slate-800">
+                {audienceCounts.total}
+              </div>
+              <span className="text-[9px] block text-slate-400">
+                {t("Master Cohort Pool", "Base Completa")}
+              </span>
+            </button>
+
+            {/* Audience 7: Non-Selected / Archived */}
+            <button
+              type="button"
+              onClick={() => setAudienceFilter("archived")}
+              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                audienceFilter === "archived"
+                  ? "bg-slate-900 border-slate-900 text-white shadow-xs"
+                  : "bg-slate-50/70 border-slate-200 hover:bg-slate-100 text-slate-800"
+              }`}
+            >
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                {t("Not Advancing", "Não Seleccionados")}
+              </div>
+              <div className="text-base font-extrabold mt-0.5 text-rose-500">
+                {audienceCounts.archived}
+              </div>
+              <span className="text-[9px] block text-slate-400">
+                {t("Concluded Candidates", "Concurso Concluído")}
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Preset Templates Palette */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs font-bold text-slate-700 px-1">
+          <span>{t("Select Official Template", "Seleccionar Modelo Oficial")}:</span>
+          <span className="text-[11px] text-slate-400 font-normal">
+            {t("Click any template to load its official wording", "Clique num modelo para carregar o texto correspondente")}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {(Object.keys(PRESET_TEMPLATES) as Array<keyof typeof PRESET_TEMPLATES>).map((key) => {
+            const tpl = PRESET_TEMPLATES[key];
+            const isSelected = activeTemplateKey === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => handleSelectTemplate(key)}
+                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2 shadow-2xs ${
+                  isSelected
+                    ? "bg-[#0a1128] text-white border-[#0a1128] shadow-xs"
+                    : "bg-white text-slate-800 border-slate-200 hover:border-slate-300 hover:bg-slate-50/70"
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-[11px] font-bold line-clamp-1 ${isSelected ? "text-sky-300" : "text-slate-900"}`}>
+                      {lang === "en" ? tpl.titleEn : tpl.titlePt}
+                    </span>
+                    {isSelected && <Check size={13} className="text-sky-400 shrink-0" />}
+                  </div>
+                  <p className={`text-[10px] mt-1 line-clamp-2 ${isSelected ? "text-slate-300" : "text-slate-500"}`}>
+                    {lang === "en" ? tpl.subjectEn : tpl.subjectPt}
+                  </p>
+                </div>
+                <span className={`text-[9px] font-semibold uppercase tracking-wider block ${isSelected ? "text-sky-400" : "text-slate-400"}`}>
+                  {key === "onboarding" ? t("Induction Briefing", "Convocatória Presencial") : key === "conditions" ? t("Terms & Stipend", "Termos & Subsídio") : key === "conclusion" ? t("Talent Bank", "Arquivo & Reserva") : t("Custom Draft", "Texto Livre")}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Main Studio Canvas: Edit vs Preview Mode */}
+      <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs">
+        {/* Canvas Mode Header Tabs */}
+        <div className="border-b border-slate-200 bg-slate-50/80 px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCanvasTab("edit")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                canvasTab === "edit"
+                  ? "bg-[#0a1128] text-white shadow-2xs"
+                  : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
+              }`}
+            >
+              <FileText size={13} />
+              <span>{t("Message Editor", "Editor da Mensagem")}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setCanvasTab("preview")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                canvasTab === "preview"
+                  ? "bg-[#0a1128] text-white shadow-2xs"
+                  : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
+              }`}
+            >
+              <Eye size={13} className={canvasTab === "preview" ? "text-sky-300" : ""} />
+              <span>{t("Live Official Letterhead Preview", "Pré-visualização em Papel Timbrado")}</span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleCopyWhatsApp}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
+              title={t("Copy formatted broadcast copy for WhatsApp", "Copiar texto formatado para WhatsApp")}
+            >
+              {copiedWhatsApp ? (
+                <>
+                  <Check size={13} className="text-emerald-600" />
+                  <span className="text-emerald-700 font-bold">{t("Copied!", "Copiado!")}</span>
+                </>
+              ) : (
+                <>
+                  <Copy size={13} />
+                  <span>{t("Copy for WhatsApp", "Copiar p/ WhatsApp")}</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Tab 1: Editor Canvas */}
+        {canvasTab === "edit" ? (
+          <div className="p-6 space-y-5">
+            {/* Subject Input */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <label className="font-bold text-slate-800">
+                  {t("Official Email Subject Line", "Assunto Oficial do Email")}
+                </label>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {subject.length} {t("characters", "caracteres")}
+                </span>
+              </div>
+              <input
+                type="text"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder={t("Subject line...", "Assunto da comunicação...")}
+                className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-xs text-slate-900 font-medium focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none shadow-2xs"
+              />
+            </div>
+
+            {/* Variable Insertion Badges */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-bold text-slate-600 block">
+                {t("Click to Insert Personalized Variables", "Inserir Variáveis Personalizadas")}:
+              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleInsertVariable("{{name}}")}
+                  className="px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[11px] font-mono font-bold text-slate-800 transition-colors shadow-2xs cursor-pointer"
+                >
+                  {"{{name}}"} <span className="text-[10px] text-slate-400 font-sans">({t("Candidate Name", "Nome")})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleInsertVariable("{{role}}")}
+                  className="px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[11px] font-mono font-bold text-slate-800 transition-colors shadow-2xs cursor-pointer"
+                >
+                  {"{{role}}"} <span className="text-[10px] text-slate-400 font-sans">({t("Role Title", "Cargo")})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleInsertVariable("{{slot}}")}
+                  className="px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[11px] font-mono font-bold text-slate-800 transition-colors shadow-2xs cursor-pointer"
+                >
+                  {"{{slot}}"} <span className="text-[10px] text-slate-400 font-sans">({t("Assigned Slot", "Turno")})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleInsertVariable("{{location}}")}
+                  className="px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[11px] font-mono font-bold text-slate-800 transition-colors shadow-2xs cursor-pointer"
+                >
+                  {"{{location}}"} <span className="text-[10px] text-slate-400 font-sans">({t("HQ Address", "Sede")})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleInsertVariable("{{date}}")}
+                  className="px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[11px] font-mono font-bold text-slate-800 transition-colors shadow-2xs cursor-pointer"
+                >
+                  {"{{date}}"} <span className="text-[10px] text-slate-400 font-sans">({t("Current Date", "Data")})</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Message Body Editor */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <label className="font-bold text-slate-800">
+                  {t("Official Message Content", "Conteúdo Oficial da Mensagem")}
+                </label>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {message.length} {t("characters", "caracteres")}
+                </span>
+              </div>
+              <textarea
+                rows={16}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder={t("Type official instructions here...", "Escreva as instruções oficiais aqui...")}
+                className="w-full rounded-xl border border-slate-300 p-4 font-sans text-xs text-slate-900 leading-relaxed focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none shadow-2xs admin-scrollbar"
+              />
+            </div>
+          </div>
+        ) : (
+          /* Tab 2: Live Official Branded Letterhead Preview */
+          <div className="p-8 bg-slate-100/60 flex flex-col items-center">
+            <div className="w-full max-w-2xl bg-white rounded-2xl border border-slate-200 p-8 shadow-sm space-y-6">
+              {/* Letterhead Top Header */}
+              <div className="flex items-center justify-between border-b border-slate-200 pb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#0a1128] flex items-center justify-center text-white font-extrabold text-sm shadow-xs">
+                    OW
+                  </div>
+                  <div>
+                    <h3 className="font-black text-sm tracking-wider text-slate-900 uppercase">
+                      OVERWATCH MOÇAMBIQUE
+                    </h3>
+                    <p className="text-[10px] text-slate-500 font-semibold tracking-wide">
+                      SEGURANÇA & OPERAÇÕES DE COMANDO 24/7
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="rounded-full bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 text-[9px] font-bold uppercase block">
+                    {t("Official Notice", "Comunicação Oficial")}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono mt-1 block">
+                    {new Date().toLocaleDateString(lang === "en" ? "en-US" : "pt-MZ")}
+                  </span>
+                </div>
+              </div>
+
+              {/* Recipient Details Block */}
+              <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4 space-y-1.5 text-xs text-slate-700">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 font-semibold">{t("Recipient", "Destinatária")}:</span>
+                  <span className="font-bold text-slate-900">{sampleCandidate.name}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 font-semibold">{t("Position", "Função")}:</span>
+                  <span className="font-bold text-slate-900">{roleTitleDisplay}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 font-semibold">{t("Subject", "Assunto")}:</span>
+                  <span className="font-bold text-slate-900">{subject}</span>
+                </div>
+              </div>
+
+              {/* Letter Body Preview */}
+              <div className="text-xs text-slate-800 leading-relaxed whitespace-pre-line font-sans space-y-3 pt-2">
+                {renderedPreviewText}
+              </div>
+
+              {/* Letterhead Signature Footer */}
+              <div className="border-t border-slate-200 pt-6 mt-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs text-slate-500">
+                <div>
+                  <div className="font-bold text-slate-900">
+                    Direcção de Recursos Humanos & Operações
+                  </div>
+                  <div className="text-[11px] text-slate-500">
+                    Overwatch Security Solutions, Lda.
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">
+                    Av. do Trabalho, 1948, Maputo • Moçambique
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl shrink-0">
+                  <ShieldCheck size={14} className="text-emerald-600" />
+                  <span>{t("Verified Official Dispatch", "Envio Oficial Verificado")}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Action & Dispatch Footer Bar */}
+        <div className="border-t border-slate-200 bg-slate-50 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          {/* Test Email Input */}
+          <div className="flex items-center gap-2 max-w-sm w-full">
+            <input
+              type="email"
+              value={previewEmail}
+              onChange={(e) => setPreviewEmail(e.target.value)}
+              placeholder={t("Admin test email (e.g. your email)...", "Email de teste (ex: seu email)...")}
+              className="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none bg-white shadow-2xs"
+            />
+            <button
+              type="button"
+              disabled={isSending}
+              onClick={() => handleDispatch(true)}
+              className="px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-xs font-bold text-slate-800 transition-colors shadow-2xs cursor-pointer shrink-0 disabled:opacity-50"
+              title={t("Send single live test email to verify formatting", "Enviar teste para verificar formatação")}
+            >
+              <span>{t("Send Test", "Enviar Teste")}</span>
+            </button>
+          </div>
+
+          {/* Mass Dispatch Button */}
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-bold text-slate-600">
+              {t(`Audience: ${targetCandidates.length} candidate(s)`, `Destinatários: ${targetCandidates.length} candidatas`)}
+            </span>
+
+            <button
+              type="button"
+              disabled={isSending || targetCandidates.length === 0}
+              onClick={() => {
+                if (
+                  confirm(
+                    t(
+                      `Are you sure you want to dispatch this official communication to all ${targetCandidates.length} candidates in the selected audience?`,
+                      `Tem a certeza de que deseja enviar esta comunicação oficial para as ${targetCandidates.length} candidatas do público seleccionado?`
+                    )
+                  )
+                ) {
+                  handleDispatch(false);
+                }
+              }}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0a1128] hover:bg-[#121c3b] text-white text-xs font-bold transition-colors shadow-sm cursor-pointer disabled:opacity-50"
+            >
+              {isSending ? (
+                <>
+                  <OverwatchOrbitLoader size="xs" theme="dark" className="shrink-0" />
+                  <span>{t("Dispatching (rate-limited)...", "A enviar com controlo de débito...")}</span>
+                </>
+              ) : (
+                <>
+                  <Send size={14} className="text-sky-300" />
+                  <span>
+                    {t(
+                      `Dispatch to ${targetCandidates.length} Candidates`,
+                      `Enviar para ${targetCandidates.length} Candidatas`
+                    )}
+                  </span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Dispatch Success Result Modal */}
+      {dispatchResult && (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-5 shadow-xs space-y-3 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
+              <h4 className="font-bold text-sm text-emerald-900">
+                {t("Official Communication Dispatched Successfully!", "Comunicação Oficial Enviada com Sucesso!")}
+              </h4>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDispatchResult(null)}
+              className="text-xs font-bold text-emerald-700 hover:text-emerald-900 cursor-pointer"
+            >
+              {t("Dismiss", "Fechar")}
+            </button>
+          </div>
+
+          <p className="text-xs text-emerald-800">
+            {t(
+              `Successfully delivered to ${dispatchResult.sentCount} candidate(s). All correspondence logged in candidate records.`,
+              `Entregue com sucesso a ${dispatchResult.sentCount} candidata(s). Todas as comunicações foram arquivadas no histórico das candidatas.`
+            )}
+            {dispatchResult.failedCount > 0 && ` (${dispatchResult.failedCount} failed)`}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default CohortCommunicationsStudio;

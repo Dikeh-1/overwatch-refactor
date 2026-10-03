@@ -541,6 +541,94 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
               </button>
             )}
 
+            {/* Mark as Hired */}
+            <button
+              type="button"
+              disabled={bulkActionBusy}
+              onClick={async () => {
+                if (onBulkStatusChange) {
+                  setBulkActionBusy(true);
+                  try {
+                    await onBulkStatusChange(Array.from(selectedIds), "hired");
+                    setCelebrationState({
+                      show: true,
+                      variant: "hired",
+                      title: t(
+                        `${selectedIds.size} Candidates Successfully Hired!`,
+                        `${selectedIds.size} Candidatos Contratados com Sucesso!`
+                      ),
+                      subtitle: t(
+                        "Candidates are officially confirmed as hired and ready for onboarding.",
+                        "Os candidatos foram oficializados como admitidos e prontos para integração."
+                      ),
+                    });
+                    setSelectedIds(new Set());
+                  } finally {
+                    setBulkActionBusy(false);
+                  }
+                }
+              }}
+              className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
+            >
+              <CheckCircle2 size={13} />
+              <span>{t("Mark Hired", "Admitir / Contratar")}</span>
+            </button>
+
+            {/* Direct Stage Selector Dropdown */}
+            <div className="flex items-center gap-1 border-l border-slate-700 pl-2">
+              <select
+                disabled={bulkActionBusy}
+                defaultValue=""
+                onChange={async (e) => {
+                  const targetStatus = e.target.value;
+                  if (!targetStatus || !onBulkStatusChange) return;
+                  setBulkActionBusy(true);
+                  try {
+                    await onBulkStatusChange(Array.from(selectedIds), targetStatus);
+                    if (targetStatus === "next_phase_selected" || targetStatus === "next_phase_invited") {
+                      setCelebrationState({
+                        show: true,
+                        variant: "next_phase",
+                        title: t(
+                          `${selectedIds.size} Candidates Advanced to Next Phase!`,
+                          `${selectedIds.size} Candidatos Avançados para a Próxima Fase!`
+                        ),
+                        subtitle: t(
+                          "Candidates are now selected and approved for next-phase training and assessment.",
+                          "Os candidatos foram selecionados e aprovados para a convocatória da próxima fase."
+                        ),
+                      });
+                    } else if (targetStatus === "hired") {
+                      setCelebrationState({
+                        show: true,
+                        variant: "hired",
+                        title: t(
+                          `${selectedIds.size} Candidates Successfully Hired!`,
+                          `${selectedIds.size} Candidatos Contratados com Sucesso!`
+                        ),
+                        subtitle: t(
+                          "Candidates are officially confirmed as hired and ready for onboarding.",
+                          "Os candidatos foram oficializados como admitidos e prontos para integração."
+                        ),
+                      });
+                    }
+                    setSelectedIds(new Set());
+                  } finally {
+                    setBulkActionBusy(false);
+                    e.target.value = "";
+                  }
+                }}
+                className="px-2 py-1 text-xs rounded bg-slate-800 text-slate-200 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer"
+              >
+                <option value="" disabled>{t("Move to Stage...", "Mover para Etapa...")}</option>
+                {stages.map((st) => (
+                  <option key={st} value={st}>
+                    {st}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <button
               type="button"
               onClick={() => setArchiveModalOpen(true)}
@@ -565,7 +653,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
       {/* Data Table */}
       <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-xs">
         <div className="overflow-x-auto admin-scrollbar">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full min-w-[980px] text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/75 text-[0.65rem] font-semibold text-slate-500 uppercase tracking-wider">
                 <th className="w-10 px-4 py-2.5">
