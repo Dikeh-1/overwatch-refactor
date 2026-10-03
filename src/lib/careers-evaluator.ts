@@ -47,7 +47,26 @@ export function evaluateApplicationWithRules(
         passed = s === exp;
       }
     } else if (rule.type === "number") {
-      const num = Number(rawVal) || 0;
+      let num = 0;
+      if (typeof rawVal === "number") {
+        num = isNaN(rawVal) ? 0 : rawVal;
+      } else if (typeof rawVal === "string") {
+        const cleaned = rawVal.trim().toLowerCase();
+        if (
+          cleaned === "" ||
+          cleaned === "0" ||
+          cleaned === "none" ||
+          cleaned === "no" ||
+          cleaned === "não" ||
+          cleaned === "nao"
+        ) {
+          num = 0;
+        } else {
+          // Extract first integer from range string (e.g. "5-8" -> 5, "1-2" -> 1, "8+" -> 8, "1_2" -> 1)
+          const match = cleaned.match(/(\d+)/);
+          num = match ? parseInt(match[1], 10) : Number(cleaned) || 0;
+        }
+      }
       const target = Number(rule.expectedValue) || 0;
       passed = num >= target;
     } else {

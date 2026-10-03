@@ -357,51 +357,95 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                 : t("Qualification Checklist", "Verificação de Qualificações")}
             </h2>
 
-            {isTechnicalRole ? (
+            {isTechnicalRole ? (() => {
+              const meetsCctvExp = Boolean(
+                candidate.yearsCctvExperience &&
+                candidate.yearsCctvExperience !== "0" &&
+                candidate.yearsCctvExperience !== "none"
+              );
+              const meetsIpCctv = candidate.ipCctv === "yes";
+              const meetsNvrDvr = candidate.nvrDvr === "yes";
+              const meetsNetworking = candidate.networking === "yes";
+              const allMandatoryMet = meetsCctvExp && meetsIpCctv && meetsNvrDvr && meetsNetworking;
+
+              const prefCount = [
+                candidate.hikvision === "yes",
+                candidate.dahua === "yes",
+                candidate.supervision === "yes",
+                candidate.drivingLicence === "yes",
+                candidate.aiAnalytics === "yes",
+                candidate.remoteMonitoring === "yes",
+                candidate.boqScopes === "yes",
+              ].filter(Boolean).length;
+
+              const rawScreening = candidate.screeningResult;
+              const passedMandatory = allMandatoryMet;
+              const preferredScore = rawScreening?.preferredScore && rawScreening.preferredScore > 0 ? rawScreening.preferredScore : prefCount;
+              const preferredTotal = rawScreening?.preferredTotal && rawScreening.preferredTotal >= 6 ? rawScreening.preferredTotal : 7;
+              const matchPercentage = rawScreening?.matchPercentage ?? Math.round((prefCount / 7) * 100);
+
+              const failedReasonsEn: string[] = [];
+              const failedReasonsPt: string[] = [];
+              if (!meetsCctvExp) {
+                failedReasonsEn.push("Missing mandatory requirement: Hands-on CCTV Experience (min 1 year)");
+                failedReasonsPt.push("Requisito obrigatório em falta: Experiência Prática em CCTV (mínimo 1 ano)");
+              }
+              if (!meetsIpCctv) {
+                failedReasonsEn.push("Missing mandatory requirement: IP CCTV & Network Camera Protocols");
+                failedReasonsPt.push("Requisito obrigatório em falta: Sistemas CCTV IP e Protocolos Digitais");
+              }
+              if (!meetsNvrDvr) {
+                failedReasonsEn.push("Missing mandatory requirement: NVR/DVR Setup & Storage Sizing");
+                failedReasonsPt.push("Requisito obrigatório em falta: Configuração de NVRs/DVRs e Armazenamento");
+              }
+              if (!meetsNetworking) {
+                failedReasonsEn.push("Missing mandatory requirement: IP Networking (Switches, VLANs, Routers)");
+                failedReasonsPt.push("Requisito obrigatório em falta: Redes IP (Switches, VLANs, Routers)");
+              }
+
+              return (
               <div className="space-y-4 text-xs">
                 {/* Screening Verdict Badge */}
-                {candidate.screeningResult && (
-                  <div
-                    className={`p-3.5 rounded-lg border ${
-                      candidate.screeningResult.passedMandatory
-                        ? "bg-emerald-50/80 border-emerald-200 text-emerald-900"
-                        : "bg-red-50/80 border-red-200 text-red-900"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between font-bold text-xs mb-1">
-                      <span>
-                        {candidate.screeningResult.passedMandatory
-                          ? t("✓ Mandatory Requirements Passed", "✓ Requisitos Obrigatórios Cumpridos")
-                          : t("✕ Mandatory Requirements Missing", "✕ Requisitos Obrigatórios em Falta")}
-                      </span>
-                      <span className="px-2 py-0.5 rounded text-[0.65rem] bg-white border border-current font-extrabold">
-                        {candidate.screeningResult.matchPercentage}% {t("Match", "Score")}
-                      </span>
-                    </div>
-                    <div className="text-[0.72rem] leading-relaxed">
-                      {candidate.screeningResult.passedMandatory ? (
-                        <span>
-                          {t(
-                            `${candidate.screeningResult.preferredScore}/${candidate.screeningResult.preferredTotal} preferred competencies met. Candidate moved to Shortlisted / Management Review.`,
-                            `${candidate.screeningResult.preferredScore}/${candidate.screeningResult.preferredTotal} competências preferenciais cumpridas. Candidato classificado para Pré-Seleção / Revisão de Gestão.`
-                          )}
-                        </span>
-                      ) : (
-                        <div>
-                          <span className="font-semibold">{t("Reasons:", "Motivos:")}</span>
-                          <ul className="list-disc list-inside mt-0.5">
-                            {(lang === "pt" && candidate.screeningResult.failedReasonsPt?.length
-                              ? candidate.screeningResult.failedReasonsPt
-                              : candidate.screeningResult.failedReasons
-                            ).map((r, i) => (
-                              <li key={i}>{r}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
+                <div
+                  className={`p-3.5 rounded-lg border ${
+                    passedMandatory
+                      ? "bg-emerald-50/80 border-emerald-200 text-emerald-900"
+                      : "bg-red-50/80 border-red-200 text-red-900"
+                  }`}
+                >
+                  <div className="flex items-center justify-between font-bold text-xs mb-1">
+                    <span>
+                      {passedMandatory
+                        ? t("✓ Mandatory Requirements Passed", "✓ Requisitos Obrigatórios Cumpridos")
+                        : t("✕ Mandatory Requirements Missing", "✕ Requisitos Obrigatórios em Falta")}
+                    </span>
+                    <span className="px-2 py-0.5 rounded text-[0.65rem] bg-white border border-current font-extrabold">
+                      {matchPercentage}% {t("Match", "Score")}
+                    </span>
                   </div>
-                )}
+                  <div className="text-[0.72rem] leading-relaxed">
+                    {passedMandatory ? (
+                      <span>
+                        {t(
+                          `${preferredScore}/${preferredTotal} preferred competencies met. Candidate moved to Shortlisted / Management Review.`,
+                          `${preferredScore}/${preferredTotal} competências preferenciais cumpridas. Candidato classificado para Pré-Seleção / Revisão de Gestão.`
+                        )}
+                      </span>
+                    ) : (
+                      <div>
+                        <span className="font-semibold">{t("Reasons:", "Motivos:")}</span>
+                        <ul className="list-disc list-inside mt-0.5">
+                          {(lang === "pt" && failedReasonsPt.length
+                            ? failedReasonsPt
+                            : failedReasonsEn
+                          ).map((r, i) => (
+                            <li key={i}>{r}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 {/* Candidate Logistics */}
                 <div className="divide-y divide-slate-100 border-y border-slate-100 py-1">
@@ -414,13 +458,15 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                     <span className="font-semibold text-slate-900">
                       {candidate.yearsCctvExperience === "0"
                         ? t("0 years", "0 anos (Sem experiência)")
-                        : candidate.yearsCctvExperience === "1_2"
+                        : candidate.yearsCctvExperience === "1_2" || candidate.yearsCctvExperience === "1-2"
                           ? t("1 to 2 years", "1 a 2 anos")
-                          : candidate.yearsCctvExperience === "3_5"
+                          : candidate.yearsCctvExperience === "3_5" || candidate.yearsCctvExperience === "3-5"
                             ? t("3 to 5 years", "3 a 5 anos")
-                            : candidate.yearsCctvExperience === "5_plus"
-                              ? t("5+ years (Senior)", "5+ anos (Sénior)")
-                              : candidate.yearsCctvExperience || "—"}
+                            : candidate.yearsCctvExperience === "5_8" || candidate.yearsCctvExperience === "5-8"
+                              ? t("5 to 8 years", "5 a 8 anos")
+                              : candidate.yearsCctvExperience === "8+" || candidate.yearsCctvExperience === "8_plus" || candidate.yearsCctvExperience === "5_plus"
+                                ? t("More than 8 years", "Mais de 8 anos")
+                                : candidate.yearsCctvExperience || "—"}
                     </span>
                   </div>
                   <div className="py-2 flex items-center justify-between">
@@ -439,7 +485,9 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                   </div>
                   <div className="py-2 flex items-center justify-between">
                     <span className="text-slate-500">{t("Expected Salary", "Salário Pretendido")}</span>
-                    <span className="font-semibold text-slate-900">{candidate.salaryExpectation || "—"}</span>
+                    <span className="font-semibold text-slate-900">
+                      {candidate.salaryExpectation || candidate.technicalData?.salaryExpectation || "—"}
+                    </span>
                   </div>
                 </div>
 
@@ -526,6 +574,12 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                         {candidate.remoteMonitoring === "yes" ? "SIM" : "NÃO"}
                       </span>
                     </div>
+                    <div className="p-2 rounded bg-slate-50 border border-slate-100 flex items-center justify-between col-span-2">
+                      <span className="text-slate-700">{t("BoQ & Scopes of Work", "Cadernos de Encargos & BoQ")}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[0.62rem] font-bold ${candidate.boqScopes === "yes" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
+                        {candidate.boqScopes === "yes" ? "SIM" : "NÃO"}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -541,7 +595,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                   </div>
                 )}
               </div>
-            ) : candidate.screeningResult?.details && candidate.screeningResult.details.length > 0 ? (
+            ); })() : candidate.screeningResult?.details && candidate.screeningResult.details.length > 0 ? (
               <div className="space-y-2 text-xs">
                 {candidate.sex && (
                   <div className="py-2 flex items-center justify-between border-b border-slate-100">

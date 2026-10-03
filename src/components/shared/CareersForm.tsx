@@ -481,6 +481,18 @@ export default function CareersForm({
           return;
         }
       }
+    } else if (currentStep === 3) {
+      if (isTechnicalManager) {
+        if (!salaryExpectation || !salaryExpectation.trim()) {
+          setError(
+            t(
+              "Please enter your current or expected monthly salary.",
+              "Por favor indique o seu salário actual ou pretendido.",
+            ),
+          );
+          return;
+        }
+      }
     } else if (currentStep === 4) {
       if (isTechnicalManager) {
         if (!largestProjectDescription.trim() || largestProjectDescription.trim().length < 15) {

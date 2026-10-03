@@ -231,6 +231,18 @@ export const DEFAULT_SCREENING_RULES_BY_ROLE: Record<string, ScreeningRule[]> = 
       weight: 1,
     },
     {
+      id: "remote_monitoring",
+      field: "remoteMonitoring",
+      labelPt: "Integração com Centrais de Monitorização Remota",
+      labelEn: "Remote Monitoring Centre Integration",
+      instructionPt: "Possui experiência na integração de CCTV com centrais de monitorização remota ou centros de comando?",
+      instructionEn: "Do you have experience integrating CCTV with remote control rooms or command centres?",
+      type: "boolean",
+      mandatory: false,
+      expectedValue: "yes",
+      weight: 1,
+    },
+    {
       id: "boq",
       field: "boqScopes",
       labelPt: "Elaboração de BoQs e Cadernos de Encargos",

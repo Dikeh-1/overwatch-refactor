@@ -15,11 +15,68 @@ import crypto from "node:crypto";
 export async function GET() {
   if (!(await authenticated())) return new Response(null, { status: 401 });
   try {
-    const [applications, roles, deletedNextPhase] = await Promise.all([
+    const [rawApplications, roles, deletedNextPhase] = await Promise.all([
       getApplications(),
       getRoles(),
       getDeletedNextPhaseIdentifiers(),
     ]);
+
+    // Auto-heal screening evaluation for applications affected by the string-range NaN bug
+    const applications = rawApplications.map((app) => {
+      if (
+        app.role === "cctv_technical_manager" &&
+        app.yearsCctvExperience &&
+        app.yearsCctvExperience !== "0" &&
+        app.yearsCctvExperience !== "none"
+      ) {
+        const meetsIp = app.ipCctv === "yes";
+        const meetsNvr = app.nvrDvr === "yes";
+        const meetsNet = app.networking === "yes";
+        if (meetsIp && meetsNvr && meetsNet) {
+          const curScreening = app.screeningResult;
+          const prefCount = [
+            app.hikvision === "yes",
+            app.dahua === "yes",
+            app.supervision === "yes",
+            app.drivingLicence === "yes",
+            app.aiAnalytics === "yes",
+            app.remoteMonitoring === "yes",
+            app.boqScopes === "yes",
+          ].filter(Boolean).length;
+
+          const prefScore =
+            curScreening?.preferredScore && curScreening.preferredScore > 0
+              ? curScreening.preferredScore
+              : prefCount;
+          const prefTotal =
+            curScreening?.preferredTotal && curScreening.preferredTotal >= 6
+              ? curScreening.preferredTotal
+              : 7;
+
+          const healedScreening = {
+            ...(curScreening || {}),
+            passedMandatory: true,
+            failedReasons: [],
+            failedReasonsPt: [],
+            preferredScore: prefScore,
+            preferredTotal: prefTotal,
+            matchPercentage: Math.round((prefScore / prefTotal) * 100),
+            evaluatedAt: curScreening?.evaluatedAt || new Date().toISOString(),
+          };
+
+          return {
+            ...app,
+            status:
+              !app.status || app.status === "not_advancing" || app.status === "screening"
+                ? "shortlisted"
+                : app.status,
+            screeningResult: healedScreening,
+          };
+        }
+      }
+      return app;
+    });
+
     return Response.json(
       { applications, roles, deletedNextPhase },
       { headers: { "Cache-Control": "no-store" } },

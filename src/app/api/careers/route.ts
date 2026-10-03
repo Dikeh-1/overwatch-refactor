@@ -98,7 +98,12 @@ export async function POST(request: Request) {
         largestProjectDescription: field("largestProjectDescription").slice(0, 4000),
       };
 
-      if (!technicalData.currentLocation || !technicalData.yearsCctvExperience || !technicalData.largestProjectDescription) {
+      if (
+        !technicalData.currentLocation ||
+        !technicalData.yearsCctvExperience ||
+        !technicalData.salaryExpectation ||
+        !technicalData.largestProjectDescription
+      ) {
         return NextResponse.json({ code: "INVALID" }, { status: 400 });
       }
 
