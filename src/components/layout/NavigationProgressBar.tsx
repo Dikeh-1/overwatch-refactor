@@ -1,35 +1,84 @@
 "use client";
 
-import { useEffect, useState, useRef, Suspense } from "react";
+import { useEffect, useState, useRef, useCallback, Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+
+function normalizePath(path: string): string {
+  let p = path.replace(/^\/(en|pt)(\/|$)/, "/");
+  if (!p.startsWith("/")) p = "/" + p;
+  if (p.length > 1 && p.endsWith("/")) p = p.slice(0, -1);
+  return p;
+}
 
 function NavigationProgressBarInner() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [loading, setLoading] = useState(false);
+  const [visible, setVisible] = useState(false);
   const [progress, setProgress] = useState(0);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Complete and dismiss immediately on any route change
-  useEffect(() => {
+  const trickleTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const dismissTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const safetyTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const clearAllTimers = useCallback(() => {
+    if (trickleTimerRef.current) {
+      clearInterval(trickleTimerRef.current);
+      trickleTimerRef.current = null;
+    }
+    if (dismissTimerRef.current) {
+      clearTimeout(dismissTimerRef.current);
+      dismissTimerRef.current = null;
+    }
+    if (safetyTimerRef.current) {
+      clearTimeout(safetyTimerRef.current);
+      safetyTimerRef.current = null;
+    }
+  }, []);
+
+  const finishAndDismiss = useCallback(() => {
+    clearAllTimers();
     setProgress(100);
-    const dismissTimer = setTimeout(() => {
-      setLoading(false);
+    dismissTimerRef.current = setTimeout(() => {
+      setVisible(false);
       setProgress(0);
-    }, 200);
-    return () => clearTimeout(dismissTimer);
-  }, [pathname, searchParams]);
+      dismissTimerRef.current = null;
+    }, 180);
+  }, [clearAllTimers]);
 
-  // Intercept click on links to show quick tactile navigation feedback
+  const startProgress = useCallback(() => {
+    clearAllTimers();
+    setVisible(true);
+    setProgress(30);
+
+    trickleTimerRef.current = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 85) return prev;
+        const inc = Math.floor(Math.random() * 8) + 4;
+        return Math.min(prev + inc, 85);
+      });
+    }, 150);
+
+    safetyTimerRef.current = setTimeout(() => {
+      finishAndDismiss();
+    }, 1200);
+  }, [clearAllTimers, finishAndDismiss]);
+
+  // Route change completion
+  useEffect(() => {
+    finishAndDismiss();
+  }, [pathname, searchParams, finishAndDismiss]);
+
+  // Click & navigation listener
   useEffect(() => {
     const handleDocumentClick = (e: MouseEvent) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+
       const anchor = (e.target as HTMLElement).closest("a");
       if (!anchor) return;
 
       const href = anchor.getAttribute("href");
       if (!href) return;
 
-      // Ignore in-page hash jumps, protocols, target="_blank", downloads
       if (
         href.startsWith("#") ||
         href.startsWith("mailto:") ||
@@ -43,29 +92,28 @@ function NavigationProgressBarInner() {
 
       try {
         const url = new URL(href, window.location.href);
-        if (
-          url.origin === window.location.origin &&
-          (url.pathname !== window.location.pathname || url.search !== window.location.search)
-        ) {
-          setLoading(true);
-          setProgress(25);
+        if (url.origin !== window.location.origin) return;
+
+        const currentNorm = normalizePath(window.location.pathname);
+        const targetNorm = normalizePath(url.pathname);
+
+        // If clicking on same route, ignore completely
+        if (currentNorm === targetNorm && url.search === window.location.search) {
+          return;
         }
+
+        startProgress();
       } catch {
         // ignore invalid URL
       }
     };
 
     const handlePopState = () => {
-      setLoading(true);
-      setProgress(35);
+      startProgress();
     };
 
     const handleWindowLoad = () => {
-      setProgress(100);
-      setTimeout(() => {
-        setLoading(false);
-        setProgress(0);
-      }, 150);
+      finishAndDismiss();
     };
 
     document.addEventListener("click", handleDocumentClick, true);
@@ -78,40 +126,11 @@ function NavigationProgressBarInner() {
       window.removeEventListener("popstate", handlePopState);
       window.removeEventListener("pageshow", handleWindowLoad);
       window.removeEventListener("load", handleWindowLoad);
+      clearAllTimers();
     };
-  }, []);
+  }, [startProgress, finishAndDismiss, clearAllTimers]);
 
-  // Incremental trickling progress while page loads
-  useEffect(() => {
-    if (!loading) {
-      if (timerRef.current) clearInterval(timerRef.current);
-      return;
-    }
-
-    timerRef.current = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 85) return prev;
-        const jump = Math.floor(Math.random() * 10) + 4;
-        return Math.min(prev + jump, 85);
-      });
-    }, 180);
-
-    // Guaranteed safety timeout: Never remain stuck on screen for more than 1.5 seconds
-    const safetyTimeout = setTimeout(() => {
-      setProgress(100);
-      setTimeout(() => {
-        setLoading(false);
-        setProgress(0);
-      }, 200);
-    }, 1500);
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-      clearTimeout(safetyTimeout);
-    };
-  }, [loading]);
-
-  if (!loading && progress === 0) return null;
+  if (!visible) return null;
 
   return (
     <div
@@ -125,8 +144,8 @@ function NavigationProgressBarInner() {
           opacity: progress === 100 ? 0 : 1,
           transition:
             progress === 100
-              ? "width 120ms ease-out, opacity 200ms ease-out"
-              : "width 180ms ease-out",
+              ? "width 120ms ease-out, opacity 180ms ease-out"
+              : "width 150ms ease-out",
         }}
       />
     </div>

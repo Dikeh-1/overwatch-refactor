@@ -103,7 +103,7 @@ export default function Navbar() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string, isMobile = false) => {
-    if (href.includes("#") && pathname === "/") {
+    if (href.includes("#") && (pathname === "/" || pathname === "/en" || pathname === "/pt")) {
       e.preventDefault();
       const targetId = href.substring(href.indexOf("#") + 1);
       const element = document.getElementById(targetId);
@@ -111,6 +111,9 @@ export default function Navbar() {
         element.scrollIntoView({ behavior: "smooth" });
         setCurrentHash(`#${targetId}`);
       }
+    } else if (href === "/" && (pathname === "/" || pathname === "/en" || pathname === "/pt")) {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
     if (isMobile) {
       closeMobileMenu();
@@ -194,7 +197,17 @@ export default function Navbar() {
           aria-label={t("aria.mainNav")}
         >
         <div className="flex h-16 md:h-20 items-center justify-between">
-          <Link href="/" className="flex min-h-11 min-w-0 shrink-0 items-center" onClick={closeMobileMenu}>
+          <Link
+            href="/"
+            className="flex min-h-11 min-w-0 shrink-0 items-center"
+            onClick={(e) => {
+              if (pathname === "/" || pathname === "/en" || pathname === "/pt") {
+                e.preventDefault();
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }
+              closeMobileMenu();
+            }}
+          >
             <Logo size="sm" preload />
           </Link>
 
