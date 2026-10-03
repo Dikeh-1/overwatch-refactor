@@ -69,7 +69,8 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [celebrationState, setCelebrationState] = useState<{
     show: boolean;
-    variant: "next_phase" | "hired";
+    variant: "next_phase" | "hired" | "shortlisted";
+    candidateName?: string;
   }>({ show: false, variant: "next_phase" });
 
   // Dynamic test score state
@@ -158,9 +159,11 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
 
       // Trigger celebration moments
       if (newStatus === "next_phase_selected" || newStatus === "next_phase_invited") {
-        setCelebrationState({ show: true, variant: "next_phase" });
+        setCelebrationState({ show: true, variant: "next_phase", candidateName: candidate.name });
       } else if (newStatus === "hired") {
-        setCelebrationState({ show: true, variant: "hired" });
+        setCelebrationState({ show: true, variant: "hired", candidateName: candidate.name });
+      } else if (newStatus === "shortlisted") {
+        setCelebrationState({ show: true, variant: "shortlisted", candidateName: candidate.name });
       }
 
       setTimeout(() => setStatusSuccessMsg(null), 3000);

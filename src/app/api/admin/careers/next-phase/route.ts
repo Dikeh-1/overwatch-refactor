@@ -572,10 +572,27 @@ export async function POST(request: Request) {
       const message = body.message || "";
       const isPreview = Boolean(body.preview);
       const previewEmail = (body.previewEmail || "").trim();
+      const rawAttachments = Array.isArray(body.attachments) ? body.attachments : [];
+      const attachments = rawAttachments
+        .filter((a: any) => a && (a.content || a.data))
+        .map((a: any) => ({
+          name: String(a.name || "document.pdf"),
+          content: String(a.content || a.data || ""),
+        }));
 
       if (!message.trim()) {
         return Response.json({ error: "Instructions message body is required" }, { status: 400 });
       }
+
+      const substituteVars = (text: string, vars: Record<string, string>) => {
+        let res = text;
+        for (const [key, val] of Object.entries(vars)) {
+          // Replace both {{key}} and {key} case-insensitively with flexible whitespace
+          const regex = new RegExp(`\\{\\{?\\s*${key}\\s*\\}\\}?`, "gi");
+          res = res.replace(regex, val || "");
+        }
+        return res;
+      };
 
       if (isPreview) {
         if (!previewEmail || !previewEmail.includes("@")) {
@@ -585,25 +602,36 @@ export async function POST(request: Request) {
         const sampleTarget =
           applications.find((a) => candidateIds.includes(a.id)) ||
           applications.find((a) => a.role === "cctv" || !a.role) || {
+            id: "preview-id",
             name: "Candidata Modelo",
             email: previewEmail,
+            role: "cctv",
+            testSlot: "Turma A (09:00 - 11:00)",
           };
 
-        const personalizedMessage = message
-          .replace(/\{\{?name\}\}?/gi, sampleTarget.name)
-          .replace(/\{\{?candidate_name\}\}?/gi, sampleTarget.name)
-          .replace(/\{\{?role\}\}?/gi, "Operadora de CCO")
-          .replace(/\{\{?role_title\}\}?/gi, "Operadora de CCO")
-          .replace(/\{\{?date\}\}?/gi, new Date().toLocaleDateString("pt-MZ"))
-          .replace(/\{\{?location\}\}?/gi, "Av. do Trabalho, N.º 1948, Maputo");
+        const previewVars: Record<string, string> = {
+          name: sampleTarget.name,
+          candidate_name: sampleTarget.name,
+          role: "Operadora de CCO",
+          role_title: "Operadora de CCO",
+          slot: (sampleTarget as any).testSlot || "Turma A (09:00 - 11:00)",
+          date: new Date().toLocaleDateString("pt-MZ"),
+          location: "Av. do Trabalho, N.º 1948, Maputo",
+          company: "Overwatch Lda.",
+          email: previewEmail,
+        };
+
+        const personalizedMessage = substituteVars(message, previewVars);
+        const personalizedSubject = substituteVars(subject, previewVars);
 
         await sendNextPhaseInstructionsEmail({
           candidate: { name: sampleTarget.name, email: previewEmail },
           instructions: personalizedMessage,
           baseUrl,
-          customSubject: subject,
+          customSubject: personalizedSubject,
           preview: true,
           recipientEmail: previewEmail,
+          attachments: attachments.length > 0 ? attachments : undefined,
         });
 
         return Response.json({
@@ -637,35 +665,36 @@ export async function POST(request: Request) {
             ? "Gestor Técnico de CCTV"
             : app.role;
 
-        const personalizedMessage = message
-          .replace(/\{\{?name\}\}?/gi, app.name)
-          .replace(/\{\{?candidate_name\}\}?/gi, app.name)
-          .replace(/\{\{?token\}\}?/gi, app.nextPhaseToken || "")
-          .replace(/\{\{?role\}\}?/gi, roleName)
-          .replace(/\{\{?role_title\}\}?/gi, roleName)
-          .replace(/\{\{?slot\}\}?/gi, app.testSlot || "")
-          .replace(/\{\{?date\}\}?/gi, new Date().toLocaleDateString("pt-MZ"))
-          .replace(/\{\{?location\}\}?/gi, "Av. do Trabalho, N.º 1948, Maputo");
+        const candidateVars: Record<string, string> = {
+          name: app.name,
+          candidate_name: app.name,
+          token: app.nextPhaseToken || "",
+          role: roleName,
+          role_title: roleName,
+          slot: app.testSlot || "",
+          date: new Date().toLocaleDateString("pt-MZ"),
+          location: "Av. do Trabalho, N.º 1948, Maputo",
+          company: "Overwatch Lda.",
+          email: app.email,
+        };
 
-        const personalizedSubject = subject
-          .replace(/\{\{?name\}\}?/gi, app.name)
-          .replace(/\{\{?candidate_name\}\}?/gi, app.name)
-          .replace(/\{\{?role\}\}?/gi, roleName)
-          .replace(/\{\{?role_title\}\}?/gi, roleName);
+        const personalizedMessage = substituteVars(message, candidateVars);
+        const personalizedSubject = substituteVars(subject, candidateVars);
 
         try {
           await sendNextPhaseInstructionsEmail({
-            candidate: { id: app.id, name: app.name, email: app.email, score: app.testScore },
+            candidate: { id: app.id, name: app.name, email: app.email, score: app.testScore, role: roleName },
             instructions: personalizedMessage,
             baseUrl,
             customSubject: personalizedSubject,
+            attachments: attachments.length > 0 ? attachments : undefined,
           });
 
           const communications = app.communications || [];
           communications.push({
             id: crypto.randomUUID(),
             type: "custom",
-            subject,
+            subject: personalizedSubject,
             recipient: app.email,
             sentAt: now,
             status: "sent",
@@ -678,7 +707,7 @@ export async function POST(request: Request) {
             timestamp: now,
             action: "Next Phase Further Instructions Dispatched",
             actor: "Admin",
-            details: `Dispatched operational onboarding/training instructions ("${subject}")`,
+            details: `Dispatched operational onboarding/training instructions ("${personalizedSubject}")`,
           });
 
           await updateApplication(app.id, {

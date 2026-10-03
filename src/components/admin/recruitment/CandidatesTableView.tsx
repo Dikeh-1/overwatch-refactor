@@ -75,7 +75,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
   const [archiveReason, setArchiveReason] = useState<string>("Not Selected for Next Phase");
   const [celebrationState, setCelebrationState] = useState<{
     show: boolean;
-    variant: "next_phase" | "hired";
+    variant: "next_phase" | "hired" | "shortlisted";
     title?: string;
     subtitle?: string;
   }>({ show: false, variant: "next_phase" });
@@ -457,6 +457,18 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                   setBulkActionBusy(true);
                   try {
                     await onBulkStatusChange(Array.from(selectedIds), "shortlisted");
+                    setCelebrationState({
+                      show: true,
+                      variant: "shortlisted",
+                      title: t(
+                        `${selectedIds.size} Candidates Shortlisted!`,
+                        `${selectedIds.size} Candidatos Pré-selecionados!`,
+                      ),
+                      subtitle: t(
+                        "Candidates are placed in the shortlisted queue for test scheduling and assessment.",
+                        "Os candidatos foram colocados na lista de convocatória para agendamento de provas.",
+                      ),
+                    });
                     setSelectedIds(new Set());
                   } finally {
                     setBulkActionBusy(false);

@@ -15,6 +15,7 @@ import { ActiveRoleProvider, useActiveRole } from "./ActiveRoleContext";
 import { NavigationLoadingProvider, useNavigationLoading } from "./NavigationLoadingContext";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 import { useLiveRecruitmentFeed } from "@/components/admin/hooks/useLiveRecruitmentFeed";
+import GlobalCelebrationListener from "@/components/admin/ui/GlobalCelebrationListener";
 
 interface AdminShellProps {
   children: React.ReactNode;
@@ -443,6 +444,9 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
           </div>
         </aside>
       )}
+
+      {/* Global Celebratory Confetti Animation Controller */}
+      <GlobalCelebrationListener />
       </div>
     </ActiveRoleProvider>
   );

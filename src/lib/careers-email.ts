@@ -2843,12 +2843,14 @@ Overwatch Moçambique`;
 }
 
 export async function sendNextPhaseInstructionsEmail(options: {
-  candidate: { id?: string; name: string; email: string; score?: number };
+  candidate: { id?: string; name: string; email: string; score?: number; role?: string };
   instructions: string;
   baseUrl?: string;
   customSubject?: string;
   preview?: boolean;
   recipientEmail?: string;
+  attachments?: { name: string; content: string }[];
+  roleTitle?: string;
 }) {
   const {
     candidate,
@@ -2857,33 +2859,43 @@ export async function sendNextPhaseInstructionsEmail(options: {
     customSubject,
     preview = false,
     recipientEmail,
+    attachments,
+    roleTitle,
   } = options;
 
   const origin = (baseUrl || process.env.NEXT_PUBLIC_SITE_URL || "https://www.overwatchmoz.com").replace(/\/+$/, "");
   const logoWhiteUrl = `${origin}/logo-white.png`;
   const subject = customSubject?.trim() || "Instruções da Próxima Fase – Processo de Selecção Overwatch";
+  const positionTitle = roleTitle || candidate.role || "Operadora de CCO / CCTV Operator";
 
-  // Check if instructions already begins with a greeting line to avoid duplication
-  const rawParagraphs = instructions
-    .split(/\n\s*\n/)
-    .map((p) => p.trim())
-    .filter(Boolean);
+  // Check if instructions is already HTML (from RichMessageEditor) or plain text
+  const isHtml = /<[a-z][\s\S]*>/i.test(instructions);
 
-  const greetingRegex =
-    /^(Dear|Prezada\(o\)|Prezado\(a\)|Prezada|Prezado|Caro|Cara|Caros|Olá|Ola|Hello|Hi)\b/i;
-
+  let formattedContent = "";
   let headerGreeting = `<p style="font-size: 14px; margin-top: 0; color: #1e293b; font-weight: 700;">Prezada Candidata <strong>${candidate.name}</strong>,</p>`;
-  let bodyParagraphs = rawParagraphs;
 
-  if (rawParagraphs.length > 0 && greetingRegex.test(rawParagraphs[0])) {
-    headerGreeting = `<p style="font-size: 14px; margin-top: 0; color: #1e293b; font-weight: 700;">${rawParagraphs[0]}</p>`;
-    bodyParagraphs = rawParagraphs.slice(1);
+  if (isHtml) {
+    // If it contains a greeting line, extract or use clean
+    formattedContent = instructions;
+  } else {
+    const rawParagraphs = instructions
+      .split(/\n\s*\n/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+
+    const greetingRegex =
+      /^(Dear|Prezada\(o\)|Prezado\(a\)|Prezada|Prezado|Caro|Cara|Caros|Olá|Ola|Hello|Hi)\b/i;
+
+    let bodyParagraphs = rawParagraphs;
+    if (rawParagraphs.length > 0 && greetingRegex.test(rawParagraphs[0])) {
+      headerGreeting = `<p style="font-size: 14px; margin-top: 0; color: #1e293b; font-weight: 700;">${rawParagraphs[0]}</p>`;
+      bodyParagraphs = rawParagraphs.slice(1);
+    }
+
+    formattedContent = bodyParagraphs
+      .map((p) => `<p style="font-size: 14px; color: #334155; line-height: 1.6; margin-bottom: 14px;">${p.replace(/\n/g, "<br />")}</p>`)
+      .join("");
   }
-
-  // Format body text paragraphs into HTML
-  const formattedHtmlParagraphs = bodyParagraphs
-    .map((p) => `<p style="font-size: 14px; color: #334155; line-height: 1.6; margin-bottom: 14px;">${p.replace(/\n/g, "<br />")}</p>`)
-    .join("");
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -2897,7 +2909,7 @@ export async function sendNextPhaseInstructionsEmail(options: {
       <div style="background-color: #f1f5f9; padding: 32px 16px;">
         <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08); overflow: hidden;">
           
-          <!-- Official Letterhead Header (Dark Navy) -->
+          <!-- Official Letterhead Header (Dark Navy #0b1329) -->
           <div style="background-color: #0b1329; padding: 18px 24px; border-bottom: 2px solid rgba(255, 255, 255, 0.15);">
             <table style="width: 100%; border-collapse: collapse;">
               <tr>
@@ -2906,10 +2918,10 @@ export async function sendNextPhaseInstructionsEmail(options: {
                 </td>
                 <td style="vertical-align: middle; text-align: right;">
                   <span style="display: inline-block; background-color: rgba(255, 255, 255, 0.12); color: #ffffff; font-family: monospace; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.2); letter-spacing: 0.04em;">
-                    REF: CCO-2026/INSTRUÇÕES
+                    REF: OW-INSTR/2026/MAPUTO
                   </span>
                   <div style="font-size: 11px; color: #cbd5e1; margin-top: 4px; font-weight: 500;">
-                    Departamento de Recursos Humanos
+                    Departamento de Recursos Humanos & Operações
                   </div>
                 </td>
               </tr>
@@ -2920,11 +2932,28 @@ export async function sendNextPhaseInstructionsEmail(options: {
           <div style="background-color: #f8fafc; padding: 10px 24px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #334155;">
             <table style="width: 100%; border-collapse: collapse;">
               <tr>
-                <td style="font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #334155;">
+                <td style="font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #0b1329;">
                   NOTIFICAÇÃO OFICIAL · INSTRUÇÕES DE FORMAÇÃO & INTEGRAÇÃO
                 </td>
-                <td style="text-align: right; color: #64748b;">
+                <td style="text-align: right; color: #64748b; font-size: 11px;">
                   Maputo, Moçambique
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Official Recipient Metadata Block -->
+          <div style="padding: 14px 24px; background-color: #ffffff; border-bottom: 1px solid #e2e8f0; font-size: 12px; color: #475569;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="width: 50%; vertical-align: top; padding-right: 12px;">
+                  <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 2px;">DESTINATÁRIO(A)</div>
+                  <strong style="color: #0f172a; font-size: 13px;">${candidate.name}</strong>
+                  <div style="font-size: 11px; color: #64748b;">${positionTitle}</div>
+                </td>
+                <td style="width: 50%; vertical-align: top; text-align: right;">
+                  <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 2px;">DATA OFICIAL</div>
+                  <span style="font-family: monospace; color: #334155; font-size: 12px;">${new Date().toLocaleDateString("pt-MZ")}</span>
                 </td>
               </tr>
             </table>
@@ -2932,10 +2961,22 @@ export async function sendNextPhaseInstructionsEmail(options: {
 
           <!-- Body Content -->
           <div style="padding: 28px 24px; background-color: #ffffff;">
-            ${headerGreeting}
+            ${!isHtml ? headerGreeting : ""}
 
-            ${formattedHtmlParagraphs}
+            <div style="font-size: 14px; line-height: 1.6; color: #334155;">
+              ${formattedContent}
+            </div>
 
+            ${attachments && attachments.length > 0 ? `
+              <div style="margin-top: 24px; padding: 14px 18px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #475569; margin-bottom: 8px; letter-spacing: 0.04em;">
+                  Documentos Oficiais Anexados (${attachments.length}):
+                </div>
+                ${attachments.map(a => `<div style="font-size: 12px; color: #0284c7; margin-bottom: 4px; font-weight: 600;">📎 ${a.name}</div>`).join('')}
+              </div>
+            ` : ''}
+
+            <!-- Official Sign-off -->
             <div style="margin-top: 28px; padding-top: 18px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #64748b; line-height: 1.5;">
               <strong>Equipa de Recrutamento & Selecção</strong><br />
               Overwatch Moçambique<br />
@@ -2955,7 +2996,8 @@ export async function sendNextPhaseInstructionsEmail(options: {
     to: [{ email: toEmail, name: toName }],
     subject: preview ? `[PREVIEW TEST] ${subject}` : subject,
     htmlContent,
-    textContent: `Prezada Candidata ${candidate.name},\n\n${instructions}\n\nCom os melhores cumprimentos,\nEquipa de Recrutamento & Selecção\nOverwatch Moçambique`,
+    textContent: `Prezada Candidata ${candidate.name},\n\n${instructions.replace(/<[^>]*>/g, "")}\n\nCom os melhores cumprimentos,\nEquipa de Recrutamento & Selecção\nOverwatch Moçambique`,
+    attachment: attachments,
   });
 }
 
