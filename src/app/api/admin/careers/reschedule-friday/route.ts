@@ -1,4 +1,4 @@
-import { authenticated } from "@/lib/careers-auth";
+import { verifyAdminAuthorization } from "@/lib/careers-auth";
 import {
   getApplications,
   updateApplication,
@@ -10,24 +10,14 @@ import { Application, normalizeSlot, isFriday25Sept } from "@/lib/careers";
 
 export const dynamic = "force-dynamic";
 
-const ADMIN_PASSWORD = process.env.CAREERS_ADMIN_PASSWORD || "OverwatchRecruit2026!";
 
-function isAuthorized(request: Request, isAuthCookie: boolean): boolean {
-  if (isAuthCookie) return true;
-  const adminKey = request.headers.get("x-admin-key");
-  if (adminKey && adminKey === ADMIN_PASSWORD) return true;
-  const authHeader = request.headers.get("authorization");
-  if (authHeader && authHeader.replace(/^Bearer\s+/i, "") === ADMIN_PASSWORD) return true;
-  return false;
-}
 
 const WEDNESDAY_SLOT = "Quarta-feira, 23 de Setembro - 10h00";
 const THURSDAY_SLOT = "Quinta-feira, 24 de Setembro - 10h00";
 const FRIDAY_SLOT_TARGET = "Sexta-feira, 25 de Setembro - 10h00";
 
 export async function GET(request: Request) {
-  const isAuthCookie = await authenticated();
-  if (!isAuthorized(request, isAuthCookie)) {
+  if (!(await verifyAdminAuthorization(request))) {
     return Response.json({ error: "Unauthorized" }, { status: 403 });
   }
 
@@ -84,8 +74,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const isAuthCookie = await authenticated();
-  if (!isAuthorized(request, isAuthCookie)) {
+  if (!(await verifyAdminAuthorization(request))) {
     return Response.json({ error: "Unauthorized" }, { status: 403 });
   }
 

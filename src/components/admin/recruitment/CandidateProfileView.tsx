@@ -25,7 +25,6 @@ import {
   X,
 } from "lucide-react";
 import { Application, Role, stages, formatPhoneDisplay, formatSlotDisplay, ArchiveReason } from "@/lib/careers";
-import { screenCandidate } from "@/lib/careers-screening";
 import DocxViewer from "../DocxViewer";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import CelebrationOverlay from "@/components/admin/ui/CelebrationOverlay";
@@ -121,9 +120,6 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
   const roleObj = roles.find((r) => r.id === candidate.role);
   const roleLabel = roleObj ? (lang === "pt" ? roleObj.pt : roleObj.en) : (candidate.role || "Operadora de CCTV");
   const isTechnicalRole = candidate.role === "cctv_technical_manager" || Boolean(candidate.technicalData || candidate.screeningResult);
-
-  // Screening analysis
-  const screening = screenCandidate(candidate);
 
   // Handle Cover Letter Translation
   const handleTranslateCover = async () => {

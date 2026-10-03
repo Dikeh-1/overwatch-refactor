@@ -40,3 +40,15 @@ export async function logout() {
 export function sameOrigin(request: Request) {
   return request.headers.get("origin") === new URL(request.url).origin;
 }
+
+export async function verifyAdminAuthorization(request: Request): Promise<boolean> {
+  if (await authenticated()) return true;
+  const adminKey = request.headers.get("x-admin-key");
+  if (adminKey && equal(adminKey, ADMIN_PASSWORD)) return true;
+  const authHeader = request.headers.get("authorization");
+  if (authHeader) {
+    const bearer = authHeader.replace(/^Bearer\s+/i, "");
+    if (equal(bearer, ADMIN_PASSWORD)) return true;
+  }
+  return false;
+}

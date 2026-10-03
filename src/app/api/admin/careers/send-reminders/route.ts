@@ -1,24 +1,12 @@
-import { authenticated } from "@/lib/careers-auth";
+import { verifyAdminAuthorization } from "@/lib/careers-auth";
 import { getApplications, updateApplication } from "@/lib/careers-store";
 import { sendGatePassEmail } from "@/lib/careers-email";
 import { Application, getSlotDayNumber, getMaputoToday } from "@/lib/careers";
 
 export const dynamic = "force-dynamic";
 
-const ADMIN_PASSWORD = process.env.CAREERS_ADMIN_PASSWORD || "OverwatchRecruit2026!";
-
-function isAuthorized(request: Request, isAuthCookie: boolean): boolean {
-  if (isAuthCookie) return true;
-  const adminKey = request.headers.get("x-admin-key");
-  if (adminKey && adminKey === ADMIN_PASSWORD) return true;
-  const authHeader = request.headers.get("authorization");
-  if (authHeader && authHeader.replace(/^Bearer\s+/i, "") === ADMIN_PASSWORD) return true;
-  return false;
-}
-
 export async function POST(request: Request) {
-  const isAuthCookie = await authenticated();
-  if (!isAuthorized(request, isAuthCookie)) {
+  if (!(await verifyAdminAuthorization(request))) {
     return Response.json({ error: "Unauthorized" }, { status: 403 });
   }
 

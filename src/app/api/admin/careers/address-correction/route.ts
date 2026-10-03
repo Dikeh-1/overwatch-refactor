@@ -1,27 +1,14 @@
-import { authenticated } from "@/lib/careers-auth";
+import { verifyAdminAuthorization } from "@/lib/careers-auth";
 import { getApplications, getApplication, updateApplication } from "@/lib/careers-store";
 import {
-  sendInocioWilsonRebookingEmail,
   sendAddressCorrectionBroadcastEmail,
 } from "@/lib/careers-email";
 import { Application } from "@/lib/careers";
 
 export const dynamic = "force-dynamic";
 
-const ADMIN_PASSWORD = process.env.CAREERS_ADMIN_PASSWORD || "OverwatchRecruit2026!";
-
-function isAuthorized(request: Request, isAuthCookie: boolean): boolean {
-  if (isAuthCookie) return true;
-  const adminKey = request.headers.get("x-admin-key");
-  if (adminKey && adminKey === ADMIN_PASSWORD) return true;
-  const authHeader = request.headers.get("authorization");
-  if (authHeader && authHeader.replace(/^Bearer\s+/i, "") === ADMIN_PASSWORD) return true;
-  return false;
-}
-
 export async function POST(request: Request) {
-  const isAuthCookie = await authenticated();
-  if (!isAuthorized(request, isAuthCookie)) {
+  if (!(await verifyAdminAuthorization(request))) {
     return Response.json({ error: "Unauthorized" }, { status: 403 });
   }
 
@@ -70,65 +57,54 @@ export async function POST(request: Request) {
 
     const allApps = await getApplications();
 
-    // 2. Specific Target: Silently Deactivate / Archive Inocio Wilson
-    if (body.target === "inocio" || body.target === "deactivate_inocio" || body.inocioOnly) {
-      let inocio = allApps.find(
+    // 2. Specific Candidate Target by ID or Email
+    if (body.candidateId || body.candidateEmail || (body.target && body.target !== "all")) {
+      const searchTarget = String(body.candidateId || body.candidateEmail || body.target).toLowerCase().trim();
+      const target = allApps.find(
         (a) =>
-          a.id === "6548b28d-9e3b-41c0-bfcf-47c992fa0956" ||
-          a.email.toLowerCase() === "inociowilson7@gmail.com" ||
-          a.name.toLowerCase().includes("inoci") ||
-          a.name.toLowerCase().includes("inosse")
+          a.id.toLowerCase() === searchTarget ||
+          a.email.toLowerCase() === searchTarget ||
+          a.name.toLowerCase().includes(searchTarget)
       );
 
-      if (inocio) {
-        await updateApplication(inocio.id, {
+      if (!target) {
+        return Response.json(
+          { error: "Candidata não encontrada no sistema de selecção." },
+          { status: 404 }
+        );
+      }
+
+      if (body.deactivate || body.archive) {
+        await updateApplication(target.id, {
           status: "archived",
           testSlot: undefined,
           testBookedAt: undefined,
           attendedAt: undefined,
           attendanceStatus: undefined,
         });
-      }
 
-      return Response.json({
-        success: true,
-        target: "inocio",
-        deactivated: true,
-        message: "Candidatura de Inocio Wilson desativada e arquivada silenciosamente com sucesso.",
-      });
-    }
-
-    // 3. Specific Target: Shelsia Raíssa Chimbende
-    if (body.target === "shelsia") {
-      let shelsia = allApps.find(
-        (a) =>
-          a.id === "8e47e205-26fd-43ae-ab5c-3568486e7ba6" ||
-          a.email.toLowerCase() === "chimbendeshelsia@gmail.com" ||
-          a.name.toLowerCase().includes("shelsia")
-      );
-
-      if (!shelsia) {
-        return Response.json(
-          { error: "Candidata Shelsia Raíssa Chimbende não encontrada." },
-          { status: 404 }
-        );
+        return Response.json({
+          success: true,
+          candidate: { id: target.id, name: target.name, email: target.email },
+          deactivated: true,
+          message: `Candidatura de ${target.name} arquivada com sucesso.`,
+        });
       }
 
       const res = await sendAddressCorrectionBroadcastEmail({
-        application: shelsia,
-        slot: shelsia.testSlot,
+        application: target,
+        slot: target.testSlot,
         baseUrl: origin,
       });
 
       return Response.json({
         success: res.success,
-        target: "shelsia",
         candidate: {
-          id: shelsia.id,
-          name: shelsia.name,
-          email: shelsia.email,
+          id: target.id,
+          name: target.name,
+          email: target.email,
         },
-        message: "E-mail de rectificação de endereço enviado para Shelsia Raíssa Chimbende!",
+        message: `E-mail de rectificação de endereço enviado para ${target.name}!`,
       });
     }
 

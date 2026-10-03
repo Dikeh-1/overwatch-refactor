@@ -1,5 +1,5 @@
 import { authenticated } from "@/lib/careers-auth";
-import { getApplications, getCV } from "@/lib/careers-store";
+import { getApplication, getCV } from "@/lib/careers-store";
 
 export async function GET(request: Request) {
   if (!(await authenticated())) return new Response(null, { status: 401 });
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const application = (await getApplications()).find((a) => a.id === id);
+    const application = await getApplication(id);
     if (!application) {
       return new Response(JSON.stringify({ error: "Candidate not found" }), {
         status: 404,

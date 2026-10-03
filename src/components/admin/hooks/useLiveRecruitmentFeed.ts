@@ -77,14 +77,29 @@ export function useLiveRecruitmentFeed({
       } catch {
         setIsConnected(false);
       } finally {
-        timer = setTimeout(checkFeed, 3500); // Live poll every 3.5 seconds
+        const isVisible = typeof document === "undefined" || document.visibilityState === "visible";
+        const delay = isVisible ? 12000 : 30000;
+        timer = setTimeout(checkFeed, delay);
       }
     };
+
+    const handleVisibilityChange = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        clearTimeout(timer);
+        checkFeed();
+      }
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+    }
 
     checkFeed();
 
     return () => {
       clearTimeout(timer);
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+      }
     };
   }, [enabled, roleId, onNewCandidate, onRefreshData, playRadarChime]);
 

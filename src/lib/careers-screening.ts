@@ -73,11 +73,7 @@ export const NEGATIVE_CCTV_KEYWORDS = [
   "aprender cco",
 ];
 
-// Specific male candidates explicitly verified by leadership as lacking prior CCTV experience
-export const KNOWN_INEXPERIENCED_MALE_EMAILS = [
-  "h.muapse@gmail.com",
-  "catinealbertoelias@gmail.com",
-];
+export const KNOWN_INEXPERIENCED_MALE_EMAILS: string[] = [];
 
 export function screenCandidate(candidate: Application): CandidateScreeningResult {
   const isMale = candidate.sex === "male";

@@ -43,11 +43,16 @@ export async function POST(request: Request) {
         const candidate = await getApplication(id);
         if (!candidate) continue;
 
-        const screening = screenCandidate(candidate);
-        const reason =
-          body.customReason ||
-          screening.reasonDescriptionPt ||
-          "Não conformidade com os requisitos eliminatórios do concurso.";
+        let defaultReason = "Não conformidade com os requisitos eliminatórios do concurso.";
+        if (candidate.screeningResult?.failedReasonsPt && candidate.screeningResult.failedReasonsPt.length > 0) {
+          defaultReason = candidate.screeningResult.failedReasonsPt.join("; ");
+        } else if (candidate.role === "cctv" || !candidate.role) {
+          const screening = screenCandidate(candidate);
+          if (screening.reasonDescriptionPt) {
+            defaultReason = screening.reasonDescriptionPt;
+          }
+        }
+        const reason = body.customReason || defaultReason;
 
         const freedSlot = candidate.testSlot;
 
