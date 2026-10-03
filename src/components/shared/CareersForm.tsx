@@ -662,7 +662,7 @@ export default function CareersForm({
     <div className="min-h-screen bg-background text-foreground">
       {/* ─── HERO SECTION ────────────────────────────────────────────── */}
       {!hideHero && (
-        <section className="dark relative isolate overflow-hidden bg-[#090d16] pb-24 pt-28 text-white sm:pb-32 sm:pt-32 lg:pb-40 lg:pt-36">
+        <section className="dark relative isolate overflow-hidden bg-[#090d16] text-white min-h-screen flex flex-col justify-center pt-28 pb-20 sm:pt-32 sm:pb-24 lg:pt-36 lg:pb-28">
           {/* Authentic Security Surveillance Background Video */}
           <div className="absolute inset-0 z-0 opacity-35 pointer-events-none">
             <LazyVideo
@@ -673,7 +673,7 @@ export default function CareersForm({
             />
           </div>
           <TechGrid className="absolute inset-0 opacity-35 pointer-events-none z-0" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_25%,rgba(255,255,255,0.08),transparent_32%),radial-gradient(circle_at_85%_20%,rgba(255,255,255,0.06),transparent_30%),linear-gradient(to_bottom,transparent_45%,rgba(9,13,22,0.95))] pointer-events-none z-0" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.08),transparent_40%),radial-gradient(circle_at_80%_80%,rgba(2,132,199,0.06),transparent_40%),linear-gradient(to_bottom,transparent_40%,rgba(9,13,22,0.98))] pointer-events-none z-0" />
 
           <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full">
             <div className="max-w-3xl">
