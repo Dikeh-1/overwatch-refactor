@@ -1,4 +1,6 @@
 import "server-only";
+import fs from "node:fs";
+import path from "node:path";
 import nodemailer from "nodemailer";
 import QRCode from "qrcode";
 import { roles, type Application, formatSlotDisplay } from "./careers";
@@ -2865,6 +2867,7 @@ export async function sendNextPhaseInstructionsEmail(options: {
 
   const origin = (baseUrl || process.env.NEXT_PUBLIC_SITE_URL || "https://www.overwatchmoz.com").replace(/\/+$/, "");
   const logoWhiteUrl = `${origin}/logo-white.png`;
+  const confettiGifUrl = `${origin}/animations/confetti-celebration.gif`;
   const subject = customSubject?.trim() || "Instruções da Próxima Fase – Processo de Selecção Overwatch";
   const positionTitle = roleTitle || candidate.role || "Operadora de CCO / CCTV Operator";
 
@@ -2942,6 +2945,11 @@ export async function sendNextPhaseInstructionsEmail(options: {
             </table>
           </div>
 
+          <!-- Celebratory Confetti Animation Banner (Dense Looping Confetti) -->
+          <div style="background-color: #ffffff; text-align: center; border-bottom: 1px solid #e2e8f0; line-height: 0;">
+            <img src="${confettiGifUrl}" alt="Overwatch Celebração Confetti" width="600" style="width: 100%; max-width: 600px; height: auto; display: block; margin: 0 auto; border: 0;" />
+          </div>
+
           <!-- Official Recipient Metadata Block -->
           <div style="padding: 14px 24px; background-color: #ffffff; border-bottom: 1px solid #e2e8f0; font-size: 12px; color: #475569;">
             <table style="width: 100%; border-collapse: collapse;">
@@ -2992,12 +3000,26 @@ export async function sendNextPhaseInstructionsEmail(options: {
   const toEmail = preview && recipientEmail ? recipientEmail : candidate.email;
   const toName = preview ? `[PREVIEW] ${candidate.name}` : candidate.name;
 
+  let emailAttachments = attachments ? [...attachments] : [];
+  try {
+    const confettiPath = path.join(process.cwd(), "public", "animations", "confetti-celebration.gif");
+    if (fs.existsSync(confettiPath)) {
+      const confettiBuffer = fs.readFileSync(confettiPath);
+      emailAttachments.push({
+        name: "celebracao_overwatch.gif",
+        content: confettiBuffer.toString("base64"),
+      });
+    }
+  } catch (e) {
+    console.warn("Could not attach confetti gif file:", e);
+  }
+
   return sendTransactionalEmail({
     to: [{ email: toEmail, name: toName }],
     subject: preview ? `[PREVIEW TEST] ${subject}` : subject,
     htmlContent,
     textContent: `Prezada Candidata ${candidate.name},\n\n${instructions.replace(/<[^>]*>/g, "")}\n\nCom os melhores cumprimentos,\nEquipa de Recrutamento & Selecção\nOverwatch Moçambique`,
-    attachment: attachments,
+    attachment: emailAttachments.length > 0 ? emailAttachments : undefined,
   });
 }
 
