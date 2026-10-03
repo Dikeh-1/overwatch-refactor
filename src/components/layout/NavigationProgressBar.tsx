@@ -10,19 +10,17 @@ function NavigationProgressBarInner() {
   const [progress, setProgress] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Complete and hide on route update
+  // Complete and dismiss immediately on any route change
   useEffect(() => {
-    if (loading) {
-      setProgress(100);
-      const timer = setTimeout(() => {
-        setLoading(false);
-        setProgress(0);
-      }, 300);
-      return () => clearTimeout(timer);
-    }
+    setProgress(100);
+    const dismissTimer = setTimeout(() => {
+      setLoading(false);
+      setProgress(0);
+    }, 200);
+    return () => clearTimeout(dismissTimer);
   }, [pathname, searchParams]);
 
-  // Click interceptor on all navigation links
+  // Intercept click on links to show quick tactile navigation feedback
   useEffect(() => {
     const handleDocumentClick = (e: MouseEvent) => {
       const anchor = (e.target as HTMLElement).closest("a");
@@ -31,7 +29,7 @@ function NavigationProgressBarInner() {
       const href = anchor.getAttribute("href");
       if (!href) return;
 
-      // Ignore anchor jumps, protocols, blank targets, downloads
+      // Ignore in-page hash jumps, protocols, target="_blank", downloads
       if (
         href.startsWith("#") ||
         href.startsWith("mailto:") ||
@@ -43,14 +41,12 @@ function NavigationProgressBarInner() {
         return;
       }
 
-      // Check if same origin and different route
       try {
         const url = new URL(href, window.location.href);
         if (
           url.origin === window.location.origin &&
           (url.pathname !== window.location.pathname || url.search !== window.location.search)
         ) {
-          // Immediately give tactile feedback
           setLoading(true);
           setProgress(25);
         }
@@ -61,15 +57,27 @@ function NavigationProgressBarInner() {
 
     const handlePopState = () => {
       setLoading(true);
-      setProgress(40);
+      setProgress(35);
+    };
+
+    const handleWindowLoad = () => {
+      setProgress(100);
+      setTimeout(() => {
+        setLoading(false);
+        setProgress(0);
+      }, 150);
     };
 
     document.addEventListener("click", handleDocumentClick, true);
     window.addEventListener("popstate", handlePopState);
+    window.addEventListener("pageshow", handleWindowLoad);
+    window.addEventListener("load", handleWindowLoad);
 
     return () => {
       document.removeEventListener("click", handleDocumentClick, true);
       window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("pageshow", handleWindowLoad);
+      window.removeEventListener("load", handleWindowLoad);
     };
   }, []);
 
@@ -82,14 +90,24 @@ function NavigationProgressBarInner() {
 
     timerRef.current = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 88) return prev;
-        const jump = Math.floor(Math.random() * 12) + 4;
-        return Math.min(prev + jump, 88);
+        if (prev >= 85) return prev;
+        const jump = Math.floor(Math.random() * 10) + 4;
+        return Math.min(prev + jump, 85);
       });
-    }, 200);
+    }, 180);
+
+    // Guaranteed safety timeout: Never remain stuck on screen for more than 1.5 seconds
+    const safetyTimeout = setTimeout(() => {
+      setProgress(100);
+      setTimeout(() => {
+        setLoading(false);
+        setProgress(0);
+      }, 200);
+    }, 1500);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      clearTimeout(safetyTimeout);
     };
   }, [loading]);
 
@@ -98,17 +116,17 @@ function NavigationProgressBarInner() {
   return (
     <div
       aria-hidden="true"
-      className="fixed top-0 left-0 right-0 z-[999999] h-[3px] pointer-events-none"
+      className="fixed top-0 left-0 right-0 z-[999999] h-[2px] pointer-events-none"
     >
       <div
-        className="h-full bg-gradient-to-r from-white via-slate-200 to-slate-400 shadow-[0_0_12px_rgba(255,255,255,0.7)] transition-all"
+        className="h-full bg-white transition-all"
         style={{
           width: `${progress}%`,
           opacity: progress === 100 ? 0 : 1,
           transition:
             progress === 100
-              ? "width 120ms ease-out, opacity 250ms ease-in"
-              : "width 200ms cubic-bezier(0.4, 0, 0.2, 1)",
+              ? "width 120ms ease-out, opacity 200ms ease-out"
+              : "width 180ms ease-out",
         }}
       />
     </div>
