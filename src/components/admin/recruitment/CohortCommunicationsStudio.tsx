@@ -407,18 +407,14 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Studio Header Card */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex items-start sm:items-center gap-3">
-            <button
-              onClick={onBackToPipeline}
-              className="rounded-xl border border-slate-200 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-colors shadow-2xs shrink-0 cursor-pointer"
-              title={t("Back to Cohort Pipeline", "Voltar ao Pipeline do Lote")}
-            >
-              <ArrowLeft size={18} />
-            </button>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-sky-50 text-sky-700 border border-sky-200 flex items-center justify-center shrink-0">
+              <Mail size={18} />
+            </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-slate-900 text-white px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                <span className="rounded-full bg-slate-100 border border-slate-200 text-slate-700 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
                   {cohort.department || t("Operations", "Operações")}
                 </span>
                 <span className="rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-700 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
@@ -430,25 +426,25 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
                   {cohort.name}
                 </span>
               </div>
-              <h2 className="text-lg font-extrabold text-slate-900 mt-1">
-                {t("Archive Cohort Communications Studio", "Estúdio de Comunicações do Lote Arquivado")}
+              <h2 className="text-base font-bold text-slate-900 mt-1">
+                {t("Cohort Communications Studio", "Estúdio de Comunicações do Lote")}
               </h2>
               <p className="text-xs text-slate-500">
                 {t(
-                  "Craft, preview in authentic letterhead, and dispatch official onboarding instructions, conditions notices, and cohort broadcasts.",
+                  "Draft, preview in authentic letterhead, and dispatch official onboarding instructions, conditions notices, and cohort broadcasts.",
                   "Personalize, pré-visualize em papel timbrado oficial e envie instruções de formação, termos e comunicados deste lote."
                 )}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={onBackToPipeline}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
             >
               <ArrowLeft size={13} />
-              <span>{t("Back to Candidates Table", "Voltar à Tabela de Candidatos")}</span>
+              <span>{t("Back to Pipeline Table", "Voltar à Tabela do Funil")}</span>
             </button>
           </div>
         </div>
@@ -458,7 +454,7 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
           <div className="flex items-center justify-between text-xs font-bold text-slate-700">
             <span className="flex items-center gap-1.5">
               <Users size={14} className="text-sky-600" />
-              <span>{t("Target Recipient Audience", "Público-Alvo Destinatário")}:</span>
+              <span>{t("1. Target Recipient Audience", "1. Público-Alvo Destinatário")}:</span>
             </span>
             <span className="text-[11px] font-semibold text-slate-500 font-mono">
               {targetCandidates.length} {t("candidates targeted", "candidatas seleccionadas")}
@@ -472,17 +468,17 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
               onClick={() => setAudienceFilter("confirmed")}
               className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                 audienceFilter === "confirmed"
-                  ? "bg-slate-900 border-slate-900 text-white shadow-xs"
-                  : "bg-slate-50/70 border-slate-200 hover:bg-slate-100 text-slate-800"
+                  ? "bg-sky-50/70 border-sky-500 text-slate-900 shadow-2xs ring-1 ring-sky-500/20"
+                  : "bg-white border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 text-slate-800 shadow-2xs"
               }`}
             >
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <div className={`text-[10px] font-bold uppercase tracking-wider ${audienceFilter === "confirmed" ? "text-sky-800" : "text-slate-400"}`}>
                 {t("Accepted Conditions", "Aceitaram Termos")}
               </div>
-              <div className="text-base font-extrabold mt-0.5 text-emerald-400">
+              <div className="text-base font-extrabold mt-0.5 text-slate-900">
                 {audienceCounts.confirmed}
               </div>
-              <span className="text-[9px] block text-slate-400">
+              <span className={`text-[9px] block ${audienceFilter === "confirmed" ? "text-sky-600 font-medium" : "text-slate-400"}`}>
                 {t("Primary CCO Group", "Grupo Finalista CCO")}
               </span>
             </button>
@@ -494,17 +490,17 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
                 onClick={() => setAudienceFilter("selected")}
                 className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                   audienceFilter === "selected"
-                    ? "bg-slate-900 border-slate-900 text-white shadow-xs"
-                    : "bg-sky-50/70 border-sky-200 hover:bg-sky-100 text-sky-900"
+                    ? "bg-sky-50/70 border-sky-500 text-slate-900 shadow-2xs ring-1 ring-sky-500/20"
+                    : "bg-white border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 text-slate-800 shadow-2xs"
                 }`}
               >
-                <div className="text-[10px] font-bold uppercase tracking-wider text-sky-500">
+                <div className={`text-[10px] font-bold uppercase tracking-wider ${audienceFilter === "selected" ? "text-sky-800" : "text-sky-600"}`}>
                   {t("Selected from Table", "Marcadas na Tabela")}
                 </div>
-                <div className="text-base font-extrabold mt-0.5 text-sky-600">
+                <div className="text-base font-extrabold mt-0.5 text-slate-900">
                   {audienceCounts.selected}
                 </div>
-                <span className="text-[9px] block text-sky-500">
+                <span className={`text-[9px] block ${audienceFilter === "selected" ? "text-sky-600 font-medium" : "text-slate-400"}`}>
                   {t("Custom Checklist", "Selecção Manual")}
                 </span>
               </button>
@@ -516,17 +512,17 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
               onClick={() => setAudienceFilter("awaiting")}
               className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                 audienceFilter === "awaiting"
-                  ? "bg-slate-900 border-slate-900 text-white shadow-xs"
-                  : "bg-slate-50/70 border-slate-200 hover:bg-slate-100 text-slate-800"
+                  ? "bg-sky-50/70 border-sky-500 text-slate-900 shadow-2xs ring-1 ring-sky-500/20"
+                  : "bg-white border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 text-slate-800 shadow-2xs"
               }`}
             >
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <div className={`text-[10px] font-bold uppercase tracking-wider ${audienceFilter === "awaiting" ? "text-sky-800" : "text-slate-400"}`}>
                 {t("Awaiting Response", "Aguardam Resposta")}
               </div>
-              <div className="text-base font-extrabold mt-0.5 text-amber-500">
+              <div className="text-base font-extrabold mt-0.5 text-slate-900">
                 {audienceCounts.awaiting}
               </div>
-              <span className="text-[9px] block text-slate-400">
+              <span className={`text-[9px] block ${audienceFilter === "awaiting" ? "text-sky-600 font-medium" : "text-slate-400"}`}>
                 {t("Pending Next Phase", "Pendente Aceitação")}
               </span>
             </button>
@@ -537,17 +533,17 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
               onClick={() => setAudienceFilter("tested")}
               className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                 audienceFilter === "tested"
-                  ? "bg-slate-900 border-slate-900 text-white shadow-xs"
-                  : "bg-slate-50/70 border-slate-200 hover:bg-slate-100 text-slate-800"
+                  ? "bg-sky-50/70 border-sky-500 text-slate-900 shadow-2xs ring-1 ring-sky-500/20"
+                  : "bg-white border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 text-slate-800 shadow-2xs"
               }`}
             >
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <div className={`text-[10px] font-bold uppercase tracking-wider ${audienceFilter === "tested" ? "text-sky-800" : "text-slate-400"}`}>
                 {t("Attended Test", "Fizeram Prova")}
               </div>
-              <div className="text-base font-extrabold mt-0.5 text-sky-500">
+              <div className="text-base font-extrabold mt-0.5 text-slate-900">
                 {audienceCounts.tested}
               </div>
-              <span className="text-[9px] block text-slate-400">
+              <span className={`text-[9px] block ${audienceFilter === "tested" ? "text-sky-600 font-medium" : "text-slate-400"}`}>
                 {t("Verified Gate Check", "Presença no Portão")}
               </span>
             </button>
@@ -558,17 +554,17 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
               onClick={() => setAudienceFilter("hired")}
               className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                 audienceFilter === "hired"
-                  ? "bg-slate-900 border-slate-900 text-white shadow-xs"
-                  : "bg-slate-50/70 border-slate-200 hover:bg-slate-100 text-slate-800"
+                  ? "bg-sky-50/70 border-sky-500 text-slate-900 shadow-2xs ring-1 ring-sky-500/20"
+                  : "bg-white border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 text-slate-800 shadow-2xs"
               }`}
             >
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <div className={`text-[10px] font-bold uppercase tracking-wider ${audienceFilter === "hired" ? "text-sky-800" : "text-slate-400"}`}>
                 {t("Hired Offers", "Admitidos")}
               </div>
-              <div className="text-base font-extrabold mt-0.5 text-emerald-500">
+              <div className="text-base font-extrabold mt-0.5 text-slate-900">
                 {audienceCounts.hired}
               </div>
-              <span className="text-[9px] block text-slate-400">
+              <span className={`text-[9px] block ${audienceFilter === "hired" ? "text-sky-600 font-medium" : "text-slate-400"}`}>
                 {t("Final Offers", "Contratos Finais")}
               </span>
             </button>
@@ -579,17 +575,17 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
               onClick={() => setAudienceFilter("all")}
               className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                 audienceFilter === "all"
-                  ? "bg-slate-900 border-slate-900 text-white shadow-xs"
-                  : "bg-slate-50/70 border-slate-200 hover:bg-slate-100 text-slate-800"
+                  ? "bg-sky-50/70 border-sky-500 text-slate-900 shadow-2xs ring-1 ring-sky-500/20"
+                  : "bg-white border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 text-slate-800 shadow-2xs"
               }`}
             >
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <div className={`text-[10px] font-bold uppercase tracking-wider ${audienceFilter === "all" ? "text-sky-800" : "text-slate-400"}`}>
                 {t("All Applications", "Todo o Lote")}
               </div>
-              <div className="text-base font-extrabold mt-0.5 text-slate-800">
+              <div className="text-base font-extrabold mt-0.5 text-slate-900">
                 {audienceCounts.total}
               </div>
-              <span className="text-[9px] block text-slate-400">
+              <span className={`text-[9px] block ${audienceFilter === "all" ? "text-sky-600 font-medium" : "text-slate-400"}`}>
                 {t("Master Cohort Pool", "Base Completa")}
               </span>
             </button>
@@ -600,17 +596,17 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
               onClick={() => setAudienceFilter("archived")}
               className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                 audienceFilter === "archived"
-                  ? "bg-slate-900 border-slate-900 text-white shadow-xs"
-                  : "bg-slate-50/70 border-slate-200 hover:bg-slate-100 text-slate-800"
+                  ? "bg-sky-50/70 border-sky-500 text-slate-900 shadow-2xs ring-1 ring-sky-500/20"
+                  : "bg-white border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 text-slate-800 shadow-2xs"
               }`}
             >
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <div className={`text-[10px] font-bold uppercase tracking-wider ${audienceFilter === "archived" ? "text-sky-800" : "text-slate-400"}`}>
                 {t("Not Advancing", "Não Seleccionados")}
               </div>
-              <div className="text-base font-extrabold mt-0.5 text-rose-500">
+              <div className="text-base font-extrabold mt-0.5 text-slate-900">
                 {audienceCounts.archived}
               </div>
-              <span className="text-[9px] block text-slate-400">
+              <span className={`text-[9px] block ${audienceFilter === "archived" ? "text-sky-600 font-medium" : "text-slate-400"}`}>
                 {t("Concluded Candidates", "Concurso Concluído")}
               </span>
             </button>
@@ -621,7 +617,7 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
       {/* Preset Templates Palette */}
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs font-bold text-slate-700 px-1">
-          <span>{t("Select Official Template", "Seleccionar Modelo Oficial")}:</span>
+          <span>{t("2. Select Official Template", "2. Seleccionar Modelo Oficial")}:</span>
           <span className="text-[11px] text-slate-400 font-normal">
             {t("Click any template to load its official wording", "Clique num modelo para carregar o texto correspondente")}
           </span>
@@ -638,22 +634,22 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
                 onClick={() => handleSelectTemplate(key)}
                 className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2 shadow-2xs ${
                   isSelected
-                    ? "bg-[#0a1128] text-white border-[#0a1128] shadow-xs"
+                    ? "bg-sky-50/70 border-sky-500 text-slate-900 ring-1 ring-sky-500/20 shadow-2xs"
                     : "bg-white text-slate-800 border-slate-200 hover:border-slate-300 hover:bg-slate-50/70"
                 }`}
               >
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className={`text-[11px] font-bold line-clamp-1 ${isSelected ? "text-sky-300" : "text-slate-900"}`}>
+                    <span className={`text-[11px] font-bold line-clamp-1 ${isSelected ? "text-sky-950 font-extrabold" : "text-slate-900"}`}>
                       {lang === "en" ? tpl.titleEn : tpl.titlePt}
                     </span>
-                    {isSelected && <Check size={13} className="text-sky-400 shrink-0" />}
+                    {isSelected && <Check size={14} className="text-sky-600 shrink-0" />}
                   </div>
-                  <p className={`text-[10px] mt-1 line-clamp-2 ${isSelected ? "text-slate-300" : "text-slate-500"}`}>
+                  <p className={`text-[10px] mt-1 line-clamp-2 ${isSelected ? "text-slate-600" : "text-slate-500"}`}>
                     {lang === "en" ? tpl.subjectEn : tpl.subjectPt}
                   </p>
                 </div>
-                <span className={`text-[9px] font-semibold uppercase tracking-wider block ${isSelected ? "text-sky-400" : "text-slate-400"}`}>
+                <span className={`text-[9px] font-semibold uppercase tracking-wider block ${isSelected ? "text-sky-700 font-bold" : "text-slate-400"}`}>
                   {key === "onboarding" ? t("Induction Briefing", "Convocatória Presencial") : key === "conditions" ? t("Terms & Stipend", "Termos & Subsídio") : key === "conclusion" ? t("Talent Bank", "Arquivo & Reserva") : t("Custom Draft", "Texto Livre")}
                 </span>
               </button>
@@ -666,17 +662,17 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
       <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs">
         {/* Canvas Mode Header Tabs */}
         <div className="border-b border-slate-200 bg-slate-50/80 px-6 py-3 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200">
             <button
               type="button"
               onClick={() => setCanvasTab("edit")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 canvasTab === "edit"
-                  ? "bg-[#0a1128] text-white shadow-2xs"
-                  : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
+                  ? "bg-white text-slate-900 shadow-2xs border border-slate-200/60"
+                  : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              <FileText size={13} />
+              <FileText size={13} className={canvasTab === "edit" ? "text-sky-600" : "text-slate-400"} />
               <span>{t("Message Editor", "Editor da Mensagem")}</span>
             </button>
 
@@ -685,11 +681,11 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
               onClick={() => setCanvasTab("preview")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 canvasTab === "preview"
-                  ? "bg-[#0a1128] text-white shadow-2xs"
-                  : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
+                  ? "bg-white text-slate-900 shadow-2xs border border-slate-200/60"
+                  : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              <Eye size={13} className={canvasTab === "preview" ? "text-sky-300" : ""} />
+              <Eye size={13} className={canvasTab === "preview" ? "text-sky-600" : "text-slate-400"} />
               <span>{t("Live Official Letterhead Preview", "Pré-visualização em Papel Timbrado")}</span>
             </button>
           </div>
@@ -734,7 +730,7 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder={t("Subject line...", "Assunto da comunicação...")}
-                className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-xs text-slate-900 font-medium focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none shadow-2xs"
+                className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-xs text-slate-900 font-medium focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none shadow-2xs"
               />
             </div>
 
@@ -747,35 +743,35 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
                 <button
                   type="button"
                   onClick={() => handleInsertVariable("{{name}}")}
-                  className="px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[11px] font-mono font-bold text-slate-800 transition-colors shadow-2xs cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 hover:border-sky-300 text-[11px] font-mono font-bold text-slate-800 transition-colors shadow-2xs cursor-pointer"
                 >
                   {"{{name}}"} <span className="text-[10px] text-slate-400 font-sans">({t("Candidate Name", "Nome")})</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleInsertVariable("{{role}}")}
-                  className="px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[11px] font-mono font-bold text-slate-800 transition-colors shadow-2xs cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 hover:border-sky-300 text-[11px] font-mono font-bold text-slate-800 transition-colors shadow-2xs cursor-pointer"
                 >
                   {"{{role}}"} <span className="text-[10px] text-slate-400 font-sans">({t("Role Title", "Cargo")})</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleInsertVariable("{{slot}}")}
-                  className="px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[11px] font-mono font-bold text-slate-800 transition-colors shadow-2xs cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 hover:border-sky-300 text-[11px] font-mono font-bold text-slate-800 transition-colors shadow-2xs cursor-pointer"
                 >
                   {"{{slot}}"} <span className="text-[10px] text-slate-400 font-sans">({t("Assigned Slot", "Turno")})</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleInsertVariable("{{location}}")}
-                  className="px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[11px] font-mono font-bold text-slate-800 transition-colors shadow-2xs cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 hover:border-sky-300 text-[11px] font-mono font-bold text-slate-800 transition-colors shadow-2xs cursor-pointer"
                 >
                   {"{{location}}"} <span className="text-[10px] text-slate-400 font-sans">({t("HQ Address", "Sede")})</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleInsertVariable("{{date}}")}
-                  className="px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[11px] font-mono font-bold text-slate-800 transition-colors shadow-2xs cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 hover:border-sky-300 text-[11px] font-mono font-bold text-slate-800 transition-colors shadow-2xs cursor-pointer"
                 >
                   {"{{date}}"} <span className="text-[10px] text-slate-400 font-sans">({t("Current Date", "Data")})</span>
                 </button>
@@ -797,7 +793,7 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder={t("Type official instructions here...", "Escreva as instruções oficiais aqui...")}
-                className="w-full rounded-xl border border-slate-300 p-4 font-sans text-xs text-slate-900 leading-relaxed focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none shadow-2xs admin-scrollbar"
+                className="w-full rounded-xl border border-slate-300 p-4 font-sans text-xs text-slate-900 leading-relaxed focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none shadow-2xs admin-scrollbar"
               />
             </div>
           </div>
@@ -808,7 +804,7 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
               {/* Letterhead Top Header */}
               <div className="flex items-center justify-between border-b border-slate-200 pb-5">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#0a1128] flex items-center justify-center text-white font-extrabold text-sm shadow-xs">
+                  <div className="w-10 h-10 rounded-xl bg-sky-900 flex items-center justify-center text-white font-extrabold text-sm shadow-xs">
                     OW
                   </div>
                   <div>
@@ -884,7 +880,7 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
               value={previewEmail}
               onChange={(e) => setPreviewEmail(e.target.value)}
               placeholder={t("Admin test email (e.g. your email)...", "Email de teste (ex: seu email)...")}
-              className="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none bg-white shadow-2xs"
+              className="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none bg-white shadow-2xs"
             />
             <button
               type="button"
@@ -918,16 +914,16 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
                   handleDispatch(false);
                 }
               }}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0a1128] hover:bg-[#121c3b] text-white text-xs font-bold transition-colors shadow-sm cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold transition-colors shadow-2xs cursor-pointer disabled:opacity-50"
             >
               {isSending ? (
                 <>
-                  <OverwatchOrbitLoader size="xs" theme="dark" className="shrink-0" />
+                  <OverwatchOrbitLoader size="xs" theme="light" className="shrink-0" />
                   <span>{t("Dispatching (rate-limited)...", "A enviar com controlo de débito...")}</span>
                 </>
               ) : (
                 <>
-                  <Send size={14} className="text-sky-300" />
+                  <Send size={14} className="text-white" />
                   <span>
                     {t(
                       `Dispatch to ${targetCandidates.length} Candidates`,

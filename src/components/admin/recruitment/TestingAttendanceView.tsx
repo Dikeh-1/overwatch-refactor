@@ -183,7 +183,7 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
           <button
             type="button"
             onClick={onOpenGateScanner}
-            className="px-3 py-1.5 rounded-md bg-[#0a1128] hover:bg-[#101b3d] text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
           >
             <QrCode size={13} />
             <span>{t("Open QR Scanner", "Scanner de Portaria")}</span>
@@ -505,7 +505,7 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
                 type="button"
                 onClick={handleSaveConfig}
                 disabled={savingConfig}
-                className="px-3 py-1.5 rounded bg-[#0a1128] hover:bg-[#101b3d] text-white text-xs font-semibold transition-colors disabled:opacity-50"
+                className="px-3.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition-colors disabled:opacity-50 shadow-2xs"
               >
                 {savingConfig ? t("Saving...", "A guardar...") : t("Save Changes", "Guardar Alterações")}
               </button>

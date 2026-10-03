@@ -666,7 +666,7 @@ export default function RoleConfigModal({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 bg-slate-50/70">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 border border-slate-200 text-[#0a1128]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-50 border border-sky-200 text-sky-700">
               <Sliders size={20} />
             </div>
             <div>
@@ -685,7 +685,7 @@ export default function RoleConfigModal({
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer"
             title={t("Close", "Fechar")}
           >
             <X size={18} />
@@ -696,9 +696,9 @@ export default function RoleConfigModal({
         <div className="flex border-b border-slate-200 bg-white px-6">
           <button
             onClick={() => setActiveTab("details")}
-            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-xs font-bold transition-colors ${
+            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-xs font-bold transition-colors cursor-pointer ${
               activeTab === "details"
-                ? "border-[#0a1128] text-[#0a1128]"
+                ? "border-sky-600 text-sky-700"
                 : "border-transparent text-slate-500 hover:text-slate-900"
             }`}
           >
@@ -706,9 +706,9 @@ export default function RoleConfigModal({
           </button>
           <button
             onClick={() => setActiveTab("pipeline")}
-            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-xs font-bold transition-colors ${
+            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-xs font-bold transition-colors cursor-pointer ${
               activeTab === "pipeline"
-                ? "border-[#0a1128] text-[#0a1128]"
+                ? "border-sky-600 text-sky-700"
                 : "border-transparent text-slate-500 hover:text-slate-900"
             }`}
           >
@@ -719,9 +719,9 @@ export default function RoleConfigModal({
           </button>
           <button
             onClick={() => setActiveTab("screening")}
-            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-xs font-bold transition-colors ${
+            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-xs font-bold transition-colors cursor-pointer ${
               activeTab === "screening"
-                ? "border-[#0a1128] text-[#0a1128]"
+                ? "border-sky-600 text-sky-700"
                 : "border-transparent text-slate-500 hover:text-slate-900"
             }`}
           >
@@ -754,7 +754,7 @@ export default function RoleConfigModal({
                     value={pt}
                     onChange={(e) => setPt(e.target.value)}
                     placeholder={t("e.g. CCTV Technical Operator", "Ex: Gestor de Segurança e Acessos")}
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none"
                   />
                 </div>
                 <div>
@@ -766,7 +766,7 @@ export default function RoleConfigModal({
                     value={en}
                     onChange={(e) => setEn(e.target.value)}
                     placeholder={t("e.g. Access Control & Security Manager", "Ex: Access Control & Security Manager")}
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none"
                   />
                 </div>
               </div>
@@ -782,7 +782,7 @@ export default function RoleConfigModal({
                     disabled={isEditing}
                     onChange={(e) => setId(e.target.value)}
                     placeholder="cctv_security_lead"
-                    className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 disabled:opacity-75 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none font-mono"
+                    className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 disabled:opacity-75 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none font-mono"
                   />
                   <span className="text-[11px] text-slate-400 mt-1 block">
                     {t("Auto-generated if left empty", "Automático se vazio")}
@@ -804,7 +804,7 @@ export default function RoleConfigModal({
                         setDepartment(e.target.value);
                       }
                     }}
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none"
                   >
                     {DEFAULT_DEPARTMENTS.map((d) => (
                       <option key={d.pt} value={d.pt}>
@@ -831,7 +831,7 @@ export default function RoleConfigModal({
                           setDepartment(e.target.value);
                         }}
                         placeholder={t("e.g. Information Technology & Telecoms", "Ex: TI & Telecomunicações")}
-                        className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
+                        className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none"
                       />
                       <button
                         type="button"
@@ -857,7 +857,7 @@ export default function RoleConfigModal({
                     "Key duties, technical skills, and scope of responsibilities...",
                     "Descrição técnica das principais atividades e escopo da posição...",
                   )}
-                  className="w-full rounded-lg border border-slate-300 bg-white p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none resize-none"
+                  className="w-full rounded-lg border border-slate-300 bg-white p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none resize-none"
                 />
               </div>
 
@@ -921,7 +921,7 @@ export default function RoleConfigModal({
                         <div
                           className={`flex h-6 w-6 items-center justify-center rounded-lg border text-xs font-bold ${
                             isEnabled
-                              ? "border-[#0a1128] bg-[#0a1128] text-white"
+                              ? "border-sky-600 bg-sky-600 text-white"
                               : "border-slate-300 bg-white text-slate-400"
                           }`}
                         >
@@ -979,7 +979,7 @@ export default function RoleConfigModal({
                         }
                       }}
                       defaultValue=""
-                      className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 focus:border-[#0a1128] focus:outline-none cursor-pointer"
+                      className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 focus:border-sky-500 focus:outline-none cursor-pointer"
                     >
                       <option value="" disabled>
                         {t("Load Template...", "Carregar Modelo / Template...")}
@@ -1178,7 +1178,7 @@ export default function RoleConfigModal({
                       <select
                         value={selectedCriterionPreset}
                         onChange={(e) => handleSelectCriterionPreset(e.target.value)}
-                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none font-medium"
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none font-medium"
                       >
                         <option value="">
                           {t("-- Choose an application criterion from form --", "-- Escolha um critério do formulário de candidatura --")}
@@ -1251,7 +1251,7 @@ export default function RoleConfigModal({
                             <select
                               value={newRuleMandatory ? "mandatory" : "preferred"}
                               onChange={(e) => setNewRuleMandatory(e.target.value === "mandatory")}
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none font-semibold"
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none font-semibold"
                             >
                               <option value="mandatory">🔴 {t("Mandatory (Knockout Pass/Fail)", "Obrigatório (Pass/Fail Eliminatório)")}</option>
                               <option value="preferred">🔵 {t("Preferred (Score Bonus)", "Preferencial (Bónus de Pontuação)")}</option>
@@ -1267,7 +1267,7 @@ export default function RoleConfigModal({
                               value={newRuleValue}
                               onChange={(e) => setNewRuleValue(e.target.value)}
                               placeholder={newRuleType === "number" ? "1" : "yes"}
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 font-mono focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 font-mono focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none"
                             />
                           </div>
                         </div>
@@ -1275,7 +1275,7 @@ export default function RoleConfigModal({
                         <button
                           type="button"
                           onClick={handleAddRule}
-                          className="rounded-lg bg-[#0a1128] hover:bg-[#121c3d] px-4 py-2 text-xs font-bold text-white transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
+                          className="rounded-lg bg-sky-600 hover:bg-sky-700 px-4 py-2 text-xs font-bold text-white transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
                         >
                           <Plus size={14} />
                           <span>{t("Add Selected Rule to Role", "Adicionar Regra à Vaga")}</span>
@@ -1305,7 +1305,7 @@ export default function RoleConfigModal({
                           value={newRuleLabelPt}
                           onChange={(e) => handleCustomTitleChange(e.target.value)}
                           placeholder="Ex: Certificação de Trabalho em Altura"
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none"
                         />
                       </div>
 
@@ -1318,7 +1318,7 @@ export default function RoleConfigModal({
                           value={newRuleLabelEn}
                           onChange={(e) => setNewRuleLabelEn(e.target.value)}
                           placeholder="e.g. Working at Heights Certification"
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none"
                         />
                       </div>
                     </div>
@@ -1333,7 +1333,7 @@ export default function RoleConfigModal({
                         value={newRuleInstructionPt}
                         onChange={(e) => setNewRuleInstructionPt(e.target.value)}
                         placeholder="Ex: Possui certificado de segurança válido para trabalhos em altura emitido por entidade acreditada?"
-                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none"
                       />
                     </div>
 
@@ -1351,7 +1351,7 @@ export default function RoleConfigModal({
                             setNewRuleField(e.target.value);
                           }}
                           placeholder="e.g. trabalho_em_altura"
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 font-mono focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 font-mono focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none"
                         />
                         <span className="text-[9px] text-slate-400 mt-0.5 block">{t("Saved in candidate data", "Guardado nos dados do candidato")}</span>
                       </div>
@@ -1367,7 +1367,7 @@ export default function RoleConfigModal({
                             setNewRuleType(val);
                             setNewRuleValue(val === "number" ? "1" : val === "boolean" ? "yes" : "sim");
                           }}
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none"
                         >
                           <option value="boolean">{t("Yes / No (Boolean)", "Sim / Não (Booleano)")}</option>
                           <option value="number">{t("Numeric Value (Minimum)", "Valor Numérico (Mínimo)")}</option>
@@ -1382,7 +1382,7 @@ export default function RoleConfigModal({
                         <select
                           value={newRuleMandatory ? "mandatory" : "preferred"}
                           onChange={(e) => setNewRuleMandatory(e.target.value === "mandatory")}
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none font-semibold"
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none font-semibold"
                         >
                           <option value="mandatory">🔴 {t("Mandatory (Knockout)", "Obrigatório (Knockout)")}</option>
                           <option value="preferred">🔵 {t("Preferred (Score Bonus)", "Preferencial (Bónus)")}</option>
@@ -1398,7 +1398,7 @@ export default function RoleConfigModal({
                           value={newRuleValue}
                           onChange={(e) => setNewRuleValue(e.target.value)}
                           placeholder={newRuleType === "number" ? "1" : "yes"}
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 font-mono focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 font-mono focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none"
                         />
                       </div>
                     </div>
@@ -1413,7 +1413,7 @@ export default function RoleConfigModal({
                         value={newRuleEvaluatorGuideline}
                         onChange={(e) => setNewRuleEvaluatorGuideline(e.target.value)}
                         placeholder="Ex: Exigir apresentação do documento original antes da entrevista presencial"
-                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none"
                       />
                     </div>
 
@@ -1422,7 +1422,7 @@ export default function RoleConfigModal({
                         type="checkbox"
                         checked={saveCriterionForFuture}
                         onChange={(e) => setSaveCriterionForFuture(e.target.checked)}
-                        className="rounded border-slate-300 accent-[#0a1128]"
+                        className="rounded border-slate-300 accent-sky-600"
                       />
                       <span>{t("Save this criterion to reuse in future roles", "Guardar este critério na lista rápida para reutilizar noutras vagas")}</span>
                     </label>
@@ -1431,7 +1431,7 @@ export default function RoleConfigModal({
                       type="button"
                       onClick={handleAddRule}
                       disabled={!newRuleField.trim() || !newRuleLabelPt.trim()}
-                      className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-[#0a1128] text-white text-xs font-semibold hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                      className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-sky-600 text-white text-xs font-semibold hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors shadow-2xs"
                     >
                       <Plus size={14} />
                       <span>{t("Add Custom Rule to Role", "Adicionar Regra Personalizada")}</span>
@@ -1457,7 +1457,7 @@ export default function RoleConfigModal({
             type="button"
             disabled={isSaving}
             onClick={handleSave}
-            className="flex items-center gap-2 rounded-lg bg-[#0a1128] hover:bg-[#121c3d] px-5 py-2 text-xs font-bold text-white transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
+            className="flex items-center gap-2 rounded-lg bg-sky-600 hover:bg-sky-700 px-5 py-2 text-xs font-bold text-white transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
           >
             {isSaving ? (
               <OverwatchOrbitLoader size="sm" label={t("Saving...", "A gravar...")} />

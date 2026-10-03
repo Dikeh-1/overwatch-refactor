@@ -647,12 +647,18 @@ export async function POST(request: Request) {
           .replace(/\{\{?date\}\}?/gi, new Date().toLocaleDateString("pt-MZ"))
           .replace(/\{\{?location\}\}?/gi, "Av. do Trabalho, N.º 1948, Maputo");
 
+        const personalizedSubject = subject
+          .replace(/\{\{?name\}\}?/gi, app.name)
+          .replace(/\{\{?candidate_name\}\}?/gi, app.name)
+          .replace(/\{\{?role\}\}?/gi, roleName)
+          .replace(/\{\{?role_title\}\}?/gi, roleName);
+
         try {
           await sendNextPhaseInstructionsEmail({
             candidate: { id: app.id, name: app.name, email: app.email, score: app.testScore },
             instructions: personalizedMessage,
             baseUrl,
-            customSubject: subject,
+            customSubject: personalizedSubject,
           });
 
           const communications = app.communications || [];

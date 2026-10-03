@@ -106,7 +106,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ lang: propLang }) =>
           <button
             type="button"
             onClick={handleSave}
-            className="px-4 py-2 rounded-md bg-[#0a1128] hover:bg-[#101b3d] text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
           >
             <Save size={13} />
             <span>{t("Save Settings", "Guardar Configurações")}</span>

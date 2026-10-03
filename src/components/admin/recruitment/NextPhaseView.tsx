@@ -583,7 +583,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
             type="button"
             onClick={() => setConfirmModalOpen(true)}
             disabled={summary.notSent === 0}
-            className="px-3.5 py-1.5 rounded-md bg-[#0a1128] hover:bg-[#101b3d] text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors disabled:opacity-40 cursor-pointer"
+            className="px-3.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors disabled:opacity-40 cursor-pointer shadow-2xs"
           >
             <Send size={13} />
             <span>
@@ -1496,7 +1496,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                   {selectedCandidate.matchedId && (
                     <Link
                       href={`/admin/recruitment/candidates/${selectedCandidate.matchedId}`}
-                      className="px-3.5 py-1.5 rounded-md bg-[#0a1128] hover:bg-[#101b3d] text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                      className="px-3.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
                     >
                       <span>{t("View Full Profile", "Ver Perfil Completo")}</span>
                       <ChevronRight size={13} />
@@ -1548,7 +1548,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                 type="button"
                 onClick={handleExecuteDispatch}
                 disabled={dispatching}
-                className="px-3.5 py-1.5 rounded-md bg-[#0a1128] hover:bg-[#101b3d] text-white text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
+                className="px-3.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer shadow-2xs"
               >
                 {dispatching
                   ? t("Sending...", "A enviar...")

@@ -357,7 +357,7 @@ export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
 
           <Link
             href="/admin/recruitment/candidates"
-            className="px-3.5 py-1.5 rounded-lg bg-[#0a1128] hover:bg-[#101b3d] text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-xs"
+            className="px-3.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-2xs"
           >
             <span>{t("View All Candidates", "Ver Candidaturas")}</span>
             <ArrowRight size={13} />
@@ -380,12 +380,12 @@ export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
             }}
             className={`px-3 py-1.5 rounded-lg font-semibold shrink-0 transition-all cursor-pointer ${
               selectedRoleFilter === "all"
-                ? "bg-[#0a1128] text-white shadow-xs"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                ? "bg-sky-50 text-sky-700 border border-sky-300 font-semibold shadow-2xs"
+                : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
             }`}
           >
             <span>{t("All Active Roles", "Todas as Vagas")}</span>
-            <span className="ml-1.5 px-1.5 py-0.2 rounded-full text-[0.65rem] bg-white/20">
+            <span className={`ml-1.5 px-1.5 py-0.2 rounded-full text-[0.65rem] ${selectedRoleFilter === "all" ? "bg-sky-200/60 text-sky-800" : "bg-slate-100 text-slate-600"}`}>
               {applications.filter((a) => a.status !== "archived").length}
             </span>
           </button>
@@ -404,14 +404,14 @@ export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
                 }}
                 className={`px-3 py-1.5 rounded-lg font-semibold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 ${
                   isSelected
-                    ? "bg-[#0a1128] text-white shadow-xs"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    ? "bg-sky-50 text-sky-700 border border-sky-300 font-semibold shadow-2xs"
+                    : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
                 }`}
               >
                 <span>{lang === "pt" ? r.pt : r.en}</span>
                 <span
                   className={`px-1.5 py-0.2 rounded-full text-[0.65rem] font-mono ${
-                    isSelected ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+                    isSelected ? "bg-sky-200/60 text-sky-800" : "bg-slate-100 text-slate-600"
                   }`}
                 >
                   {count}
@@ -567,7 +567,7 @@ export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
             <div className="pt-4 mt-4 border-t border-slate-100">
               <Link
                 href="/admin/recruitment/next-phase"
-                className="w-full py-2.5 px-3 rounded-lg bg-[#0a1128] hover:bg-[#101b3d] text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+                className="w-full py-2.5 px-3 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
               >
                 <span>{t("Open Next Phase Workflow", "Abrir Fluxo da Próxima Fase")}</span>
                 <ArrowRight size={13} />
@@ -613,7 +613,7 @@ export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
             <div className="pt-4 mt-4 border-t border-slate-100 space-y-2">
               <Link
                 href={`/admin/recruitment/candidates?role=${selectedRoleFilter}`}
-                className="w-full py-2.5 px-3 rounded-lg bg-[#0a1128] hover:bg-[#101b3d] text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+                className="w-full py-2.5 px-3 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
               >
                 <span>{t("Review Role Candidates", "Rever Candidatos da Vaga")}</span>
                 <ArrowRight size={13} />

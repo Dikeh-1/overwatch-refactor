@@ -281,7 +281,7 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
           <button
             type="button"
             onClick={handleOpenCreate}
-            className="px-4 py-2 rounded-lg bg-[#0a1128] hover:bg-[#121c3d] text-white text-xs font-semibold flex items-center gap-2 transition-colors shadow-sm cursor-pointer"
+            className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold flex items-center gap-2 transition-colors shadow-2xs cursor-pointer"
           >
             <Plus size={15} />
             <span>{t("Add New Role", "Nova Vaga")}</span>
@@ -298,7 +298,7 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t("Search by role title, department, or ID...", "Pesquisar por título, departamento ou ID...")}
-            className="w-full pl-9 pr-8 py-2 text-xs rounded-lg border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0a1128] focus:border-[#0a1128]"
+            className="w-full pl-9 pr-8 py-2 text-xs rounded-lg border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
           />
           {searchQuery && (
             <button
@@ -449,7 +449,7 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
 
                   <Link
                     href={role.open ? `/admin/recruitment/candidates?role=${role.id}` : `/admin/recruitment/candidates?role=${role.id}&view=all`}
-                    className="px-3 py-1.5 rounded-lg bg-[#0a1128] hover:bg-[#121c3d] text-white text-xs font-semibold flex items-center gap-1 transition-colors"
+                    className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold flex items-center gap-1 transition-colors shadow-2xs"
                   >
                     <span>{role.open ? t("Active Pipeline", "Funil Ativo") : t("View Candidates", "Ver Candidatos")}</span>
                     <ArrowUpRight size={13} />
@@ -578,7 +578,7 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
                   "e.g. Completed cohort. 12 candidates advanced to technical orientation.",
                   "ex.: Lote concluído. 12 candidatas integradas no centro de comando.",
                 )}
-                className="w-full rounded-lg border border-slate-300 bg-white p-3 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0a1128] focus:border-[#0a1128]"
+                className="w-full rounded-lg border border-slate-300 bg-white p-3 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
               />
             </div>
 
@@ -659,7 +659,7 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
                   `e.g. ${(lang === "en" ? openTargetRole.en : openTargetRole.pt) || openTargetRole.pt} — Batch 2026`,
                   `ex.: ${openTargetRole.pt} — Turma 2026`,
                 )}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0a1128] focus:border-[#0a1128] disabled:opacity-50"
+                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 disabled:opacity-50"
               />
             </div>
 

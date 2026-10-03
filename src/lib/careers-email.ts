@@ -2863,10 +2863,25 @@ export async function sendNextPhaseInstructionsEmail(options: {
   const logoWhiteUrl = `${origin}/logo-white.png`;
   const subject = customSubject?.trim() || "Instruções da Próxima Fase – Processo de Selecção Overwatch";
 
-  // Format body text paragraphs into HTML
-  const formattedHtmlParagraphs = instructions
+  // Check if instructions already begins with a greeting line to avoid duplication
+  const rawParagraphs = instructions
     .split(/\n\s*\n/)
-    .filter(Boolean)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  const greetingRegex =
+    /^(Dear|Prezada\(o\)|Prezado\(a\)|Prezada|Prezado|Caro|Cara|Caros|Olá|Ola|Hello|Hi)\b/i;
+
+  let headerGreeting = `<p style="font-size: 14px; margin-top: 0; color: #1e293b; font-weight: 700;">Prezada Candidata <strong>${candidate.name}</strong>,</p>`;
+  let bodyParagraphs = rawParagraphs;
+
+  if (rawParagraphs.length > 0 && greetingRegex.test(rawParagraphs[0])) {
+    headerGreeting = `<p style="font-size: 14px; margin-top: 0; color: #1e293b; font-weight: 700;">${rawParagraphs[0]}</p>`;
+    bodyParagraphs = rawParagraphs.slice(1);
+  }
+
+  // Format body text paragraphs into HTML
+  const formattedHtmlParagraphs = bodyParagraphs
     .map((p) => `<p style="font-size: 14px; color: #334155; line-height: 1.6; margin-bottom: 14px;">${p.replace(/\n/g, "<br />")}</p>`)
     .join("");
 
@@ -2917,7 +2932,7 @@ export async function sendNextPhaseInstructionsEmail(options: {
 
           <!-- Body Content -->
           <div style="padding: 28px 24px; background-color: #ffffff;">
-            <p style="font-size: 14px; margin-top: 0; color: #1e293b;">Prezada Candidata <strong>${candidate.name}</strong>,</p>
+            ${headerGreeting}
 
             ${formattedHtmlParagraphs}
 

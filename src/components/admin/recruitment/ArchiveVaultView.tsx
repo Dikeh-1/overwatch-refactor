@@ -636,7 +636,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                 </button>
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-slate-900 text-white px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                    <span className="rounded-full bg-slate-100 border border-slate-200 text-slate-700 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
                       {selectedCohort.department || t("Operations", "Operações")}
                     </span>
                     <span className="rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-700 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
@@ -676,7 +676,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                     onClick={() => setDossierViewMode("pipeline")}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       dossierViewMode === "pipeline"
-                        ? "bg-white text-slate-900 shadow-2xs"
+                        ? "bg-white text-slate-900 shadow-2xs border border-slate-200/60"
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
@@ -688,17 +688,17 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                     onClick={() => openCommunicationsStudio()}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       dossierViewMode === "communications"
-                        ? "bg-[#0a1128] text-white shadow-xs"
+                        ? "bg-white text-sky-700 shadow-2xs border border-slate-200/60"
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    <Mail size={13} className={dossierViewMode === "communications" ? "text-sky-300" : "text-slate-400"} />
+                    <Mail size={13} className={dossierViewMode === "communications" ? "text-sky-600" : "text-slate-400"} />
                     <span>{t("Communications Studio", "Estúdio de Comunicações")}</span>
                     {cohortMetrics.confirmedCount > 0 && (
                       <span
                         className={`ml-1 rounded-full px-1.5 py-0.2 text-[10px] font-mono font-bold ${
                           dossierViewMode === "communications"
-                            ? "bg-sky-500/30 text-sky-200"
+                            ? "bg-sky-100 text-sky-800"
                             : "bg-emerald-100 text-emerald-800"
                         }`}
                       >
@@ -726,15 +726,6 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                   <FileSpreadsheet size={14} className="text-emerald-600" />
                   <span>{t("Master Sheet (.csv)", "Folha Mestra (.csv)")}</span>
                 </button>
-
-                <button
-                  onClick={() => openCommunicationsStudio()}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0a1128] hover:bg-[#121c3b] text-xs font-bold text-white transition-colors shadow-xs cursor-pointer"
-                  title={t("Open Communications Studio to compose, customize, and dispatch letters", "Abrir o Estúdio de Comunicações para redigir, personalizar e enviar cartas")}
-                >
-                  <Mail size={13} className="text-sky-300" />
-                  <span>{t("Communications Studio", "Estúdio de Comunicações")}</span>
-                </button>
               </div>
             </div>
 
@@ -746,18 +737,18 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                 onClick={() => setActiveTab("all")}
                 className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                   activeTab === "all"
-                    ? "bg-slate-900 border-slate-900 text-white shadow-xs"
-                    : "bg-slate-50/70 border-slate-200 hover:bg-slate-100/70 text-slate-800"
+                    ? "bg-sky-50/70 border-sky-500 text-slate-900 shadow-2xs ring-1 ring-sky-500/20"
+                    : "bg-white border-slate-200 hover:bg-slate-50 text-slate-800 shadow-2xs"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${activeTab === "all" ? "text-slate-300" : "text-slate-400"}`}>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${activeTab === "all" ? "text-sky-700" : "text-slate-400"}`}>
                     {t("Total Ingested", "Total Geral")}
                   </span>
-                  <Users size={12} className={activeTab === "all" ? "text-sky-400" : "text-slate-400"} />
+                  <Users size={12} className={activeTab === "all" ? "text-sky-600" : "text-slate-400"} />
                 </div>
-                <div className="text-xl font-black mt-1">{cohortMetrics.total}</div>
-                <span className={`text-[10px] block ${activeTab === "all" ? "text-slate-300" : "text-slate-500"}`}>
+                <div className="text-xl font-black mt-1 text-slate-900">{cohortMetrics.total}</div>
+                <span className="text-[10px] block text-slate-500">
                   {t("All Applications", "Candidaturas")}
                 </span>
               </button>
@@ -768,18 +759,18 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                 onClick={() => setActiveTab("screening")}
                 className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                   activeTab === "screening"
-                    ? "bg-slate-900 border-slate-900 text-white shadow-xs"
-                    : "bg-slate-50/70 border-slate-200 hover:bg-slate-100/70 text-slate-800"
+                    ? "bg-amber-50/70 border-amber-500 text-slate-900 shadow-2xs ring-1 ring-amber-500/20"
+                    : "bg-white border-slate-200 hover:bg-slate-50 text-slate-800 shadow-2xs"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${activeTab === "screening" ? "text-slate-300" : "text-slate-400"}`}>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${activeTab === "screening" ? "text-amber-800" : "text-slate-400"}`}>
                     {t("Screening", "Triagem")}
                   </span>
-                  <ListFilter size={12} className={activeTab === "screening" ? "text-amber-400" : "text-slate-400"} />
+                  <ListFilter size={12} className={activeTab === "screening" ? "text-amber-600" : "text-slate-400"} />
                 </div>
-                <div className="text-xl font-black mt-1 text-amber-500">{cohortMetrics.screened}</div>
-                <span className={`text-[10px] block ${activeTab === "screening" ? "text-slate-300" : "text-slate-500"}`}>
+                <div className="text-xl font-black mt-1 text-amber-600">{cohortMetrics.screened}</div>
+                <span className="text-[10px] block text-slate-500">
                   {t("Qualified CVs", "Qualificados")}
                 </span>
               </button>
@@ -790,18 +781,18 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                 onClick={() => setActiveTab("testing")}
                 className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                   activeTab === "testing"
-                    ? "bg-slate-900 border-slate-900 text-white shadow-xs"
-                    : "bg-slate-50/70 border-slate-200 hover:bg-slate-100/70 text-slate-800"
+                    ? "bg-sky-50/70 border-sky-500 text-slate-900 shadow-2xs ring-1 ring-sky-500/20"
+                    : "bg-white border-slate-200 hover:bg-slate-50 text-slate-800 shadow-2xs"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${activeTab === "testing" ? "text-slate-300" : "text-slate-400"}`}>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${activeTab === "testing" ? "text-sky-800" : "text-slate-400"}`}>
                     {t("Testing", "Testes")}
                   </span>
-                  <CalendarCheck size={12} className={activeTab === "testing" ? "text-sky-400" : "text-slate-400"} />
+                  <CalendarCheck size={12} className={activeTab === "testing" ? "text-sky-600" : "text-slate-400"} />
                 </div>
-                <div className="text-xl font-black mt-1 text-sky-500">{cohortMetrics.tested}</div>
-                <span className={`text-[10px] block ${activeTab === "testing" ? "text-slate-300" : "text-slate-500"}`}>
+                <div className="text-xl font-black mt-1 text-sky-600">{cohortMetrics.tested}</div>
+                <span className="text-[10px] block text-slate-500">
                   {t("Presenças & Escala", "Presenças")}
                 </span>
               </button>
@@ -815,26 +806,26 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                 }}
                 className={`p-3 rounded-xl border text-left transition-all cursor-pointer sm:col-span-2 lg:col-span-2 ${
                   activeTab === "next_phase"
-                    ? "bg-[#0a1128] border-sky-500 text-white shadow-xs"
-                    : "bg-emerald-500/5 border-emerald-500/20 hover:bg-emerald-500/10 text-slate-800"
+                    ? "bg-emerald-50/80 border-emerald-500 text-slate-900 shadow-2xs ring-1 ring-emerald-500/20"
+                    : "bg-white border-slate-200 hover:bg-emerald-50/20 hover:border-emerald-200 text-slate-800 shadow-2xs"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${activeTab === "next_phase" ? "text-sky-300" : "text-emerald-700"}`}>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">
                     {t("Next Phase Cohort", "Próxima Fase & Condições")}
                   </span>
-                  <Award size={13} className={activeTab === "next_phase" ? "text-emerald-400" : "text-emerald-600"} />
+                  <Award size={13} className="text-emerald-600" />
                 </div>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-xl font-black text-emerald-500">{cohortMetrics.confirmedCount}</span>
-                  <span className="text-[11px] font-bold text-emerald-600">{t("Accepted Conditions (YES)", "Aceitaram Condições")}</span>
+                  <span className="text-xl font-black text-emerald-600">{cohortMetrics.confirmedCount}</span>
+                  <span className="text-[11px] font-bold text-emerald-700">{t("Accepted Conditions (YES)", "Aceitaram Condições")}</span>
                 </div>
                 <div className="flex items-center gap-2 mt-1 text-[10px]">
-                  <span className="text-slate-400">{cohortMetrics.nextPhaseTotal} {t("selected", "selecionadas")}</span>
+                  <span className="text-slate-500">{cohortMetrics.nextPhaseTotal} {t("selected", "selecionadas")}</span>
                   <span>•</span>
-                  <span className="text-amber-500 font-semibold">{cohortMetrics.awaitingCount} {t("awaiting", "pendentes")}</span>
+                  <span className="text-amber-600 font-semibold">{cohortMetrics.awaitingCount} {t("awaiting", "pendentes")}</span>
                   <span>•</span>
-                  <span className="text-rose-400 font-semibold">{cohortMetrics.declinedCount} {t("declined", "recusaram")}</span>
+                  <span className="text-rose-600 font-semibold">{cohortMetrics.declinedCount} {t("declined", "recusaram")}</span>
                 </div>
               </button>
 
@@ -844,18 +835,18 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                 onClick={() => setActiveTab("interview")}
                 className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                   activeTab === "interview"
-                    ? "bg-slate-900 border-slate-900 text-white shadow-xs"
-                    : "bg-slate-50/70 border-slate-200 hover:bg-slate-100/70 text-slate-800"
+                    ? "bg-indigo-50/70 border-indigo-500 text-slate-900 shadow-2xs ring-1 ring-indigo-500/20"
+                    : "bg-white border-slate-200 hover:bg-slate-50 text-slate-800 shadow-2xs"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${activeTab === "interview" ? "text-slate-300" : "text-slate-400"}`}>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${activeTab === "interview" ? "text-indigo-800" : "text-slate-400"}`}>
                     {t("Interview", "Entrevistas")}
                   </span>
-                  <UserCheck size={12} className={activeTab === "interview" ? "text-indigo-400" : "text-slate-400"} />
+                  <UserCheck size={12} className={activeTab === "interview" ? "text-indigo-600" : "text-slate-400"} />
                 </div>
-                <div className="text-xl font-black mt-1 text-indigo-500">{cohortMetrics.interviewCount}</div>
-                <span className={`text-[10px] block ${activeTab === "interview" ? "text-slate-300" : "text-slate-500"}`}>
+                <div className="text-xl font-black mt-1 text-indigo-600">{cohortMetrics.interviewCount}</div>
+                <span className="text-[10px] block text-slate-500">
                   {t("Scheduled", "Agendadas")}
                 </span>
               </button>
@@ -866,18 +857,18 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                 onClick={() => setActiveTab("hired")}
                 className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                   activeTab === "hired"
-                    ? "bg-slate-900 border-slate-900 text-white shadow-xs"
-                    : "bg-slate-50/70 border-slate-200 hover:bg-slate-100/70 text-slate-800"
+                    ? "bg-emerald-50/70 border-emerald-500 text-slate-900 shadow-2xs ring-1 ring-emerald-500/20"
+                    : "bg-white border-slate-200 hover:bg-slate-50 text-slate-800 shadow-2xs"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${activeTab === "hired" ? "text-slate-300" : "text-slate-400"}`}>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${activeTab === "hired" ? "text-emerald-800" : "text-slate-400"}`}>
                     {t("Hired", "Admitidos")}
                   </span>
-                  <CheckCircle2 size={12} className={activeTab === "hired" ? "text-emerald-400" : "text-slate-400"} />
+                  <CheckCircle2 size={12} className={activeTab === "hired" ? "text-emerald-600" : "text-slate-400"} />
                 </div>
                 <div className="text-xl font-black mt-1 text-emerald-600">{cohortMetrics.hiredCount}</div>
-                <span className={`text-[10px] block ${activeTab === "hired" ? "text-slate-300" : "text-slate-500"}`}>
+                <span className="text-[10px] block text-slate-500">
                   {t("Final Offers", "Contratados")}
                 </span>
               </button>
@@ -918,16 +909,16 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                   }}
                   className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                     isActive
-                      ? "bg-[#0a1128] text-white shadow-xs"
+                      ? "bg-white text-slate-900 shadow-2xs border border-slate-200/60"
                       : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                   }`}
                 >
-                  <TabIcon size={14} className={isActive ? "text-sky-300" : "text-slate-400"} />
+                  <TabIcon size={14} className={isActive ? "text-sky-600" : "text-slate-400"} />
                   <span>{lang === "en" ? tab.labelEn : tab.labelPt}</span>
                   <span
                     className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
                       isActive
-                        ? "bg-white/20 text-white"
+                        ? "bg-sky-100 text-sky-800"
                         : tab.badgeColor || "bg-slate-100 text-slate-600"
                     }`}
                   >
@@ -949,7 +940,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                   value={candidateSearch}
                   onChange={(e) => setCandidateSearch(e.target.value)}
                   placeholder={t("Filter section by name, email, contact...", "Pesquisar por nome, contacto...")}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-4 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none transition-colors"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-4 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none transition-colors"
                 />
               </div>
 
@@ -970,7 +961,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                         nextPhaseSubFilter === sub.id
                           ? sub.highlight
                             ? "bg-emerald-600 text-white font-bold shadow-xs"
-                            : "bg-[#0a1128] text-white font-bold"
+                            : "bg-sky-600 text-white font-bold shadow-xs"
                           : sub.highlight
                           ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
                           : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -997,7 +988,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                       onClick={() => setTestingSubFilter(sub.id as any)}
                       className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                         testingSubFilter === sub.id
-                          ? "bg-[#0a1128] text-white"
+                          ? "bg-sky-600 text-white font-bold shadow-xs"
                           : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                       }`}
                     >
@@ -1026,13 +1017,13 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
               {/* COMMUNICATIONS STUDIO TRIGGER */}
               <button
                 onClick={() => openCommunicationsStudio()}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0a1128] hover:bg-[#121c3b] text-white text-xs font-bold transition-colors shadow-xs cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold transition-colors shadow-2xs cursor-pointer"
                 title={t(
                   "Open Communications Studio to create, customize, and dispatch letters",
                   "Abrir Estúdio de Comunicações para criar, personalizar e enviar cartas oficiais"
                 )}
               >
-                <Mail size={13} className="text-sky-300" />
+                <Mail size={13} className="text-white" />
                 <span>
                   {selectedCandidateIds.size > 0
                     ? t(`Communications Studio (${selectedCandidateIds.size})`, `Estúdio de Comunicações (${selectedCandidateIds.size})`)
@@ -1092,7 +1083,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                             selectedCandidateIds.size === filteredSectionApps.length
                           }
                           onChange={handleToggleSelectAll}
-                          className="rounded border-slate-300 text-[#0a1128] focus:ring-[#0a1128] cursor-pointer"
+                          className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer"
                         />
                       </th>
                       <th className="px-4 py-3.5 min-w-[200px] whitespace-nowrap">{t("Candidate", "Candidato")}</th>
@@ -1151,14 +1142,14 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                               type="checkbox"
                               checked={isSelected}
                               onChange={() => handleToggleSelectOne(app.id)}
-                              className="rounded border-slate-300 text-[#0a1128] focus:ring-[#0a1128] cursor-pointer"
+                              className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer"
                             />
                           </td>
 
                           {/* Candidate Identity */}
                           <td className="px-4 py-3.5 whitespace-nowrap">
                             <div className="flex items-center gap-2.5">
-                              <div className="w-7 h-7 rounded-full bg-[#0a1128] text-white flex items-center justify-center font-bold text-[11px] shrink-0">
+                              <div className="w-7 h-7 rounded-full bg-slate-700 text-white flex items-center justify-center font-bold text-[11px] shrink-0">
                                 {app.name.charAt(0).toUpperCase()}
                               </div>
                               <div className="min-w-0">
@@ -1396,7 +1387,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
           {/* Top Banner Navigation */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#0a1128] text-white shadow-2xs">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-600 text-white shadow-2xs">
                 <Archive size={22} />
               </div>
               <div>
@@ -1438,7 +1429,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                   "Search archived cohorts by name or role...",
                   "Pesquisar lotes arquivados por nome ou cargo..."
                 )}
-                className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-4 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none shadow-2xs"
+                className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-4 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none shadow-2xs"
               />
             </div>
 
@@ -1447,7 +1438,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
               <select
                 value={filterRole}
                 onChange={(e) => setFilterRole(e.target.value)}
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 focus:border-[#0a1128] focus:outline-none shadow-2xs"
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 focus:border-sky-500 focus:outline-none shadow-2xs"
               >
                 <option value="all">{t("All Roles", "Todas as Vagas")}</option>
                 {uniqueRoles.map((r) => (
@@ -1534,9 +1525,9 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
 
                     <button
                       onClick={() => openCohortDossier(cohort)}
-                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#0a1128] hover:bg-[#121c3b] text-white px-4 py-2.5 text-xs font-bold transition-colors shadow-2xs cursor-pointer"
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white px-4 py-2.5 text-xs font-bold transition-colors shadow-2xs cursor-pointer"
                     >
-                      <Layers size={13} className="text-sky-300" />
+                      <Layers size={13} className="text-white" />
                       <span>{t("Open Cohort Pipeline & Vault", "Abrir Pipeline & Cofre do Lote")}</span>
                     </button>
                   </div>
@@ -1556,8 +1547,8 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
             {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 bg-slate-50">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-[#0a1128] text-white flex items-center justify-center shadow-xs">
-                  <Send size={15} className="text-sky-300" />
+                <div className="w-8 h-8 rounded-xl bg-sky-600 text-white flex items-center justify-center shadow-xs">
+                  <Send size={15} className="text-white" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">
@@ -1621,7 +1612,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                   type="text"
                   value={instructionsSubject}
                   onChange={(e) => setInstructionsSubject(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-xs text-slate-900 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none"
+                  className="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-xs text-slate-900 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none"
                 />
               </div>
 
@@ -1639,7 +1630,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                   rows={10}
                   value={instructionsMessage}
                   onChange={(e) => setInstructionsMessage(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 p-3.5 text-xs text-slate-900 focus:border-[#0a1128] focus:ring-1 focus:ring-[#0a1128] focus:outline-none font-sans leading-relaxed"
+                  className="w-full rounded-xl border border-slate-300 p-3.5 text-xs text-slate-900 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none font-sans leading-relaxed"
                 />
               </div>
 
@@ -1659,7 +1650,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                     value={instructionsPreviewEmail}
                     onChange={(e) => setInstructionsPreviewEmail(e.target.value)}
                     placeholder="ex: admin@overwatchmoz.com"
-                    className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#0a1128] focus:outline-none"
+                    className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none"
                   />
                   <button
                     type="button"
@@ -1734,7 +1725,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
           <div className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 bg-slate-50">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-[#0a1128] text-white flex items-center justify-center font-bold text-xs">
+                <div className="w-8 h-8 rounded-full bg-slate-700 text-white flex items-center justify-center font-bold text-xs">
                   {profileCandidate.name.charAt(0).toUpperCase()}
                 </div>
                 <div>

@@ -96,20 +96,41 @@ export async function POST(request: Request) {
         createdAt: new Date().toISOString(),
       };
 
+      const roleTitle = roleId === "cctv" || !roleId ? "Operadora de CCTV" : roleId;
+      const isEnglish =
+        /Dear\s+/i.test(message) ||
+        /Kind regards/i.test(message) ||
+        /Please be reminded/i.test(message) ||
+        /recruitment process/i.test(message);
+
+      const substitutedSubject = substituteCandidateVariables(
+        subject,
+        sampleCandidate,
+        roleTitle,
+        isEnglish,
+      );
+      const substitutedMessage = substituteCandidateVariables(
+        message,
+        sampleCandidate,
+        roleTitle,
+        isEnglish,
+      );
+
       const html = generateOfficialBroadcastHtml({
         candidate: sampleCandidate,
-        subject,
-        message,
+        subject: substitutedSubject,
+        message: substitutedMessage,
         includeBookingButton,
         buttonText,
+        roleTitle,
       });
 
       await sendTransactionalEmail({
         sender: { name: "Overwatch Recrutamento", email: "info@overwatchmoz.com" },
         to: [{ email: recipient, name: sampleCandidate.name }],
-        subject: `[TEST PREVIEW] ${subject.trim()}`,
+        subject: `[TEST PREVIEW] ${substitutedSubject.trim()}`,
         htmlContent: html,
-        textContent: message.trim(),
+        textContent: substitutedMessage.trim(),
         attachment: attachments?.map((a) => ({ name: a.name, content: a.content })),
       });
 
@@ -216,20 +237,31 @@ export async function POST(request: Request) {
 
     for (const candidate of deduplicatedCandidates) {
       try {
+        const roleTitle = roleId === "cctv" || !roleId ? "Operadora de CCTV" : roleId;
+        const isEnglish =
+          /Dear\s+/i.test(message) ||
+          /Kind regards/i.test(message) ||
+          /Please be reminded/i.test(message) ||
+          /recruitment process/i.test(message);
+
+        const candSubj = substituteCandidateVariables(subject, candidate, roleTitle, isEnglish);
+        const candMsg = substituteCandidateVariables(message, candidate, roleTitle, isEnglish);
+
         const html = generateOfficialBroadcastHtml({
           candidate,
-          subject,
-          message,
+          subject: candSubj,
+          message: candMsg,
           includeBookingButton,
           buttonText,
+          roleTitle,
         });
 
         await sendTransactionalEmail({
           sender: { name: "Overwatch Recrutamento", email: "info@overwatchmoz.com" },
           to: [{ email: candidate.email.trim(), name: candidate.name.trim() }],
-          subject: subject.trim(),
+          subject: candSubj.trim(),
           htmlContent: html,
-          textContent: message.trim(),
+          textContent: candMsg.trim(),
           attachment: attachments?.map((a) => ({ name: a.name, content: a.content })),
         });
 
@@ -260,14 +292,57 @@ export async function POST(request: Request) {
   }
 }
 
+export function substituteCandidateVariables(
+  text: string,
+  candidate: Application,
+  roleTitle?: string,
+  isEnglish?: boolean,
+): string {
+  if (!text) return "";
+  const name = candidate.name.trim();
+  const title =
+    roleTitle ||
+    (candidate.role === "cctv" || candidate.role === "cctv_operator" || !candidate.role
+      ? isEnglish
+        ? "CCTV Operator"
+        : "Operadora de CCTV"
+      : candidate.role === "cctv_technical_manager"
+      ? isEnglish
+        ? "CCTV Technical Manager"
+        : "Gestor Técnico de CCTV"
+      : candidate.role);
+
+  const slot = candidate.testSlot || (isEnglish ? "To be confirmed" : "A definir");
+  const dateStr = new Date().toLocaleDateString(isEnglish ? "en-US" : "pt-MZ", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const location = "Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo";
+  const company = "Overwatch Moçambique";
+
+  return text
+    .replace(/\{\{?candidate_name\}\}?/gi, name)
+    .replace(/\{\{?name\}\}?/gi, name)
+    .replace(/\{\{?role_title\}\}?/gi, title)
+    .replace(/\{\{?role\}\}?/gi, title)
+    .replace(/\{\{?company_name\}\}?/gi, company)
+    .replace(/\{\{?company\}\}?/gi, company)
+    .replace(/\{\{?test_slot\}\}?/gi, slot)
+    .replace(/\{\{?slot\}\}?/gi, slot)
+    .replace(/\{\{?date\}\}?/gi, dateStr)
+    .replace(/\{\{?location\}\}?/gi, location);
+}
+
 function generateOfficialBroadcastHtml(params: {
   candidate: Application;
   subject: string;
   message: string;
   includeBookingButton: boolean;
   buttonText: string;
+  roleTitle?: string;
 }) {
-  const { candidate, subject, message, includeBookingButton, buttonText } = params;
+  const { candidate, includeBookingButton, buttonText, roleTitle } = params;
 
   const origin = "https://www.overwatchmoz.com";
   const logoWhiteUrl = `${origin}/logo-white.png`;
@@ -276,12 +351,31 @@ function generateOfficialBroadcastHtml(params: {
   const isFemale = candidate.sex === "female";
   const candidateFullName = candidate.name.trim();
   const isEnglish =
-    /Dear\s+/i.test(message) ||
-    /Kind regards/i.test(message) ||
-    /Please be reminded/i.test(message) ||
-    /recruitment process/i.test(message);
+    /Dear\s+/i.test(params.message) ||
+    /Kind regards/i.test(params.message) ||
+    /Please be reminded/i.test(params.message) ||
+    /recruitment process/i.test(params.message);
 
-  const greeting = isEnglish
+  const substitutedSubject = substituteCandidateVariables(
+    params.subject,
+    candidate,
+    roleTitle,
+    isEnglish,
+  );
+  const substitutedMessage = substituteCandidateVariables(
+    params.message,
+    candidate,
+    roleTitle,
+    isEnglish,
+  );
+  const substitutedButtonText = substituteCandidateVariables(
+    buttonText,
+    candidate,
+    roleTitle,
+    isEnglish,
+  );
+
+  const defaultGreeting = isEnglish
     ? `Dear ${candidateFullName}`
     : isFemale
       ? `Prezada ${candidateFullName}`
@@ -289,23 +383,46 @@ function generateOfficialBroadcastHtml(params: {
         ? `Prezado ${candidateFullName}`
         : `Prezada(o) ${candidateFullName}`;
 
-  // Format message paragraphs and lists cleanly
-  const paragraphs = message
+  // Check if message body already begins with a formal greeting line
+  const rawParagraphs = substitutedMessage
     .split(/\n\s*\n/)
     .map((p) => p.trim())
     .filter(Boolean);
 
-  const formattedContent = paragraphs
+  let finalGreeting = defaultGreeting;
+  let bodyParagraphs = rawParagraphs;
+
+  const greetingRegex =
+    /^(Dear|Prezada\(o\)|Prezado\(a\)|Prezada|Prezado|Caro|Cara|Caros|Olá|Ola|Hello|Hi)\b/i;
+
+  if (rawParagraphs.length > 0 && greetingRegex.test(rawParagraphs[0])) {
+    // The first paragraph is already the greeting!
+    // Extract it as finalGreeting (cleaning up trailing commas/colons for header styling)
+    const firstLine = rawParagraphs[0].replace(/[,\s]+$/, "").trim();
+    finalGreeting = firstLine;
+    // Remove the greeting paragraph from the body paragraphs so it is never duplicated!
+    bodyParagraphs = rawParagraphs.slice(1);
+  }
+
+  // Format message paragraphs and lists cleanly
+  const formattedContent = bodyParagraphs
     .map((block) => {
       // Check for bullet list
-      if (block.includes("\n•") || block.includes("\n-") || block.startsWith("•") || block.startsWith("-")) {
+      if (
+        block.includes("\n•") ||
+        block.includes("\n-") ||
+        block.startsWith("•") ||
+        block.startsWith("-")
+      ) {
         const lines = block.split("\n");
         const items: string[] = [];
         let introText = "";
         lines.forEach((l) => {
           const t = l.trim();
           if (t.startsWith("•") || t.startsWith("-")) {
-            items.push(`<li style="margin-bottom: 6px; color: #334155;">${t.replace(/^[•-]\s*/, "")}</li>`);
+            items.push(
+              `<li style="margin-bottom: 6px; color: #334155;">${t.replace(/^[•-]\s*/, "")}</li>`,
+            );
           } else if (t) {
             introText += `<p style="font-size: 14px; color: #334155; line-height: 1.6; margin: 0 0 8px 0;">${t}</p>`;
           }
@@ -321,7 +438,9 @@ function generateOfficialBroadcastHtml(params: {
         lines.forEach((l) => {
           const t = l.trim();
           if (/^\d+\./.test(t)) {
-            items.push(`<li style="margin-bottom: 6px; color: #334155;">${t.replace(/^\d+\.\s*/, "")}</li>`);
+            items.push(
+              `<li style="margin-bottom: 6px; color: #334155;">${t.replace(/^\d+\.\s*/, "")}</li>`,
+            );
           } else if (t) {
             introText += `<p style="font-size: 14px; color: #334155; line-height: 1.6; margin: 0 0 8px 0;">${t}</p>`;
           }
@@ -338,7 +457,7 @@ function generateOfficialBroadcastHtml(params: {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${subject}</title>
+  <title>${substitutedSubject}</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; -webkit-font-smoothing: antialiased;">
   <div style="background-color: #f1f5f9; padding: 32px 14px;">
@@ -380,7 +499,7 @@ function generateOfficialBroadcastHtml(params: {
       <!-- Body Content -->
       <div style="padding: 28px 24px; background-color: #ffffff;">
         <h1 style="font-size: 18px; font-weight: 700; color: #090d16; margin: 0 0 16px 0;">
-          ${greeting},
+          ${finalGreeting},
         </h1>
 
         <div style="margin-bottom: 20px;">
@@ -393,7 +512,7 @@ function generateOfficialBroadcastHtml(params: {
         <!-- Direct CTA Button (Official Dark Navy) -->
         <div style="text-align: center; margin: 28px 0;">
           <a href="${bookingUrl}" target="_blank" style="display: inline-block; background-color: #0b1329; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; padding: 14px 28px; border-radius: 8px; box-shadow: 0 4px 12px rgba(11, 19, 41, 0.25); letter-spacing: 0.02em;">
-            ${buttonText} &rarr;
+            ${substitutedButtonText} &rarr;
           </a>
           <div style="font-size: 11px; color: #64748b; margin-top: 8px;">
             Link pessoal: <a href="${bookingUrl}" style="color: #0b1329; text-decoration: underline; word-break: break-all;">${bookingUrl}</a>

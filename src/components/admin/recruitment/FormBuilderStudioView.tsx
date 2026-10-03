@@ -517,27 +517,27 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
       {/* =========================================================================
           TOP STUDIO HEADER (Patterned after Communications Studio)
          ========================================================================= */}
-      <div className="bg-[#0a1128] rounded-2xl p-6 text-white border border-white/10 shadow-xl space-y-5">
+      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-5">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-sky-50 text-sky-700 border border-sky-200">
                 {adminLang === "en" ? "Form Builder Studio" : "Estúdio de Formulário"}
               </span>
-              <span className="text-white/40">•</span>
-              <span className="text-xs text-white/70 font-mono">
+              <span className="text-slate-300">•</span>
+              <span className="text-xs text-slate-500 font-mono">
                 {currentRole?.id}
               </span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2.5">
-              <SlidersHorizontal className="text-amber-400" size={24} />
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 flex items-center gap-2.5">
+              <SlidersHorizontal className="text-sky-600" size={24} />
               <span>
                 {adminLang === "en"
                   ? "Public Application Form & Screening Studio"
                   : "Estúdio de Formulário & Triagem de Candidaturas"}
               </span>
             </h1>
-            <p className="text-xs text-slate-300 max-w-3xl">
+            <p className="text-xs text-slate-500 max-w-3xl">
               {adminLang === "en"
                 ? "Configure candidate identity inputs, drag-and-drop screening questions, and preview the live public application form in English and Portuguese."
                 : "Configure campos de identificação civil, arraste e solte perguntas de triagem e visualize o formulário público em tempo real."}
@@ -548,22 +548,22 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
           <div className="flex items-center gap-3 flex-wrap">
             {/* Unsaved indicator */}
             {hasUnsavedChanges && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold">
-                <span className="w-2 h-2 rounded-full bg-amber-400" />
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 text-xs font-semibold shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
                 <span>{adminLang === "en" ? "Unsaved Changes" : "Não Gravado"}</span>
               </span>
             )}
 
             {saveSuccessMsg && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold">
-                <CheckCircle2 size={14} />
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold shadow-2xs">
+                <CheckCircle2 size={14} className="text-emerald-600" />
                 <span>{saveSuccessMsg}</span>
               </span>
             )}
 
             {saveErrorMsg && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold">
-                <AlertCircle size={14} />
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 text-rose-800 border border-rose-200 text-xs font-semibold shadow-2xs">
+                <AlertCircle size={14} className="text-rose-600" />
                 <span>{saveErrorMsg}</span>
               </span>
             )}
@@ -572,7 +572,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
             <button
               type="button"
               onClick={handleResetToDefaults}
-              className="px-3.5 py-2 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
               title={adminLang === "en" ? "Reset to role default rules" : "Repor regras padrão"}
             >
               <RefreshCw size={13} className="text-slate-400" />
@@ -584,15 +584,15 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
               type="button"
               disabled={isSaving || !hasUnsavedChanges}
               onClick={handleSaveAll}
-              className={`px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-md cursor-pointer ${
+              className={`px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-2xs cursor-pointer ${
                 hasUnsavedChanges
-                  ? "bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold"
-                  : "bg-white/10 text-white/50 cursor-not-allowed border border-white/10"
+                  ? "bg-sky-600 hover:bg-sky-700 text-white font-extrabold"
+                  : "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
               }`}
             >
               {isSaving ? (
                 <>
-                  <RefreshCw size={14} className="animate-spin text-slate-900" />
+                  <RefreshCw size={14} className="animate-spin text-white" />
                   <span>{adminLang === "en" ? "Saving..." : "A gravar..."}</span>
                 </>
               ) : (
@@ -606,9 +606,9 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
         </div>
 
         {/* Role Workspace Bar */}
-        <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-300 font-semibold">
+            <span className="text-xs text-slate-600 font-semibold">
               {adminLang === "en" ? "Selected Role Workspace:" : "Vaga em Edição:"}
             </span>
 
@@ -617,17 +617,17 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
               <select
                 value={selectedRoleId}
                 onChange={(e) => handleSelectRole(e.target.value)}
-                className="appearance-none bg-[#111c3d] text-white font-bold text-xs pl-3 pr-8 py-1.5 rounded-lg border border-white/20 focus:outline-none focus:border-amber-400 cursor-pointer"
+                className="appearance-none bg-white text-slate-900 font-bold text-xs pl-3 pr-8 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:border-sky-500 cursor-pointer shadow-2xs"
               >
                 {allRoles.map((r) => (
-                  <option key={r.id} value={r.id} className="bg-[#0a1128] text-white">
+                  <option key={r.id} value={r.id} className="bg-white text-slate-900">
                     {adminLang === "en" ? r.en || r.pt : r.pt || r.en} ({r.id})
                   </option>
                 ))}
               </select>
               <ChevronDown
                 size={14}
-                className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-white/60"
+                className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400"
               />
             </div>
 
@@ -635,8 +635,8 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
             <span
               className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                 currentRole?.open
-                  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                  : "bg-slate-700/50 text-slate-300 border border-slate-600"
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  : "bg-slate-100 text-slate-600 border border-slate-200"
               }`}
             >
               <span
@@ -790,7 +790,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
                 <button
                   type="button"
                   onClick={handleOpenAdd}
-                  className="px-3.5 py-1.5 rounded-xl bg-[#0a1128] hover:bg-[#121c3d] text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
                 >
                   <Plus size={14} />
                   <span>{adminLang === "en" ? "Add Question" : "Nova Pergunta"}</span>
@@ -827,7 +827,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
                   <button
                     type="button"
                     onClick={handleOpenAdd}
-                    className="px-3 py-1.5 rounded-lg bg-[#0a1128] text-white text-xs font-semibold hover:bg-slate-800 cursor-pointer"
+                    className="px-3 py-1.5 rounded-lg bg-sky-600 text-white text-xs font-semibold hover:bg-sky-700 cursor-pointer shadow-2xs"
                   >
                     {adminLang === "en" ? "+ Create Custom" : "+ Criar Pergunta"}
                   </button>
@@ -1012,7 +1012,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
                     onClick={() => setPreviewLang("en")}
                     className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-colors cursor-pointer ${
                       previewLang === "en"
-                        ? "bg-[#0a1128] text-white shadow-xs"
+                        ? "bg-white text-sky-700 shadow-2xs border border-slate-200/60"
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
@@ -1023,7 +1023,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
                     onClick={() => setPreviewLang("pt")}
                     className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-colors cursor-pointer ${
                       previewLang === "pt"
-                        ? "bg-[#0a1128] text-white shadow-xs"
+                        ? "bg-white text-sky-700 shadow-2xs border border-slate-200/60"
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
@@ -1318,7 +1318,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
             {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 bg-slate-50">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-[#0a1128] text-white flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-sky-600 text-white flex items-center justify-center shadow-2xs">
                   <SlidersHorizontal size={16} />
                 </div>
                 <div>
@@ -1363,7 +1363,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
                     value={qLabelPt}
                     onChange={(e) => handleLabelPtChange(e.target.value)}
                     placeholder="ex. Experiência Prática em CCTV (mínimo 1 ano)"
-                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0a1128]"
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                   />
                 </div>
 
@@ -1379,7 +1379,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
                     value={qLabelEn}
                     onChange={(e) => setQLabelEn(e.target.value)}
                     placeholder="e.g. Hands-on CCTV Experience (min 1 year)"
-                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0a1128]"
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                   />
                 </div>
               </div>
@@ -1397,7 +1397,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
                     value={qInstructionPt}
                     onChange={(e) => setQInstructionPt(e.target.value)}
                     placeholder="ex. Quantos anos de experiência prática comprovada possui na instalação de CCTV?"
-                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0a1128]"
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                   />
                 </div>
 
@@ -1412,7 +1412,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
                     value={qInstructionEn}
                     onChange={(e) => setQInstructionEn(e.target.value)}
                     placeholder="e.g. How many years of proven hands-on experience do you have in CCTV installation?"
-                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0a1128]"
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                   />
                 </div>
               </div>
@@ -1431,7 +1431,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
                       if (t === "boolean") setQExpectedValue("yes");
                       if (t === "number") setQExpectedValue("1");
                     }}
-                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0a1128]"
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                   >
                     <option value="boolean">
                       {adminLang === "en" ? "Yes / No Choice (Boolean)" : "Opção Sim / Não"}
@@ -1454,7 +1454,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
                     value={qField}
                     onChange={(e) => setQField(e.target.value)}
                     placeholder="e.g. cctv_experience"
-                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900 font-mono focus:outline-none focus:border-[#0a1128]"
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900 font-mono focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                   />
                 </div>
 
@@ -1465,7 +1465,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
                   <select
                     value={qMandatory ? "mandatory" : "preferred"}
                     onChange={(e) => setQMandatory(e.target.value === "mandatory")}
-                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0a1128]"
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                   >
                     <option value="mandatory">
                       {adminLang === "en"
@@ -1488,7 +1488,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
                     <select
                       value={qExpectedValue}
                       onChange={(e) => setQExpectedValue(e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0a1128]"
+                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                     >
                       <option value="yes">{adminLang === "en" ? "Yes (Must answer Yes)" : "Sim (Exige resposta Sim)"}</option>
                       <option value="no">{adminLang === "en" ? "No (Must answer No)" : "Não (Exige resposta Não)"}</option>
@@ -1499,7 +1499,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
                       value={qExpectedValue}
                       onChange={(e) => setQExpectedValue(e.target.value)}
                       placeholder="e.g. 1 (minimum threshold)"
-                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0a1128]"
+                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                     />
                   ) : (
                     <input
@@ -1507,7 +1507,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
                       value={qExpectedValue}
                       onChange={(e) => setQExpectedValue(e.target.value)}
                       placeholder="e.g. required keyword"
-                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0a1128]"
+                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                     />
                   )}
                 </div>
@@ -1527,7 +1527,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
               <button
                 type="button"
                 onClick={handleSaveQuestionModal}
-                className="px-5 py-2 rounded-xl bg-[#0a1128] hover:bg-[#121c3d] text-white text-xs font-bold transition-colors shadow-xs cursor-pointer"
+                className="px-5 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold transition-colors shadow-xs cursor-pointer"
               >
                 {modalMode === "edit"
                   ? adminLang === "en"
@@ -1607,7 +1607,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
                       className={`px-3 py-1.5 rounded-lg text-xs font-bold shrink-0 transition-colors cursor-pointer ${
                         isAlreadyAdded
                           ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                          : "bg-[#0a1128] hover:bg-[#121c3d] text-white shadow-2xs"
+                          : "bg-sky-600 hover:bg-sky-700 text-white shadow-2xs"
                       }`}
                     >
                       {isAlreadyAdded

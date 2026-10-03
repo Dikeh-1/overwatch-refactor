@@ -267,7 +267,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
       <div className="bg-white border border-slate-200 rounded-lg p-5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
-            <div className="w-12 h-12 rounded-lg bg-[#0a1128] text-white flex items-center justify-center font-bold text-lg shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-sky-600 text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-2xs">
               {candidate.name.charAt(0).toUpperCase()}
             </div>
             <div>
@@ -279,7 +279,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                   {roleLabel}
                 </span>
                 {typeof savedScore === "number" && (
-                  <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-slate-900 text-white">
+                  <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-sky-100 text-sky-800 border border-sky-200">
                     Score: {savedScore}%
                   </span>
                 )}
@@ -314,7 +314,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
               href={`https://wa.me/${candidate.whatsapp.replace(/\D/g, "")}`}
               target="_blank"
               rel="noreferrer"
-              className="px-3 py-1.5 rounded-md bg-[#0a1128] hover:bg-[#101b3d] text-white text-xs font-semibold transition-colors inline-flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors inline-flex items-center gap-1.5 shadow-2xs"
             >
               <Phone size={13} />
               <span>{t("Open WhatsApp", "Contactar WhatsApp")}</span>
@@ -901,7 +901,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                   type="button"
                   onClick={handleSaveScore}
                   disabled={isSavingScore || currentScore === ""}
-                  className="px-3 py-1.5 rounded-md bg-[#0a1128] hover:bg-[#101b3d] text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 shadow-2xs"
                 >
                   {isSavingScore ? (
                     <>
@@ -956,7 +956,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
             <a
               href={`/api/admin/cv?id=${candidate.id}&download=1`}
               download={candidate.cvName}
-              className="px-3 py-1.5 rounded-md bg-[#0a1128] hover:bg-[#101b3d] text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
             >
               <Download size={13} />
               <span>{t("Download CV File", "Descarregar Ficheiro")}</span>
@@ -1106,7 +1106,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                     setIsArchiving(false);
                   }
                 }}
-                className="px-3 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-white inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-xs font-semibold text-white inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-2xs"
               >
                 {isArchiving ? (
                   <>
