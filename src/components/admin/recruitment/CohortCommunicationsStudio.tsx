@@ -757,58 +757,57 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
         </div>
 
         {/* Tab 1: Editor Canvas */}
-        {canvasTab === "edit" ? (
-          <div className="p-6 space-y-5">
-            {/* Subject Input */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <label className="font-bold text-slate-800">
-                  {t("Official Email Subject Line", "Assunto Oficial do Email")}
-                </label>
-                <span className="text-[10px] text-slate-400 font-mono">
-                  {subject.length} {t("characters", "caracteres")}
-                </span>
-              </div>
-              <input
-                type="text"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder={t("Subject line...", "Assunto da comunicação...")}
-                className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-xs text-slate-900 font-medium focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none shadow-2xs"
-              />
+        <div style={{ display: canvasTab === "edit" ? "block" : "none" }} className="p-6 space-y-5">
+          {/* Subject Input */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <label className="font-bold text-slate-800">
+                {t("Official Email Subject Line", "Assunto Oficial do Email")}
+              </label>
+              <span className="text-[10px] text-slate-400 font-mono">
+                {subject.length} {t("characters", "caracteres")}
+              </span>
             </div>
-
-            {/* Standard Professional Rich Message Editor */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <label className="font-bold text-slate-800">
-                  {t("Official Message Content & Attachments", "Conteúdo Oficial da Mensagem & Anexos")}
-                </label>
-                <span className="text-[10px] text-slate-400 font-mono">
-                  {attachments.length} {t("attachment(s)", "anexo(s)")}
-                </span>
-              </div>
-              <RichMessageEditor
-                value={message}
-                onChange={setMessage}
-                attachments={attachments}
-                onAttachmentsChange={setAttachments}
-                lang={lang}
-                placeholder={t("Type official instructions here...", "Escreva as instruções oficiais aqui...")}
-                availableVariables={[
-                  { code: "{{name}}", label: t("Candidate Full Name", "Nome Completo") },
-                  { code: "{{role}}", label: t("Job Role Title", "Cargo / Função") },
-                  { code: "{{slot}}", label: t("Assigned Test Slot", "Turno Agendado") },
-                  { code: "{{date}}", label: t("Current Official Date", "Data Oficial") },
-                  { code: "{{location}}", label: t("HQ Facility Address", "Endereço das Instalações") },
-                  { code: "{{company}}", label: t("Company Name", "Overwatch Moçambique") },
-                ]}
-              />
-            </div>
+            <input
+              type="text"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder={t("Subject line...", "Assunto da comunicação...")}
+              className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-xs text-slate-900 font-medium focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none shadow-2xs"
+            />
           </div>
-        ) : (
-          /* Tab 2: Live Official Branded Letterhead Preview */
-          <div className="p-8 bg-slate-100/60 flex flex-col items-center space-y-4">
+
+          {/* Standard Professional Rich Message Editor */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <label className="font-bold text-slate-800">
+                {t("Official Message Content & Attachments", "Conteúdo Oficial da Mensagem & Anexos")}
+              </label>
+              <span className="text-[10px] text-slate-400 font-mono">
+                {attachments.length} {t("attachment(s)", "anexo(s)")}
+              </span>
+            </div>
+            <RichMessageEditor
+              value={message}
+              onChange={setMessage}
+              attachments={attachments}
+              onAttachmentsChange={setAttachments}
+              lang={lang}
+              placeholder={t("Type official instructions here...", "Escreva as instruções oficiais aqui...")}
+              availableVariables={[
+                { code: "{{name}}", label: t("Candidate Full Name", "Nome Completo") },
+                { code: "{{role}}", label: t("Job Role Title", "Cargo / Função") },
+                { code: "{{slot}}", label: t("Assigned Test Slot", "Turno Agendado") },
+                { code: "{{date}}", label: t("Current Official Date", "Data Oficial") },
+                { code: "{{location}}", label: t("HQ Facility Address", "Endereço das Instalações") },
+                { code: "{{company}}", label: t("Company Name", "Overwatch Moçambique") },
+              ]}
+            />
+          </div>
+        </div>
+
+        {/* Tab 2: Live Official Branded Letterhead Preview */}
+        <div style={{ display: canvasTab === "preview" ? "flex" : "none" }} className="p-8 bg-slate-100/60 flex-col items-center space-y-4">
             {/* Dynamic Personalization Guarantee Banner */}
             <div className="w-full max-w-2xl rounded-xl border border-sky-200 bg-sky-50/90 p-3.5 shadow-2xs flex items-start gap-3 text-xs text-sky-950">
               <ShieldCheck className="text-sky-600 shrink-0 mt-0.5" size={17} />
@@ -1002,7 +1001,6 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
               </div>
             </div>
           </div>
-        )}
 
         {/* Action & Dispatch Footer Bar */}
         <div className="border-t border-slate-200 bg-slate-50 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">

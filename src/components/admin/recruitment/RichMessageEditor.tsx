@@ -97,26 +97,59 @@ export default function RichMessageEditor({
 
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isUpdatingFromProps = useRef(false);
+  const isUpdatingFromProps = useRef<boolean>(false);
+  const normalizeToHtml = useCallback((val: string) => {
+    if (!val) return "";
+    if (!val.includes("<p>") && !val.includes("<div>") && !val.includes("<br>")) {
+      return val
+        .split(/\n\s*\n/)
+        .map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`)
+        .join("");
+    }
+    return val;
+  }, []);
 
   // Sync incoming value to contentEditable when not user typing
   useEffect(() => {
     if (editorRef.current && !isUpdatingFromProps.current) {
-      if (editorRef.current.innerHTML !== value) {
-        // If value has newlines but no html tags, convert to paragraphs/breaks
-        if (value && !value.includes("<p>") && !value.includes("<div>") && !value.includes("<br>")) {
-          const html = value
-            .split(/\n\s*\n/)
-            .map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`)
-            .join("");
-          editorRef.current.innerHTML = html;
-        } else {
-          editorRef.current.innerHTML = value || "";
-        }
+      const targetHtml = normalizeToHtml(value);
+      if (editorRef.current.innerHTML !== targetHtml) {
+        editorRef.current.innerHTML = targetHtml;
       }
     }
     isUpdatingFromProps.current = false;
-  }, [value]);
+  }, [value, editorMode, normalizeToHtml]);
+
+  // Initial mount populate guarantee
+  useEffect(() => {
+    if (editorRef.current && value) {
+      const targetHtml = normalizeToHtml(value);
+      if (!editorRef.current.innerHTML) {
+        editorRef.current.innerHTML = targetHtml;
+      }
+    }
+  }, [value, normalizeToHtml]);
+
+  // Robust mode switch handler with 100% bi-directional synchronization
+  const handleSetEditorMode = (mode: "visual" | "raw") => {
+    if (mode === editorMode) return;
+    isUpdatingFromProps.current = false;
+
+    if (mode === "raw") {
+      // Switching from visual to source: sync editorRef content into value
+      if (editorRef.current) {
+        const html = editorRef.current.innerHTML;
+        onChange(html);
+      }
+    } else {
+      // Switching from source to visual: sync value into editorRef
+      if (editorRef.current) {
+        const targetHtml = normalizeToHtml(value);
+        editorRef.current.innerHTML = targetHtml;
+      }
+    }
+    setEditorMode(mode);
+  };
 
   const handleContentChange = useCallback(() => {
     if (editorRef.current) {
@@ -561,7 +594,7 @@ export default function RichMessageEditor({
           <div className="flex items-center p-0.5 rounded-lg bg-slate-200/60 border border-slate-300">
             <button
               type="button"
-              onClick={() => setEditorMode("visual")}
+              onClick={() => handleSetEditorMode("visual")}
               className={`px-2.5 py-1 rounded-md text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer ${
                 editorMode === "visual"
                   ? "bg-white text-sky-700 shadow-2xs"
@@ -573,7 +606,7 @@ export default function RichMessageEditor({
             </button>
             <button
               type="button"
-              onClick={() => setEditorMode("raw")}
+              onClick={() => handleSetEditorMode("raw")}
               className={`px-2.5 py-1 rounded-md text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer ${
                 editorMode === "raw"
                   ? "bg-white text-sky-700 shadow-2xs"
@@ -591,24 +624,32 @@ export default function RichMessageEditor({
           EDITOR CANVAS
          ========================================================================= */}
       <div className="relative min-h-[340px] flex-1 bg-white p-6">
-        {editorMode === "visual" ? (
-          <div
-            ref={editorRef}
-            contentEditable
-            onInput={handleContentChange}
-            onKeyDown={handleKeyDown}
-            data-placeholder={placeholder}
-            className="outline-none min-h-[300px] text-sm text-slate-900 leading-relaxed font-sans empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400 empty:before:pointer-events-none prose prose-slate max-w-none prose-p:my-2 prose-ul:my-2 prose-ol:my-2"
-          />
-        ) : (
-          <textarea
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            rows={14}
-            className="w-full h-full min-h-[300px] text-xs font-mono text-slate-900 leading-relaxed outline-none resize-y p-2 bg-slate-50/50 rounded-xl border border-slate-200"
-            placeholder={placeholder}
-          />
-        )}
+        {/* ContentEditable Visual Element (Persistently preserved in DOM) */}
+        <div
+          ref={editorRef}
+          contentEditable
+          onInput={handleContentChange}
+          onKeyDown={handleKeyDown}
+          data-placeholder={placeholder}
+          style={{ display: editorMode === "visual" ? "block" : "none" }}
+          className="outline-none min-h-[300px] text-sm text-slate-900 leading-relaxed font-sans empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400 empty:before:pointer-events-none prose prose-slate max-w-none prose-p:my-2 prose-ul:my-2 prose-ol:my-2"
+        />
+
+        {/* Source Textarea Element (Persistently preserved in DOM) */}
+        <textarea
+          value={value}
+          onChange={(e) => {
+            const newHtml = e.target.value;
+            onChange(newHtml);
+            if (editorRef.current) {
+              editorRef.current.innerHTML = newHtml;
+            }
+          }}
+          rows={14}
+          style={{ display: editorMode === "raw" ? "block" : "none" }}
+          className="w-full h-full min-h-[300px] text-xs font-mono text-slate-900 leading-relaxed outline-none resize-y p-3 bg-slate-50/50 rounded-xl border border-slate-200"
+          placeholder={placeholder}
+        />
       </div>
 
       {/* =========================================================================
