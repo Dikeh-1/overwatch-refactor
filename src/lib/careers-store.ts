@@ -205,7 +205,23 @@ const SYSTEM_UUIDS = new Set([
 
 let hasPurgedLegacy = false;
 
-export async function getApplications(): Promise<Application[]> {
+// ─────────────────────────────────────────────────────────────────────────────
+// IN-MEMORY SMART CACHING (CRITICAL: PREVENTS SUPABASE EGRESS EXHAUSTION)
+// ─────────────────────────────────────────────────────────────────────────────
+let cachedApplications: Application[] | null = null;
+let cachedApplicationsAt = 0;
+const APPLICATIONS_CACHE_TTL_MS = 25000; // 25 seconds TTL
+
+export function invalidateApplicationsCache(): void {
+  cachedApplications = null;
+  cachedApplicationsAt = 0;
+}
+
+export async function getApplications(forceFresh = false): Promise<Application[]> {
+  if (!forceFresh && cachedApplications && Date.now() - cachedApplicationsAt < APPLICATIONS_CACHE_TTL_MS) {
+    return cachedApplications;
+  }
+
   if (!hasPurgedLegacy) {
     hasPurgedLegacy = true;
     purgeLegacySystemRowsFromApplicationsTable().catch(() => {});
@@ -213,16 +229,26 @@ export async function getApplications(): Promise<Application[]> {
 
   if (!isRemote()) {
     const list = await read("applications.json", []);
-    return list.filter((a: any) => a && a.role !== "__system_config__" && !SYSTEM_UUIDS.has(a.id));
+    const filtered = list.filter((a: any) => a && a.role !== "__system_config__" && !SYSTEM_UUIDS.has(a.id));
+    cachedApplications = filtered;
+    cachedApplicationsAt = Date.now();
+    return filtered;
   }
+
   const rows = await (
     await api("/rest/v1/career_applications?select=data&order=created_at.desc")
   ).json();
-  return rows
+
+  const filtered = rows
     .map((r: { data: Application }) => r.data)
     .filter((a: any) => a && a.role !== "__system_config__" && !SYSTEM_UUIDS.has(a.id));
+
+  cachedApplications = filtered;
+  cachedApplicationsAt = Date.now();
+  return filtered;
 }
 export async function saveApplication(application: Application, cv: Buffer) {
+  invalidateApplicationsCache();
   if (isRemote()) {
     await api(`/storage/v1/object/career-cvs/${application.id}`, {
       method: "POST",
@@ -235,6 +261,7 @@ export async function saveApplication(application: Application, cv: Buffer) {
         method: "POST",
         body: JSON.stringify({ application }),
       });
+      invalidateApplicationsCache();
     } catch (error) {
       await api(`/storage/v1/object/career-cvs/${application.id}`, {
         method: "DELETE",
@@ -252,41 +279,74 @@ export async function saveApplication(application: Application, cv: Buffer) {
       application,
       ...(await getApplications()),
     ]);
+    invalidateApplicationsCache();
   });
 }
+
 export async function setStatus(id: string, status: Application["status"]) {
+  invalidateApplicationsCache();
   if (isRemote()) {
     try {
       await api("/rest/v1/rpc/update_career_status", {
         method: "POST",
         body: JSON.stringify({ application_id: id, new_status: status }),
       });
+      invalidateApplicationsCache();
       return;
     } catch {
       // Fallback to direct PATCH on career_applications (e.g., for newly added stages like 'archived')
       await updateApplication(id, { status });
+      invalidateApplicationsCache();
       return;
     }
   }
-  await exclusive(async () =>
-    write(
+  await exclusive(async () => {
+    await write(
       "applications.json",
       (await getApplications()).map((a) =>
         a.id === id ? { ...a, status } : a,
       ),
-    ),
-  );
+    );
+    invalidateApplicationsCache();
+  });
 }
-export async function getCV(id: string) {
-  if (isRemote())
-    return Buffer.from(
+
+// In-memory buffer cache for CV files to drastically reduce repeated storage egress
+const cvBufferCache = new Map<string, { buffer: Buffer; cachedAt: number }>();
+const CV_CACHE_MAX_SIZE = 25;
+const CV_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+export async function getCV(id: string): Promise<Buffer> {
+  const cached = cvBufferCache.get(id);
+  if (cached && Date.now() - cached.cachedAt < CV_CACHE_TTL_MS) {
+    return cached.buffer;
+  }
+
+  let buf: Buffer;
+  if (isRemote()) {
+    buf = Buffer.from(
       await (await api(`/storage/v1/object/career-cvs/${id}`)).arrayBuffer(),
     );
-  localOnly();
-  return readFile(path.join(directory, id));
+  } else {
+    localOnly();
+    buf = await readFile(path.join(directory, id));
+  }
+
+  if (cvBufferCache.size >= CV_CACHE_MAX_SIZE) {
+    const oldestKey = cvBufferCache.keys().next().value;
+    if (oldestKey) cvBufferCache.delete(oldestKey);
+  }
+  cvBufferCache.set(id, { buffer: buf, cachedAt: Date.now() });
+  return buf;
 }
 
 export async function getApplication(id: string): Promise<Application | null> {
+  // If memory cache has this application, return without remote roundtrip
+  if (cachedApplications && cachedApplications.length > 0) {
+    const found = cachedApplications.find((a) => a.id === id);
+    if (found) return found;
+  }
+
   if (isRemote()) {
     const rows = await (
       await api(`/rest/v1/career_applications?id=eq.${id}&select=data`)
@@ -301,6 +361,7 @@ export async function updateApplication(
   id: string,
   updates: Partial<Application>,
 ): Promise<Application> {
+  invalidateApplicationsCache();
   if (isRemote()) {
     const current = await getApplication(id);
     if (!current) throw new Error("Application not found");
@@ -309,6 +370,7 @@ export async function updateApplication(
       method: "PATCH",
       body: JSON.stringify({ data: merged }),
     });
+    invalidateApplicationsCache();
     return merged;
   }
   return await exclusive(async () => {
@@ -320,13 +382,16 @@ export async function updateApplication(
       "applications.json",
       list.map((a) => (a.id === id ? merged : a)),
     );
+    invalidateApplicationsCache();
     return merged;
   });
 }
 
 export async function bulkSaveApplications(applications: Application[]): Promise<void> {
+  invalidateApplicationsCache();
   if (!isRemote()) {
     await exclusive(async () => write("applications.json", applications));
+    invalidateApplicationsCache();
     return;
   }
   const chunkSize = 50;
@@ -349,9 +414,11 @@ export async function bulkSaveApplications(applications: Application[]): Promise
       );
     }
   }
+  invalidateApplicationsCache();
 }
 
 export async function deleteApplications(ids: string[]): Promise<void> {
+  invalidateApplicationsCache();
   const validIds = ids.filter((id) => /^[\da-f-]{36}$/i.test(id) && !SYSTEM_UUIDS.has(id));
   if (!validIds.length) return;
 
@@ -370,6 +437,7 @@ export async function deleteApplications(ids: string[]): Promise<void> {
         ),
       );
     }
+    invalidateApplicationsCache();
     return;
   }
 

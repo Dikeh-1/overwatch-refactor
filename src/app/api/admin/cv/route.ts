@@ -44,11 +44,26 @@ export async function GET(request: Request) {
       else contentType = "application/pdf";
     }
 
+    // Generate deterministic ETag based on applicant ID and document byte length
+    const etag = `"${application.id}-${cvData.length}"`;
+    const clientIfNoneMatch = request.headers.get("if-none-match");
+
+    if (clientIfNoneMatch && clientIfNoneMatch === etag) {
+      return new Response(null, {
+        status: 304,
+        headers: {
+          "ETag": etag,
+          "Cache-Control": "private, max-age=86400, stale-while-revalidate=604800",
+        },
+      });
+    }
+
     return new Response(new Uint8Array(cvData), {
       headers: {
         "Content-Type": contentType,
         "Content-Disposition": `${disposition}; filename="${encodeURIComponent(filename)}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
-        "Cache-Control": "private, no-store, max-age=0",
+        "Cache-Control": "private, max-age=86400, stale-while-revalidate=604800",
+        "ETag": etag,
         "X-Content-Type-Options": "nosniff",
       },
     });

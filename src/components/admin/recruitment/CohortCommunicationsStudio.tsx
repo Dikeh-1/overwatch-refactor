@@ -63,7 +63,7 @@ Vimos por este meio convocar-lhe formalmente para o início do Programa de Forma
 - Traje formal / executivo sóbrio (calça escura ou saia abaixo do joelho, blusa ou camisa social, calçado fechado e confortável).
 
 5. CANAL DE APOIO & ESCLARECIMENTO DE DÚVIDAS:
-- Para qualquer questão de logística ou confirmação prévia, favor contactar a equipa de RH via WhatsApp ou chamada para o número institucional Overwatch: +258 84 000 0000.
+- Para qualquer questão de logística ou confirmação prévia, favor contactar a equipa de RH via WhatsApp ou chamada para o número institucional Overwatch: +258 84 287 0793.
 
 Reiteramos os nossos parabéns pela dedicação demonstrada nas provas de selecção e esperamos contar com o seu melhor desempenho nesta fase decisiva.
 
@@ -106,7 +106,7 @@ You are hereby invited to attend the commencement of the Initial Training and Op
 - Formal / sober executive business attire (dark trousers or below-the-knee skirt, collared shirt/blouse, closed comfortable shoes).
 
 5. SUPPORT & CONTACT CHANNEL:
-- For logistics inquiries or questions, contact the HR team via WhatsApp or call: +258 84 000 0000.
+- For logistics inquiries or questions, contact the HR team via WhatsApp or call: +258 84 287 0793.
 
 Congratulations on your dedication during the selection trials. We look forward to your best performance in this decisive stage.
 
@@ -368,7 +368,7 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
   // WhatsApp template copy
   const handleCopyWhatsApp = () => {
     const plainText = renderedPreviewText.replace(/<[^>]*>/g, "");
-    const text = `*OVERWATCH MOÇAMBIQUE | ${subject.toUpperCase()}*\n\nPrezada ${sampleCandidate.name},\n\n${plainText}\n\n📍 *Suporte & Dúvidas:* Responda directamente a esta mensagem ou contacte a equipa de RH: +258 84 000 0000.\n\nEquipa de Recursos Humanos & Operações\nOverwatch Moçambique`;
+    const text = `*OVERWATCH MOÇAMBIQUE | ${subject.toUpperCase()}*\n\nPrezada ${sampleCandidate.name},\n\n${plainText}\n\n📍 *Suporte & Dúvidas:* Responda directamente a esta mensagem ou contacte a equipa de RH: +258 84 287 0793.\n\nEquipa de Recursos Humanos & Operações\nOverwatch Moçambique`;
     navigator.clipboard.writeText(text);
     setCopiedWhatsApp(true);
     setTimeout(() => setCopiedWhatsApp(false), 3000);

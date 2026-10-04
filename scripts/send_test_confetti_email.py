@@ -132,7 +132,7 @@ def send_test_email():
         <div style="margin-top: 28px; padding-top: 18px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #64748b; line-height: 1.5;">
           <strong>Equipa de Recrutamento &amp; Operações</strong><br />
           Overwatch Moçambique<br />
-          Email: recrutamento@overwatchmoz.com · Tel: +258 84 000 0000
+          Email: info@overwatchmoz.com · Tel: +258 84 287 0793
         </div>
       </div>
     </div>

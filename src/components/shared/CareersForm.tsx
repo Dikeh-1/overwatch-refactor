@@ -367,7 +367,10 @@ export default function CareersForm({
       }
     };
     void refresh();
-    const timer = setInterval(refresh, 10000);
+    const timer = setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      void refresh();
+    }, 60000);
     window.addEventListener("focus", refresh);
     return () => {
       active = false;

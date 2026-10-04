@@ -80,7 +80,7 @@ export async function POST(request: Request) {
         id: matchedCandidate?.id || firstCandidate?.id || "preview-sample-id",
         name: matchedCandidate?.name || firstCandidate?.name || "Arminda Martins Guambe",
         email: recipient,
-        whatsapp: matchedCandidate?.whatsapp || "+258 84 000 0000",
+        whatsapp: matchedCandidate?.whatsapp || "+258 84 287 0793",
         role: roleId || "cctv",
         locale: "pt",
         grade12: "yes",

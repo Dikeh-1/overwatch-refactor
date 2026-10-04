@@ -75,9 +75,20 @@ async function api(endpoint: string, init: RequestInit = {}) {
   return response;
 }
 
-// In-memory runtime cache for serverless environments
+// In-memory runtime cache for serverless environments with TTL
 let inMemoryRoleDefs: CareerRoleDefinition[] | null = null;
+let inMemoryRoleDefsAt = 0;
 let inMemoryCohorts: CareerCohort[] | null = null;
+let inMemoryCohortsAt = 0;
+const ROLE_DEFS_TTL_MS = 60000; // 60s TTL
+const COHORTS_TTL_MS = 60000; // 60s TTL
+
+export function invalidateCampaignStoreCache(): void {
+  inMemoryRoleDefs = null;
+  inMemoryRoleDefsAt = 0;
+  inMemoryCohorts = null;
+  inMemoryCohortsAt = 0;
+}
 
 // Generate default initial roles if storage is fresh
 function buildDefaultRoles(): CareerRoleDefinition[] {
@@ -110,7 +121,11 @@ function buildDefaultRoles(): CareerRoleDefinition[] {
 // ROLE MANAGEMENT (CRUD)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export async function getRoleDefinitions(): Promise<CareerRoleDefinition[]> {
+export async function getRoleDefinitions(forceFresh = false): Promise<CareerRoleDefinition[]> {
+  if (!forceFresh && inMemoryRoleDefs && Date.now() - inMemoryRoleDefsAt < ROLE_DEFS_TTL_MS) {
+    return inMemoryRoleDefs;
+  }
+
   let remoteConfigs: CareerRoleDefinition[] | null = null;
 
   // 1. Try dedicated system config store (Supabase storage career-cvs/system-configs/roles_def.json or local)
@@ -229,21 +244,29 @@ export async function getRoleDefinitions(): Promise<CareerRoleDefinition[]> {
     });
 
     inMemoryRoleDefs = roles;
+    inMemoryRoleDefsAt = Date.now();
     return roles;
   }
 
   // Local development
   const local = await getConfiguredRoles();
-  if (local.length > 0) return local;
+  if (local.length > 0) {
+    inMemoryRoleDefs = local;
+    inMemoryRoleDefsAt = Date.now();
+    return local;
+  }
 
   const defaults = buildDefaultRoles();
   await setConfiguredRoles(defaults);
+  inMemoryRoleDefs = defaults;
+  inMemoryRoleDefsAt = Date.now();
   return defaults;
 }
 
 export async function saveRoleDefinition(
   role: CareerRoleDefinition,
 ): Promise<CareerRoleDefinition> {
+  invalidateCampaignStoreCache();
   const roles = await getRoleDefinitions();
   const existingIdx = roles.findIndex(
     (r) =>
@@ -345,6 +368,7 @@ export async function saveRoleDefinition(
 }
 
 export async function deleteRoleDefinition(roleId: string): Promise<void> {
+  invalidateCampaignStoreCache();
   const roles = await getRoleDefinitions();
   const nextRoles = roles.filter(
     (r) =>
@@ -353,6 +377,7 @@ export async function deleteRoleDefinition(roleId: string): Promise<void> {
       !(roleId === "cctv_operator" && r.id === "cctv"),
   );
   inMemoryRoleDefs = nextRoles;
+  inMemoryRoleDefsAt = Date.now();
   await setConfiguredRoles(nextRoles);
 
   if (isRemote()) {
@@ -373,11 +398,16 @@ export async function deleteRoleDefinition(roleId: string): Promise<void> {
 // COHORT / CAMPAIGN WORKSPACE MANAGEMENT & ARCHIVING
 // ─────────────────────────────────────────────────────────────────────────────
 
-export async function getAllCohorts(): Promise<CareerCohort[]> {
+export async function getAllCohorts(forceFresh = false): Promise<CareerCohort[]> {
+  if (!forceFresh && inMemoryCohorts && Date.now() - inMemoryCohortsAt < COHORTS_TTL_MS) {
+    return inMemoryCohorts;
+  }
+
   // 1. Check dedicated config store
   const stored = await getConfiguredCohorts();
   if (Array.isArray(stored) && stored.length > 0) {
     inMemoryCohorts = stored;
+    inMemoryCohortsAt = Date.now();
     return stored;
   }
 
@@ -399,6 +429,7 @@ export async function getAllCohorts(): Promise<CareerCohort[]> {
           notes: r.notes,
         }));
         inMemoryCohorts = remote;
+        inMemoryCohortsAt = Date.now();
         await setConfiguredCohorts(remote).catch(() => {});
         return remote;
       }
@@ -410,6 +441,7 @@ export async function getAllCohorts(): Promise<CareerCohort[]> {
       const rows = await res.json();
       if (Array.isArray(rows) && rows[0]?.data?.cohorts && Array.isArray(rows[0].data.cohorts) && rows[0].data.cohorts.length > 0) {
         inMemoryCohorts = rows[0].data.cohorts;
+        inMemoryCohortsAt = Date.now();
         await setConfiguredCohorts(rows[0].data.cohorts).catch(() => {});
         return rows[0].data.cohorts;
       }
@@ -423,6 +455,7 @@ export async function getAllCohorts(): Promise<CareerCohort[]> {
 }
 
 export async function saveCohort(cohort: CareerCohort): Promise<CareerCohort> {
+  invalidateCampaignStoreCache();
   const cohorts = await getAllCohorts();
   const idx = cohorts.findIndex((c) => c.id === cohort.id);
   const next = idx >= 0 ? cohorts.map((c) => (c.id === cohort.id ? cohort : c)) : [cohort, ...cohorts];

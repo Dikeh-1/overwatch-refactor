@@ -79,14 +79,27 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
 
   useEffect(() => {
     loadSummaryData();
-    const interval = setInterval(loadSummaryData, 8000);
+    const interval = setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      loadSummaryData();
+    }, 60000);
+
     const handleAdminUpdate = () => {
       loadSummaryData();
     };
+
+    const handleVisibility = () => {
+      if (typeof document !== "undefined" && !document.hidden) {
+        loadSummaryData();
+      }
+    };
+
     window.addEventListener("admin:careers-updated", handleAdminUpdate);
+    document.addEventListener("visibilitychange", handleVisibility);
     return () => {
       clearInterval(interval);
       window.removeEventListener("admin:careers-updated", handleAdminUpdate);
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [loadSummaryData]);
 

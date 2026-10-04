@@ -23,17 +23,17 @@ export async function GET() {
             activeCohortId: r.activeCohortId,
           })),
         },
-        { headers: { "Cache-Control": "no-store" } },
+        { headers: { "Cache-Control": "public, max-age=60, s-maxage=120, stale-while-revalidate=300" } },
       );
     }
 
     const legacy = await getRoles().catch(() => null);
     if (legacy && legacy.length > 0) {
-      return Response.json({ roles: legacy }, { headers: { "Cache-Control": "no-store" } });
+      return Response.json({ roles: legacy }, { headers: { "Cache-Control": "public, max-age=60, s-maxage=120, stale-while-revalidate=300" } });
     }
 
-    return Response.json({ roles: fallbackRoles }, { headers: { "Cache-Control": "no-store" } });
+    return Response.json({ roles: fallbackRoles }, { headers: { "Cache-Control": "public, max-age=60, s-maxage=120, stale-while-revalidate=300" } });
   } catch {
-    return Response.json({ roles: fallbackRoles }, { headers: { "Cache-Control": "no-store" } });
+    return Response.json({ roles: fallbackRoles }, { headers: { "Cache-Control": "public, max-age=60, s-maxage=120, stale-while-revalidate=300" } });
   }
 }

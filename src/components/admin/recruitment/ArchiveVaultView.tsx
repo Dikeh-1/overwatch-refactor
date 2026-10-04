@@ -87,7 +87,7 @@ Vimos por este meio convocar-lhe formalmente para o início do Programa de Forma
 - Traje formal / executivo sóbrio (calça escura ou saia abaixo do joelho, blusa ou camisa social, calçado fechado e confortável).
 
 5. CANAL DE APOIO & ESCLARECIMENTO DE DÚVIDAS:
-- Para qualquer questão de logística ou confirmação prévia, favor contactar a equipa de RH via WhatsApp ou chamada para o número institucional Overwatch: +258 84 000 0000.
+- Para qualquer questão de logística ou confirmação prévia, favor contactar a equipa de RH via WhatsApp ou chamada para o número institucional Overwatch: +258 84 287 0793.
 
 Reiteramos os nossos parabéns pela dedicação demonstrada nas provas de selecção e esperamos contar com o seu melhor desempenho nesta fase decisiva.
 

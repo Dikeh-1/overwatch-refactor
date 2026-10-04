@@ -78,8 +78,11 @@ export function useLiveRecruitmentFeed({
         setIsConnected(false);
       } finally {
         const isVisible = typeof document === "undefined" || document.visibilityState === "visible";
-        const delay = isVisible ? 12000 : 30000;
-        timer = setTimeout(checkFeed, delay);
+        // CRITICAL FOR SUPABASE EGRESS: Only schedule next poll if tab is active/visible.
+        // When tab is hidden/backgrounded, do not poll. Visibility change listener will instantly resume on tab focus.
+        if (isVisible) {
+          timer = setTimeout(checkFeed, 30000);
+        }
       }
     };
 

@@ -15,8 +15,8 @@ export async function GET(request: Request) {
     const roleId = searchParams.get("roleId");
 
     const [allApps, roles] = await Promise.all([
-      getApplications(),
-      getRoleDefinitions(),
+      getApplications(), // Served directly from 25s in-memory cache
+      getRoleDefinitions(), // Served directly from 60s in-memory cache
     ]);
 
     let filtered = allApps;
@@ -35,8 +35,17 @@ export async function GET(request: Request) {
       serverTime: new Date().toISOString(),
       totalApplications: filtered.length,
       newApplicationsCount: sinceDate > 0 ? newOrUpdated.length : 0,
-      recentApplications: newOrUpdated.slice(0, 10),
-      openRoles: roles.filter((r) => r.open),
+      recentApplications: newOrUpdated.slice(0, 5).map((a) => ({
+        id: a.id,
+        name: a.name,
+        role: a.role,
+        createdAt: a.createdAt,
+      })),
+      openRoles: roles.filter((r) => r.open).map((r) => ({ id: r.id, open: r.open })),
+    }, {
+      headers: {
+        "Cache-Control": "private, no-cache, no-store, must-revalidate",
+      },
     });
   } catch (error: any) {
     return NextResponse.json(

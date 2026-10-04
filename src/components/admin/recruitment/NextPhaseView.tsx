@@ -159,14 +159,27 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(() => loadData(), 8000);
+    const interval = setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      loadData();
+    }, 45000);
+
     const handleAdminUpdate = () => {
       loadData();
     };
+
+    const handleVisibility = () => {
+      if (typeof document !== "undefined" && !document.hidden) {
+        loadData();
+      }
+    };
+
     window.addEventListener("admin:careers-updated", handleAdminUpdate);
+    document.addEventListener("visibilitychange", handleVisibility);
     return () => {
       clearInterval(interval);
       window.removeEventListener("admin:careers-updated", handleAdminUpdate);
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [activeRoleId]);
 
