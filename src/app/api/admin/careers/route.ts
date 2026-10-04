@@ -23,56 +23,93 @@ export async function GET() {
 
     // Auto-heal screening evaluation for applications affected by the string-range NaN bug
     const applications = rawApplications.map((app) => {
-      if (
-        app.role === "cctv_technical_manager" &&
-        app.yearsCctvExperience &&
-        app.yearsCctvExperience !== "0" &&
-        app.yearsCctvExperience !== "none"
-      ) {
+      if (app.role === "cctv_technical_manager" || app.role === "cctv_technician") {
+        const meetsCctv = Boolean(
+          app.yearsCctvExperience &&
+          app.yearsCctvExperience !== "0" &&
+          app.yearsCctvExperience !== "none"
+        );
         const meetsIp = app.ipCctv === "yes";
         const meetsNvr = app.nvrDvr === "yes";
         const meetsNet = app.networking === "yes";
-        if (meetsIp && meetsNvr && meetsNet) {
-          const curScreening = app.screeningResult;
-          const prefCount = [
-            app.hikvision === "yes",
-            app.dahua === "yes",
-            app.supervision === "yes",
-            app.drivingLicence === "yes",
-            app.aiAnalytics === "yes",
-            app.remoteMonitoring === "yes",
-            app.boqScopes === "yes",
-          ].filter(Boolean).length;
+        const allMandatoryMet = meetsCctv && meetsIp && meetsNvr && meetsNet;
 
-          const prefScore =
-            curScreening?.preferredScore && curScreening.preferredScore > 0
-              ? curScreening.preferredScore
-              : prefCount;
-          const prefTotal =
-            curScreening?.preferredTotal && curScreening.preferredTotal >= 6
-              ? curScreening.preferredTotal
-              : 7;
+        const mandPassed = [meetsCctv, meetsIp, meetsNvr, meetsNet].filter(Boolean).length;
+        const mandTotal = 4;
 
-          const healedScreening = {
-            ...(curScreening || {}),
-            passedMandatory: true,
-            failedReasons: [],
-            failedReasonsPt: [],
-            preferredScore: prefScore,
-            preferredTotal: prefTotal,
-            matchPercentage: Math.round((prefScore / prefTotal) * 100),
-            evaluatedAt: curScreening?.evaluatedAt || new Date().toISOString(),
-          };
+        const curScreening = app.screeningResult;
+        const prefCount = [
+          app.hikvision === "yes",
+          app.dahua === "yes",
+          app.supervision === "yes",
+          app.drivingLicence === "yes",
+          app.aiAnalytics === "yes",
+          app.remoteMonitoring === "yes",
+          app.boqScopes === "yes",
+        ].filter(Boolean).length;
 
-          return {
-            ...app,
-            status:
-              !app.status || app.status === "not_advancing" || app.status === "screening"
-                ? "shortlisted"
-                : app.status,
-            screeningResult: healedScreening,
-          };
+        const prefScore =
+          curScreening?.preferredScore && curScreening.preferredScore > 0
+            ? curScreening.preferredScore
+            : prefCount;
+        const prefTotal =
+          curScreening?.preferredTotal && curScreening.preferredTotal >= 6
+            ? curScreening.preferredTotal
+            : 7;
+
+        // Heavy mandatory weighting: 70% mandatory, 30% preferred
+        const mandRatio = mandTotal > 0 ? mandPassed / mandTotal : 1;
+        const prefRatio = prefTotal > 0 ? prefScore / prefTotal : 1;
+        const weightedMatch = Math.round((mandRatio * 70) + (prefRatio * 30));
+
+        const failedReasonsEn: string[] = [];
+        const failedReasonsPt: string[] = [];
+        if (!meetsCctv) {
+          failedReasonsEn.push("Missing mandatory requirement: Hands-on CCTV Experience (min 1 year)");
+          failedReasonsPt.push("Requisito obrigatório em falta: Experiência Prática em CCTV (mínimo 1 ano)");
         }
+        if (!meetsIp) {
+          failedReasonsEn.push("Missing mandatory requirement: IP CCTV & Network Camera Protocols");
+          failedReasonsPt.push("Requisito obrigatório em falta: Sistemas CCTV IP e Protocolos Digitais");
+        }
+        if (!meetsNvr) {
+          failedReasonsEn.push("Missing mandatory requirement: NVR/DVR Setup & Storage Sizing");
+          failedReasonsPt.push("Requisito obrigatório em falta: Configuração de NVRs/DVRs e Armazenamento");
+        }
+        if (!meetsNet) {
+          failedReasonsEn.push("Missing mandatory requirement: IP Networking (Switches, VLANs, Routers)");
+          failedReasonsPt.push("Requisito obrigatório em falta: Redes IP (Switches, VLANs, Routers)");
+        }
+
+        const healedScreening = {
+          ...(curScreening || {}),
+          passedMandatory: allMandatoryMet,
+          failedReasons: failedReasonsEn,
+          failedReasonsPt: failedReasonsPt,
+          mandatoryScore: mandPassed,
+          mandatoryTotal: mandTotal,
+          preferredScore: prefScore,
+          preferredTotal: prefTotal,
+          matchPercentage: weightedMatch,
+          evaluatedAt: curScreening?.evaluatedAt || new Date().toISOString(),
+        };
+
+        let newStatus = app.status;
+        if (!allMandatoryMet) {
+          if (!app.status || app.status === "shortlisted" || app.status === "screening") {
+            newStatus = "not_advancing";
+          }
+        } else {
+          if (!app.status || app.status === "not_advancing" || app.status === "screening") {
+            newStatus = "shortlisted";
+          }
+        }
+
+        return {
+          ...app,
+          status: newStatus,
+          screeningResult: healedScreening,
+        };
       }
       return app;
     });

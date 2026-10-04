@@ -276,6 +276,8 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
         return <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-slate-100 text-slate-600 border border-slate-200">{t("Interest Declined", "Interesse Recusado")}</span>;
       case "archived":
         return <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-slate-100 text-slate-500 border border-slate-200">{t("Archived", "Arquivado")}</span>;
+      case "not_advancing":
+        return <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-red-50 text-red-700 border border-red-200">{t("Not Advancing", "Não Avança")}</span>;
       case "rejected":
       case "disqualified":
         return <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-red-50 text-red-700 border border-red-200">{t("Not Selected", "Não Selecionado")}</span>;
@@ -314,7 +316,8 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                 t("Status", "Estado"),
                 t("Slot", "Turno"),
                 t("Attendance", "Presença"),
-                t("Score", "Pontuação"),
+                t("Technical Match", "Match Técnico"),
+                t("Test Score", "Pontuação Teste"),
               ];
               const rows = filteredCandidates.map((c) => [
                 `"${c.id}"`,
@@ -325,7 +328,8 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                 `"${c.status}"`,
                 `"${c.testSlot || ""}"`,
                 c.attendedAt ? `"${t("Attended", "Presente")}"` : `"${t("Awaiting", "Aguardado")}"`,
-                `"${c.testScore || ""}"`,
+                `"${c.screeningResult ? (c.screeningResult.passedMandatory ? `${c.screeningResult.matchPercentage}%` : `Not Qualified (${c.screeningResult.matchPercentage}%)`) : ""}"`,
+                `"${typeof c.testScore === "number" ? `${c.testScore}%` : ""}"`,
               ]);
               const csv = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\r\n");
               const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -682,14 +686,17 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                 <th className="px-4 py-2.5">{t("Contact", "Contacto")}</th>
                 <th className="px-4 py-2.5">{t("Date Applied", "Data")}</th>
                 <th className="px-4 py-2.5">{t("Stage", "Estado")}</th>
-                <th className="px-4 py-2.5">{hasTesting ? t("Test Score", "Pontuação") : t("Technical Match", "Match Técnico")}</th>
+                <th className="px-4 py-2.5">{t("Technical Match", "Match Técnico")}</th>
+                {hasTesting && (
+                  <th className="px-4 py-2.5">{t("Test Score", "Pontuação Teste")}</th>
+                )}
                 <th className="px-4 py-2.5 text-right">{t("Action", "Ação")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
               {paginatedCandidates.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-slate-400 text-xs">
+                  <td colSpan={hasTesting ? 9 : 8} className="text-center py-12 text-slate-400 text-xs">
                     {t("No candidates match the specified criteria.", "Nenhum candidato encontrado com estes critérios.")}
                   </td>
                 </tr>
@@ -750,6 +757,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                         {renderStageBadge(candidate.status)}
                       </td>
 
+                      {/* Technical Application Screening Match */}
                       <td className="px-4 py-3 whitespace-nowrap font-mono">
                         {candidate.screeningResult ? (
                           <span
@@ -761,14 +769,25 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                           >
                             {candidate.screeningResult.passedMandatory
                               ? `${candidate.screeningResult.matchPercentage}% ${t("Match", "Score")}`
-                              : t("Not Qualified", "Não Qualif.")}
+                              : `${t("Not Qualified", "Não Qualif.")} (${candidate.screeningResult.matchPercentage}%)`}
                           </span>
-                        ) : candidate.testScore ? (
-                          <span className="font-bold text-slate-900">{candidate.testScore}%</span>
                         ) : (
                           <span className="text-slate-300">—</span>
                         )}
                       </td>
+
+                      {/* Testing Stage Test Score (Exam / Practical) */}
+                      {hasTesting && (
+                        <td className="px-4 py-3 whitespace-nowrap font-mono">
+                          {typeof candidate.testScore === "number" ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[0.68rem] font-bold bg-slate-100 text-slate-800 border border-slate-200">
+                              {candidate.testScore}%
+                            </span>
+                          ) : (
+                            <span className="text-slate-300 text-xs">—</span>
+                          )}
+                        </td>
+                      )}
 
                       <td className="px-4 py-3 text-right whitespace-nowrap">
                         <Link

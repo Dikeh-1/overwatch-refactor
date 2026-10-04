@@ -98,6 +98,8 @@ export type ScreeningEvaluationResult = {
   passedMandatory: boolean;
   failedReasons: string[];
   failedReasonsPt?: string[];
+  mandatoryScore?: number;
+  mandatoryTotal?: number;
   preferredScore: number;
   preferredTotal: number;
   matchPercentage: number;

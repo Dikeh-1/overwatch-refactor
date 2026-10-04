@@ -436,6 +436,8 @@ export function evaluateTechnicalScreening(
 
   const failedReasonsEn: string[] = [];
   const failedReasonsPt: string[] = [];
+  let mandatoryScore = 0;
+  let mandatoryTotal = 0;
   let preferredScore = 0;
   let preferredTotal = 0;
   const details: Array<{ key: string; label: string; passed: boolean; mandatory: boolean }> = [];
@@ -452,7 +454,10 @@ export function evaluateTechnicalScreening(
     });
 
     if (criterion.isMandatory) {
-      if (!passed) {
+      mandatoryTotal += 1;
+      if (passed) {
+        mandatoryScore += 1;
+      } else {
         failedReasonsEn.push(criterion.failureMessageEn || `Missing mandatory requirement: ${criterion.labelEn}`);
         failedReasonsPt.push(criterion.failureMessagePt || `Requisito obrigatório não cumprido: ${criterion.labelPt}`);
       }
@@ -465,13 +470,28 @@ export function evaluateTechnicalScreening(
   }
 
   const passedMandatory = failedReasonsEn.length === 0;
-  const matchPercentage =
-    preferredTotal > 0 ? Math.round((preferredScore / preferredTotal) * 100) : 100;
+
+  // Mandatory requirements carry primary heavy scoring criteria (70% mandatory, 30% preferred)
+  const mandatoryRatio = mandatoryTotal > 0 ? mandatoryScore / mandatoryTotal : 1;
+  const preferredRatio = preferredTotal > 0 ? preferredScore / preferredTotal : 1;
+
+  let matchPercentage: number;
+  if (mandatoryTotal > 0 && preferredTotal > 0) {
+    matchPercentage = Math.round((mandatoryRatio * 70) + (preferredRatio * 30));
+  } else if (mandatoryTotal > 0) {
+    matchPercentage = Math.round(mandatoryRatio * 100);
+  } else if (preferredTotal > 0) {
+    matchPercentage = Math.round(preferredRatio * 100);
+  } else {
+    matchPercentage = 100;
+  }
 
   return {
     passedMandatory,
     failedReasons: failedReasonsEn,
     failedReasonsPt: failedReasonsPt,
+    mandatoryScore,
+    mandatoryTotal,
     preferredScore,
     preferredTotal,
     matchPercentage,

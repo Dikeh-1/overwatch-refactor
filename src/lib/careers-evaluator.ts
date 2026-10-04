@@ -21,6 +21,8 @@ export function evaluateApplicationWithRules(
   let passedMandatory = true;
   const failedReasons: string[] = [];
   const failedReasonsPt: string[] = [];
+  let mandatoryScore = 0;
+  let mandatoryTotal = 0;
   let preferredScore = 0;
   let preferredTotal = 0;
   const details: Array<{
@@ -80,14 +82,17 @@ export function evaluateApplicationWithRules(
       mandatory: rule.mandatory,
     });
 
+    const weight = rule.weight && rule.weight > 0 ? rule.weight : 1;
     if (rule.mandatory) {
-      if (!passed) {
+      mandatoryTotal += weight;
+      if (passed) {
+        mandatoryScore += weight;
+      } else {
         passedMandatory = false;
         failedReasons.push(`Missing mandatory requirement: ${rule.labelEn}`);
         failedReasonsPt.push(`Requisito obrigatório em falta: ${rule.labelPt}`);
       }
     } else {
-      const weight = rule.weight || 1;
       preferredTotal += weight;
       if (passed) {
         preferredScore += weight;
@@ -95,17 +100,27 @@ export function evaluateApplicationWithRules(
     }
   }
 
-  const matchPercentage =
-    preferredTotal > 0
-      ? Math.round((preferredScore / preferredTotal) * 100)
-      : passedMandatory
-        ? 100
-        : 0;
+  // Mandatory requirements carry primary heavy scoring criteria (70% mandatory, 30% preferred)
+  const mandatoryRatio = mandatoryTotal > 0 ? mandatoryScore / mandatoryTotal : 1;
+  const preferredRatio = preferredTotal > 0 ? preferredScore / preferredTotal : 1;
+
+  let matchPercentage: number;
+  if (mandatoryTotal > 0 && preferredTotal > 0) {
+    matchPercentage = Math.round((mandatoryRatio * 70) + (preferredRatio * 30));
+  } else if (mandatoryTotal > 0) {
+    matchPercentage = Math.round(mandatoryRatio * 100);
+  } else if (preferredTotal > 0) {
+    matchPercentage = Math.round(preferredRatio * 100);
+  } else {
+    matchPercentage = 100;
+  }
 
   return {
     passedMandatory,
     failedReasons,
     failedReasonsPt,
+    mandatoryScore,
+    mandatoryTotal,
     preferredScore,
     preferredTotal,
     matchPercentage,

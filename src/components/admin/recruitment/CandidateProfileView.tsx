@@ -367,6 +367,9 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
               const meetsNetworking = candidate.networking === "yes";
               const allMandatoryMet = meetsCctvExp && meetsIpCctv && meetsNvrDvr && meetsNetworking;
 
+              const mandPassedCount = [meetsCctvExp, meetsIpCctv, meetsNvrDvr, meetsNetworking].filter(Boolean).length;
+              const mandTotalCount = 4;
+
               const prefCount = [
                 candidate.hikvision === "yes",
                 candidate.dahua === "yes",
@@ -376,12 +379,23 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                 candidate.remoteMonitoring === "yes",
                 candidate.boqScopes === "yes",
               ].filter(Boolean).length;
+              const prefTotalCount = 7;
 
               const rawScreening = candidate.screeningResult;
               const passedMandatory = allMandatoryMet;
               const preferredScore = rawScreening?.preferredScore && rawScreening.preferredScore > 0 ? rawScreening.preferredScore : prefCount;
-              const preferredTotal = rawScreening?.preferredTotal && rawScreening.preferredTotal >= 6 ? rawScreening.preferredTotal : 7;
-              const matchPercentage = rawScreening?.matchPercentage ?? Math.round((prefCount / 7) * 100);
+              const preferredTotal = rawScreening?.preferredTotal && rawScreening.preferredTotal >= 6 ? rawScreening.preferredTotal : prefTotalCount;
+
+              // Heavy mandatory weighting: 70% mandatory, 30% preferred
+              const mandRatio = mandTotalCount > 0 ? mandPassedCount / mandTotalCount : 1;
+              const prefRatio = preferredTotal > 0 ? preferredScore / preferredTotal : 1;
+              const calculatedMatch = Math.round((mandRatio * 70) + (prefRatio * 30));
+
+              // If candidate's screening was saved under old unweighted 86%, recalculate with 70/30 weighting
+              const matchPercentage =
+                rawScreening?.matchPercentage && rawScreening.matchPercentage !== 86
+                  ? rawScreening.matchPercentage
+                  : calculatedMatch;
 
               const failedReasonsEn: string[] = [];
               const failedReasonsPt: string[] = [];
@@ -419,21 +433,28 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                         : t("✕ Mandatory Requirements Missing", "✕ Requisitos Obrigatórios em Falta")}
                     </span>
                     <span className="px-2 py-0.5 rounded text-[0.65rem] bg-white border border-current font-extrabold">
-                      {matchPercentage}% {t("Match", "Score")}
+                      {passedMandatory
+                        ? `${matchPercentage}% ${t("Match", "Score")}`
+                        : `${matchPercentage}% · ${t("Disqualified", "Não Qualif.")}`}
                     </span>
                   </div>
                   <div className="text-[0.72rem] leading-relaxed">
                     {passedMandatory ? (
                       <span>
                         {t(
-                          `${preferredScore}/${preferredTotal} preferred competencies met. Candidate moved to Shortlisted / Management Review.`,
-                          `${preferredScore}/${preferredTotal} competências preferenciais cumpridas. Candidato classificado para Pré-Seleção / Revisão de Gestão.`
+                          `All ${mandTotalCount} mandatory requirements met (70% weight) and ${preferredScore}/${preferredTotal} preferred competencies satisfied (${matchPercentage}% total match). Candidate qualified for Management Review.`,
+                          `Todos os ${mandTotalCount} requisitos obrigatórios cumpridos (peso de 70%) e ${preferredScore}/${preferredTotal} competências preferenciais atendidas (${matchPercentage}% de compatibilidade total). Candidato classificado para Revisão de Gestão.`
                         )}
                       </span>
                     ) : (
                       <div>
-                        <span className="font-semibold">{t("Reasons:", "Motivos:")}</span>
-                        <ul className="list-disc list-inside mt-0.5">
+                        <span className="font-semibold text-red-800">
+                          {t(
+                            `Mandatory criteria carry heavy scoring weight (70%). Candidate missing ${failedReasonsEn.length} mandatory requirement(s) and is disqualified from proceeding.`,
+                            `Requisitos obrigatórios têm peso preponderante (70%). O candidato tem ${failedReasonsPt.length} requisito(s) obrigatório(s) em falta e está desqualificado para avançar.`
+                          )}
+                        </span>
+                        <ul className="list-disc list-inside mt-1 text-red-900 font-medium">
                           {(lang === "pt" && failedReasonsPt.length
                             ? failedReasonsPt
                             : failedReasonsEn
