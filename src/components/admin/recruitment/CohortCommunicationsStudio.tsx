@@ -879,6 +879,17 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
                 <span>Maputo, Moçambique</span>
               </div>
 
+              {/* Celebratory Looping Confetti Animation Banner */}
+              {(activeTemplateKey === "onboarding" || activeTemplateKey === "conditions") && (
+                <div className="w-full bg-[#090d16] border-b border-slate-800 text-center overflow-hidden">
+                  <img
+                    src="/animations/confetti-celebration.gif"
+                    alt="Celebração Confetti"
+                    className="w-full max-h-56 object-cover mx-auto block"
+                  />
+                </div>
+              )}
+
               {/* Recipient Details Block */}
               <div className="p-6 pb-4 border-b border-slate-100 bg-white grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                 <div>

@@ -2946,7 +2946,7 @@ export async function sendNextPhaseInstructionsEmail(options: {
           </div>
 
           <!-- Celebratory Confetti Animation Banner (Dense Looping Confetti) -->
-          <div style="background-color: #ffffff; text-align: center; border-bottom: 1px solid #e2e8f0; line-height: 0;">
+          <div style="background-color: #090d16; text-align: center; border-bottom: 1px solid #1e293b; line-height: 0;">
             <img src="${confettiGifUrl}" alt="Overwatch Celebração Confetti" width="600" style="width: 100%; max-width: 600px; height: auto; display: block; margin: 0 auto; border: 0;" />
           </div>
 
