@@ -14,7 +14,7 @@ export interface CelebrationDetail {
  * Can be called whenever an applicant is shortlisted, moved to next phase, hired, or when
  * celebratory / moving forward cohort emails are dispatched.
  */
-export function triggerCelebration(detail: CelebrationDetail) {
+export function triggerCelebration(detail: CelebrationDetail = {}) {
   if (typeof window !== "undefined") {
     window.dispatchEvent(
       new CustomEvent("overwatch-celebrate", {

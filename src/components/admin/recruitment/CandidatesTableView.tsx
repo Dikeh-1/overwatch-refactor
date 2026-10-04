@@ -27,6 +27,7 @@ import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import { useActiveRole } from "../shell/ActiveRoleContext";
 import CelebrationOverlay from "@/components/admin/ui/CelebrationOverlay";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
+import StickyScrollContainer from "@/components/admin/ui/StickyScrollContainer";
 
 interface CandidatesTableViewProps {
   applications: Application[];
@@ -664,7 +665,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
 
       {/* Data Table */}
       <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-xs">
-        <div className="overflow-x-auto admin-scrollbar">
+        <StickyScrollContainer>
           <table className="w-full min-w-[980px] text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/75 text-[0.65rem] font-semibold text-slate-500 uppercase tracking-wider">
@@ -784,7 +785,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
               )}
             </tbody>
           </table>
-        </div>
+        </StickyScrollContainer>
 
         {/* Pagination Bar */}
         <div className="px-4 py-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 bg-slate-50/50">

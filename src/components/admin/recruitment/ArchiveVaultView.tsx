@@ -45,6 +45,8 @@ import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 import { CandidateProfileView } from "./CandidateProfileView";
 import CohortCommunicationsStudio from "./CohortCommunicationsStudio";
+import StickyScrollContainer from "@/components/admin/ui/StickyScrollContainer";
+import RichMessageEditor, { AttachmentItem } from "./RichMessageEditor";
 
 interface ArchiveVaultViewProps {
   onBackToActive: () => void;
@@ -129,6 +131,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
     "Instruções da Próxima Fase – Vaga de Operadora de CCO | Overwatch Moçambique"
   );
   const [instructionsMessage, setInstructionsMessage] = useState(DEFAULT_INSTRUCTIONS_TEMPLATE);
+  const [instructionsAttachments, setInstructionsAttachments] = useState<AttachmentItem[]>([]);
   const [instructionsPreviewEmail, setInstructionsPreviewEmail] = useState("");
   const [instructionsSending, setInstructionsSending] = useState(false);
   const [instructionsResult, setInstructionsResult] = useState<{
@@ -527,6 +530,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
           message: instructionsMessage.trim(),
           preview: isPreview,
           previewEmail: instructionsPreviewEmail.trim(),
+          attachments: instructionsAttachments,
         }),
       });
 
@@ -1071,7 +1075,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                 </span>
               </div>
 
-              <div className="w-full overflow-x-auto admin-scrollbar pb-2">
+              <StickyScrollContainer innerClassName="pb-2">
                 <table className="w-full min-w-[1280px] text-left text-xs text-slate-700 whitespace-nowrap">
                   <thead className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
                     <tr>
@@ -1373,7 +1377,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                     })}
                   </tbody>
                 </table>
-              </div>
+              </StickyScrollContainer>
             </div>
           )}
         </div>
@@ -1616,21 +1620,31 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                 />
               </div>
 
-              {/* Instructions Body */}
-              <div className="space-y-1">
+              {/* Instructions Body with Rich Message Editor */}
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-700">
-                    {t("Instructions Message Body", "Corpo das Instruções (Mensagem Completa)")}
+                    {t("Official Message Content & Attachments", "Conteúdo Oficial da Mensagem & Anexos")}
                   </label>
                   <span className="text-[10px] text-slate-400 font-mono">
-                    {t("Supports {name} variable", "Suporta variável {name}")}
+                    {instructionsAttachments.length} {t("attachment(s)", "anexo(s)")}
                   </span>
                 </div>
-                <textarea
-                  rows={10}
+                <RichMessageEditor
                   value={instructionsMessage}
-                  onChange={(e) => setInstructionsMessage(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 p-3.5 text-xs text-slate-900 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none font-sans leading-relaxed"
+                  onChange={setInstructionsMessage}
+                  attachments={instructionsAttachments}
+                  onAttachmentsChange={setInstructionsAttachments}
+                  lang={lang}
+                  placeholder={t("Type official instructions here...", "Escreva as instruções oficiais aqui...")}
+                  availableVariables={[
+                    { code: "{{name}}", label: t("Candidate Full Name", "Nome Completo") },
+                    { code: "{{role}}", label: t("Job Role Title", "Cargo / Função") },
+                    { code: "{{slot}}", label: t("Assigned Test Slot", "Turno Agendado") },
+                    { code: "{{date}}", label: t("Current Official Date", "Data Oficial") },
+                    { code: "{{location}}", label: t("HQ Facility Address", "Endereço das Instalações") },
+                    { code: "{{company}}", label: t("Company Name", "Overwatch Moçambique") },
+                  ]}
                 />
               </div>
 

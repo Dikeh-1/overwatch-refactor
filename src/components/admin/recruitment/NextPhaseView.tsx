@@ -35,6 +35,7 @@ import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import { useActiveRole } from "../shell/ActiveRoleContext";
 import Logo from "@/components/ui/Logo";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
+import StickyScrollContainer from "@/components/admin/ui/StickyScrollContainer";
 
 interface NextPhaseCandidate {
   id: string;
@@ -964,7 +965,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
           </span>
         </div>
 
-        <div className="overflow-x-auto admin-scrollbar">
+        <StickyScrollContainer>
           <table className="w-full text-left border-collapse min-w-[760px]">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/75 text-[0.65rem] font-semibold text-slate-500 uppercase tracking-wider">
@@ -1181,7 +1182,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
               )}
             </tbody>
           </table>
-        </div>
+        </StickyScrollContainer>
       </div>
 
       {/* Candidate Detail Slide-Over Panel */}

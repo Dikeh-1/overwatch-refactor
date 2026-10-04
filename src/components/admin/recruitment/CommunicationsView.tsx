@@ -22,6 +22,7 @@ import {
   Layers,
   SlidersHorizontal,
   Shield,
+  ShieldCheck,
   Check,
   FileUp,
   Image as ImageIcon,
@@ -34,6 +35,8 @@ import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import { useActiveRole } from "../shell/ActiveRoleContext";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 import CelebrationOverlay from "@/components/admin/ui/CelebrationOverlay";
+import RichMessageEditor, { AttachmentItem } from "./RichMessageEditor";
+import { triggerCelebration } from "@/lib/celebration";
 
 interface CommunicationsViewProps {
   applications: Application[];
@@ -120,6 +123,11 @@ Agradecemos que consulte as instruções e confirme a sua disponibilidade.`
   // File Attachments State
   const [attachments, setAttachments] = useState<CommAttachment[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Studio Mode: Edit vs Live Letterhead Preview
+  const [canvasTab, setCanvasTab] = useState<"edit" | "preview">("edit");
+  const [selectedPreviewCandidateId, setSelectedPreviewCandidateId] = useState<string>("");
+  const [copiedWhatsApp, setCopiedWhatsApp] = useState(false);
 
   // Drag and drop state over letterhead
   const [isDragOverLetterhead, setIsDragOverLetterhead] = useState(false);
@@ -579,6 +587,10 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
         const count = data.sentCount || targetCandidates.length;
         setDispatchResultCount(count);
         setCelebrationOpen(true);
+        triggerCelebration({
+          title: t("Official Broadcast Dispatched!", "Comunicação Oficial Enviada!"),
+          variant: "next_phase",
+        });
       } else {
         alert(data.error || t("Broadcast failed.", "Falha no envio da comunicação."));
       }
@@ -613,6 +625,65 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
     if (!r) return "CCTV Operator";
     return lang === "en" ? r.en || r.pt : r.pt || r.en;
   }, [selectedRole, roles, activeRole, lang]);
+
+  // Dynamic sample candidate for preview simulation
+  const sampleCandidate = useMemo(() => {
+    if (selectedPreviewCandidateId) {
+      const match = targetCandidates.find((c) => c.id === selectedPreviewCandidateId);
+      if (match) return match;
+    }
+    return targetCandidates[0] || applications[0] || {
+      id: "preview-sample",
+      name: "Palmira João Mordinho",
+      email: "palmira.mordinho@exemplo.com",
+      whatsapp: "+258 84 123 4567",
+      role: activeRoleTitle,
+      testSlot: "Turma A (08:30 - 11:30)",
+    };
+  }, [selectedPreviewCandidateId, targetCandidates, applications, activeRoleTitle]);
+
+  // Formatted preview text with universal placeholder substitution and HTML preservation
+  const renderedPreviewText = useMemo(() => {
+    let text = messageBody;
+    const vars: Record<string, string> = {
+      name: sampleCandidate.name,
+      candidate_name: sampleCandidate.name,
+      role: activeRoleTitle,
+      role_title: activeRoleTitle,
+      slot: sampleCandidate.testSlot || (lang === "en" ? "To be confirmed" : "A definir"),
+      test_slot: sampleCandidate.testSlot || (lang === "en" ? "To be confirmed" : "A definir"),
+      date: new Date().toLocaleDateString(lang === "en" ? "en-US" : "pt-MZ", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+      location: "Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo",
+      company: "Overwatch Moçambique",
+      company_name: "Overwatch Moçambique",
+    };
+
+    for (const [key, val] of Object.entries(vars)) {
+      const regex = new RegExp(`\\{\\{?\\s*${key}\\s*\\}\\}?`, "gi");
+      text = text.replace(regex, val);
+    }
+
+    if (!/<[a-z][\s\S]*>/i.test(text)) {
+      text = text
+        .split(/\n\s*\n/)
+        .map((p) => `<p>${p.replace(/\n/g, "<br />")}</p>`)
+        .join("");
+    }
+
+    return text;
+  }, [messageBody, sampleCandidate, activeRoleTitle, lang]);
+
+  const handleCopyWhatsApp = () => {
+    const plainText = renderedPreviewText.replace(/<[^>]*>/g, "");
+    const text = `*OVERWATCH MOÇAMBIQUE | ${subject.toUpperCase()}*\n\nPrezado(a) ${sampleCandidate.name},\n\n${plainText}\n\n📍 *Suporte & Dúvidas:* Responda directamente a esta mensagem ou contacte a equipa de RH: +258 84 287 0793.\n\nEquipa de Recursos Humanos & Operações\nOverwatch Moçambique`;
+    navigator.clipboard.writeText(text);
+    setCopiedWhatsApp(true);
+    setTimeout(() => setCopiedWhatsApp(false), 3000);
+  };
 
   // All past communication logs for history drawer
   const allLogs = useMemo(() => {
@@ -1113,10 +1184,10 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
         </div>
 
         {/* ========================================================================= */}
-        {/* RIGHT COLUMN: THE OFFICIAL OVERWATCH LETTERHEAD CANVAS (7 cols on lg) */}
+        {/* RIGHT COLUMN: THE OFFICIAL OVERWATCH COMMUNICATIONS STUDIO CANVAS (7 cols) */}
         {/* ========================================================================= */}
         <div className="lg:col-span-7 space-y-4">
-          {/* THE OFFICIAL LETTERHEAD SHEET */}
+          {/* Main Studio Canvas Container */}
           <div
             onDragOver={(e) => {
               e.preventDefault();
@@ -1124,7 +1195,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
             }}
             onDragLeave={() => setIsDragOverLetterhead(false)}
             onDrop={handleDropOnLetterhead}
-            className={`bg-white rounded-2xl border transition-all shadow-xl overflow-hidden relative ${
+            className={`rounded-2xl border transition-all shadow-xl overflow-hidden relative bg-white ${
               isDragOverLetterhead
                 ? "border-sky-500 ring-4 ring-sky-100"
                 : "border-slate-300"
@@ -1136,149 +1207,289 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                 <div className="p-4 rounded-xl bg-sky-900 border border-sky-400 shadow-xl flex flex-col items-center gap-2">
                   <FileText size={32} className="text-sky-300" />
                   <span className="text-sm font-bold">
-                    {t("Drop template to load into letterhead", "Solte o modelo para carregar na minuta")}
+                    {t("Drop template to load into editor", "Solte o modelo para carregar no editor")}
                   </span>
                 </div>
               </div>
             )}
 
-            {/* LETTERHEAD BRAND HEADER (Navy Band #0a1128) */}
-            <div className="bg-[#0a1128] px-6 py-4.5 border-b-2 border-white/10 flex items-center justify-between text-white">
-              <div className="flex items-center gap-3">
-                <Logo variant="light" size="sm" />
+            {/* Studio Canvas Mode Header Tabs */}
+            <div className="border-b border-slate-200 bg-slate-50/80 px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setCanvasTab("edit")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    canvasTab === "edit"
+                      ? "bg-white text-slate-900 shadow-2xs border border-slate-200/60"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <FileText size={13} className={canvasTab === "edit" ? "text-sky-600" : "text-slate-400"} />
+                  <span>{t("Message Editor", "Editor da Mensagem")}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setCanvasTab("preview")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    canvasTab === "preview"
+                      ? "bg-white text-slate-900 shadow-2xs border border-slate-200/60"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <Eye size={13} className={canvasTab === "preview" ? "text-sky-600" : "text-slate-400"} />
+                  <span>{t("Live Official Letterhead Preview", "Pré-visualização em Papel Timbrado")}</span>
+                </button>
               </div>
 
-              <div className="text-right">
-                <span className="inline-block bg-white/10 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded border border-white/15 tracking-wider">
-                  REF: OW-COMMS/2026/MAPUTO
-                </span>
-                <span className="block text-[10px] text-slate-300 font-medium mt-0.5">
-                  {t("Recruitment & Operations Command", "Recrutamento & Operações")}
-                </span>
-              </div>
-            </div>
-
-            {/* OFFICIAL LETTERHEAD SUB-BAR */}
-            <div className="bg-slate-50 px-6 py-2.5 border-b border-slate-200 flex items-center justify-between text-[11px] text-slate-600 font-medium">
-              <span className="font-bold text-slate-900 tracking-wider uppercase text-[10px]">
-                {t("Official Communication · Selection Process", "Comunicação Oficial · Processo de Selecção")}
-              </span>
-              <span>Maputo, Moçambique</span>
-            </div>
-
-            {/* METADATA BAR (TO, ROLE, DATE) */}
-            <div className="p-6 pb-4 border-b border-slate-100 bg-white grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                  {t("To / Recipient:", "Para / Destinatário:")}
-                </span>
-                <span className="font-bold text-slate-900 truncate block mt-0.5">
-                  {letterheadRecipientDisplay}
-                </span>
-              </div>
-
-              <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                  {t("Position / Role:", "Vaga / Função:")}
-                </span>
-                <span className="font-semibold text-slate-800 truncate block mt-0.5">
-                  {activeRoleTitle}
-                </span>
-              </div>
-
-              <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                  {t("Date / Data:", "Data de Emissão:")}
-                </span>
-                <span className="font-mono text-slate-700 block mt-0.5">
-                  {new Date().toLocaleDateString(lang === "en" ? "en-US" : "pt-PT", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopyWhatsApp}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
+                  title={t("Copy formatted broadcast copy for WhatsApp", "Copiar texto formatado para WhatsApp")}
+                >
+                  {copiedWhatsApp ? (
+                    <>
+                      <Check size={13} className="text-emerald-600" />
+                      <span className="text-emerald-700 font-bold">{t("Copied!", "Copiado!")}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={13} />
+                      <span>{t("Copy for WhatsApp", "Copiar p/ WhatsApp")}</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
 
-            {/* EDITABLE SUBJECT BAR */}
-            <div className="px-6 py-3 border-b border-slate-100 bg-white flex items-center gap-3">
-              <span className="text-xs font-bold text-slate-900 uppercase tracking-wider shrink-0">
-                {t("Subject:", "Assunto:")}
-              </span>
-              <input
-                type="text"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder={t("Enter email subject...", "Assunto da comunicação oficial...")}
-                className="w-full text-xs sm:text-sm font-semibold text-slate-900 placeholder-slate-400 border-none bg-transparent focus:outline-none focus:ring-0 p-0"
-              />
-            </div>
-
-            {/* EDITABLE LETTERHEAD BODY (CORE TYPING AREA) */}
-            <div className="p-6 bg-white space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  {t("Editable Letter Content (Click or Type Freely):", "Conteúdo da Minuta (Edite e escreva livremente):")}
-                </span>
-                <span className="text-[10px] text-slate-400 font-mono">
-                  {messageBody.length} {t("characters", "caracteres")}
-                </span>
-              </div>
-
-              <textarea
-                value={messageBody}
-                onChange={(e) => setMessageBody(e.target.value)}
-                rows={14}
-                placeholder={t(
-                  "Type your official letter here, edit the loaded template, or drag a template directly into this space...",
-                  "Escreva a mensagem aqui, personalize o modelo carregado ou arraste um modelo para esta área..."
-                )}
-                className="w-full text-xs sm:text-sm text-slate-900 leading-relaxed placeholder-slate-400 border border-slate-200 rounded-xl p-4 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all font-sans resize-y"
-              />
-
-              {/* ATTACHED FILES DISPLAY INSIDE LETTERHEAD */}
-              {attachments.length > 0 && (
-                <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-                    <Paperclip size={13} />
-                    <span>{t("Official Attachments Transmitted with Letter:", "Documentos Oficiais Anexados:")}</span>
+            {/* Tab 1: Professional Rich Message Editor */}
+            {canvasTab === "edit" ? (
+              <div className="p-6 space-y-5">
+                {/* Official Email Subject Bar */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <label className="font-bold text-slate-800">
+                      {t("Official Email Subject Line", "Assunto Oficial do Email")}
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {subject.length} {t("characters", "caracteres")}
+                    </span>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {attachments.map((att, idx) => (
-                      <span
-                        key={idx}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white border border-slate-300 text-xs font-medium text-slate-800 shadow-2xs"
-                      >
-                        {att.type.includes("pdf") ? (
-                          <FileText size={12} className="text-rose-600" />
-                        ) : (
-                          <ImageIcon size={12} className="text-sky-600" />
-                        )}
-                        <span>{att.name}</span>
-                        <span className="text-[10px] text-slate-400">({Math.round(att.size / 1024)} KB)</span>
+                  <input
+                    type="text"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    placeholder={t("Enter email subject...", "Assunto da comunicação oficial...")}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-xs sm:text-sm text-slate-900 font-medium focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none shadow-2xs"
+                  />
+                </div>
+
+                {/* Standard Professional Rich Message Editor */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <label className="font-bold text-slate-800">
+                      {t("Official Message Content & Attachments", "Conteúdo Oficial da Mensagem & Anexos")}
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {attachments.length} {t("attachment(s)", "anexo(s)")}
+                    </span>
+                  </div>
+                  <RichMessageEditor
+                    value={messageBody}
+                    onChange={setMessageBody}
+                    attachments={attachments}
+                    onAttachmentsChange={setAttachments}
+                    lang={lang}
+                    placeholder={t(
+                      "Type your official letter here, edit the loaded template, or drag a template directly into this space...",
+                      "Escreva a mensagem aqui, personalize o modelo carregado ou arraste um modelo para esta área..."
+                    )}
+                    availableVariables={[
+                      { code: "{{candidate_name}}", label: t("Candidate Full Name", "Nome Completo") },
+                      { code: "{{name}}", label: t("Candidate Name (Short)", "Nome Candidato") },
+                      { code: "{{role_title}}", label: t("Job Role Title", "Cargo / Função") },
+                      { code: "{{test_slot}}", label: t("Assigned Test Slot", "Turno Agendado") },
+                      { code: "{{date}}", label: t("Current Official Date", "Data Oficial") },
+                      { code: "{{location}}", label: t("HQ Facility Address", "Endereço das Instalações") },
+                      { code: "{{company_name}}", label: t("Company Name", "Overwatch Moçambique") },
+                    ]}
+                  />
+                </div>
+              </div>
+            ) : (
+              /* Tab 2: Live Official Branded Letterhead Preview */
+              <div className="p-6 sm:p-8 bg-slate-100/60 flex flex-col items-center space-y-4">
+                {/* Dynamic Personalization Guarantee Banner */}
+                <div className="w-full max-w-2xl rounded-xl border border-sky-200 bg-sky-50/90 p-3.5 shadow-2xs flex items-start gap-3 text-xs text-sky-950">
+                  <ShieldCheck className="text-sky-600 shrink-0 mt-0.5" size={17} />
+                  <div className="space-y-0.5">
+                    <div className="font-bold flex items-center gap-1.5">
+                      <span>{t("Dynamic Personalization Guarantee", "Garantia de Personalização Dinâmica")}</span>
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-200/60 text-sky-900 font-bold uppercase">
+                        {t("Automatic", "Automático")}
                       </span>
-                    ))}
+                    </div>
+                    <p className="text-[11px] text-sky-800 leading-relaxed">
+                      {t(
+                        "Each candidate automatically receives their own individual name, role, and schedule dynamically upon dispatch. Use the simulator below to inspect how this template formats for any specific recipient.",
+                        "Cada candidato receberá automaticamente o seu próprio nome, função e horário dinamicamente no envio oficial. Use o simulador abaixo para conferir a substituição com os dados reais de qualquer candidato deste grupo."
+                      )}
+                    </p>
                   </div>
                 </div>
-              )}
 
-              {/* OFFICIAL LETTERHEAD SIGN-OFF BLOCK */}
-              <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-start gap-4 text-xs text-slate-600">
-                <div>
-                  <span className="block">{t("With highest regards,", "Com os melhores cumprimentos,")}</span>
-                  <span className="font-bold text-slate-900 block mt-1">
-                    {t("Talent & Recruitment Operations", "Equipa de Recrutamento & Operações")}
-                  </span>
-                  <span className="font-semibold text-slate-700 block">Overwatch Moçambique, Lda.</span>
-                </div>
+                {/* Recipient Simulation Selector */}
+                {targetCandidates.length > 0 && (
+                  <div className="w-full max-w-2xl bg-white rounded-xl border border-slate-200 p-3 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-700">
+                        {t("Previewing Recipient Data:", "Simular com Dados do Candidato:")}
+                      </span>
+                      <select
+                        value={sampleCandidate.id}
+                        onChange={(e) => setSelectedPreviewCandidateId(e.target.value)}
+                        className="text-xs rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer"
+                      >
+                        {targetCandidates.slice(0, 50).map((cand) => (
+                          <option key={cand.id} value={cand.id}>
+                            {cand.name} ({cand.email || cand.whatsapp})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      {targetCandidates.length} {t("candidates targeted", "candidatos no grupo")}
+                    </span>
+                  </div>
+                )}
 
-                <div className="text-left sm:text-right text-[11px] text-slate-500 font-mono">
-                  <span>Av. Paulo Samuel Kankhomba, 1948</span>
-                  <span className="block">Maputo, Moçambique</span>
-                  <span className="block text-slate-700 font-semibold">info@overwatchmoz.com</span>
+                {/* The Actual Official Letterhead Sheet */}
+                <div className="w-full max-w-2xl rounded-2xl border border-slate-300 bg-white shadow-xl overflow-hidden text-left">
+                  {/* Navy Header Band #0a1128 */}
+                  <div className="bg-[#0a1128] px-6 py-4.5 border-b-2 border-white/10 flex items-center justify-between text-white">
+                    <Logo variant="light" size="sm" />
+                    <div className="text-right">
+                      <span className="inline-block bg-white/10 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded border border-white/15 tracking-wider">
+                        REF: OW-COMMS/2026/MAPUTO
+                      </span>
+                      <span className="block text-[10px] text-slate-300 font-medium mt-0.5">
+                        {t("Recruitment & Operations Command", "Recrutamento & Operações")}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Sub-bar */}
+                  <div className="bg-slate-50 px-6 py-2.5 border-b border-slate-200 flex items-center justify-between text-[11px] text-slate-600 font-medium">
+                    <span className="font-bold text-slate-900 tracking-wider uppercase text-[10px]">
+                      {t("Official Communication · Selection Process", "Comunicação Oficial · Processo de Selecção")}
+                    </span>
+                    <span>Maputo, Moçambique</span>
+                  </div>
+
+                  {/* Metadata Bar */}
+                  <div className="p-6 pb-4 border-b border-slate-100 bg-white grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                        {t("To / Recipient:", "Para / Destinatário:")}
+                      </span>
+                      <span className="font-bold text-slate-900 truncate block mt-0.5">
+                        {sampleCandidate.name}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                        {t("Position / Role:", "Vaga / Função:")}
+                      </span>
+                      <span className="font-semibold text-slate-800 truncate block mt-0.5">
+                        {activeRoleTitle}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                        {t("Date / Data:", "Data de Emissão:")}
+                      </span>
+                      <span className="font-mono text-slate-700 block mt-0.5">
+                        {new Date().toLocaleDateString(lang === "en" ? "en-US" : "pt-PT", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Subject Display */}
+                  <div className="px-6 py-3 border-b border-slate-100 bg-white flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-900 uppercase tracking-wider shrink-0">
+                      {t("Subject:", "Assunto:")}
+                    </span>
+                    <span className="text-xs sm:text-sm font-semibold text-slate-900">
+                      {subject}
+                    </span>
+                  </div>
+
+                  {/* Letter Body Rendered */}
+                  <div className="p-6 bg-white space-y-4">
+                    <div
+                      className="text-xs sm:text-sm text-slate-800 leading-relaxed font-sans prose prose-slate max-w-none [&_p]:mb-3 [&_ul]:list-disc [&_ul]:ml-5 [&_ol]:list-decimal [&_ol]:ml-5 [&_li]:mb-1 [&_strong]:font-bold [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-3 [&_blockquote]:italic"
+                      dangerouslySetInnerHTML={{ __html: renderedPreviewText }}
+                    />
+
+                    {/* Attachments List */}
+                    {attachments.length > 0 && (
+                      <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                          <Paperclip size={13} />
+                          <span>{t("Official Attachments Transmitted with Letter:", "Documentos Oficiais Anexados:")}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {attachments.map((att, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white border border-slate-300 text-xs font-medium text-slate-800 shadow-2xs"
+                            >
+                              {att.type.includes("pdf") ? (
+                                <FileText size={12} className="text-rose-600" />
+                              ) : (
+                                <ImageIcon size={12} className="text-sky-600" />
+                              )}
+                              <span>{att.name}</span>
+                              <span className="text-[10px] text-slate-400">({Math.round(att.size / 1024)} KB)</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Official Sign-off block */}
+                    <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-start gap-4 text-xs text-slate-600">
+                      <div>
+                        <span className="block">{t("With highest regards,", "Com os melhores cumprimentos,")}</span>
+                        <span className="font-bold text-slate-900 block mt-1">
+                          {t("Talent & Recruitment Operations", "Equipa de Recrutamento & Operações")}
+                        </span>
+                        <span className="font-semibold text-slate-700 block">Overwatch Moçambique, Lda.</span>
+                      </div>
+
+                      <div className="text-left sm:text-right text-[11px] text-slate-500 font-mono">
+                        <span>Av. Paulo Samuel Kankhomba, 1948</span>
+                        <span className="block">Maputo, Moçambique</span>
+                        <span className="block text-slate-700 font-semibold">info@overwatchmoz.com</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Security & Confidentiality Footer */}
+                  <div className="bg-slate-50 px-6 py-3 border-t border-slate-200 text-[10px] text-slate-500 flex items-center justify-between">
+                    <span>{t("Official Confidential Communication · Overwatch Moçambique", "Comunicação Oficial Confidencial · Overwatch Moçambique")}</span>
+                    <span className="font-mono">ENCRYPTED/256</span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* DISPATCH CONTROLS & TEST EMAIL STRIP */}

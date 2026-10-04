@@ -383,74 +383,77 @@ function generateOfficialBroadcastHtml(params: {
         ? `Prezado ${candidateFullName}`
         : `Prezada(o) ${candidateFullName}`;
 
-  // Check if message body already begins with a formal greeting line
-  const rawParagraphs = substitutedMessage
-    .split(/\n\s*\n/)
-    .map((p) => p.trim())
-    .filter(Boolean);
-
   let finalGreeting = defaultGreeting;
-  let bodyParagraphs = rawParagraphs;
+  const isHtml = /<[a-z][\s\S]*>/i.test(substitutedMessage);
+  let formattedContent = "";
 
-  const greetingRegex =
-    /^(Dear|Prezada\(o\)|Prezado\(a\)|Prezada|Prezado|Caro|Cara|Caros|Olá|Ola|Hello|Hi)\b/i;
+  if (isHtml) {
+    formattedContent = substitutedMessage;
+  } else {
+    // Check if message body already begins with a formal greeting line
+    const rawParagraphs = substitutedMessage
+      .split(/\n\s*\n/)
+      .map((p) => p.trim())
+      .filter(Boolean);
 
-  if (rawParagraphs.length > 0 && greetingRegex.test(rawParagraphs[0])) {
-    // The first paragraph is already the greeting!
-    // Extract it as finalGreeting (cleaning up trailing commas/colons for header styling)
-    const firstLine = rawParagraphs[0].replace(/[,\s]+$/, "").trim();
-    finalGreeting = firstLine;
-    // Remove the greeting paragraph from the body paragraphs so it is never duplicated!
-    bodyParagraphs = rawParagraphs.slice(1);
+    let bodyParagraphs = rawParagraphs;
+    const greetingRegex =
+      /^(Dear|Prezada\(o\)|Prezado\(a\)|Prezada|Prezado|Caro|Cara|Caros|Olá|Ola|Hello|Hi)\b/i;
+
+    if (rawParagraphs.length > 0 && greetingRegex.test(rawParagraphs[0])) {
+      const firstLine = rawParagraphs[0].replace(/[,\s]+$/, "").trim();
+      finalGreeting = firstLine;
+      bodyParagraphs = rawParagraphs.slice(1);
+    }
+
+    // Format message paragraphs and lists cleanly
+    formattedContent = bodyParagraphs
+      .map((block) => {
+        // Check for bullet list
+        if (
+          block.includes("\n•") ||
+          block.includes("\n-") ||
+          block.startsWith("•") ||
+          block.startsWith("-")
+        ) {
+          const lines = block.split("\n");
+          const items: string[] = [];
+          let introText = "";
+          lines.forEach((l) => {
+            const t = l.trim();
+            if (t.startsWith("•") || t.startsWith("-")) {
+              items.push(
+                `<li style="margin-bottom: 6px; color: #334155;">${t.replace(/^[•-]\s*/, "")}</li>`,
+              );
+            } else if (t) {
+              introText += `<p style="font-size: 14px; color: #334155; line-height: 1.6; margin: 0 0 8px 0;">${t}</p>`;
+            }
+          });
+          return `${introText}<ul style="margin: 6px 0 16px 20px; padding: 0; font-size: 14px; line-height: 1.6;">${items.join("")}</ul>`;
+        }
+
+        // Check for numbered list (1. 2. 3.)
+        if (/^\d+\./m.test(block)) {
+          const lines = block.split("\n");
+          const items: string[] = [];
+          let introText = "";
+          lines.forEach((l) => {
+            const t = l.trim();
+            if (/^\d+\./.test(t)) {
+              items.push(
+                `<li style="margin-bottom: 6px; color: #334155;">${t.replace(/^\d+\.\s*/, "")}</li>`,
+              );
+            } else if (t) {
+              introText += `<p style="font-size: 14px; color: #334155; line-height: 1.6; margin: 0 0 8px 0;">${t}</p>`;
+            }
+          });
+          return `${introText}<ol style="margin: 6px 0 16px 20px; padding: 0; font-size: 14px; line-height: 1.6;">${items.join("")}</ol>`;
+        }
+
+        return `<p style="font-size: 14px; color: #334155; line-height: 1.6; margin: 0 0 14px 0;">${block.replace(/\n/g, "<br />")}</p>`;
+      })
+      .join("");
   }
-
-  // Format message paragraphs and lists cleanly
-  const formattedContent = bodyParagraphs
-    .map((block) => {
-      // Check for bullet list
-      if (
-        block.includes("\n•") ||
-        block.includes("\n-") ||
-        block.startsWith("•") ||
-        block.startsWith("-")
-      ) {
-        const lines = block.split("\n");
-        const items: string[] = [];
-        let introText = "";
-        lines.forEach((l) => {
-          const t = l.trim();
-          if (t.startsWith("•") || t.startsWith("-")) {
-            items.push(
-              `<li style="margin-bottom: 6px; color: #334155;">${t.replace(/^[•-]\s*/, "")}</li>`,
-            );
-          } else if (t) {
-            introText += `<p style="font-size: 14px; color: #334155; line-height: 1.6; margin: 0 0 8px 0;">${t}</p>`;
-          }
-        });
-        return `${introText}<ul style="margin: 6px 0 16px 20px; padding: 0; font-size: 14px; line-height: 1.6;">${items.join("")}</ul>`;
-      }
-
-      // Check for numbered list (1. 2. 3.)
-      if (/^\d+\./m.test(block)) {
-        const lines = block.split("\n");
-        const items: string[] = [];
-        let introText = "";
-        lines.forEach((l) => {
-          const t = l.trim();
-          if (/^\d+\./.test(t)) {
-            items.push(
-              `<li style="margin-bottom: 6px; color: #334155;">${t.replace(/^\d+\.\s*/, "")}</li>`,
-            );
-          } else if (t) {
-            introText += `<p style="font-size: 14px; color: #334155; line-height: 1.6; margin: 0 0 8px 0;">${t}</p>`;
-          }
-        });
-        return `${introText}<ol style="margin: 6px 0 16px 20px; padding: 0; font-size: 14px; line-height: 1.6;">${items.join("")}</ol>`;
-      }
-
-      return `<p style="font-size: 14px; color: #334155; line-height: 1.6; margin: 0 0 14px 0;">${block.replace(/\n/g, "<br />")}</p>`;
-    })
-    .join("");
 
   return `<!DOCTYPE html>
 <html lang="pt">
