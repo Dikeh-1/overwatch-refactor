@@ -72,9 +72,12 @@ interface NextPhaseViewProps {
 
 export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) => {
   const { lang: contextLang } = useAdminLanguage();
-  const { activeRoleId } = useActiveRole();
+  const { activeRoleId, roles } = useActiveRole();
   const lang = propLang ?? contextLang;
   const t = (en: string, pt: string) => (lang === "en" ? en : pt);
+
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [copiedCandidateId, setCopiedCandidateId] = useState<string | null>(null);
 
   const [candidates, setCandidates] = useState<NextPhaseCandidate[]>([]);
   const [summary, setSummary] = useState<NextPhaseSummary>({
@@ -138,10 +141,46 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
+  const handleCopyCandidateLink = (cand: NextPhaseCandidate) => {
+    if (!cand.token) return;
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://www.overwatchmoz.com";
+    const url = `${origin}/pt/careers/next-phase/${cand.token}`;
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(url);
+      setCopiedCandidateId(cand.id);
+      setTimeout(() => setCopiedCandidateId(null), 2500);
+    }
+  };
+
+  const handleGenerateToken = async (cand: NextPhaseCandidate) => {
+    try {
+      const res = await fetch("/api/admin/careers/next-phase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "generate_token", candidateId: cand.matchedId || cand.id }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setCandidates((prev) =>
+          prev.map((c) => (c.id === cand.id ? { ...c, token: data.token } : c))
+        );
+        if (selectedCandidate && selectedCandidate.id === cand.id) {
+          setSelectedCandidate({ ...selectedCandidate, token: data.token });
+        }
+      } else {
+        alert(data.error || "Failed to generate token");
+      }
+    } catch (err: any) {
+      alert(err.message || "Network error generating token");
+    }
+  };
+
   const loadData = async (isManual = false) => {
     if (isManual) setIsRefreshing(true);
     try {
-      const url = activeRoleId ? `/api/admin/careers/next-phase?role=${encodeURIComponent(activeRoleId)}` : "/api/admin/careers/next-phase";
+      const url = roleFilter && roleFilter !== "all"
+        ? `/api/admin/careers/next-phase?role=${encodeURIComponent(roleFilter)}`
+        : "/api/admin/careers/next-phase";
       const res = await fetch(url);
       const data = await res.json();
       if (res.ok) {
@@ -182,7 +221,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
       window.removeEventListener("admin:careers-updated", handleAdminUpdate);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [activeRoleId]);
+  }, [roleFilter]);
 
   // Filtered candidate list based on metric card click + dropdowns + search query
   const filteredCandidates = useMemo(() => {
@@ -847,6 +886,23 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
             )}
           </form>
 
+          {/* Role Filter Dropdown */}
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="px-2.5 py-1.5 text-xs rounded-md border border-slate-300 text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-sky-500 font-medium"
+          >
+            <option value="all">{t("All Roles", "Todas as Funções")}</option>
+            <option value="cctv">{t("CCTV Operator (CCO)", "Operadora de CCTV (CCO)")}</option>
+            {roles
+              .filter((r) => r.id !== "cctv" && r.id !== "cctv_operator")
+              .map((r) => (
+                <option key={r.id} value={r.id}>
+                  {lang === "pt" ? r.pt : r.en}
+                </option>
+              ))}
+          </select>
+
           {/* Response Dropdown */}
           <select
             value={responseFilter}
@@ -1117,6 +1173,50 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                       {/* Actions */}
                       <td className="px-4 py-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
+                          {/* 1-Click Dedicated Portal Link and Copy */}
+                          {cand.token ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyCandidateLink(cand)}
+                                className="px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                                title={t("Copy candidate's dedicated decision portal link", "Copiar link dedicado da candidata")}
+                              >
+                                {copiedCandidateId === cand.id ? (
+                                  <>
+                                    <Check size={11} className="text-emerald-600" />
+                                    <span className="text-emerald-700 font-bold">{t("Copiado!", "Copiado!")}</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy size={11} className="text-slate-600" />
+                                    <span>{t("Copiar Link", "Copiar Link")}</span>
+                                  </>
+                                )}
+                              </button>
+
+                              <a
+                                href={`/pt/careers/next-phase/${cand.token}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-2 py-1 rounded border border-emerald-300 bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-semibold inline-flex items-center gap-1 transition-colors shadow-2xs"
+                                title={t("Open candidate's dedicated response portal", "Abrir portal dedicado da candidata")}
+                              >
+                                <ExternalLink size={11} className="text-emerald-600" />
+                                <span>{t("Portal", "Portal")}</span>
+                              </a>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleGenerateToken(cand)}
+                              className="px-2 py-1 rounded border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+                              title={t("Generate dedicated portal token", "Gerar token dedicado de acesso")}
+                            >
+                              <span>{t("Gerar Token", "Gerar Token")}</span>
+                            </button>
+                          )}
+
                           <button
                             type="button"
                             onClick={() => {
@@ -1334,13 +1434,70 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                       </strong>
                     </div>
 
-                    <div className="flex justify-between items-baseline">
-                      <span className="text-slate-500">{t("Secure Access Token:", "Token de Acesso Seguro:")}</span>
-                      <span className="font-mono text-[0.7rem] text-slate-500">
-                        {selectedCandidate.token
-                          ? `${selectedCandidate.token.slice(0, 10)}••••••••`
-                          : t("Generated at dispatch", "Gerado no disparo")}
-                      </span>
+                    {/* Dedicated Portal Decision Link */}
+                    <div className="pt-2 border-t border-slate-200 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[0.68rem] font-bold uppercase tracking-wider text-slate-500">
+                          {t("Dedicated Candidate Decision Link:", "Link Dedicado de Decisão da Candidata:")}
+                        </span>
+                        {selectedCandidate.token && (
+                          <span className="text-[0.65rem] font-mono font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                            {t("Active Portal Link", "Link Ativo & Rastreado")}
+                          </span>
+                        )}
+                      </div>
+
+                      {selectedCandidate.token ? (
+                        <div className="space-y-2">
+                          <div className="p-2.5 rounded bg-slate-100 border border-slate-300 font-mono text-[0.72rem] text-slate-800 break-all select-all">
+                            {typeof window !== "undefined"
+                              ? `${window.location.origin}/pt/careers/next-phase/${selectedCandidate.token}`
+                              : `https://www.overwatchmoz.com/pt/careers/next-phase/${selectedCandidate.token}`}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleCopyCandidateLink(selectedCandidate)}
+                              className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                            >
+                              {copiedCandidateId === selectedCandidate.id ? (
+                                <>
+                                  <Check size={12} className="text-emerald-600" />
+                                  <span className="text-emerald-700 font-bold">{t("Link Copiado!", "Link Copiado!")}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy size={12} className="text-slate-600" />
+                                  <span>{t("Copiar Link Dedicado", "Copiar Link Dedicado")}</span>
+                                </>
+                              )}
+                            </button>
+
+                            <a
+                              href={`/pt/careers/next-phase/${selectedCandidate.token}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-1.5 rounded-lg border border-emerald-300 bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors shadow-2xs"
+                            >
+                              <ExternalLink size={12} className="text-emerald-600" />
+                              <span>{t("Abrir Portal da Candidata", "Abrir Portal da Candidata")}</span>
+                            </a>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-3 rounded bg-amber-50 border border-amber-200 flex items-center justify-between gap-2">
+                          <span className="text-[0.72rem] text-amber-800 font-medium">
+                            {t("No access token has been generated yet for this candidate.", "Ainda não foi gerado nenhum token para esta candidata.")}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleGenerateToken(selectedCandidate)}
+                            className="px-2.5 py-1 text-xs font-semibold rounded bg-amber-600 hover:bg-amber-700 text-white cursor-pointer"
+                          >
+                            {t("Generate Token", "Gerar Token")}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

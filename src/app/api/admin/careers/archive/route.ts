@@ -21,8 +21,47 @@ export async function GET(request: Request) {
     ]);
 
     let archivedCohorts = allCohorts.filter((c) => c.status === "archived");
+    const existingCohortIds = new Set(archivedCohorts.map((c) => c.id));
 
-    // Auto-discover cohorts for closed roles or archived candidates if not yet in cohorts table
+    // 1. Auto-discover all distinct cohortIds present on existing applications (e.g. cctv_cohort)
+    const appCohortIds = Array.from(new Set(allApps.map((a: any) => a.cohortId).filter(Boolean)));
+    for (const cId of appCohortIds) {
+      if (existingCohortIds.has(cId)) continue;
+      const matchingApps = allApps.filter((a: any) => a.cohortId === cId);
+      const isArchived = matchingApps.some((a: any) => a.status === "archived") || cId.includes("cohort") || cId.includes("archived");
+      if (isArchived) {
+        const sampleApp = matchingApps[0];
+        const roleId = sampleApp?.role || (cId.includes("cctv") ? "cctv" : "cctv_operator");
+        const matchedRole = roles.find((r) => r.id === roleId || (roleId === "cctv" && r.id === "cctv_operator"));
+        const cohortName =
+          cId === "cctv_cohort"
+            ? "Operadora de CCTV (CCO) — Lote Setembro 2026"
+            : `${matchedRole?.pt || roleId} — Lote Arquivado (${cId})`;
+
+        archivedCohorts.push({
+          id: cId,
+          roleId,
+          name: cohortName,
+          openedAt: matchingApps[matchingApps.length - 1]?.createdAt || new Date().toISOString(),
+          closedAt: matchingApps[0]?.createdAt || new Date().toISOString(),
+          status: "archived" as const,
+          stages: matchedRole?.pipelineStages || [
+            "applications",
+            "screening",
+            "testing",
+            "gate_checkin",
+            "next_phase",
+            "interview",
+            "hired",
+          ],
+          screeningRules: matchedRole?.screeningRules || [],
+          notes: "Lote de recrutamento anterior preservado no cofre histórico.",
+        });
+        existingCohortIds.add(cId);
+      }
+    }
+
+    // 2. Auto-discover cohorts for closed roles or roles with archived candidates
     for (const role of roles) {
       const hasMatchingCohort = archivedCohorts.some(
         (c) => c.roleId === role.id || (role.id === "cctv" && c.roleId === "cctv_operator")
@@ -33,20 +72,20 @@ export async function GET(request: Request) {
           (role.id === "cctv" && (!a.role || a.role === "cctv" || a.role === "cctv_operator"))
       );
 
-      // If role is closed OR has archived applicants, ensure a cohort dossier exists in vault
       if (!hasMatchingCohort && (!role.open || roleApps.some((a) => a.status === "archived"))) {
-        const syntheticCohort = {
-          id: `${role.id}_archived_batch`,
+        const synthId = `${role.id}_archived_batch`;
+        archivedCohorts.push({
+          id: synthId,
           roleId: role.id,
           name: `${role.pt || role.en} — Lote Concluído`,
-          openedAt: role.createdAt || new Date().toISOString(),
+          openedAt: roleApps[roleApps.length - 1]?.createdAt || role.createdAt || new Date().toISOString(),
           closedAt: role.updatedAt || new Date().toISOString(),
           status: "archived" as const,
           stages: role.pipelineStages || [],
           screeningRules: role.screeningRules || [],
           notes: "Lote de recrutamento anterior preservado no cofre histórico.",
-        };
-        archivedCohorts.push(syntheticCohort);
+        });
+        existingCohortIds.add(synthId);
       }
     }
 
@@ -68,11 +107,20 @@ export async function GET(request: Request) {
           };
         }
       }
-      const cohortApps = allApps.filter(
-        (a: any) =>
-          a.cohortId === cohortId ||
-          (targetCohort && (a.role === targetCohort.roleId || (targetCohort.roleId === "cctv" && (!a.role || a.role === "cctv" || a.role === "cctv_operator")))),
-      );
+
+      const cohortApps = allApps.filter((a: any) => {
+        if (a.cohortId === cohortId) return true;
+        if (targetCohort && targetCohort.status === "archived") {
+          const isThisRole =
+            a.role === targetCohort.roleId ||
+            ((targetCohort.roleId === "cctv" || targetCohort.roleId === "cctv_operator") &&
+              (!a.role || a.role === "cctv" || a.role === "cctv_operator"));
+          if (isThisRole && (a.status === "archived" || !a.cohortId || a.cohortId === targetCohort.id)) {
+            return true;
+          }
+        }
+        return false;
+      });
 
       // Enrich with approved seed candidate scores, tokens, and response defaults
       const enrichedApps = cohortApps.map((a: any) => {
@@ -106,15 +154,21 @@ export async function GET(request: Request) {
 
     // Return list of archived cohorts with metrics
     const summary = archivedCohorts.map((cohort) => {
-      const apps = allApps.filter(
-        (a: any) =>
-          a.cohortId === cohort.id ||
-          (cohort.roleId === "cctv" && (!a.role || a.role === "cctv" || a.role === "cctv_operator")) ||
-          a.role === cohort.roleId,
-      );
-      const role = roles.find((r) => r.id === cohort.roleId);
+      const apps = allApps.filter((a: any) => {
+        if (a.cohortId === cohort.id) return true;
+        const isThisRole =
+          a.role === cohort.roleId ||
+          ((cohort.roleId === "cctv" || cohort.roleId === "cctv_operator") &&
+            (!a.role || a.role === "cctv" || a.role === "cctv_operator"));
+        if (isThisRole && (a.status === "archived" || !a.cohortId || a.cohortId === cohort.id)) {
+          return true;
+        }
+        return false;
+      });
+
+      const role = roles.find((r) => r.id === cohort.roleId || (cohort.roleId === "cctv" && r.id === "cctv_operator"));
       const hiredCount = apps.filter((a) => a.status === "hired").length;
-      const testedCount = apps.filter((a) => a.status === "tested" || a.testScore !== undefined).length;
+      const testedCount = apps.filter((a) => a.status === "tested" || a.testScore !== undefined || Boolean(a.attendedAt)).length;
 
       return {
         ...cohort,
@@ -151,36 +205,29 @@ export async function PATCH(request: Request) {
 
   try {
     const body = await request.json();
-    const { id, status, nextPhaseStatus, notes } = body;
-    if (!id) {
-      return NextResponse.json({ error: "Candidate ID required" }, { status: 400 });
+    const { cohortId, notes } = body;
+    if (!cohortId) {
+      return NextResponse.json({ error: "Missing cohortId" }, { status: 400 });
     }
 
-    const { updateApplication, setStatus, getApplication } = await import("@/lib/careers-store");
-    const app = await getApplication(id);
-    if (status) {
-      await setStatus(id, status);
+    const allCohorts = await getAllCohorts();
+    const target = allCohorts.find((c) => c.id === cohortId);
+    if (!target) {
+      return NextResponse.json({ error: "Cohort not found" }, { status: 404 });
     }
-    const updates: Record<string, any> = {};
-    if (nextPhaseStatus) updates.nextPhaseStatus = nextPhaseStatus;
-    if (notes !== undefined) updates.archiveReason = notes;
-    if (status === "hired") {
-      updates.hiredAt = new Date().toISOString();
-    }
-    const currentLog = app?.activityLog || [];
-    updates.activityLog = [
-      ...currentLog,
-      {
-        action: `Stage Transition: ${status || "Updated"}`,
-        details: `Updated in Archive Vault${notes ? ` (Reason: ${notes})` : ""}`,
-        actor: "Admin Recruiter",
-        timestamp: new Date().toISOString(),
-      },
-    ];
-    await updateApplication(id, updates);
 
-    return NextResponse.json({ success: true });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || "Failed to update candidate" }, { status: 500 });
+    const updated = {
+      ...target,
+      notes: notes !== undefined ? notes : target.notes,
+    };
+    const { saveCohort } = await import("@/lib/careers-campaign-store");
+    await saveCohort(updated);
+
+    return NextResponse.json({ success: true, cohort: updated });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error?.message || "Failed to update cohort" },
+      { status: 500 },
+    );
   }
 }

@@ -23,6 +23,7 @@ import {
   ChevronDown,
   Check,
   X,
+  Copy,
 } from "lucide-react";
 import { Application, Role, stages, formatPhoneDisplay, formatSlotDisplay, ArchiveReason } from "@/lib/careers";
 import DocxViewer from "../DocxViewer";
@@ -81,6 +82,43 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
   const [isSavingScore, setIsSavingScore] = useState(false);
   const [scoreSuccessMsg, setScoreSuccessMsg] = useState<string | null>(null);
   const [scoreErrorMsg, setScoreErrorMsg] = useState<string | null>(null);
+
+  const [copiedLinkType, setCopiedLinkType] = useState<"next_phase" | "invite" | null>(null);
+  const [candidateToken, setCandidateToken] = useState<string | undefined>(candidate.nextPhaseToken);
+  const [isGeneratingToken, setIsGeneratingToken] = useState(false);
+
+  const handleCopyLink = (url: string, type: "next_phase" | "invite") => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(url);
+      setCopiedLinkType(type);
+      setTimeout(() => setCopiedLinkType(null), 2500);
+    }
+  };
+
+  const handleGenerateNextPhaseToken = async () => {
+    setIsGeneratingToken(true);
+    try {
+      const res = await fetch("/api/admin/careers/next-phase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "generate_token", candidateId: candidate.id }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setCandidateToken(data.token);
+        candidate.nextPhaseToken = data.token;
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("admin:careers-updated"));
+        }
+      } else {
+        alert(data.error || "Failed to generate token");
+      }
+    } catch (err: any) {
+      alert(err.message || "Network error generating token");
+    } finally {
+      setIsGeneratingToken(false);
+    }
+  };
 
   const handleSaveScore = async () => {
     const num = parseFloat(currentScore);
@@ -725,15 +763,15 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                 </div>
               </div>
 
-              {candidate.nextPhaseStatus && (
-                <div className="p-3.5 rounded-md bg-sky-50/70 border border-sky-200 space-y-2.5">
+              {(candidate.nextPhaseStatus || candidateToken) && (
+                <div className="p-4 rounded-md bg-sky-50/70 border border-sky-200 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 text-sky-900 font-bold">
-                      <Award size={14} />
-                      <span>{t("Next Phase Cohort Status", "Estado na Turma da Próxima Fase")}</span>
+                      <Award size={15} />
+                      <span>{t("Next Phase Cohort Status & Portal", "Estado na Turma da Próxima Fase & Portal")}</span>
                     </div>
                     <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold uppercase tracking-wider bg-white border border-sky-200 text-sky-800">
-                      {candidate.nextPhaseStatus}
+                      {candidate.nextPhaseStatus || "selected"}
                     </span>
                   </div>
 
@@ -750,10 +788,10 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                     <span>{t("Candidate Decision:", "Decisão da Candidata:")}</span>
                     <strong className={candidate.nextPhaseResponse === "yes" ? "text-emerald-700 font-bold" : candidate.nextPhaseResponse === "no" ? "text-slate-700 font-bold" : "text-amber-700 font-semibold"}>
                       {candidate.nextPhaseResponse === "yes"
-                        ? t("Confirmed Interest (YES)", "Confirmou SIM")
+                        ? t("✓ Confirmed Interest (YES)", "✓ Confirmou Interesse (SIM)")
                         : candidate.nextPhaseResponse === "no"
-                          ? t("Declined Interest (NO)", "Recusou NÃO")
-                          : t("Awaiting Candidate Decision", "Aguardando Resposta")}
+                          ? t("✕ Declined Interest (NO)", "✕ Recusou Interesse (NÃO)")
+                          : t("⏳ Awaiting Candidate Decision", "⏳ A Aguardar Resposta da Candidata")}
                     </strong>
                   </div>
 
@@ -776,6 +814,67 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                       </div>
                     </div>
                   )}
+
+                  {/* Dedicated Candidate Decision Link Card */}
+                  <div className="pt-2 border-t border-sky-200/70 space-y-2">
+                    <span className="text-[0.65rem] font-bold text-sky-900 uppercase tracking-wider block">
+                      {t("Dedicated Decision Portal Link:", "Link Dedicado do Portal de Decisão:")}
+                    </span>
+                    {candidateToken ? (
+                      <div className="space-y-2">
+                        <div className="p-2 rounded bg-white border border-slate-200 font-mono text-[0.7rem] text-slate-700 break-all select-all">
+                          {typeof window !== "undefined"
+                            ? `${window.location.origin}/pt/careers/next-phase/${candidateToken}`
+                            : `https://www.overwatchmoz.com/pt/careers/next-phase/${candidateToken}`}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const origin = typeof window !== "undefined" ? window.location.origin : "https://www.overwatchmoz.com";
+                              handleCopyLink(`${origin}/pt/careers/next-phase/${candidateToken}`, "next_phase");
+                            }}
+                            className="px-2.5 py-1 rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                          >
+                            {copiedLinkType === "next_phase" ? (
+                              <>
+                                <Check size={12} className="text-emerald-600" />
+                                <span className="text-emerald-700 font-bold">{t("Link Copiado!", "Link Copiado!")}</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy size={12} className="text-slate-600" />
+                                <span>{t("Copiar Link Dedicado", "Copiar Link Dedicado")}</span>
+                              </>
+                            )}
+                          </button>
+                          <a
+                            href={`/pt/careers/next-phase/${candidateToken}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2.5 py-1 rounded-md border border-emerald-300 bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-semibold inline-flex items-center gap-1 transition-colors shadow-2xs"
+                          >
+                            <ExternalLink size={12} className="text-emerald-600" />
+                            <span>{t("Abrir Portal de Decisão", "Abrir Portal de Decisão")}</span>
+                          </a>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between gap-2 p-2 rounded bg-amber-50 border border-amber-200">
+                        <span className="text-[0.7rem] text-amber-800 font-medium">
+                          {t("No token generated yet.", "Nenhum token gerado ainda.")}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={isGeneratingToken}
+                          onClick={handleGenerateNextPhaseToken}
+                          className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold cursor-pointer shadow-2xs"
+                        >
+                          {isGeneratingToken ? t("Gerando...", "Gerando...") : t("Gerar Token Dedicado", "Gerar Token Dedicado")}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -887,20 +986,29 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
             {/* Dynamic Assessment Score Card */}
             <div className="p-4 rounded-md border border-slate-200 space-y-3 md:col-span-2 bg-slate-50/50">
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <span className="text-[0.65rem] font-bold uppercase tracking-wider text-slate-500 block">
-                  {t("Written Assessment Test Score", "Pontuação do Teste Escrito de Avaliação")}
-                </span>
+                <div>
+                  <span className="text-[0.65rem] font-bold uppercase tracking-wider text-slate-500 block">
+                    {t("Written Assessment Test Score", "Pontuação do Teste Escrito de Avaliação")}
+                  </span>
+                  <div className="text-[0.68rem] text-slate-500 mt-0.5">
+                    {t("Official Benchmarks: Pass ≥ 75% (15/20) · Grace 70%–74% (14/20) · Fail < 70%", "Métricas Oficiais: Aprovado ≥ 75% (15/20) · Margem Tolerância 70%–74% (14/20) · Reprovado < 70%")}
+                  </div>
+                </div>
                 {typeof savedScore === "number" && (
                   <span
                     className={`px-2 py-0.5 rounded text-[0.65rem] font-bold ${
-                      savedScore >= 80
+                      savedScore >= 75
                         ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                        : "bg-amber-100 text-amber-800 border border-amber-300"
+                        : savedScore >= 70
+                          ? "bg-amber-100 text-amber-800 border border-amber-300"
+                          : "bg-red-100 text-red-800 border border-red-300"
                     }`}
                   >
-                    {savedScore >= 80
-                      ? t("Passed (≥80%) — Next Phase Eligible", "Aprovada (≥80%) — Apta para Próxima Fase")
-                      : t(`Score: ${savedScore}%`, `Nota: ${savedScore}%`)}
+                    {savedScore >= 75
+                      ? t(`Passed (≥75%) — Score: ${savedScore}%`, `Aprovada (≥75%) — Nota: ${savedScore}%`)
+                      : savedScore >= 70
+                        ? t(`Grace Token Eligible (70%–74%) — Score: ${savedScore}%`, `Margem de Tolerância (70%–74%) — Nota: ${savedScore}%`)
+                        : t(`Below Benchmark (<70%) — Score: ${savedScore}%`, `Abaixo do Mínimo (<70%) — Nota: ${savedScore}%`)}
                   </span>
                 )}
               </div>
@@ -952,12 +1060,124 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                 )}
               </div>
 
-              <p className="text-[0.7rem] text-slate-500 leading-relaxed">
-                {t(
-                  "Enter the candidate's verified written test score (0–100%). Scores update live across the portal and qualify candidates for next-phase cohorts.",
-                  "Introduza a nota verificada do teste presencial (0–100%). A pontuação actualiza em tempo real em todo o portal e qualifica a candidata para a turma da próxima fase."
-                )}
-              </p>
+              {/* Dedicated Tracking Links Card */}
+              <div className="pt-3 border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* 1. Test Invite Link */}
+                <div className="p-3 rounded-md bg-white border border-slate-200 space-y-1.5">
+                  <span className="text-[0.65rem] font-bold uppercase tracking-wider text-slate-500 block">
+                    {t("In-Person Test Booking Link", "Link de Agendamento do Teste")}
+                  </span>
+                  <div className="p-1.5 rounded bg-slate-50 border border-slate-200 font-mono text-[0.68rem] text-slate-700 break-all select-all">
+                    {typeof window !== "undefined"
+                      ? `${window.location.origin}/pt/careers/test-invite/${candidate.id}`
+                      : `https://www.overwatchmoz.com/pt/careers/test-invite/${candidate.id}`}
+                  </div>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const origin = typeof window !== "undefined" ? window.location.origin : "https://www.overwatchmoz.com";
+                        handleCopyLink(`${origin}/pt/careers/test-invite/${candidate.id}`, "invite");
+                      }}
+                      className="px-2.5 py-1 rounded border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                    >
+                      {copiedLinkType === "invite" ? (
+                        <>
+                          <Check size={11} className="text-emerald-600" />
+                          <span className="text-emerald-700 font-bold">{t("Copiado!", "Copiado!")}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={11} className="text-slate-600" />
+                          <span>{t("Copiar Link", "Copiar Link")}</span>
+                        </>
+                      )}
+                    </button>
+                    <a
+                      href={`/pt/careers/test-invite/${candidate.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2.5 py-1 rounded border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs font-semibold inline-flex items-center gap-1 transition-colors shadow-2xs"
+                    >
+                      <ExternalLink size={11} className="text-slate-600" />
+                      <span>{t("Abrir Link", "Abrir Link")}</span>
+                    </a>
+                  </div>
+                </div>
+
+                {/* 2. Next Phase Portal Link */}
+                <div className="p-3 rounded-md bg-white border border-slate-200 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[0.65rem] font-bold uppercase tracking-wider text-slate-500 block">
+                      {t("Next Phase Conditions Decision Link", "Link de Decisão da Próxima Fase")}
+                    </span>
+                    {candidateToken && (
+                      <span className="text-[0.62rem] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                        {candidate.nextPhaseResponse === "yes"
+                          ? t("CONFIRMED", "CONFIRMOU")
+                          : candidate.nextPhaseResponse === "no"
+                            ? t("DECLINED", "RECUSOU")
+                            : t("PENDING", "PENDENTE")}
+                      </span>
+                    )}
+                  </div>
+
+                  {candidateToken ? (
+                    <>
+                      <div className="p-1.5 rounded bg-slate-50 border border-slate-200 font-mono text-[0.68rem] text-slate-700 break-all select-all">
+                        {typeof window !== "undefined"
+                          ? `${window.location.origin}/pt/careers/next-phase/${candidateToken}`
+                          : `https://www.overwatchmoz.com/pt/careers/next-phase/${candidateToken}`}
+                      </div>
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const origin = typeof window !== "undefined" ? window.location.origin : "https://www.overwatchmoz.com";
+                            handleCopyLink(`${origin}/pt/careers/next-phase/${candidateToken}`, "next_phase");
+                          }}
+                          className="px-2.5 py-1 rounded border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                        >
+                          {copiedLinkType === "next_phase" ? (
+                            <>
+                              <Check size={11} className="text-emerald-600" />
+                              <span className="text-emerald-700 font-bold">{t("Copiado!", "Copiado!")}</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy size={11} className="text-slate-600" />
+                              <span>{t("Copiar Link", "Copiar Link")}</span>
+                            </>
+                          )}
+                        </button>
+                        <a
+                          href={`/pt/careers/next-phase/${candidateToken}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1 rounded border border-emerald-300 bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-semibold inline-flex items-center gap-1 transition-colors shadow-2xs"
+                        >
+                          <ExternalLink size={11} className="text-emerald-600" />
+                          <span>{t("Abrir Portal", "Abrir Portal")}</span>
+                        </a>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex items-center justify-between gap-2 pt-1">
+                      <span className="text-[0.7rem] text-slate-500">
+                        {t("No token generated yet.", "Nenhum token gerado ainda.")}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={isGeneratingToken}
+                        onClick={handleGenerateNextPhaseToken}
+                        className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold cursor-pointer shadow-2xs"
+                      >
+                        {isGeneratingToken ? t("Gerando...", "Gerando...") : t("Gerar Token Dedicado", "Gerar Token Dedicado")}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>

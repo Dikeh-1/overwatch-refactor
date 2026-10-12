@@ -18,8 +18,12 @@ export async function GET(request: Request) {
   if (!(await authenticated())) return new Response(null, { status: 401 });
 
   try {
-    const { searchParams } = new URL(request.url);
+    const url = new URL(request.url);
+    const searchParams = url.searchParams;
     const roleParam = searchParams.get("role");
+    const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || url.host;
+    const proto = request.headers.get("x-forwarded-proto") || url.protocol.replace(":", "") || "https";
+    const baseUrl = `${proto}://${host}`;
 
     const [allApplications, deletedRaw] = await Promise.all([
       getApplications(),
@@ -64,12 +68,12 @@ export async function GET(request: Request) {
         let matchedApp: Application | undefined;
 
         if (seed.matchedId) {
-          matchedApp = applications.find((a) => a.id === seed.matchedId);
+          matchedApp = allApplications.find((a) => a.id === seed.matchedId);
         }
 
         if (!matchedApp) {
           const normSeed = normalizeName(seed.name);
-          matchedApp = applications.find((a) => {
+          matchedApp = allApplications.find((a) => {
             const normApp = normalizeName(a.name);
             return normApp === normSeed || normApp.includes(normSeed) || normSeed.includes(normApp);
           });
@@ -111,6 +115,9 @@ export async function GET(request: Request) {
             ? (matchedApp.nextPhaseResponseOption || "Não tenho interesse")
             : null;
 
+        const dedicatedLink = `/pt/careers/next-phase/${token}`;
+        const fullDedicatedUrl = `${baseUrl}/pt/careers/next-phase/${token}`;
+
         return {
           id,
           seedIndex: index + 1,
@@ -130,15 +137,16 @@ export async function GET(request: Request) {
           responseOption,
           recruitmentStage,
           token: token || `cand_${index + 1}_${seed.score}`,
+          dedicatedLink,
+          fullDedicatedUrl,
         };
       })
     );
 
-    // Also include any other applications explicitly moved to next phase that were not in the seed roster
+    // Also include any other applications explicitly moved to next phase or having next phase tokens/responses
     const additionalApps = applications.filter((a) => {
       if (matchedAppIds.has(a.id)) return false;
       if (isDeleted(a.id, a.name)) return false;
-      if (a.status === "archived" || a.status === "rejected") return false;
       return (
         a.status === "next_phase_selected" ||
         a.status === "next_phase_invited" ||
@@ -148,7 +156,10 @@ export async function GET(request: Request) {
         a.nextPhaseStatus === "selected" ||
         a.nextPhaseStatus === "invited" ||
         a.nextPhaseStatus === "confirmed" ||
-        a.nextPhaseStatus === "declined"
+        a.nextPhaseStatus === "declined" ||
+        Boolean(a.nextPhaseToken) ||
+        Boolean(a.nextPhaseInvitedAt) ||
+        Boolean(a.nextPhaseResponse)
       );
     });
 
@@ -168,6 +179,9 @@ export async function GET(request: Request) {
             : invitationStatus === "sent"
               ? "awaiting"
               : null;
+
+        const dedicatedLink = `/pt/careers/next-phase/${token}`;
+        const fullDedicatedUrl = `${baseUrl}/pt/careers/next-phase/${token}`;
 
         return {
           id: app.id,
@@ -192,6 +206,8 @@ export async function GET(request: Request) {
               : null,
           recruitmentStage: app.status || "next_phase_selected",
           token,
+          dedicatedLink,
+          fullDedicatedUrl,
         };
       })
     );
@@ -221,7 +237,16 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const action = body.action as "preview" | "dispatch" | "reconcile" | "update_contact" | "delete_candidate" | "bulk_delete" | "delete_candidates" | "send_instructions";
+    const action = body.action as
+      | "preview"
+      | "dispatch"
+      | "reconcile"
+      | "update_contact"
+      | "delete_candidate"
+      | "bulk_delete"
+      | "delete_candidates"
+      | "send_instructions"
+      | "generate_token";
     const [applications, deletedRaw] = await Promise.all([
       getApplications(),
       getDeletedNextPhaseIdentifiers(),
@@ -240,6 +265,30 @@ export async function POST(request: Request) {
     const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || url.host;
     const proto = request.headers.get("x-forwarded-proto") || url.protocol.replace(":", "") || "https";
     const baseUrl = `${proto}://${host}`;
+
+    if (action === "generate_token") {
+      const candidateId = String(body.candidateId || "").trim();
+      if (!candidateId) return Response.json({ error: "Candidate ID required" }, { status: 400 });
+      let app = applications.find((a) => a.id === candidateId);
+      if (!app && candidateId.startsWith("seed_")) {
+        const sIdx = parseInt(candidateId.replace("seed_", ""), 10) - 1;
+        const seed = APPROVED_NEXT_PHASE_CANDIDATES[sIdx];
+        if (seed) {
+          const normSeed = normalizeName(seed.name);
+          app = applications.find((a) => normalizeName(a.name) === normSeed);
+        }
+      }
+      if (!app) return Response.json({ error: "Candidate not found" }, { status: 404 });
+      const token = crypto.randomBytes(16).toString("hex");
+      const updated = await updateApplication(app.id, { nextPhaseToken: token });
+      return Response.json({
+        success: true,
+        token,
+        dedicatedLink: `/pt/careers/next-phase/${token}`,
+        fullDedicatedUrl: `${baseUrl}/pt/careers/next-phase/${token}`,
+        candidate: updated,
+      });
+    }
 
     if (action === "delete_candidate") {
       const candidateId = String(body.candidateId || "").trim();
@@ -472,7 +521,6 @@ export async function POST(request: Request) {
       for (const a of applications) {
         if (handledAppIds.has(a.id)) continue;
         if (isDeleted(a.id, a.name)) continue;
-        if (a.status === "archived" || a.status === "rejected") continue;
         if (roleParam && roleParam !== "all" && a.role !== roleParam) continue;
 
         const isNextPhase =
@@ -484,7 +532,8 @@ export async function POST(request: Request) {
           a.nextPhaseStatus === "selected" ||
           a.nextPhaseStatus === "invited" ||
           a.nextPhaseStatus === "confirmed" ||
-          a.nextPhaseStatus === "declined";
+          a.nextPhaseStatus === "declined" ||
+          Boolean(a.nextPhaseToken);
 
         if (isNextPhase && a.email) {
           handledAppIds.add(a.id);

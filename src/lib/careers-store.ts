@@ -1,6 +1,7 @@
 import "server-only";
 import { mkdir, readFile, writeFile, rename, unlink } from "node:fs/promises";
 import path from "node:path";
+import { Pool } from "pg";
 import { roles, type Role, type Application, DEFAULT_TEST_SLOTS } from "./careers";
 import {
   getConfiguredTestSlots,
@@ -13,6 +14,20 @@ import {
 
 const directory = path.join(process.cwd(), ".careers-data");
 
+let pgPool: Pool | null = null;
+function getPgPool(): Pool | null {
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) return null;
+  if (!pgPool) {
+    pgPool = new Pool({
+      connectionString: dbUrl,
+      ssl: { rejectUnauthorized: false },
+      max: 10,
+    });
+  }
+  return pgPool;
+}
+
 function getSupabaseUrl() {
   return (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim().replace(/\/+$/, "");
 }
@@ -22,11 +37,11 @@ function getSupabaseKey() {
 }
 
 function isRemote() {
-  return !!(getSupabaseUrl() && getSupabaseKey());
+  return !!(getPgPool() || (getSupabaseUrl() && getSupabaseKey()));
 }
 
 function localOnly() {
-  if (process.env.NODE_ENV === "production") {
+  if (process.env.NODE_ENV === "production" && !getPgPool() && !isRemote()) {
     const missing: string[] = [];
     if (!getSupabaseUrl()) missing.push("SUPABASE_URL");
     if (!getSupabaseKey()) missing.push("SUPABASE_SERVICE_ROLE_KEY");
@@ -46,8 +61,6 @@ async function api(endpoint: string, init: RequestInit = {}) {
     ...((init.headers as Record<string, string>) || {}),
   };
 
-  // Only attach Bearer authorization if using legacy JWT service_role key (starts with eyJ).
-  // New Supabase sb_secret_ keys are passed via apikey header and rejected by PostgREST if placed in Authorization header.
   if (key.startsWith("eyJ")) {
     headers.Authorization = `Bearer ${key}`;
   }
@@ -63,6 +76,7 @@ async function api(endpoint: string, init: RequestInit = {}) {
   }
   return response;
 }
+
 async function read<T>(file: string, fallback: T): Promise<T> {
   try {
     localOnly();
@@ -71,6 +85,7 @@ async function read<T>(file: string, fallback: T): Promise<T> {
     return fallback;
   }
 }
+
 async function write(file: string, value: unknown) {
   localOnly();
   await mkdir(directory, { recursive: true });
@@ -78,12 +93,14 @@ async function write(file: string, value: unknown) {
   await writeFile(temp, JSON.stringify(value));
   await rename(temp, path.join(directory, file));
 }
+
 let queue: Promise<unknown> = Promise.resolve();
 export function exclusive<T>(fn: () => Promise<T>): Promise<T> {
   const result = queue.then(fn);
   queue = result.catch(() => {});
   return result;
 }
+
 export async function getRoles(): Promise<Role[]> {
   try {
     const { getRoleDefinitions } = await import("./careers-campaign-store");
@@ -116,6 +133,27 @@ export async function getRoles(): Promise<Role[]> {
     }
   } catch {}
 
+  const pool = getPgPool();
+  if (pool) {
+    try {
+      const res = await pool.query("SELECT id, open FROM career_roles");
+      if (res.rows && res.rows.length > 0) {
+        return roles.map((role) => {
+          const match = res.rows.find(
+            (r: any) =>
+              r.id === role.id ||
+              (role.id === "cctv" && r.id === "cctv_operator") ||
+              (role.id === "cctv_operator" && r.id === "cctv"),
+          );
+          return {
+            ...role,
+            open: match !== undefined ? Boolean(match.open) : role.open,
+          };
+        });
+      }
+    } catch {}
+  }
+
   if (!isRemote()) return read("roles.json", roles);
 
   try {
@@ -140,7 +178,22 @@ export async function getRoles(): Promise<Role[]> {
 }
 
 export async function setRole(id: string, open: boolean) {
-  if (isRemote()) {
+  const pool = getPgPool();
+  if (pool) {
+    try {
+      await pool.query(
+        "INSERT INTO career_roles (id, open) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET open = $2",
+        [id, open]
+      );
+      if (id === "cctv" || id === "cctv_operator") {
+        const alias = id === "cctv" ? "cctv_operator" : "cctv";
+        await pool.query(
+          "INSERT INTO career_roles (id, open) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET open = $2",
+          [alias, open]
+        ).catch(() => {});
+      }
+    } catch {}
+  } else if (getSupabaseUrl() && getSupabaseKey()) {
     try {
       await api(`/rest/v1/career_roles`, {
         method: "POST",
@@ -164,6 +217,7 @@ export async function setRole(id: string, open: boolean) {
       } catch {}
     }
   }
+
   await exclusive(async () => {
     // 1. Update roles.json
     const currentLegacy = await read("roles.json", roles);
@@ -192,6 +246,7 @@ export async function setRole(id: string, open: boolean) {
     } catch {}
   });
 }
+
 export const SYSTEM_DELETED_NEXT_PHASE_UUID = "00000000-0000-0000-0000-000000000001";
 export const SYSTEM_TEST_SLOTS_UUID = "00000000-0000-0000-0000-000000000002";
 export const SYSTEM_COHORTS_UUID = "00000000-0000-0000-0000-000000000003";
@@ -206,7 +261,7 @@ const SYSTEM_UUIDS = new Set([
 let hasPurgedLegacy = false;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// IN-MEMORY SMART CACHING (CRITICAL: PREVENTS SUPABASE EGRESS EXHAUSTION)
+// IN-MEMORY SMART CACHING (PREVENTS EGRESS EXHAUSTION)
 // ─────────────────────────────────────────────────────────────────────────────
 let cachedApplications: Application[] | null = null;
 let cachedApplicationsAt = 0;
@@ -227,36 +282,83 @@ export async function getApplications(forceFresh = false): Promise<Application[]
     purgeLegacySystemRowsFromApplicationsTable().catch(() => {});
   }
 
-  if (!isRemote()) {
-    const list = await read("applications.json", []);
-    const filtered = list.filter((a: any) => a && a.role !== "__system_config__" && !SYSTEM_UUIDS.has(a.id));
-    cachedApplications = filtered;
-    cachedApplicationsAt = Date.now();
-    return filtered;
+  const pool = getPgPool();
+  if (pool) {
+    try {
+      const res = await pool.query("SELECT data FROM career_applications ORDER BY created_at DESC");
+      const filtered = res.rows
+        .map((r: { data: Application }) => r.data)
+        .filter((a: any) => a && a.role !== "__system_config__" && !SYSTEM_UUIDS.has(a.id));
+      cachedApplications = filtered;
+      cachedApplicationsAt = Date.now();
+      // Mirror in background to local applications.json
+      exclusive(async () => {
+        try {
+          await write("applications.json", filtered);
+        } catch {}
+      }).catch(() => {});
+      return filtered;
+    } catch (pgErr) {
+      console.warn("Direct PostgreSQL query error, falling back to REST/local:", pgErr);
+    }
   }
 
-  const rows = await (
-    await api("/rest/v1/career_applications?select=data&order=created_at.desc")
-  ).json();
+  if (getSupabaseUrl() && getSupabaseKey()) {
+    try {
+      const rows = await (
+        await api("/rest/v1/career_applications?select=data&order=created_at.desc")
+      ).json();
 
-  const filtered = rows
-    .map((r: { data: Application }) => r.data)
-    .filter((a: any) => a && a.role !== "__system_config__" && !SYSTEM_UUIDS.has(a.id));
+      const filtered = rows
+        .map((r: { data: Application }) => r.data)
+        .filter((a: any) => a && a.role !== "__system_config__" && !SYSTEM_UUIDS.has(a.id));
 
+      cachedApplications = filtered;
+      cachedApplicationsAt = Date.now();
+      return filtered;
+    } catch (apiErr) {
+      console.warn("REST query error, falling back to local:", apiErr);
+    }
+  }
+
+  const list = await read("applications.json", []);
+  const filtered = list.filter((a: any) => a && a.role !== "__system_config__" && !SYSTEM_UUIDS.has(a.id));
   cachedApplications = filtered;
   cachedApplicationsAt = Date.now();
   return filtered;
 }
+
 export async function saveApplication(application: Application, cv: Buffer) {
   invalidateApplicationsCache();
-  if (isRemote()) {
+  const pool = getPgPool();
+  if (pool) {
+    try {
+      await pool.query(
+        "INSERT INTO career_applications (id, data, created_at) VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET data = $2",
+        [application.id, JSON.stringify(application), application.createdAt || new Date().toISOString()]
+      );
+      exclusive(async () => {
+        try {
+          await mkdir(directory, { recursive: true });
+          await writeFile(path.join(directory, application.id), cv);
+          const current = await getApplications();
+          await write("applications.json", [application, ...current.filter((a) => a.id !== application.id)]);
+        } catch {}
+      }).catch(() => {});
+      invalidateApplicationsCache();
+      return;
+    } catch (pgErr) {
+      console.warn("PG saveApplication error, trying REST:", pgErr);
+    }
+  }
+
+  if (getSupabaseUrl() && getSupabaseKey()) {
     await api(`/storage/v1/object/career-cvs/${application.id}`, {
       method: "POST",
       headers: { "Content-Type": application.cvType },
       body: new Uint8Array(cv),
     });
     try {
-      // The database function locks the role row, preventing submissions after a role closes.
       await api("/rest/v1/rpc/submit_career_application", {
         method: "POST",
         body: JSON.stringify({ application }),
@@ -270,6 +372,7 @@ export async function saveApplication(application: Application, cv: Buffer) {
     }
     return;
   }
+
   await exclusive(async () => {
     if (!(await getRoles()).find((r) => r.id === application.role)?.open)
       throw new Error("ROLE_CLOSED");
@@ -285,7 +388,28 @@ export async function saveApplication(application: Application, cv: Buffer) {
 
 export async function setStatus(id: string, status: Application["status"]) {
   invalidateApplicationsCache();
-  if (isRemote()) {
+  const pool = getPgPool();
+  if (pool) {
+    try {
+      const current = await getApplication(id);
+      if (current) {
+        const merged = { ...current, status };
+        await pool.query("UPDATE career_applications SET data = $1 WHERE id = $2", [JSON.stringify(merged), id]);
+        invalidateApplicationsCache();
+        exclusive(async () => {
+          try {
+            const list = await read("applications.json", []);
+            await write("applications.json", list.map((a: any) => (a.id === id ? merged : a)));
+          } catch {}
+        }).catch(() => {});
+        return;
+      }
+    } catch (pgErr) {
+      console.warn("PG setStatus error, trying REST:", pgErr);
+    }
+  }
+
+  if (getSupabaseUrl() && getSupabaseKey()) {
     try {
       await api("/rest/v1/rpc/update_career_status", {
         method: "POST",
@@ -294,12 +418,12 @@ export async function setStatus(id: string, status: Application["status"]) {
       invalidateApplicationsCache();
       return;
     } catch {
-      // Fallback to direct PATCH on career_applications (e.g., for newly added stages like 'archived')
       await updateApplication(id, { status });
       invalidateApplicationsCache();
       return;
     }
   }
+
   await exclusive(async () => {
     await write(
       "applications.json",
@@ -311,10 +435,9 @@ export async function setStatus(id: string, status: Application["status"]) {
   });
 }
 
-// In-memory buffer cache for CV files to drastically reduce repeated storage egress
 const cvBufferCache = new Map<string, { buffer: Buffer; cachedAt: number }>();
 const CV_CACHE_MAX_SIZE = 25;
-const CV_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const CV_CACHE_TTL_MS = 10 * 60 * 1000;
 
 export async function getCV(id: string): Promise<Buffer> {
   const cached = cvBufferCache.get(id);
@@ -323,13 +446,25 @@ export async function getCV(id: string): Promise<Buffer> {
   }
 
   let buf: Buffer;
-  if (isRemote()) {
-    buf = Buffer.from(
-      await (await api(`/storage/v1/object/career-cvs/${id}`)).arrayBuffer(),
-    );
-  } else {
+  if (getSupabaseUrl() && getSupabaseKey()) {
+    try {
+      buf = Buffer.from(
+        await (await api(`/storage/v1/object/career-cvs/${id}`)).arrayBuffer(),
+      );
+      if (cvBufferCache.size >= CV_CACHE_MAX_SIZE) {
+        const oldestKey = cvBufferCache.keys().next().value;
+        if (oldestKey) cvBufferCache.delete(oldestKey);
+      }
+      cvBufferCache.set(id, { buffer: buf, cachedAt: Date.now() });
+      return buf;
+    } catch {}
+  }
+
+  try {
     localOnly();
     buf = await readFile(path.join(directory, id));
+  } catch {
+    buf = Buffer.from("");
   }
 
   if (cvBufferCache.size >= CV_CACHE_MAX_SIZE) {
@@ -341,18 +476,30 @@ export async function getCV(id: string): Promise<Buffer> {
 }
 
 export async function getApplication(id: string): Promise<Application | null> {
-  // If memory cache has this application, return without remote roundtrip
   if (cachedApplications && cachedApplications.length > 0) {
     const found = cachedApplications.find((a) => a.id === id);
     if (found) return found;
   }
 
-  if (isRemote()) {
-    const rows = await (
-      await api(`/rest/v1/career_applications?id=eq.${id}&select=data`)
-    ).json();
-    return rows?.[0]?.data || null;
+  const pool = getPgPool();
+  if (pool) {
+    try {
+      const res = await pool.query("SELECT data FROM career_applications WHERE id = $1", [id]);
+      if (res.rows.length > 0 && res.rows[0].data) {
+        return res.rows[0].data as Application;
+      }
+    } catch {}
   }
+
+  if (getSupabaseUrl() && getSupabaseKey()) {
+    try {
+      const rows = await (
+        await api(`/rest/v1/career_applications?id=eq.${id}&select=data`)
+      ).json();
+      return rows?.[0]?.data || null;
+    } catch {}
+  }
+
   const list = await getApplications();
   return list.find((a) => a.id === id) || null;
 }
@@ -362,7 +509,27 @@ export async function updateApplication(
   updates: Partial<Application>,
 ): Promise<Application> {
   invalidateApplicationsCache();
-  if (isRemote()) {
+  const pool = getPgPool();
+  if (pool) {
+    try {
+      const current = await getApplication(id);
+      if (!current) throw new Error("Application not found");
+      const merged = { ...current, ...updates };
+      await pool.query("UPDATE career_applications SET data = $1 WHERE id = $2", [JSON.stringify(merged), id]);
+      invalidateApplicationsCache();
+      exclusive(async () => {
+        try {
+          const list = await read("applications.json", []);
+          await write("applications.json", list.map((a: any) => (a.id === id ? merged : a)));
+        } catch {}
+      }).catch(() => {});
+      return merged;
+    } catch (pgErr) {
+      console.warn("PG updateApplication error, falling back:", pgErr);
+    }
+  }
+
+  if (getSupabaseUrl() && getSupabaseKey()) {
     const current = await getApplication(id);
     if (!current) throw new Error("Application not found");
     const merged = { ...current, ...updates };
@@ -373,6 +540,7 @@ export async function updateApplication(
     invalidateApplicationsCache();
     return merged;
   }
+
   return await exclusive(async () => {
     const list = await getApplications();
     const target = list.find((a) => a.id === id);
@@ -389,31 +557,53 @@ export async function updateApplication(
 
 export async function bulkSaveApplications(applications: Application[]): Promise<void> {
   invalidateApplicationsCache();
-  if (!isRemote()) {
-    await exclusive(async () => write("applications.json", applications));
+  const pool = getPgPool();
+  if (pool) {
+    try {
+      for (const app of applications) {
+        await pool.query(
+          "INSERT INTO career_applications (id, data, created_at) VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET data = $2",
+          [app.id, JSON.stringify(app), app.createdAt || new Date().toISOString()]
+        );
+      }
+      exclusive(async () => {
+        try {
+          await write("applications.json", applications);
+        } catch {}
+      }).catch(() => {});
+      invalidateApplicationsCache();
+      return;
+    } catch (pgErr) {
+      console.warn("PG bulkSaveApplications error, falling back:", pgErr);
+    }
+  }
+
+  if (getSupabaseUrl() && getSupabaseKey()) {
+    const chunkSize = 50;
+    for (let i = 0; i < applications.length; i += chunkSize) {
+      const chunk = applications.slice(i, i + chunkSize);
+      try {
+        await api("/rest/v1/career_applications", {
+          method: "POST",
+          headers: { Prefer: "resolution=merge-duplicates" },
+          body: JSON.stringify(chunk.map((app) => ({ id: app.id, data: app }))),
+        });
+      } catch {
+        await Promise.allSettled(
+          chunk.map((app) =>
+            api(`/rest/v1/career_applications?id=eq.${app.id}`, {
+              method: "PATCH",
+              body: JSON.stringify({ data: app }),
+            })
+          )
+        );
+      }
+    }
     invalidateApplicationsCache();
     return;
   }
-  const chunkSize = 50;
-  for (let i = 0; i < applications.length; i += chunkSize) {
-    const chunk = applications.slice(i, i + chunkSize);
-    try {
-      await api("/rest/v1/career_applications", {
-        method: "POST",
-        headers: { Prefer: "resolution=merge-duplicates" },
-        body: JSON.stringify(chunk.map((app) => ({ id: app.id, data: app }))),
-      });
-    } catch {
-      await Promise.allSettled(
-        chunk.map((app) =>
-          api(`/rest/v1/career_applications?id=eq.${app.id}`, {
-            method: "PATCH",
-            body: JSON.stringify({ data: app }),
-          })
-        )
-      );
-    }
-  }
+
+  await exclusive(async () => write("applications.json", applications));
   invalidateApplicationsCache();
 }
 
@@ -422,15 +612,31 @@ export async function deleteApplications(ids: string[]): Promise<void> {
   const validIds = ids.filter((id) => /^[\da-f-]{36}$/i.test(id) && !SYSTEM_UUIDS.has(id));
   if (!validIds.length) return;
 
-  if (isRemote()) {
-    // Delete in chunks of 50 to prevent query string URL length issues
+  const pool = getPgPool();
+  if (pool) {
+    try {
+      await pool.query("DELETE FROM career_applications WHERE id = ANY($1::uuid[])", [validIds]);
+      invalidateApplicationsCache();
+      exclusive(async () => {
+        try {
+          const list = await read("applications.json", []);
+          const idSet = new Set(validIds);
+          await write("applications.json", list.filter((a: any) => !idSet.has(a.id)));
+        } catch {}
+      }).catch(() => {});
+      return;
+    } catch (pgErr) {
+      console.warn("PG deleteApplications error, falling back:", pgErr);
+    }
+  }
+
+  if (getSupabaseUrl() && getSupabaseKey()) {
     const chunkSize = 50;
     for (let i = 0; i < validIds.length; i += chunkSize) {
       const chunk = validIds.slice(i, i + chunkSize);
       await api(`/rest/v1/career_applications?id=in.(${chunk.join(",")})`, {
         method: "DELETE",
       });
-      // Delete CV files from storage bucket
       await Promise.allSettled(
         chunk.map((id) =>
           api(`/storage/v1/object/career-cvs/${id}`, { method: "DELETE" }),
@@ -441,14 +647,12 @@ export async function deleteApplications(ids: string[]): Promise<void> {
     return;
   }
 
-  // Local filesystem fallback
   await exclusive(async () => {
     const list = await getApplications();
     const idSet = new Set(validIds);
     const updated = list.filter((a) => !idSet.has(a.id));
     await write("applications.json", updated);
 
-    // Delete local CV files if they exist
     await Promise.allSettled(
       validIds.map((id) => unlink(path.join(directory, id)).catch(() => {})),
     );
@@ -485,12 +689,6 @@ export async function saveTestSlots(slots: string[], quota?: number): Promise<st
 }
 
 export async function getDeletedNextPhaseIdentifiers(): Promise<string[]> {
-  const fallback: string[] = [];
-  if (isRemote()) {
-    // 1. Storage / config fallback
-    return getConfiguredDeletedNextPhase();
-  }
-
   return getConfiguredDeletedNextPhase();
 }
 
@@ -506,7 +704,3 @@ export async function addDeletedNextPhaseIdentifiers(identifiers: string[]): Pro
   });
   return setConfiguredDeletedNextPhase(Array.from(set));
 }
-
-
-
-

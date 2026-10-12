@@ -21,6 +21,8 @@ import {
   X,
   Award,
   CalendarCheck,
+  Copy,
+  ExternalLink,
 } from "lucide-react";
 import { Application, Role, stages, formatPhoneDisplay, formatSlotDisplay } from "@/lib/careers";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
@@ -188,21 +190,40 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
       } else if (activeView === "tested") {
         if (!cand.attendedAt || cand.status === "archived") return false;
       } else if (activeView === "next_phase") {
-        if (cand.nextPhaseStatus !== "selected" && cand.nextPhaseStatus !== "invited" && cand.nextPhaseStatus !== "confirmed") return false;
+        const isNp =
+          cand.nextPhaseStatus === "selected" ||
+          cand.nextPhaseStatus === "invited" ||
+          cand.nextPhaseStatus === "confirmed" ||
+          cand.status === "next_phase_selected" ||
+          cand.status === "next_phase_invited" ||
+          cand.status === "interest_confirmed" ||
+          Boolean(cand.nextPhaseToken);
+        if (!isNp) return false;
       } else if (activeView === "confirmed") {
-        if (cand.nextPhaseResponse !== "yes") return false;
+        const isConf =
+          cand.nextPhaseResponse === "yes" ||
+          cand.nextPhaseStatus === "confirmed" ||
+          cand.status === "interest_confirmed";
+        if (!isConf) return false;
       } else if (activeView === "declined") {
-        if (cand.nextPhaseResponse !== "no" && cand.nextPhaseStatus !== "declined") return false;
+        const isDecl =
+          cand.nextPhaseResponse === "no" ||
+          cand.nextPhaseStatus === "declined" ||
+          cand.status === "interest_declined";
+        if (!isDecl) return false;
       } else if (activeView === "archived") {
         if (cand.status !== "archived") return false;
       } else if (activeView === "all") {
-        // By default on "all", hide archived unless specifically filtered
-        if (cand.status === "archived" && stageFilter !== "archived") return false;
+        // If user is actively searching, search across all candidates including archived
+        if (!searchQuery.trim() && cand.status === "archived" && stageFilter !== "archived") return false;
       }
 
-      // 2. Role filter
-      if (roleFilter !== "all" && cand.role !== roleFilter && !(roleFilter === "cctv" && !cand.role)) {
-        return false;
+      // 2. Role filter (robustly normalize CCTV operator aliases)
+      if (roleFilter !== "all") {
+        const isCandCctv = !cand.role || cand.role === "cctv" || cand.role === "cctv_operator";
+        const isFilterCctv = roleFilter === "cctv" || roleFilter === "cctv_operator";
+        if (isFilterCctv && !isCandCctv) return false;
+        if (!isFilterCctv && cand.role !== roleFilter) return false;
       }
 
       // 3. Stage filter
@@ -223,7 +244,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
       // 6. Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const haystack = `${cand.id} ${cand.id.slice(0, 8)} ${cand.name} ${cand.email} ${cand.whatsapp} ${cand.lastProfession || ""} ${cand.currentLocation || ""} ${cand.yearsCctvExperience || ""}`.toLowerCase();
+        const haystack = `${cand.id} ${cand.id.slice(0, 8)} ${cand.name} ${cand.email} ${cand.whatsapp} ${cand.nextPhaseToken || ""} ${cand.lastProfession || ""} ${cand.currentLocation || ""} ${cand.yearsCctvExperience || ""}`.toLowerCase();
         if (!haystack.includes(q)) return false;
       }
 
@@ -261,12 +282,32 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
   };
 
   // Stage badge formatting
-  const renderStageBadge = (status: string) => {
-    switch (status) {
+  const renderStageBadge = (cand: Application) => {
+    if (cand.nextPhaseResponse === "yes" || cand.nextPhaseStatus === "confirmed") {
+      return (
+        <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1">
+          ✓ {t("Confirmed YES", "Confirmou SIM")}
+        </span>
+      );
+    }
+    if (cand.nextPhaseResponse === "no" || cand.nextPhaseStatus === "declined") {
+      return (
+        <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-slate-100 text-slate-700 border border-slate-300">
+          ✕ {t("Declined NO", "Recusou NÃO")}
+        </span>
+      );
+    }
+    if (cand.nextPhaseInvitedAt || cand.nextPhaseStatus === "invited") {
+      return (
+        <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+          {t("Next Phase Invited", "Convocada Próx. Fase")}
+        </span>
+      );
+    }
+    switch (cand.status) {
       case "shortlisted":
         return <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-sky-50 text-sky-700 border border-sky-200">{t("Shortlisted", "Pré-selecionado")}</span>;
       case "test_invited":
-      case "invited":
         return <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-amber-50 text-amber-700 border border-amber-200">{t("Invited", "Convocado")}</span>;
       case "test_booked":
         return <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">{t("Booked", "Agendado")}</span>;
@@ -754,7 +795,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                       </td>
 
                       <td className="px-4 py-3 whitespace-nowrap">
-                        {renderStageBadge(candidate.status)}
+                        {renderStageBadge(candidate)}
                       </td>
 
                       {/* Technical Application Screening Match */}
@@ -790,13 +831,27 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                       )}
 
                       <td className="px-4 py-3 text-right whitespace-nowrap">
-                        <Link
-                          href={`/admin/recruitment/candidates/${candidate.id}?${searchParams.toString()}`}
-                          className="px-2.5 py-1 rounded border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-medium transition-colors inline-flex items-center gap-1"
-                        >
-                          <Eye size={12} />
-                          <span>{t("Profile", "Perfil")}</span>
-                        </Link>
+                        <div className="inline-flex items-center gap-1.5 justify-end">
+                          {candidate.nextPhaseToken && (
+                            <a
+                              href={`/pt/careers/next-phase/${candidate.nextPhaseToken}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-2 py-1 rounded border border-emerald-300 bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-semibold transition-colors inline-flex items-center gap-1 shadow-2xs"
+                              title={t("Open Dedicated Next Phase Link", "Abrir Link Dedicado da Próxima Fase")}
+                            >
+                              <ExternalLink size={11} className="text-emerald-600" />
+                              <span>{t("Portal", "Portal")}</span>
+                            </a>
+                          )}
+                          <Link
+                            href={`/admin/recruitment/candidates/${candidate.id}?${searchParams.toString()}`}
+                            className="px-2.5 py-1 rounded border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs font-medium transition-colors inline-flex items-center gap-1 shadow-2xs"
+                          >
+                            <Eye size={12} className="text-slate-500" />
+                            <span>{t("Profile", "Perfil")}</span>
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   );
