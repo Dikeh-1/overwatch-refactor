@@ -563,9 +563,9 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
             title={t("Filter by geographical location", "Filtrar por localização geográfica")}
           >
             <option value="all">{t("All Locations", "Todas as Localizações")}</option>
-            <option value="maputo_region">{t("🟢 Maputo Region (Maputo/Matola/Marracuene/Mavalane)", "🟢 Região de Maputo (Maputo/Matola/Marracuene/Mavalane)")}</option>
-            <option value="mozambique_other">{t("🇲🇿 Other Mozambique (Beira, Nampula, etc.)", "🇲🇿 Outro Moçambique (Beira, Nampula, etc.)")}</option>
-            <option value="outside_mozambique">{t("🌐 Outside Mozambique", "🌐 Fora de Moçambique (Internacional)")}</option>
+            <option value="maputo_region">{t("🟢 Maputo Metro Area", "🟢 Área Metropolitana de Maputo")}</option>
+            <option value="mozambique_other">{t("🇲🇿 Other Provinces (Mozambique)", "🇲🇿 Outras Províncias (Moçambique)")}</option>
+            <option value="outside_mozambique">{t("🌐 Outside Mozambique", "🌐 Fora de Moçambique")}</option>
           </select>
 
           {/* Gender Filter */}
@@ -795,6 +795,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
             </div>
 
             {/* Decline Candidates Outside Mozambique / Outside Maputo */}
+            {/* Decline Candidates Outside Mozambique / Other Provinces */}
             <button
               type="button"
               disabled={bulkActionBusy}
@@ -802,14 +803,14 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
               className="px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
               title={
                 locationFilter === "mozambique_other"
-                  ? t("Decline selected candidates based outside Maputo Region", "Recusar candidatos selecionados fora da Região de Maputo")
+                  ? t("Decline selected candidates outside operational deployment area", "Recusar candidatos selecionados fora da área operacional")
                   : t("Decline selected candidates based outside Mozambique", "Recusar candidatos selecionados com base fora de Moçambique")
               }
             >
               {locationFilter === "mozambique_other" ? <MapPin size={13} /> : <Globe size={13} />}
               <span>
                 {locationFilter === "mozambique_other"
-                  ? t("Decline Outside Maputo", "Recusar Fora de Maputo")
+                  ? t("Decline (Other Provinces)", "Recusar (Outras Províncias)")
                   : t("Decline Outside MZ", "Recusar Fora de Moçambique")}
               </span>
             </button>
@@ -936,8 +937,8 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                 <div>
                   <div className="font-semibold text-emerald-950">
                     {t(
-                      `All ${bannerOtherMzCount} candidate(s) outside Maputo Region are Declined (Not Advancing)`,
-                      `Todos os ${bannerOtherMzCount} candidato(s) fora da Região de Maputo foram Recusados (Não Selecionados)`
+                      `All ${bannerOtherMzCount} candidate(s) from other provinces are Declined (Not Advancing)`,
+                      `Todos os ${bannerOtherMzCount} candidato(s) de outras províncias foram Recusados (Não Selecionados)`
                     )}
                   </div>
                   <div className="text-[11px] text-emerald-700">
@@ -963,12 +964,12 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                   <div className="font-semibold text-orange-950">
                     {bannerShowsAllRoles
                       ? t(
-                          `Gestor Técnico: ${bannerOtherMzCount} candidate(s) outside Maputo Region (${gestorTecnicoOtherMzPendingCount} pending decline)`,
-                          `Gestor Técnico: ${bannerOtherMzCount} candidato(s) fora da Região de Maputo (${gestorTecnicoOtherMzPendingCount} pendentes de recusa)`
+                          `Gestor Técnico: ${bannerOtherMzCount} candidate(s) from other provinces (${gestorTecnicoOtherMzPendingCount} pending decline)`,
+                          `Gestor Técnico: ${bannerOtherMzCount} candidato(s) de outras províncias (${gestorTecnicoOtherMzPendingCount} pendentes de recusa)`
                         )
                       : t(
-                          `Displaying ${filteredCandidates.length} candidate(s) in Mozambique — outside Maputo Region (${gestorTecnicoOtherMzPendingCount} pending decline)`,
-                          `A visualizar ${filteredCandidates.length} candidato(s) em Moçambique — fora da Região de Maputo (${gestorTecnicoOtherMzPendingCount} pendentes de recusa)`
+                          `Displaying ${filteredCandidates.length} candidate(s) in Mozambique — other provinces (${gestorTecnicoOtherMzPendingCount} pending decline)`,
+                          `A visualizar ${filteredCandidates.length} candidato(s) em Moçambique — outras províncias (${gestorTecnicoOtherMzPendingCount} pendentes de recusa)`
                         )}
                   </div>
                   <div className="text-[11px] text-orange-800">
@@ -978,8 +979,8 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                           "⚠ Filtre pelo cargo 'Gestor Técnico' antes de usar Recusar Todos."
                         )
                       : t(
-                          "Leadership directive (Filipa): Gestor Técnico requires physical presence in Maputo, Matola, Marracuene or Mavalane only.",
-                          "Directriz da Direcção (Filipa): Gestor Técnico requer presença física apenas em Maputo, Matola, Marracuene ou Mavalane."
+                          "Operational requirement: Gestor Técnico requires immediate on-site technical availability and local field presence.",
+                          "Requisito operacional: o cargo de Gestor Técnico requer disponibilidade técnica presencial imediata e intervenção local no terreno."
                         )}
                   </div>
                 </div>
@@ -1336,12 +1337,12 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                 <div>
                   <div>
                     {locationFilter === "mozambique_other"
-                      ? t("Decline Candidates Outside Maputo Region", "Recusar Candidatos Fora da Região de Maputo")
+                      ? t("Decline Candidates (Other Provinces)", "Recusar Candidatos (Outras Províncias)")
                       : t("Decline Candidates Outside Mozambique", "Recusar Candidatos Fora de Moçambique")}
                   </div>
                   <div className="text-[11px] font-normal text-slate-500">
                     {locationFilter === "mozambique_other"
-                      ? t("Leadership Directive (Filipa) · Maputo / Matola / Marracuene / Mavalane only", "Directriz da Direcção (Filipa) · Apenas Maputo / Matola / Marracuene / Mavalane")
+                      ? t("Operational Readiness & Field Presence Criteria", "Critério de Prontidão Operacional e Presença no Terreno")
                       : t("Official Leadership Template · Gestor Técnico", "Modelo Oficial da Direcção · Gestor Técnico")}
                   </div>
                 </div>
@@ -1366,12 +1367,12 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                       `Target Audience: ${
                         selectedIds.size > 0
                           ? `${selectedIds.size} selected candidate(s)`
-                          : `${applications.filter((a) => (a.role === "technical" || a.role === "cctv_technical_manager") && classifyCandidateLocation(a).group === "mozambique_other").length} candidate(s) detected outside Maputo Region`
+                          : `${applications.filter((a) => (a.role === "technical" || a.role === "cctv_technical_manager") && classifyCandidateLocation(a).group === "mozambique_other").length} candidate(s) from other provinces`
                       }`,
                       `Público-Alvo: ${
                         selectedIds.size > 0
                           ? `${selectedIds.size} candidato(s) selecionado(s)`
-                          : `${applications.filter((a) => (a.role === "technical" || a.role === "cctv_technical_manager") && classifyCandidateLocation(a).group === "mozambique_other").length} candidato(s) detectados fora da Região de Maputo`
+                          : `${applications.filter((a) => (a.role === "technical" || a.role === "cctv_technical_manager") && classifyCandidateLocation(a).group === "mozambique_other").length} candidato(s) de outras províncias`
                       }`
                     )
                   : t(
@@ -1390,8 +1391,8 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
               <div className="text-slate-600 text-[11px] leading-relaxed">
                 {locationFilter === "mozambique_other"
                   ? t(
-                      "All selected candidates based outside the Maputo Metropolitan area (Maputo, Matola, Marracuene, Mavalane) will be moved to 'Not Advancing' (Declined) with the specific regional notification email sent via Brevo.",
-                      "Todos os candidatos selecionados com residência fora da Grande Maputo (Maputo, Matola, Marracuene, Mavalane) serão movidos para 'Não Selecionado' com envio do email específico de notificação regional via Brevo."
+                      "Selected candidates not meeting the immediate local deployment requirements will be moved to 'Not Advancing' (Declined) with the formal notification email sent via Brevo.",
+                      "Os candidatos selecionados que não cumpram os requisitos imediatos de prontidão operacional local serão movidos para 'Não Selecionado' com envio do email formal via Brevo."
                     )
                   : t(
                       "All selected candidates based outside Mozambique will be moved to 'Not Advancing' (Declined) with the formal notification email sent via Brevo.",
@@ -1405,7 +1406,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
               <div className="font-semibold text-[11px] uppercase tracking-wider text-amber-900 flex items-center justify-between">
                 <span>
                   {locationFilter === "mozambique_other"
-                    ? t("Approved Regional Decline Copy (Filipa Directive)", "Texto Aprovado: Região de Maputo (Directriz Filipa)")
+                    ? t("Approved Operational Notice Copy", "Texto de Notificação Operacional Aprovado")
                     : t("Approved Rejection Email Copy", "Texto do Email Aprovado pela Direcção")}
                 </span>
                 <span className="text-[10px] font-mono text-slate-500 font-bold">PT-MZ</span>
@@ -1415,9 +1416,9 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                   <>
                     <p className="font-semibold text-slate-900">Prezado(a) Candidato(a),</p>
                     <p>Agradecemos o seu interesse em integrar a equipa da Overwatch e o tempo dedicado à sua candidatura à posição de Gestor Técnico.</p>
-                    <p>Após uma análise detalhada dos perfis recebidos, verificámos que a sua localização actual não se encontra na região de Maputo (Maputo, Matola, Marracuene ou Mavalane). Dada a natureza estritamente presencial desta função, que exige disponibilidade física imediata nas nossas instalações e no terreno na área da Grande Maputo, não nos é possível avançar com candidaturas de profissionais que não residam nesta região.</p>
-                    <p>Desta forma, informamos que a sua candidatura não foi seleccionada para prosseguir nas fases seguintes deste processo de recrutamento.</p>
-                    <p>Manteremos os seus contactos na nossa base de dados para futuras oportunidades que se enquadrem melhor no seu perfil e localização.</p>
+                    <p>Após uma análise cuidada da sua candidatura, informamos que, devido às exigências operacionais e à necessidade de intervenção técnica presencial imediata no terreno associadas a esta função, decidimos avançar nesta fase com candidaturas que respondem aos critérios de prontidão e disponibilidade logística local definidos para o projecto.</p>
+                    <p>Desta forma, não nos será possível dar seguimento à sua candidatura para esta vaga específica.</p>
+                    <p>Agradecemos sinceramente a sua participação e manteremos o seu perfil registado na nossa base de dados para futuras oportunidades que se alinhem com as suas qualificações.</p>
                     <p>Desejamos-lhe os maiores sucessos no seu percurso profissional.</p>
                     <div className="text-slate-600 pt-2 border-t border-slate-100 text-[11px]">
                       Com os melhores cumprimentos,<br />

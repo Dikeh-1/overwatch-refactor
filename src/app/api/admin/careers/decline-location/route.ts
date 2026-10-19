@@ -79,12 +79,12 @@ export async function POST(request: Request) {
 
     const auditLabel =
       declineType === "mozambique_other"
-        ? "Declined: Outside Maputo Region"
+        ? "Declined: Operational Logistics / Field Readiness"
         : "Declined: Outside Mozambique";
 
     const auditDetails =
       declineType === "mozambique_other"
-        ? "Candidatura declinada por não residir na região de Maputo (Maputo, Matola, Marracuene ou Mavalane). Requisito de presença física na Grande Maputo."
+        ? "Candidatura não selecionada devido aos requisitos operacionais imediatos e logística de intervenção presencial no terreno."
         : "Candidatura declinada por motivo de localização. Requisito presencial em Moçambique.";
 
     const results: {

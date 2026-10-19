@@ -3261,9 +3261,9 @@ export async function sendTechnicalRegionDeclineEmail({
           <div style="padding: 28px 24px; background-color: #ffffff;">
             <p style="font-size: 14px; margin-top: 0; color: #1e293b; line-height: 1.6;">Prezado(a) Candidato(a) <strong>${escapeHtml(application.name)}</strong>,</p>
             <p style="font-size: 14px; color: #334155; line-height: 1.6;">Agradecemos o seu interesse em integrar a equipa da Overwatch e o tempo dedicado à sua candidatura à posição de Gestor Técnico.</p>
-            <p style="font-size: 14px; color: #334155; line-height: 1.6;">Após uma análise detalhada dos perfis recebidos, verificámos que a sua localização actual não se encontra na região de Maputo (Maputo, Matola, Marracuene ou Mavalane). Dada a natureza estritamente presencial desta função, que exige disponibilidade física imediata nas nossas instalações e no terreno na área da Grande Maputo, não nos é possível avançar com candidaturas de profissionais que não residam nesta região.</p>
-            <p style="font-size: 14px; color: #334155; line-height: 1.6;">Desta forma, informamos que a sua candidatura não foi seleccionada para prosseguir nas fases seguintes deste processo de recrutamento.</p>
-            <p style="font-size: 14px; color: #334155; line-height: 1.6;">Manteremos os seus contactos na nossa base de dados para futuras oportunidades que se enquadrem melhor no seu perfil e localização.</p>
+            <p style="font-size: 14px; color: #334155; line-height: 1.6;">Após uma análise cuidada da sua candidatura, informamos que, devido às exigências operacionais e à necessidade de intervenção técnica presencial imediata no terreno associadas a esta função, decidimos avançar nesta fase com candidaturas que respondem aos critérios de prontidão e disponibilidade logística local definidos para o projecto.</p>
+            <p style="font-size: 14px; color: #334155; line-height: 1.6;">Desta forma, não nos será possível dar seguimento à sua candidatura para esta vaga específica.</p>
+            <p style="font-size: 14px; color: #334155; line-height: 1.6;">Agradecemos sinceramente a sua participação e manteremos o seu perfil registado na nossa base de dados para futuras oportunidades que se alinhem com as suas qualificações.</p>
             <p style="font-size: 14px; color: #334155; line-height: 1.6;">Desejamos-lhe os maiores sucessos no seu percurso profissional.</p>
 
             <!-- Formal Sign-Off -->
@@ -3290,11 +3290,11 @@ export async function sendTechnicalRegionDeclineEmail({
 
 Agradecemos o seu interesse em integrar a equipa da Overwatch e o tempo dedicado à sua candidatura à posição de Gestor Técnico.
 
-Após uma análise detalhada dos perfis recebidos, verificámos que a sua localização actual não se encontra na região de Maputo (Maputo, Matola, Marracuene ou Mavalane). Dada a natureza estritamente presencial desta função, que exige disponibilidade física imediata nas nossas instalações e no terreno na área da Grande Maputo, não nos é possível avançar com candidaturas de profissionais que não residam nesta região.
+Após uma análise cuidada da sua candidatura, informamos que, devido às exigências operacionais e à necessidade de intervenção técnica presencial imediata no terreno associadas a esta função, decidimos avançar nesta fase com candidaturas que respondem aos critérios de prontidão e disponibilidade logística local definidos para o projecto.
 
-Desta forma, informamos que a sua candidatura não foi seleccionada para prosseguir nas fases seguintes deste processo de recrutamento.
+Desta forma, não nos será possível dar seguimento à sua candidatura para esta vaga específica.
 
-Manteremos os seus contactos na nossa base de dados para futuras oportunidades que se enquadrem melhor no seu perfil e localização.
+Agradecemos sinceramente a sua participação e manteremos o seu perfil registado na nossa base de dados para futuras oportunidades que se alinhem com as suas qualificações.
 
 Desejamos-lhe os maiores sucessos no seu percurso profissional.
 
