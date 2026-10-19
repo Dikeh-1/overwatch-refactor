@@ -794,16 +794,24 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
               </select>
             </div>
 
-            {/* Decline Candidates Outside Mozambique */}
+            {/* Decline Candidates Outside Mozambique / Outside Maputo */}
             <button
               type="button"
               disabled={bulkActionBusy}
               onClick={() => setDeclineLocationModalOpen(true)}
               className="px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-              title={t("Decline selected candidates based outside Mozambique", "Recusar candidatos selecionados com base fora de Moçambique")}
+              title={
+                locationFilter === "mozambique_other"
+                  ? t("Decline selected candidates based outside Maputo Region", "Recusar candidatos selecionados fora da Região de Maputo")
+                  : t("Decline selected candidates based outside Mozambique", "Recusar candidatos selecionados com base fora de Moçambique")
+              }
             >
-              <Globe size={13} />
-              <span>{t("Decline Outside MZ", "Recusar Fora de Moçambique")}</span>
+              {locationFilter === "mozambique_other" ? <MapPin size={13} /> : <Globe size={13} />}
+              <span>
+                {locationFilter === "mozambique_other"
+                  ? t("Decline Outside Maputo", "Recusar Fora de Maputo")
+                  : t("Decline Outside MZ", "Recusar Fora de Moçambique")}
+              </span>
             </button>
 
             <button
@@ -1353,44 +1361,84 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
             {/* Target summary */}
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs">
               <div className="font-semibold text-slate-800 mb-1">
-                {t(
-                  `Target Audience: ${
-                    selectedIds.size > 0
-                      ? `${selectedIds.size} selected candidate(s)`
-                      : `${applications.filter((a) => (a.role === "technical" || a.role === "cctv_technical_manager") && classifyCandidateLocation(a).group === "outside_mozambique").length} candidate(s) detected outside Mozambique`
-                  }`,
-                  `Público-Alvo: ${
-                    selectedIds.size > 0
-                      ? `${selectedIds.size} candidato(s) selecionado(s)`
-                      : `${applications.filter((a) => (a.role === "technical" || a.role === "cctv_technical_manager") && classifyCandidateLocation(a).group === "outside_mozambique").length} candidato(s) detectados fora de Moçambique`
-                  }`
-                )}
+                {locationFilter === "mozambique_other"
+                  ? t(
+                      `Target Audience: ${
+                        selectedIds.size > 0
+                          ? `${selectedIds.size} selected candidate(s)`
+                          : `${applications.filter((a) => (a.role === "technical" || a.role === "cctv_technical_manager") && classifyCandidateLocation(a).group === "mozambique_other").length} candidate(s) detected outside Maputo Region`
+                      }`,
+                      `Público-Alvo: ${
+                        selectedIds.size > 0
+                          ? `${selectedIds.size} candidato(s) selecionado(s)`
+                          : `${applications.filter((a) => (a.role === "technical" || a.role === "cctv_technical_manager") && classifyCandidateLocation(a).group === "mozambique_other").length} candidato(s) detectados fora da Região de Maputo`
+                      }`
+                    )
+                  : t(
+                      `Target Audience: ${
+                        selectedIds.size > 0
+                          ? `${selectedIds.size} selected candidate(s)`
+                          : `${applications.filter((a) => (a.role === "technical" || a.role === "cctv_technical_manager") && classifyCandidateLocation(a).group === "outside_mozambique").length} candidate(s) detected outside Mozambique`
+                      }`,
+                      `Público-Alvo: ${
+                        selectedIds.size > 0
+                          ? `${selectedIds.size} candidato(s) selecionado(s)`
+                          : `${applications.filter((a) => (a.role === "technical" || a.role === "cctv_technical_manager") && classifyCandidateLocation(a).group === "outside_mozambique").length} candidato(s) detectados fora de Moçambique`
+                      }`
+                    )}
               </div>
               <div className="text-slate-600 text-[11px] leading-relaxed">
-                {t(
-                  "All selected candidates based outside Mozambique will be moved to 'Not Advancing' (Declined) with the formal notification email sent via Brevo.",
-                  "Todos os candidatos selecionados com residência fora de Moçambique serão movidos para 'Não Selecionado' com envio do email oficial de notificação via Brevo."
-                )}
+                {locationFilter === "mozambique_other"
+                  ? t(
+                      "All selected candidates based outside the Maputo Metropolitan area (Maputo, Matola, Marracuene, Mavalane) will be moved to 'Not Advancing' (Declined) with the specific regional notification email sent via Brevo.",
+                      "Todos os candidatos selecionados com residência fora da Grande Maputo (Maputo, Matola, Marracuene, Mavalane) serão movidos para 'Não Selecionado' com envio do email específico de notificação regional via Brevo."
+                    )
+                  : t(
+                      "All selected candidates based outside Mozambique will be moved to 'Not Advancing' (Declined) with the formal notification email sent via Brevo.",
+                      "Todos os candidatos selecionados com residência fora de Moçambique serão movidos para 'Não Selecionado' com envio do email oficial de notificação via Brevo."
+                    )}
               </div>
             </div>
 
             {/* Official Message Template Preview */}
             <div className="border border-slate-200 rounded-lg p-3.5 bg-amber-50/40 text-xs space-y-2">
               <div className="font-semibold text-[11px] uppercase tracking-wider text-amber-900 flex items-center justify-between">
-                <span>{t("Approved Rejection Email Copy", "Texto do Email Aprovado pela Direcção")}</span>
+                <span>
+                  {locationFilter === "mozambique_other"
+                    ? t("Approved Regional Decline Copy (Filipa Directive)", "Texto Aprovado: Região de Maputo (Directriz Filipa)")
+                    : t("Approved Rejection Email Copy", "Texto do Email Aprovado pela Direcção")}
+                </span>
                 <span className="text-[10px] font-mono text-slate-500 font-bold">PT-MZ</span>
               </div>
               <div className="bg-white border border-slate-200 rounded-md p-3.5 text-slate-700 text-[12px] leading-relaxed font-sans space-y-2 shadow-2xs">
-                <p className="font-semibold text-slate-900">Prezado(a) Candidato(a),</p>
-                <p>Agradecemos o seu interesse em integrar a equipa da Overwatch e o tempo dedicado à sua candidatura à posição de Gestor Técnico.</p>
-                <p>Após análise da sua candidatura, informamos que, nesta fase, estamos a dar prioridade a candidatos que se encontram actualmente em Moçambique, devido às necessidades operacionais e de disponibilidade presencial associadas à função.</p>
-                <p>Por este motivo, não será possível dar seguimento à sua candidatura neste processo de recrutamento.</p>
-                <p>Agradecemos novamente o seu interesse e desejamos-lhe sucesso no seu percurso profissional.</p>
-                <div className="text-slate-600 pt-2 border-t border-slate-100 text-[11px]">
-                  Com os melhores cumprimentos,<br />
-                  <strong className="text-slate-900">Equipa de Recrutamento</strong><br />
-                  <span>Overwatch Moçambique</span>
-                </div>
+                {locationFilter === "mozambique_other" ? (
+                  <>
+                    <p className="font-semibold text-slate-900">Prezado(a) Candidato(a),</p>
+                    <p>Agradecemos o seu interesse em integrar a equipa da Overwatch e o tempo dedicado à sua candidatura à posição de Gestor Técnico.</p>
+                    <p>Após uma análise detalhada dos perfis recebidos, verificámos que a sua localização actual não se encontra na região de Maputo (Maputo, Matola, Marracuene ou Mavalane). Dada a natureza estritamente presencial desta função, que exige disponibilidade física imediata nas nossas instalações e no terreno na área da Grande Maputo, não nos é possível avançar com candidaturas de profissionais que não residam nesta região.</p>
+                    <p>Desta forma, informamos que a sua candidatura não foi seleccionada para prosseguir nas fases seguintes deste processo de recrutamento.</p>
+                    <p>Manteremos os seus contactos na nossa base de dados para futuras oportunidades que se enquadrem melhor no seu perfil e localização.</p>
+                    <p>Desejamos-lhe os maiores sucessos no seu percurso profissional.</p>
+                    <div className="text-slate-600 pt-2 border-t border-slate-100 text-[11px]">
+                      Com os melhores cumprimentos,<br />
+                      <strong className="text-slate-900">Equipa de Recrutamento &amp; Selecção</strong><br />
+                      <span>Overwatch Moçambique</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-semibold text-slate-900">Prezado(a) Candidato(a),</p>
+                    <p>Agradecemos o seu interesse em integrar a equipa da Overwatch e o tempo dedicado à sua candidatura à posição de Gestor Técnico.</p>
+                    <p>Após análise da sua candidatura, informamos que, nesta fase, estamos a dar prioridade a candidatos que se encontram actualmente em Moçambique, devido às necessidades operacionais e de disponibilidade presencial associadas à função.</p>
+                    <p>Por este motivo, não será possível dar seguimento à sua candidatura neste processo de recrutamento.</p>
+                    <p>Agradecemos novamente o seu interesse e desejamos-lhe sucesso no seu percurso profissional.</p>
+                    <div className="text-slate-600 pt-2 border-t border-slate-100 text-[11px]">
+                      Com os melhores cumprimentos,<br />
+                      <strong className="text-slate-900">Equipa de Recrutamento</strong><br />
+                      <span>Overwatch Moçambique</span>
+                    </div>
+                  </>
+                )}
               </div>
               <div className="text-[11px] text-slate-600 bg-amber-100/60 px-2 py-1 rounded">
                 <strong>Assunto:</strong> Overwatch | Candidatura à Vaga de Gestor Técnico
@@ -1420,7 +1468,14 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                       const res = await fetch("/api/admin/careers/decline-location", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ preview: true, previewEmail }),
+                        body: JSON.stringify({
+                          preview: true,
+                          previewEmail,
+                          declineType:
+                            locationFilter === "mozambique_other"
+                              ? "mozambique_other"
+                              : "outside_mozambique",
+                        }),
                       });
                       const d = await res.json();
                       if (res.ok) {
