@@ -1,10 +1,55 @@
 import "server-only";
 import { mkdir, readFile, writeFile, rename, unlink } from "node:fs/promises";
 import path from "node:path";
+import os from "node:os";
+import { Pool } from "pg";
 import type { CareerRoleDefinition, CareerCohort } from "./careers-models";
 import { DEFAULT_TEST_SLOTS } from "./careers";
 
-const directory = path.join(process.cwd(), ".careers-data");
+const isServerless = Boolean(
+  process.env.VERCEL ||
+  process.env.AWS_LAMBDA_FUNCTION_NAME ||
+  process.env.NODE_ENV === "production"
+);
+
+const directory = isServerless
+  ? path.join(os.tmpdir(), ".careers-data")
+  : path.join(process.cwd(), ".careers-data");
+
+let pgPool: Pool | null = null;
+function getPgPool(): Pool | null {
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) return null;
+  if (!pgPool) {
+    pgPool = new Pool({
+      connectionString: dbUrl,
+      ssl: { rejectUnauthorized: false },
+      max: 10,
+    });
+  }
+  return pgPool;
+}
+
+let tableEnsured = false;
+async function ensureSystemConfigsTable(): Promise<boolean> {
+  const pool = getPgPool();
+  if (!pool) return false;
+  if (tableEnsured) return true;
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS system_configs (
+        key text PRIMARY KEY,
+        value jsonb NOT NULL,
+        updated_at timestamptz DEFAULT NOW()
+      )
+    `);
+    tableEnsured = true;
+    return true;
+  } catch (err) {
+    console.warn("Could not ensure system_configs table:", err);
+    return false;
+  }
+}
 
 function getSupabaseUrl() {
   return (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim().replace(/\/+$/, "");
@@ -15,7 +60,7 @@ function getSupabaseKey() {
 }
 
 export function isRemoteConfigStore() {
-  return !!(getSupabaseUrl() && getSupabaseKey());
+  return !!(getPgPool() || (getSupabaseUrl() && getSupabaseKey()));
 }
 
 async function api(endpoint: string, init: RequestInit = {}) {
@@ -61,11 +106,18 @@ async function readLocal<T>(filename: string, fallback: T): Promise<T> {
 }
 
 async function writeLocal(filename: string, data: any) {
-  await mkdir(directory, { recursive: true });
-  const finalPath = path.join(directory, filename);
-  const tempPath = `${finalPath}.${Date.now()}.tmp`;
-  await writeFile(tempPath, JSON.stringify(data, null, 2), "utf8");
-  await rename(tempPath, finalPath);
+  try {
+    await mkdir(directory, { recursive: true });
+    const finalPath = path.join(directory, filename);
+    const tempPath = `${finalPath}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`;
+    await writeFile(tempPath, JSON.stringify(data, null, 2), "utf8");
+    await rename(tempPath, finalPath);
+  } catch (err) {
+    // Graceful on read-only environments when DB is configured
+    if (!isServerless && !getPgPool()) {
+      throw err;
+    }
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -131,8 +183,25 @@ const FILENAME_MAP: Record<SystemConfigKey, string> = {
 export async function getSystemConfig<T>(key: SystemConfigKey, fallback: T): Promise<T> {
   const filename = FILENAME_MAP[key];
 
-  if (isRemoteConfigStore()) {
-    // 1. Try dedicated Supabase Storage bucket under system-configs/
+  // 1. Try PostgreSQL system_configs table (fast, reliable, persistent)
+  const pool = getPgPool();
+  if (pool) {
+    try {
+      await ensureSystemConfigsTable();
+      const res = await pool.query(
+        "SELECT value FROM system_configs WHERE key = $1 LIMIT 1",
+        [key]
+      );
+      if (res.rows && res.rows.length > 0 && res.rows[0].value !== undefined && res.rows[0].value !== null) {
+        return res.rows[0].value as T;
+      }
+    } catch (pgErr) {
+      console.warn(`PG getSystemConfig(${key}) warning:`, pgErr);
+    }
+  }
+
+  if (getSupabaseUrl() && getSupabaseKey()) {
+    // 2. Try dedicated Supabase Storage bucket under system-configs/
     try {
       const res = await api(`/storage/v1/object/career-cvs/system-configs/${filename}`);
       if (res.ok) {
@@ -144,7 +213,7 @@ export async function getSystemConfig<T>(key: SystemConfigKey, fallback: T): Pro
       }
     } catch {}
 
-    // 2. Try root storage backup path
+    // 3. Try root storage backup path
     try {
       const res = await api(`/storage/v1/object/career-cvs/${filename}`);
       if (res.ok) {
@@ -155,25 +224,35 @@ export async function getSystemConfig<T>(key: SystemConfigKey, fallback: T): Pro
         }
       }
     } catch {}
-
-    // 3. Fallback to local files if present
-    const localVal = await readLocal<T>(filename, fallback);
-    return localVal;
   }
 
+  // 4. Fallback to local files if present
   return readLocal<T>(filename, fallback);
 }
 
 export async function setSystemConfig<T>(key: SystemConfigKey, data: T): Promise<T> {
   const filename = FILENAME_MAP[key];
 
-  // 1. Always update local storage file
-  await exclusive(async () => {
-    await writeLocal(filename, data);
-  });
+  // 1. Persist to PostgreSQL system_configs table
+  const pool = getPgPool();
+  let pgSaved = false;
+  if (pool) {
+    try {
+      await ensureSystemConfigsTable();
+      await pool.query(
+        `INSERT INTO system_configs (key, value, updated_at)
+         VALUES ($1, $2, NOW())
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+        [key, JSON.stringify(data)]
+      );
+      pgSaved = true;
+    } catch (pgErr) {
+      console.warn(`PG setSystemConfig(${key}) error:`, pgErr);
+    }
+  }
 
   // 2. If remote Supabase is configured, persist to dedicated storage object
-  if (isRemoteConfigStore()) {
+  if (getSupabaseUrl() && getSupabaseKey()) {
     try {
       const jsonBody = Buffer.from(JSON.stringify(data, null, 2), "utf8");
 
@@ -202,6 +281,17 @@ export async function setSystemConfig<T>(key: SystemConfigKey, data: T): Promise
 
     // Trigger cleanup of any legacy rows in career_applications asynchronously
     purgeLegacySystemRowsFromApplicationsTable().catch(() => {});
+  }
+
+  // 3. Best-effort local storage backup (never fails the request if disk is read-only)
+  try {
+    await exclusive(async () => {
+      await writeLocal(filename, data);
+    });
+  } catch (err) {
+    if (!pgSaved && !isServerless) {
+      console.error(`Failed to write local config ${filename}:`, err);
+    }
   }
 
   return data;

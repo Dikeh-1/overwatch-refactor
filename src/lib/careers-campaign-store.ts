@@ -20,6 +20,22 @@ import {
   setConfiguredCohorts,
 } from "./careers-config-store";
 
+import { Pool } from "pg";
+
+let pgPool: Pool | null = null;
+function getPgPool(): Pool | null {
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) return null;
+  if (!pgPool) {
+    pgPool = new Pool({
+      connectionString: dbUrl,
+      ssl: { rejectUnauthorized: false },
+      max: 10,
+    });
+  }
+  return pgPool;
+}
+
 function getSupabaseUrl() {
   return (
     process.env.SUPABASE_URL ||
@@ -37,7 +53,10 @@ function getSupabaseKey() {
 }
 
 function isRemote() {
-  return Boolean(getSupabaseUrl() && getSupabaseKey() && getSupabaseKey().length > 10);
+  return Boolean(
+    getPgPool() ||
+    (getSupabaseUrl() && getSupabaseKey() && getSupabaseKey().length > 10)
+  );
 }
 
 function isServerless() {
@@ -180,20 +199,36 @@ export async function getRoleDefinitions(forceFresh = false): Promise<CareerRole
       } catch {}
     }
 
-    // 4. Fetch authoritative open/closed status from Supabase career_roles
+    // 4. Fetch authoritative open/closed status from PostgreSQL career_roles (or Supabase)
     const remoteOpenMap: Record<string, boolean> = {};
-    try {
-      const res = await api("/rest/v1/career_roles?select=id,open");
-      const rows = await res.json();
-      if (Array.isArray(rows)) {
-        for (const row of rows) {
-          if (row.id) {
-            remoteOpenMap[row.id] = Boolean(row.open);
+    const pool = getPgPool();
+    if (pool) {
+      try {
+        const res = await pool.query("SELECT id, open FROM career_roles");
+        if (res.rows) {
+          for (const row of res.rows) {
+            if (row.id) {
+              remoteOpenMap[row.id] = Boolean(row.open);
+            }
           }
         }
+      } catch (pgErr) {
+        console.warn("Could not query career_roles from PG:", pgErr);
       }
-    } catch (e) {
-      console.warn("Could not query career_roles from Supabase:", e);
+    } else if (getSupabaseUrl() && getSupabaseKey()) {
+      try {
+        const res = await api("/rest/v1/career_roles?select=id,open");
+        const rows = await res.json();
+        if (Array.isArray(rows)) {
+          for (const row of rows) {
+            if (row.id) {
+              remoteOpenMap[row.id] = Boolean(row.open);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Could not query career_roles from Supabase:", e);
+      }
     }
 
     // Combine configs or fallback to defaults
