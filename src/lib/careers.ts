@@ -91,6 +91,7 @@ export type ArchiveReason =
   | "Candidate Withdrew"
   | "Declined Next Phase"
   | "Outside Mozambique"
+  | "Outside Maputo Region"
   | "Duplicate"
   | "Recruitment Closed"
   | "Other";

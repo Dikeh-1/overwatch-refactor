@@ -3035,6 +3035,7 @@ export async function sendNextPhaseInstructionsEmail(options: {
 /**
  * Send official location-based decline email for Gestor Técnico position (Filipa's template)
  */
+/** Decline email for candidates outside Mozambique entirely */
 export async function sendTechnicalLocationDeclineEmail({
   application,
   baseUrl,
@@ -3171,5 +3172,146 @@ Website: ${origin}
   });
 }
 
+/**
+ * Decline email for Gestor Técnico candidates based IN Mozambique but
+ * OUTSIDE the Maputo metro area (Beira, Nampula, Sofala, Tete, Inhambane etc.)
+ * per Filipa's directive: only Maputo / Matola / Marracuene / Mavalane.
+ */
+export async function sendTechnicalRegionDeclineEmail({
+  application,
+  baseUrl,
+  preview = false,
+  recipientEmail,
+}: {
+  application: { name: string; email: string };
+  baseUrl?: string;
+  preview?: boolean;
+  recipientEmail?: string;
+}) {
+  if (
+    (!process.env.BREVO_API_KEY && !process.env.FALLBACK_SMTP_PASS) ||
+    application.email.endsWith(".invalid") ||
+    process.env.CAREERS_TEST_MODE === "true"
+  ) {
+    return { success: true, mocked: true };
+  }
 
+  const origin = (
+    baseUrl ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "https://www.overwatchmoz.com"
+  ).replace(/\/+$/, "");
+  const logoWhiteUrl = `${origin}/logo-white.png`;
+  const subject = "Overwatch | Candidatura à Vaga de Gestor Técnico";
 
+  const sender = {
+    name: "Overwatch Recrutamento",
+    email: "noreply@overwatchmoz.com",
+  };
+
+  const toEmail = preview && recipientEmail ? recipientEmail : application.email;
+  const toName = preview ? `[PREVIEW] ${application.name}` : application.name;
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="pt">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${subject}</title>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; -webkit-font-smoothing: antialiased;">
+      <div style="background-color: #f1f5f9; padding: 32px 16px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08); overflow: hidden;">
+
+          <!-- Official Letterhead Header (Dark Navy) -->
+          <div style="background-color: #0b1329; padding: 18px 24px; border-bottom: 2px solid rgba(255, 255, 255, 0.15);">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="vertical-align: middle;">
+                  <img src="${logoWhiteUrl}" alt="Overwatch" height="22" width="147" style="height: 22px; width: auto; max-width: 145px; display: block; border: 0;" />
+                </td>
+                <td style="vertical-align: middle; text-align: right;">
+                  <span style="display: inline-block; background-color: rgba(255, 255, 255, 0.12); color: #ffffff; font-family: monospace; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.2); letter-spacing: 0.04em;">
+                    REF: GESTOR-TECNICO/2026
+                  </span>
+                  <div style="font-size: 11px; color: #cbd5e1; margin-top: 4px; font-weight: 500;">
+                    Departamento de Recursos Humanos
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Official Subheading Bar -->
+          <div style="background-color: #f8fafc; padding: 10px 24px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #334155;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #334155;">
+                  NOTIFICAÇÃO OFICIAL · PROCESSO DE SELECÇÃO
+                </td>
+                <td style="text-align: right; color: #64748b;">
+                  Maputo, Moçambique
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Body Content (Clean White) -->
+          <div style="padding: 28px 24px; background-color: #ffffff;">
+            <p style="font-size: 14px; margin-top: 0; color: #1e293b; line-height: 1.6;">Prezado(a) Candidato(a) <strong>${escapeHtml(application.name)}</strong>,</p>
+            <p style="font-size: 14px; color: #334155; line-height: 1.6;">Agradecemos o seu interesse em integrar a equipa da Overwatch e o tempo dedicado à sua candidatura à posição de Gestor Técnico.</p>
+            <p style="font-size: 14px; color: #334155; line-height: 1.6;">Após uma análise detalhada dos perfis recebidos, verificámos que a sua localização actual não se encontra na região de Maputo (Maputo, Matola, Marracuene ou Mavalane). Dada a natureza estritamente presencial desta função, que exige disponibilidade física imediata nas nossas instalações e no terreno na área da Grande Maputo, não nos é possível avançar com candidaturas de profissionais que não residam nesta região.</p>
+            <p style="font-size: 14px; color: #334155; line-height: 1.6;">Desta forma, informamos que a sua candidatura não foi seleccionada para prosseguir nas fases seguintes deste processo de recrutamento.</p>
+            <p style="font-size: 14px; color: #334155; line-height: 1.6;">Manteremos os seus contactos na nossa base de dados para futuras oportunidades que se enquadrem melhor no seu perfil e localização.</p>
+            <p style="font-size: 14px; color: #334155; line-height: 1.6;">Desejamos-lhe os maiores sucessos no seu percurso profissional.</p>
+
+            <!-- Formal Sign-Off -->
+            <div style="margin-top: 24px; font-size: 14px; color: #334155; line-height: 1.5;">
+              Com os melhores cumprimentos,<br />
+              <strong style="color: #090d16;">Equipa de Recrutamento &amp; Selecção</strong><br />
+              <span style="color: #475569; font-size: 13px; font-weight: 600;">Overwatch Moçambique</span>
+            </div>
+          </div>
+
+          <!-- Formal Legal & Contact Footer -->
+          <div style="background-color: #f8fafc; padding: 22px 32px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6;">
+            <strong style="color: #090d16;">Overwatch Moçambique, Lda.</strong><br />
+            ${siteContact.address.pt}<br />
+            Telefone / WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #0284c7; text-decoration: none; font-weight: 600;">+258 84 287 0793</a> · Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none;">${siteContact.email}</a> · Website: <a href="${origin}" style="color: #64748b; text-decoration: none;">www.overwatchmoz.com</a>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const textContent = `Prezado(a) Candidato(a) ${application.name},
+
+Agradecemos o seu interesse em integrar a equipa da Overwatch e o tempo dedicado à sua candidatura à posição de Gestor Técnico.
+
+Após uma análise detalhada dos perfis recebidos, verificámos que a sua localização actual não se encontra na região de Maputo (Maputo, Matola, Marracuene ou Mavalane). Dada a natureza estritamente presencial desta função, que exige disponibilidade física imediata nas nossas instalações e no terreno na área da Grande Maputo, não nos é possível avançar com candidaturas de profissionais que não residam nesta região.
+
+Desta forma, informamos que a sua candidatura não foi seleccionada para prosseguir nas fases seguintes deste processo de recrutamento.
+
+Manteremos os seus contactos na nossa base de dados para futuras oportunidades que se enquadrem melhor no seu perfil e localização.
+
+Desejamos-lhe os maiores sucessos no seu percurso profissional.
+
+Com os melhores cumprimentos,
+Equipa de Recrutamento & Selecção
+Overwatch Moçambique
+Av. do Trabalho, N.º 1948, Maputo
+Telefone / WhatsApp: +258 84 287 0793
+Email: ${siteContact.email}
+Website: ${origin}
+`;
+
+  return sendTransactionalEmail({
+    to: [{ email: toEmail, name: toName }],
+    sender,
+    subject: preview ? `[PREVIEW TEST] ${subject}` : subject,
+    htmlContent,
+    textContent,
+  });
+}

@@ -288,17 +288,32 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
     [applications]
   );
 
-  // When the Outside MZ filter is active but role = "all", the banner count
-  // will be the full filtered list (may include other roles). Compute the
-  // role-scoped count to display in the banner instead.
-  const bannerOutsideCount =
-    roleFilter === "cctv_technical_manager" || roleFilter === "technical"
-      ? filteredCandidates.length
-      : gestorTecnicoOutsideMzCount;
+  // True Gestor Técnico Other-Mozambique count (in Moz but not Maputo region)
+  const gestorTecnicoOtherMzCount = useMemo(() =>
+    applications.filter(
+      (a) =>
+        (a.role === "cctv_technical_manager" || a.role === "technical") &&
+        classifyCandidateLocation(a).group === "mozambique_other"
+    ).length,
+    [applications]
+  );
+
+  const isGestorTecnicoRole = roleFilter === "cctv_technical_manager" || roleFilter === "technical";
+
+  // When the Outside MZ filter is active but role = "all", use Gestor Técnico-specific count
+  const bannerOutsideCount = isGestorTecnicoRole
+    ? filteredCandidates.length
+    : gestorTecnicoOutsideMzCount;
+
+  // When the Other MZ filter is active but role = "all", use Gestor Técnico-specific count
+  const bannerOtherMzCount = isGestorTecnicoRole
+    ? filteredCandidates.length
+    : gestorTecnicoOtherMzCount;
 
   const bannerShowsAllRoles =
-    locationFilter === "outside_mozambique" &&
+    (locationFilter === "outside_mozambique" || locationFilter === "mozambique_other") &&
     roleFilter === "all";
+
 
   // Pagination calculations
   const totalItems = filteredCandidates.length;
@@ -517,7 +532,8 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
             title={t("Filter by geographical location", "Filtrar por localização geográfica")}
           >
             <option value="all">{t("All Locations", "Todas as Localizações")}</option>
-            <option value="mozambique">{t("🇲🇿 Based in Mozambique", "🇲🇿 Em Moçambique (Nacional)")}</option>
+            <option value="maputo_region">{t("🟢 Maputo Region (Maputo/Matola/Marracuene/Mavalane)", "🟢 Região de Maputo (Maputo/Matola/Marracuene/Mavalane)")}</option>
+            <option value="mozambique_other">{t("🇲🇿 Other Mozambique (Beira, Nampula, etc.)", "🇲🇿 Outro Moçambique (Beira, Nampula, etc.)")}</option>
             <option value="outside_mozambique">{t("🌐 Outside Mozambique", "🌐 Fora de Moçambique (Internacional)")}</option>
           </select>
 
@@ -841,7 +857,68 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
         </div>
       )}
 
-      {/* Data Table */}
+      {/* Other Mozambique Notice & Quick Action Banner (Beira, Nampula, etc.) */}
+      {locationFilter === "mozambique_other" && (
+        <div className="space-y-2">
+          <div className="bg-orange-50/90 border border-orange-200 rounded-xl p-3.5 flex items-center justify-between gap-3 text-xs text-orange-900 shadow-2xs">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-orange-100 text-orange-800 flex items-center justify-center shrink-0">
+                <MapPin size={16} />
+              </div>
+              <div>
+                <div className="font-semibold text-orange-950">
+                  {bannerShowsAllRoles
+                    ? t(
+                        `Gestor Técnico: ${bannerOtherMzCount} candidate(s) in Mozambique outside Maputo Region (showing all roles: ${filteredCandidates.length} total)`,
+                        `Gestor Técnico: ${bannerOtherMzCount} candidato(s) em Moçambique fora da Região de Maputo (a mostrar todos os cargos: ${filteredCandidates.length} total)`
+                      )
+                    : t(
+                        `Displaying ${filteredCandidates.length} candidate(s) in Mozambique — outside Maputo / Matola / Marracuene / Mavalane`,
+                        `A visualizar ${filteredCandidates.length} candidato(s) em Moçambique — fora de Maputo / Matola / Marracuene / Mavalane`
+                      )}
+                </div>
+                <div className="text-[11px] text-orange-800">
+                  {bannerShowsAllRoles
+                    ? t(
+                        "⚠ Filter by 'Gestor Técnico' role above before using Decline All.",
+                        "⚠ Filtre pelo cargo 'Gestor Técnico' antes de usar Recusar Todos."
+                      )
+                    : t(
+                        "Leadership directive (Filipa): Gestor Técnico requires physical presence in Maputo, Matola, Marracuene or Mavalane only.",
+                        "Directriz da Direcção (Filipa): Gestor Técnico requer presença física apenas em Maputo, Matola, Marracuene ou Mavalane."
+                      )}
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              disabled={bannerShowsAllRoles}
+              onClick={() => {
+                setSelectedIds(new Set(filteredCandidates.map((c) => c.id)));
+                setDeclineLocationModalOpen(true);
+              }}
+              className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-lg shadow-xs shrink-0 cursor-pointer text-xs flex items-center gap-1.5 transition-colors"
+              title={bannerShowsAllRoles ? t("Filter by Gestor Técnico role first", "Filtre pelo cargo Gestor Técnico primeiro") : undefined}
+            >
+              <UserX size={13} />
+              <span>{t(`Review & Decline All (${bannerOtherMzCount})`, `Rever e Recusar Todos (${bannerOtherMzCount})`)}</span>
+            </button>
+          </div>
+          {bannerShowsAllRoles && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-sky-50 border border-sky-200 rounded-lg text-[11px] text-sky-800">
+              <AlertCircle size={13} className="shrink-0 text-sky-600" />
+              <span>
+                {t(
+                  `The table shows ${filteredCandidates.length} candidates in other Mozambique cities across all roles. The decline action targets Gestor Técnico only (${bannerOtherMzCount} candidates). Select "Gestor Técnico" in the Role filter above to enable the Decline All button.`,
+                  `A tabela mostra ${filteredCandidates.length} candidatos noutras cidades moçambicanas em todos os cargos. A acção de recusa aplica-se apenas ao Gestor Técnico (${bannerOtherMzCount} candidatos). Seleccione "Gestor Técnico" no filtro de cargo acima para activar o botão.`
+                )}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+
       <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-xs">
         <StickyScrollContainer>
           <table className="w-full min-w-[980px] text-left border-collapse">
@@ -912,18 +989,23 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                         </Link>
                         <div className="flex items-center gap-1.5 text-[0.7rem] text-slate-400 truncate max-w-[220px]">
                           <span className="truncate">{candidate.email}</span>
-                          {candidate.currentLocation ? (
-                            <span
-                              className={`inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[0.62rem] font-medium shrink-0 ${
-                                classifyCandidateLocation(candidate).group === "outside_mozambique"
-                                  ? "bg-amber-50 text-amber-800 border border-amber-200"
-                                  : "bg-slate-50 text-slate-600 border border-slate-200"
-                              }`}
-                              title={candidate.currentLocation}
-                            >
-                              {classifyCandidateLocation(candidate).group === "outside_mozambique" ? "🌐" : "🇲🇿"} {candidate.currentLocation}
-                            </span>
-                          ) : null}
+                          {candidate.currentLocation ? (() => {
+                              const locGrp = classifyCandidateLocation(candidate).group;
+                              return (
+                                <span
+                                  className={`inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[0.62rem] font-medium shrink-0 ${
+                                    locGrp === "outside_mozambique"
+                                      ? "bg-amber-50 text-amber-800 border border-amber-200"
+                                      : locGrp === "mozambique_other"
+                                      ? "bg-orange-50 text-orange-700 border border-orange-200"
+                                      : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                  }`}
+                                  title={candidate.currentLocation}
+                                >
+                                  {locGrp === "outside_mozambique" ? "🌐" : locGrp === "mozambique_other" ? "🇲🇿" : "🟢"} {candidate.currentLocation}
+                                </span>
+                              );
+                            })() : null}
                         </div>
                       </td>
 
@@ -1098,6 +1180,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                 <option value="Candidate Withdrew">{t("Candidate Withdrew", "Candidato Desistiu do Processo")}</option>
                 <option value="Declined Next Phase">{t("Declined Next Phase Conditions", "Recusou Condições da Próxima Fase")}</option>
                 <option value="Outside Mozambique">{t("Outside Mozambique (Presencial Requirement)", "Não Reside em Moçambique (Requisito Presencial)")}</option>
+                <option value="Outside Maputo Region">{t("Outside Maputo Region (Beira, Nampula, etc.)", "Fora da Região de Maputo (Beira, Nampula, etc.)")}</option>
                 <option value="Duplicate">{t("Duplicate Application", "Candidatura Duplicada")}</option>
                 <option value="Recruitment Closed">{t("Recruitment Closed", "Concurso Encerrado")}</option>
                 <option value="Other">{t("Other Reason", "Outro Motivo")}</option>
@@ -1155,9 +1238,15 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                   <Globe size={18} />
                 </div>
                 <div>
-                  <div>{t("Decline Candidates Outside Mozambique", "Recusar Candidatos Fora de Moçambique")}</div>
+                  <div>
+                    {locationFilter === "mozambique_other"
+                      ? t("Decline Candidates Outside Maputo Region", "Recusar Candidatos Fora da Região de Maputo")
+                      : t("Decline Candidates Outside Mozambique", "Recusar Candidatos Fora de Moçambique")}
+                  </div>
                   <div className="text-[11px] font-normal text-slate-500">
-                    {t("Official Leadership Template · Gestor Técnico", "Modelo Oficial da Direcção · Gestor Técnico")}
+                    {locationFilter === "mozambique_other"
+                      ? t("Leadership Directive (Filipa) · Maputo / Matola / Marracuene / Mavalane only", "Directriz da Direcção (Filipa) · Apenas Maputo / Matola / Marracuene / Mavalane")
+                      : t("Official Leadership Template · Gestor Técnico", "Modelo Oficial da Direcção · Gestor Técnico")}
                   </div>
                 </div>
               </div>
@@ -1304,7 +1393,13 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                     const res = await fetch("/api/admin/careers/decline-location", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ ids: targetIds, sendEmail: true }),
+                      body: JSON.stringify({
+                        ids: targetIds,
+                        sendEmail: true,
+                        declineType: locationFilter === "mozambique_other"
+                          ? "mozambique_other"
+                          : "outside_mozambique",
+                      }),
                     });
                     const data = await res.json();
                     if (res.ok && data.success) {
