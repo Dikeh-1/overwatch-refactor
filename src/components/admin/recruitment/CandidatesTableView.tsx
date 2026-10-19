@@ -94,6 +94,10 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
     title?: string;
     subtitle?: string;
   }>({ show: false, variant: "next_phase" });
+  const [declineSuccessState, setDeclineSuccessState] = useState<{
+    show: boolean;
+    count: number;
+  } | null>(null);
 
   // Keep URL search params in sync
   const updateUrlParams = (updates: Record<string, string | number | null>) => {
@@ -288,12 +292,38 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
     [applications]
   );
 
+  // Active outside-MZ candidates pending decline
+  const gestorTecnicoOutsideMzPendingCount = useMemo(() =>
+    applications.filter(
+      (a) =>
+        (a.role === "cctv_technical_manager" || a.role === "technical") &&
+        classifyCandidateLocation(a).group === "outside_mozambique" &&
+        a.status !== "not_advancing" &&
+        a.status !== "archived" &&
+        a.status !== "rejected"
+    ).length,
+    [applications]
+  );
+
   // True Gestor Técnico Other-Mozambique count (in Moz but not Maputo region)
   const gestorTecnicoOtherMzCount = useMemo(() =>
     applications.filter(
       (a) =>
         (a.role === "cctv_technical_manager" || a.role === "technical") &&
         classifyCandidateLocation(a).group === "mozambique_other"
+    ).length,
+    [applications]
+  );
+
+  // Active other-MZ candidates pending decline
+  const gestorTecnicoOtherMzPendingCount = useMemo(() =>
+    applications.filter(
+      (a) =>
+        (a.role === "cctv_technical_manager" || a.role === "technical") &&
+        classifyCandidateLocation(a).group === "mozambique_other" &&
+        a.status !== "not_advancing" &&
+        a.status !== "archived" &&
+        a.status !== "rejected"
     ).length,
     [applications]
   );
@@ -313,6 +343,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
   const bannerShowsAllRoles =
     (locationFilter === "outside_mozambique" || locationFilter === "mozambique_other") &&
     roleFilter === "all";
+
 
 
   // Pagination calculations
@@ -799,57 +830,85 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
       {/* Outside Mozambique Notice & Quick Action Banner */}
       {locationFilter === "outside_mozambique" && (
         <div className="space-y-2">
-          <div className="bg-amber-50/90 border border-amber-200 rounded-xl p-3.5 flex items-center justify-between gap-3 text-xs text-amber-900 shadow-2xs">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
-                <Globe size={16} />
-              </div>
-              <div>
-                <div className="font-semibold text-amber-950">
-                  {bannerShowsAllRoles
-                    ? t(
-                        `Gestor Técnico: ${bannerOutsideCount} candidate(s) outside Mozambique (showing all roles: ${filteredCandidates.length} total)`,
-                        `Gestor Técnico: ${bannerOutsideCount} candidato(s) fora de Moçambique (a mostrar todos os cargos: ${filteredCandidates.length} total)`
-                      )
-                    : t(
-                        `Displaying ${filteredCandidates.length} candidate(s) based outside Mozambique`,
-                        `A visualizar ${filteredCandidates.length} candidato(s) residentes fora de Moçambique`
-                      )}
+          {gestorTecnicoOutsideMzPendingCount === 0 && !bannerShowsAllRoles ? (
+            <div className="bg-emerald-50/90 border border-emerald-200 rounded-xl p-3.5 flex items-center justify-between gap-3 text-xs text-emerald-900 shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+                  <CheckCircle2 size={16} />
                 </div>
-                <div className="text-[11px] text-amber-800">
-                  {bannerShowsAllRoles
-                    ? t(
-                        "⚠ Filter by 'Gestor Técnico' role above before using Decline All.",
-                        "⚠ Filtre pelo cargo 'Gestor Técnico' antes de usar Recusar Todos."
-                      )
-                    : t(
-                        "Leadership policy: Gestor Técnico role requires immediate physical availability on-site in Mozambique.",
-                        "Directriz da Direcção: a função de Gestor Técnico requer disponibilidade física presencial em Moçambique."
-                      )}
+                <div>
+                  <div className="font-semibold text-emerald-950">
+                    {t(
+                      `All ${bannerOutsideCount} candidate(s) based outside Mozambique are Declined (Not Advancing)`,
+                      `Todos os ${bannerOutsideCount} candidato(s) fora de Moçambique foram Recusados (Não Selecionados)`
+                    )}
+                  </div>
+                  <div className="text-[11px] text-emerald-700">
+                    {t(
+                      "Rejection notices were dispatched via Brevo. Records are marked as Not Advancing.",
+                      "Notificações de recusa enviadas via Brevo. Candidaturas marcadas como Não Selecionadas."
+                    )}
+                  </div>
                 </div>
               </div>
+              <span className="px-3 py-1.5 bg-emerald-100 text-emerald-800 border border-emerald-300 font-semibold rounded-lg text-xs flex items-center gap-1.5">
+                <CheckCircle2 size={13} />
+                <span>{t("All Declined", "Todos Recusados")}</span>
+              </span>
             </div>
-            <button
-              type="button"
-              disabled={bannerShowsAllRoles}
-              onClick={() => {
-                setSelectedIds(new Set(filteredCandidates.map((c) => c.id)));
-                setDeclineLocationModalOpen(true);
-              }}
-              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-lg shadow-xs shrink-0 cursor-pointer text-xs flex items-center gap-1.5 transition-colors"
-              title={bannerShowsAllRoles ? t("Filter by Gestor Técnico role first", "Filtre pelo cargo Gestor Técnico primeiro") : undefined}
-            >
-              <UserX size={13} />
-              <span>{t(`Review & Decline All (${bannerOutsideCount})`, `Rever e Recusar Todos (${bannerOutsideCount})`)}</span>
-            </button>
-          </div>
+          ) : (
+            <div className="bg-amber-50/90 border border-amber-200 rounded-xl p-3.5 flex items-center justify-between gap-3 text-xs text-amber-900 shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                  <Globe size={16} />
+                </div>
+                <div>
+                  <div className="font-semibold text-amber-950">
+                    {bannerShowsAllRoles
+                      ? t(
+                          `Gestor Técnico: ${bannerOutsideCount} candidate(s) outside Mozambique (${gestorTecnicoOutsideMzPendingCount} pending decline)`,
+                          `Gestor Técnico: ${bannerOutsideCount} candidato(s) fora de Moçambique (${gestorTecnicoOutsideMzPendingCount} pendentes de recusa)`
+                        )
+                      : t(
+                          `Displaying ${filteredCandidates.length} candidate(s) based outside Mozambique (${gestorTecnicoOutsideMzPendingCount} pending decline)`,
+                          `A visualizar ${filteredCandidates.length} candidato(s) fora de Moçambique (${gestorTecnicoOutsideMzPendingCount} pendentes de recusa)`
+                        )}
+                  </div>
+                  <div className="text-[11px] text-amber-800">
+                    {bannerShowsAllRoles
+                      ? t(
+                          "⚠ Filter by 'Gestor Técnico' role above before using Decline All.",
+                          "⚠ Filtre pelo cargo 'Gestor Técnico' antes de usar Recusar Todos."
+                        )
+                      : t(
+                          "Leadership policy: Gestor Técnico role requires immediate physical availability on-site in Mozambique.",
+                          "Directriz da Direcção: a função de Gestor Técnico requer disponibilidade física presencial em Moçambique."
+                        )}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={bannerShowsAllRoles || gestorTecnicoOutsideMzPendingCount === 0}
+                onClick={() => {
+                  setSelectedIds(new Set(filteredCandidates.map((c) => c.id)));
+                  setDeclineLocationModalOpen(true);
+                }}
+                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-lg shadow-xs shrink-0 cursor-pointer text-xs flex items-center gap-1.5 transition-colors"
+                title={bannerShowsAllRoles ? t("Filter by Gestor Técnico role first", "Filtre pelo cargo Gestor Técnico primeiro") : undefined}
+              >
+                <UserX size={13} />
+                <span>{t(`Review & Decline (${gestorTecnicoOutsideMzPendingCount})`, `Rever e Recusar (${gestorTecnicoOutsideMzPendingCount})`)}</span>
+              </button>
+            </div>
+          )}
           {bannerShowsAllRoles && (
             <div className="flex items-center gap-2 px-3 py-2 bg-sky-50 border border-sky-200 rounded-lg text-[11px] text-sky-800">
               <AlertCircle size={13} className="shrink-0 text-sky-600" />
               <span>
                 {t(
-                  `The table shows ${filteredCandidates.length} candidates outside Mozambique across all roles. The decline action targets Gestor Técnico only (${bannerOutsideCount} candidates). Select "Gestor Técnico" in the Role filter above to enable the Decline All button.`,
-                  `A tabela mostra ${filteredCandidates.length} candidatos fora de Moçambique em todos os cargos. A acção de recusa aplica-se apenas ao Gestor Técnico (${bannerOutsideCount} candidatos). Seleccione "Gestor Técnico" no filtro de cargo acima para activar o botão.`
+                  `The table shows ${filteredCandidates.length} candidates outside Mozambique across all roles. The decline action targets Gestor Técnico only (${gestorTecnicoOutsideMzPendingCount} pending). Select "Gestor Técnico" in the Role filter above to enable the Decline button.`,
+                  `A tabela mostra ${filteredCandidates.length} candidatos fora de Moçambique em todos os cargos. A acção de recusa aplica-se apenas ao Gestor Técnico (${gestorTecnicoOutsideMzPendingCount} pendentes). Seleccione "Gestor Técnico" no filtro de cargo acima para activar o botão.`
                 )}
               </span>
             </div>
@@ -860,63 +919,92 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
       {/* Other Mozambique Notice & Quick Action Banner (Beira, Nampula, etc.) */}
       {locationFilter === "mozambique_other" && (
         <div className="space-y-2">
-          <div className="bg-orange-50/90 border border-orange-200 rounded-xl p-3.5 flex items-center justify-between gap-3 text-xs text-orange-900 shadow-2xs">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-orange-100 text-orange-800 flex items-center justify-center shrink-0">
-                <MapPin size={16} />
-              </div>
-              <div>
-                <div className="font-semibold text-orange-950">
-                  {bannerShowsAllRoles
-                    ? t(
-                        `Gestor Técnico: ${bannerOtherMzCount} candidate(s) in Mozambique outside Maputo Region (showing all roles: ${filteredCandidates.length} total)`,
-                        `Gestor Técnico: ${bannerOtherMzCount} candidato(s) em Moçambique fora da Região de Maputo (a mostrar todos os cargos: ${filteredCandidates.length} total)`
-                      )
-                    : t(
-                        `Displaying ${filteredCandidates.length} candidate(s) in Mozambique — outside Maputo / Matola / Marracuene / Mavalane`,
-                        `A visualizar ${filteredCandidates.length} candidato(s) em Moçambique — fora de Maputo / Matola / Marracuene / Mavalane`
-                      )}
+          {gestorTecnicoOtherMzPendingCount === 0 && !bannerShowsAllRoles ? (
+            <div className="bg-emerald-50/90 border border-emerald-200 rounded-xl p-3.5 flex items-center justify-between gap-3 text-xs text-emerald-900 shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+                  <CheckCircle2 size={16} />
                 </div>
-                <div className="text-[11px] text-orange-800">
-                  {bannerShowsAllRoles
-                    ? t(
-                        "⚠ Filter by 'Gestor Técnico' role above before using Decline All.",
-                        "⚠ Filtre pelo cargo 'Gestor Técnico' antes de usar Recusar Todos."
-                      )
-                    : t(
-                        "Leadership directive (Filipa): Gestor Técnico requires physical presence in Maputo, Matola, Marracuene or Mavalane only.",
-                        "Directriz da Direcção (Filipa): Gestor Técnico requer presença física apenas em Maputo, Matola, Marracuene ou Mavalane."
-                      )}
+                <div>
+                  <div className="font-semibold text-emerald-950">
+                    {t(
+                      `All ${bannerOtherMzCount} candidate(s) outside Maputo Region are Declined (Not Advancing)`,
+                      `Todos os ${bannerOtherMzCount} candidato(s) fora da Região de Maputo foram Recusados (Não Selecionados)`
+                    )}
+                  </div>
+                  <div className="text-[11px] text-emerald-700">
+                    {t(
+                      "Rejection notices were dispatched via Brevo. Records are marked as Not Advancing.",
+                      "Notificações de recusa enviadas via Brevo. Candidaturas marcadas como Não Selecionadas."
+                    )}
+                  </div>
                 </div>
               </div>
+              <span className="px-3 py-1.5 bg-emerald-100 text-emerald-800 border border-emerald-300 font-semibold rounded-lg text-xs flex items-center gap-1.5">
+                <CheckCircle2 size={13} />
+                <span>{t("All Declined", "Todos Recusados")}</span>
+              </span>
             </div>
-            <button
-              type="button"
-              disabled={bannerShowsAllRoles}
-              onClick={() => {
-                setSelectedIds(new Set(filteredCandidates.map((c) => c.id)));
-                setDeclineLocationModalOpen(true);
-              }}
-              className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-lg shadow-xs shrink-0 cursor-pointer text-xs flex items-center gap-1.5 transition-colors"
-              title={bannerShowsAllRoles ? t("Filter by Gestor Técnico role first", "Filtre pelo cargo Gestor Técnico primeiro") : undefined}
-            >
-              <UserX size={13} />
-              <span>{t(`Review & Decline All (${bannerOtherMzCount})`, `Rever e Recusar Todos (${bannerOtherMzCount})`)}</span>
-            </button>
-          </div>
+          ) : (
+            <div className="bg-orange-50/90 border border-orange-200 rounded-xl p-3.5 flex items-center justify-between gap-3 text-xs text-orange-900 shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-orange-100 text-orange-800 flex items-center justify-center shrink-0">
+                  <MapPin size={16} />
+                </div>
+                <div>
+                  <div className="font-semibold text-orange-950">
+                    {bannerShowsAllRoles
+                      ? t(
+                          `Gestor Técnico: ${bannerOtherMzCount} candidate(s) outside Maputo Region (${gestorTecnicoOtherMzPendingCount} pending decline)`,
+                          `Gestor Técnico: ${bannerOtherMzCount} candidato(s) fora da Região de Maputo (${gestorTecnicoOtherMzPendingCount} pendentes de recusa)`
+                        )
+                      : t(
+                          `Displaying ${filteredCandidates.length} candidate(s) in Mozambique — outside Maputo Region (${gestorTecnicoOtherMzPendingCount} pending decline)`,
+                          `A visualizar ${filteredCandidates.length} candidato(s) em Moçambique — fora da Região de Maputo (${gestorTecnicoOtherMzPendingCount} pendentes de recusa)`
+                        )}
+                  </div>
+                  <div className="text-[11px] text-orange-800">
+                    {bannerShowsAllRoles
+                      ? t(
+                          "⚠ Filter by 'Gestor Técnico' role above before using Decline All.",
+                          "⚠ Filtre pelo cargo 'Gestor Técnico' antes de usar Recusar Todos."
+                        )
+                      : t(
+                          "Leadership directive (Filipa): Gestor Técnico requires physical presence in Maputo, Matola, Marracuene or Mavalane only.",
+                          "Directriz da Direcção (Filipa): Gestor Técnico requer presença física apenas em Maputo, Matola, Marracuene ou Mavalane."
+                        )}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={bannerShowsAllRoles || gestorTecnicoOtherMzPendingCount === 0}
+                onClick={() => {
+                  setSelectedIds(new Set(filteredCandidates.map((c) => c.id)));
+                  setDeclineLocationModalOpen(true);
+                }}
+                className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-lg shadow-xs shrink-0 cursor-pointer text-xs flex items-center gap-1.5 transition-colors"
+                title={bannerShowsAllRoles ? t("Filter by Gestor Técnico role first", "Filtre pelo cargo Gestor Técnico primeiro") : undefined}
+              >
+                <UserX size={13} />
+                <span>{t(`Review & Decline (${gestorTecnicoOtherMzPendingCount})`, `Rever e Recusar (${gestorTecnicoOtherMzPendingCount})`)}</span>
+              </button>
+            </div>
+          )}
           {bannerShowsAllRoles && (
             <div className="flex items-center gap-2 px-3 py-2 bg-sky-50 border border-sky-200 rounded-lg text-[11px] text-sky-800">
               <AlertCircle size={13} className="shrink-0 text-sky-600" />
               <span>
                 {t(
-                  `The table shows ${filteredCandidates.length} candidates in other Mozambique cities across all roles. The decline action targets Gestor Técnico only (${bannerOtherMzCount} candidates). Select "Gestor Técnico" in the Role filter above to enable the Decline All button.`,
-                  `A tabela mostra ${filteredCandidates.length} candidatos noutras cidades moçambicanas em todos os cargos. A acção de recusa aplica-se apenas ao Gestor Técnico (${bannerOtherMzCount} candidatos). Seleccione "Gestor Técnico" no filtro de cargo acima para activar o botão.`
+                  `The table shows ${filteredCandidates.length} candidates in other Mozambique cities across all roles. The decline action targets Gestor Técnico only (${gestorTecnicoOtherMzPendingCount} pending). Select "Gestor Técnico" in the Role filter above to enable the Decline button.`,
+                  `A tabela mostra ${filteredCandidates.length} candidatos noutras cidades moçambicanas em todos os cargos. A acção de recusa aplica-se apenas ao Gestor Técnico (${gestorTecnicoOtherMzPendingCount} pendentes). Seleccione "Gestor Técnico" no filtro de cargo acima para activar o botão.`
                 )}
               </span>
             </div>
           )}
         </div>
       )}
+
 
 
       <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-xs">
@@ -1377,14 +1465,28 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                 type="button"
                 disabled={declineLocationBusy}
                 onClick={async () => {
-                  const targetIds = selectedIds.size > 0 
-                    ? Array.from(selectedIds) 
-                    : applications
-                        .filter((a) => (a.role === "technical" || a.role === "cctv_technical_manager") && classifyCandidateLocation(a).group === "outside_mozambique")
-                        .map((a) => a.id);
+                  const targetGroup = locationFilter === "mozambique_other" ? "mozambique_other" : "outside_mozambique";
+                  const pendingInGroup = applications.filter(
+                    (a) =>
+                      (a.role === "technical" || a.role === "cctv_technical_manager") &&
+                      classifyCandidateLocation(a).group === targetGroup &&
+                      a.status !== "not_advancing" &&
+                      a.status !== "archived" &&
+                      a.status !== "rejected"
+                  );
+                  const allInGroup = applications.filter(
+                    (a) =>
+                      (a.role === "technical" || a.role === "cctv_technical_manager") &&
+                      classifyCandidateLocation(a).group === targetGroup
+                  );
+
+                  const targetIds =
+                    selectedIds.size > 0
+                      ? Array.from(selectedIds)
+                      : (pendingInGroup.length > 0 ? pendingInGroup : allInGroup).map((a) => a.id);
 
                   if (targetIds.length === 0) {
-                    alert(t("No candidates found outside Mozambique.", "Nenhum candidato encontrado fora de Moçambique."));
+                    alert(t("No candidates found to decline.", "Nenhum candidato encontrado para declinar."));
                     return;
                   }
 
@@ -1403,17 +1505,9 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                     });
                     const data = await res.json();
                     if (res.ok && data.success) {
-                      setCelebrationState({
+                      setDeclineSuccessState({
                         show: true,
-                        variant: "shortlisted",
-                        title: t(
-                          `${data.count} Candidates Successfully Declined!`,
-                          `${data.count} Candidaturas Recusadas com Sucesso!`
-                        ),
-                        subtitle: t(
-                          "Rejection notices were dispatched and candidate records updated.",
-                          "As notificações foram enviadas e os registos dos candidatos actualizados."
-                        ),
+                        count: data.count,
                       });
                       setSelectedIds(new Set());
                       setDeclineLocationModalOpen(false);
@@ -1449,7 +1543,41 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
         </div>
       )}
 
-      {/* Celebration Confetti Pop Overlay */}
+      {/* Professional, Non-Celebratory Decline Success Modal */}
+      {declineSuccessState?.show && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-md bg-white rounded-xl p-6 shadow-2xl border border-slate-200 text-center space-y-4">
+            <div className="w-12 h-12 mx-auto rounded-full bg-slate-100 text-slate-800 flex items-center justify-center">
+              <CheckCircle2 size={24} className="text-slate-700" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">
+                {t(
+                  `${declineSuccessState.count} Candidates Successfully Declined`,
+                  `${declineSuccessState.count} Candidaturas Recusadas com Sucesso`
+                )}
+              </h3>
+              <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">
+                {t(
+                  "Official rejection notices were dispatched and candidate records updated to 'Not Advancing'.",
+                  "Notificações de recusa oficiais enviadas e registos actualizados para 'Não Selecionado'."
+                )}
+              </p>
+            </div>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setDeclineSuccessState(null)}
+                className="w-full px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors cursor-pointer shadow-xs"
+              >
+                {t("Continue to Candidates", "Continuar")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Celebration Confetti Pop Overlay (Used ONLY for Shortlisting, Next Phase, or Hired) */}
       <CelebrationOverlay
         show={celebrationState.show}
         onClose={() => setCelebrationState((prev) => ({ ...prev, show: false }))}
@@ -1457,6 +1585,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
         subtitle={celebrationState.subtitle}
         variant={celebrationState.variant}
       />
+
     </div>
   );
 };

@@ -95,14 +95,9 @@ export async function GET() {
         };
 
         let newStatus = app.status;
-        if (!allMandatoryMet) {
-          if (!app.status || app.status === "shortlisted" || app.status === "screening") {
-            newStatus = "not_advancing";
-          }
-        } else {
-          if (!app.status || app.status === "not_advancing" || app.status === "screening") {
-            newStatus = "shortlisted";
-          }
+        // Only auto-assign status if application has no status or is still in new intake
+        if (!newStatus || (newStatus as string) === "new" || (newStatus as string) === "reviewing") {
+          newStatus = allMandatoryMet ? "shortlisted" : "not_advancing";
         }
 
         return {
