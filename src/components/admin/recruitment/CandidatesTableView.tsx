@@ -23,8 +23,11 @@ import {
   CalendarCheck,
   Copy,
   ExternalLink,
+  Globe,
+  MapPin,
 } from "lucide-react";
 import { Application, Role, stages, formatPhoneDisplay, formatSlotDisplay } from "@/lib/careers";
+import { classifyCandidateLocation, LocationFilterValue } from "@/lib/location-utils";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import { useActiveRole } from "../shell/ActiveRoleContext";
 import CelebrationOverlay from "@/components/admin/ui/CelebrationOverlay";
@@ -37,6 +40,7 @@ interface CandidatesTableViewProps {
   lang?: "pt" | "en";
   onBulkStatusChange?: (ids: string[], status: string) => Promise<void>;
   onBulkArchive?: (ids: string[], reason: string) => Promise<void>;
+  onRefresh?: () => void | Promise<void>;
 }
 
 export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
@@ -45,6 +49,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
   lang: propLang,
   onBulkStatusChange,
   onBulkArchive,
+  onRefresh,
 }) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -59,6 +64,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
   const urlView = searchParams.get("view") || "all";
   const urlRole = searchParams.get("role") || "all";
   const urlStage = searchParams.get("stage") || "all";
+  const urlLoc = (searchParams.get("loc") as LocationFilterValue) || "all";
   const urlPage = parseInt(searchParams.get("page") || "1", 10);
   const urlPageSize = parseInt(searchParams.get("size") || "25", 10);
 
@@ -66,6 +72,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
   const [activeView, setActiveView] = useState(urlView);
   const [roleFilter, setRoleFilter] = useState(urlRole);
   const [stageFilter, setStageFilter] = useState(urlStage);
+  const [locationFilter, setLocationFilter] = useState<LocationFilterValue>(urlLoc);
   const [sexFilter, setSexFilter] = useState<"all" | "female" | "male">("all");
   const [expFilter, setExpFilter] = useState<"all" | "yes" | "no">("all");
   const [currentPage, setCurrentPage] = useState(isNaN(urlPage) ? 1 : urlPage);
@@ -76,6 +83,11 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
   const [bulkActionBusy, setBulkActionBusy] = useState(false);
   const [archiveModalOpen, setArchiveModalOpen] = useState(false);
   const [archiveReason, setArchiveReason] = useState<string>("Not Selected for Next Phase");
+  const [declineLocationModalOpen, setDeclineLocationModalOpen] = useState(false);
+  const [previewEmail, setPreviewEmail] = useState("");
+  const [isPreviewSending, setIsPreviewSending] = useState(false);
+  const [previewResult, setPreviewResult] = useState<string | null>(null);
+  const [declineLocationBusy, setDeclineLocationBusy] = useState(false);
   const [celebrationState, setCelebrationState] = useState<{
     show: boolean;
     variant: "next_phase" | "hired" | "shortlisted";
@@ -114,9 +126,17 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
     updateUrlParams({ role, page: 1 });
   };
 
+  const handleLocationChange = (loc: LocationFilterValue) => {
+    setLocationFilter(loc);
+    setCurrentPage(1);
+    updateUrlParams({ loc, page: 1 });
+  };
+
   useEffect(() => {
     const r = searchParams.get("role") || "all";
     setRoleFilter(r);
+    const l = (searchParams.get("loc") as LocationFilterValue) || "all";
+    setLocationFilter(l);
   }, [searchParams]);
 
   const { activeRole, roles: roleDefs } = useActiveRole();
@@ -241,7 +261,13 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
         return false;
       }
 
-      // 6. Search query
+      // 6. Location filter (Mozambique vs Outside Mozambique)
+      if (locationFilter !== "all") {
+        const locInfo = classifyCandidateLocation(cand);
+        if (locInfo.group !== locationFilter) return false;
+      }
+
+      // 7. Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
         const haystack = `${cand.id} ${cand.id.slice(0, 8)} ${cand.name} ${cand.email} ${cand.whatsapp} ${cand.nextPhaseToken || ""} ${cand.lastProfession || ""} ${cand.currentLocation || ""} ${cand.yearsCctvExperience || ""}`.toLowerCase();
@@ -250,7 +276,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
 
       return true;
     });
-  }, [applications, activeView, roleFilter, stageFilter, sexFilter, expFilter, searchQuery]);
+  }, [applications, activeView, roleFilter, stageFilter, sexFilter, expFilter, locationFilter, searchQuery]);
 
   // Pagination calculations
   const totalItems = filteredCandidates.length;
@@ -451,7 +477,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
           <select
             value={roleFilter}
             onChange={(e) => handleRoleChange(e.target.value)}
-            className="px-2.5 py-1.5 text-xs rounded-md border border-slate-300 text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+            className="px-2.5 py-1.5 text-xs rounded-md border border-slate-300 text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-sky-500 font-medium"
           >
             <option value="all">{t("All Roles", "Todas as Vagas")}</option>
             {roles.map((r) => (
@@ -459,6 +485,18 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                 {lang === "pt" ? r.pt : r.en}
               </option>
             ))}
+          </select>
+
+          {/* Location Filter */}
+          <select
+            value={locationFilter}
+            onChange={(e) => handleLocationChange(e.target.value as LocationFilterValue)}
+            className="px-2.5 py-1.5 text-xs rounded-md border border-slate-300 text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-sky-500 font-medium"
+            title={t("Filter by geographical location", "Filtrar por localização geográfica")}
+          >
+            <option value="all">{t("All Locations", "Todas as Localizações")}</option>
+            <option value="mozambique">{t("🇲🇿 Based in Mozambique", "🇲🇿 Em Moçambique (Nacional)")}</option>
+            <option value="outside_mozambique">{t("🌐 Outside Mozambique", "🌐 Fora de Moçambique (Internacional)")}</option>
           </select>
 
           {/* Gender Filter */}
@@ -687,10 +725,22 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
               </select>
             </div>
 
+            {/* Decline Candidates Outside Mozambique */}
+            <button
+              type="button"
+              disabled={bulkActionBusy}
+              onClick={() => setDeclineLocationModalOpen(true)}
+              className="px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+              title={t("Decline selected candidates based outside Mozambique", "Recusar candidatos selecionados com base fora de Moçambique")}
+            >
+              <Globe size={13} />
+              <span>{t("Decline Outside MZ", "Recusar Fora de Moçambique")}</span>
+            </button>
+
             <button
               type="button"
               onClick={() => setArchiveModalOpen(true)}
-              className="px-2.5 py-1 rounded bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors flex items-center gap-1"
+              className="px-2.5 py-1 rounded bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer"
             >
               <Archive size={13} />
               <span>{t("Archive with Reason", "Arquivar")}</span>
@@ -699,12 +749,48 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
             <button
               type="button"
               onClick={() => setSelectedIds(new Set())}
-              className="p-1 text-slate-400 hover:text-white"
+              className="p-1 text-slate-400 hover:text-white cursor-pointer"
               title={t("Clear selection", "Limpar seleção")}
             >
               <X size={14} />
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Outside Mozambique Notice & Quick Action Banner */}
+      {locationFilter === "outside_mozambique" && (
+        <div className="bg-amber-50/90 border border-amber-200 rounded-xl p-3.5 flex items-center justify-between gap-3 text-xs text-amber-900 shadow-2xs">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+              <Globe size={16} />
+            </div>
+            <div>
+              <div className="font-semibold text-amber-950">
+                {t(
+                  `Displaying ${filteredCandidates.length} candidate(s) based outside Mozambique`,
+                  `A visualizar ${filteredCandidates.length} candidato(s) residentes fora de Moçambique`
+                )}
+              </div>
+              <div className="text-[11px] text-amber-800">
+                {t(
+                  "Leadership policy: Gestor Técnico role requires immediate physical availability on-site in Mozambique.",
+                  "Directriz da Direcção: a função de Gestor Técnico requer disponibilidade física presencial em Moçambique."
+                )}
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedIds(new Set(filteredCandidates.map((c) => c.id)));
+              setDeclineLocationModalOpen(true);
+            }}
+            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg shadow-xs shrink-0 cursor-pointer text-xs flex items-center gap-1.5 transition-colors"
+          >
+            <UserX size={13} />
+            <span>{t(`Review & Decline All (${filteredCandidates.length})`, `Rever e Recusar Todos (${filteredCandidates.length})`)}</span>
+          </button>
         </div>
       )}
 
@@ -777,8 +863,20 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                             </span>
                           </div>
                         </Link>
-                        <div className="text-[0.7rem] text-slate-400 truncate max-w-[200px]">
-                          {candidate.email}
+                        <div className="flex items-center gap-1.5 text-[0.7rem] text-slate-400 truncate max-w-[220px]">
+                          <span className="truncate">{candidate.email}</span>
+                          {candidate.currentLocation ? (
+                            <span
+                              className={`inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[0.62rem] font-medium shrink-0 ${
+                                classifyCandidateLocation(candidate).group === "outside_mozambique"
+                                  ? "bg-amber-50 text-amber-800 border border-amber-200"
+                                  : "bg-slate-50 text-slate-600 border border-slate-200"
+                              }`}
+                              title={candidate.currentLocation}
+                            >
+                              {classifyCandidateLocation(candidate).group === "outside_mozambique" ? "🌐" : "🇲🇿"} {candidate.currentLocation}
+                            </span>
+                          ) : null}
                         </div>
                       </td>
 
@@ -952,6 +1050,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                 <option value="No Show">{t("No Show (Absent from Test)", "Faltou ao Teste Presencial")}</option>
                 <option value="Candidate Withdrew">{t("Candidate Withdrew", "Candidato Desistiu do Processo")}</option>
                 <option value="Declined Next Phase">{t("Declined Next Phase Conditions", "Recusou Condições da Próxima Fase")}</option>
+                <option value="Outside Mozambique">{t("Outside Mozambique (Presencial Requirement)", "Não Reside em Moçambique (Requisito Presencial)")}</option>
                 <option value="Duplicate">{t("Duplicate Application", "Candidatura Duplicada")}</option>
                 <option value="Recruitment Closed">{t("Recruitment Closed", "Concurso Encerrado")}</option>
                 <option value="Other">{t("Other Reason", "Outro Motivo")}</option>
@@ -977,6 +1076,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                       await onBulkArchive(Array.from(selectedIds), archiveReason);
                       setSelectedIds(new Set());
                       setArchiveModalOpen(false);
+                      if (onRefresh) await onRefresh();
                     } finally {
                       setBulkActionBusy(false);
                     }
@@ -991,6 +1091,215 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                   </>
                 ) : (
                   <span>{t("Confirm Archive", "Confirmar Arquivo")}</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Decline Outside Mozambique Confirmation Modal */}
+      {declineLocationModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-xl bg-white rounded-xl p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5 text-slate-900 font-bold text-sm">
+                <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center">
+                  <Globe size={18} />
+                </div>
+                <div>
+                  <div>{t("Decline Candidates Outside Mozambique", "Recusar Candidatos Fora de Moçambique")}</div>
+                  <div className="text-[11px] font-normal text-slate-500">
+                    {t("Official Leadership Template · Gestor Técnico", "Modelo Oficial da Direcção · Gestor Técnico")}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setDeclineLocationModalOpen(false);
+                  setPreviewResult(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Target summary */}
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs">
+              <div className="font-semibold text-slate-800 mb-1">
+                {t(
+                  `Target Audience: ${
+                    selectedIds.size > 0
+                      ? `${selectedIds.size} selected candidate(s)`
+                      : `${applications.filter((a) => (a.role === "technical" || a.role === "cctv_technical_manager") && classifyCandidateLocation(a).group === "outside_mozambique").length} candidate(s) detected outside Mozambique`
+                  }`,
+                  `Público-Alvo: ${
+                    selectedIds.size > 0
+                      ? `${selectedIds.size} candidato(s) selecionado(s)`
+                      : `${applications.filter((a) => (a.role === "technical" || a.role === "cctv_technical_manager") && classifyCandidateLocation(a).group === "outside_mozambique").length} candidato(s) detectados fora de Moçambique`
+                  }`
+                )}
+              </div>
+              <div className="text-slate-600 text-[11px] leading-relaxed">
+                {t(
+                  "All selected candidates based outside Mozambique will be moved to 'Not Advancing' (Declined) with the formal notification email sent via Brevo.",
+                  "Todos os candidatos selecionados com residência fora de Moçambique serão movidos para 'Não Selecionado' com envio do email oficial de notificação via Brevo."
+                )}
+              </div>
+            </div>
+
+            {/* Official Message Template Preview */}
+            <div className="border border-slate-200 rounded-lg p-3.5 bg-amber-50/40 text-xs space-y-2">
+              <div className="font-semibold text-[11px] uppercase tracking-wider text-amber-900 flex items-center justify-between">
+                <span>{t("Approved Rejection Email Copy", "Texto do Email Aprovado pela Direcção")}</span>
+                <span className="text-[10px] font-mono text-slate-500 font-bold">PT-MZ</span>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-md p-3.5 text-slate-700 text-[12px] leading-relaxed font-sans space-y-2 shadow-2xs">
+                <p className="font-semibold text-slate-900">Prezado(a) Candidato(a),</p>
+                <p>Agradecemos o seu interesse em integrar a equipa da Overwatch e o tempo dedicado à sua candidatura à posição de Gestor Técnico.</p>
+                <p>Após análise da sua candidatura, informamos que, nesta fase, estamos a dar prioridade a candidatos que se encontram actualmente em Moçambique, devido às necessidades operacionais e de disponibilidade presencial associadas à função.</p>
+                <p>Por este motivo, não será possível dar seguimento à sua candidatura neste processo de recrutamento.</p>
+                <p>Agradecemos novamente o seu interesse e desejamos-lhe sucesso no seu percurso profissional.</p>
+                <div className="text-slate-600 pt-2 border-t border-slate-100 text-[11px]">
+                  Com os melhores cumprimentos,<br />
+                  <strong className="text-slate-900">Equipa de Recrutamento</strong><br />
+                  <span>Overwatch Moçambique</span>
+                </div>
+              </div>
+              <div className="text-[11px] text-slate-600 bg-amber-100/60 px-2 py-1 rounded">
+                <strong>Assunto:</strong> Overwatch | Candidatura à Vaga de Gestor Técnico
+              </div>
+            </div>
+
+            {/* Test Preview Email Option */}
+            <div className="border border-slate-200 rounded-lg p-3 bg-slate-50 space-y-2">
+              <label className="block text-[11px] font-semibold text-slate-700">
+                {t("Send Live Test Preview (Optional)", "Enviar Teste de Modelo (Opcional)")}
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="email"
+                  value={previewEmail}
+                  onChange={(e) => setPreviewEmail(e.target.value)}
+                  placeholder="seu.email@exemplo.com"
+                  className="flex-1 px-3 py-1.5 text-xs rounded-md border border-slate-300 bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                />
+                <button
+                  type="button"
+                  disabled={isPreviewSending || !previewEmail.includes("@")}
+                  onClick={async () => {
+                    setIsPreviewSending(true);
+                    setPreviewResult(null);
+                    try {
+                      const res = await fetch("/api/admin/careers/decline-location", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ preview: true, previewEmail }),
+                      });
+                      const d = await res.json();
+                      if (res.ok) {
+                        setPreviewResult(t("Live test email sent successfully!", "Email de teste enviado com sucesso!"));
+                      } else {
+                        setPreviewResult(d.error || "Erro ao enviar teste.");
+                      }
+                    } catch {
+                      setPreviewResult("Falha na comunicação.");
+                    } finally {
+                      setIsPreviewSending(false);
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold shrink-0 cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5 transition-colors"
+                >
+                  {isPreviewSending ? <OverwatchOrbitLoader size="xs" theme="dark" /> : <Send size={12} />}
+                  <span>{t("Send Test", "Enviar Teste")}</span>
+                </button>
+              </div>
+              {previewResult && (
+                <div className="text-[11px] text-emerald-700 font-medium">
+                  {previewResult}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={declineLocationBusy}
+                onClick={() => {
+                  setDeclineLocationModalOpen(false);
+                  setPreviewResult(null);
+                }}
+                className="px-3 py-1.5 rounded-md border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 cursor-pointer disabled:opacity-50"
+              >
+                {t("Cancel", "Cancelar")}
+              </button>
+
+              <button
+                type="button"
+                disabled={declineLocationBusy}
+                onClick={async () => {
+                  const targetIds = selectedIds.size > 0 
+                    ? Array.from(selectedIds) 
+                    : applications
+                        .filter((a) => (a.role === "technical" || a.role === "cctv_technical_manager") && classifyCandidateLocation(a).group === "outside_mozambique")
+                        .map((a) => a.id);
+
+                  if (targetIds.length === 0) {
+                    alert(t("No candidates found outside Mozambique.", "Nenhum candidato encontrado fora de Moçambique."));
+                    return;
+                  }
+
+                  setDeclineLocationBusy(true);
+                  try {
+                    const res = await fetch("/api/admin/careers/decline-location", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ ids: targetIds, sendEmail: true }),
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.success) {
+                      setCelebrationState({
+                        show: true,
+                        variant: "shortlisted",
+                        title: t(
+                          `${data.count} Candidates Successfully Declined!`,
+                          `${data.count} Candidaturas Recusadas com Sucesso!`
+                        ),
+                        subtitle: t(
+                          "Rejection notices were dispatched and candidate records updated.",
+                          "As notificações foram enviadas e os registos dos candidatos actualizados."
+                        ),
+                      });
+                      setSelectedIds(new Set());
+                      setDeclineLocationModalOpen(false);
+                      if (onRefresh) await onRefresh();
+                      if (typeof window !== "undefined") {
+                        window.dispatchEvent(new CustomEvent("admin:careers-updated"));
+                      }
+                    } else {
+                      alert(data.error || "Erro ao declinar candidatos.");
+                    }
+                  } catch {
+                    alert("Erro ao comunicar com o servidor.");
+                  } finally {
+                    setDeclineLocationBusy(false);
+                  }
+                }}
+                className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs inline-flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50 transition-colors"
+              >
+                {declineLocationBusy ? (
+                  <>
+                    <OverwatchOrbitLoader size="xs" theme="dark" className="shrink-0" />
+                    <span>{t("Processing & Sending...", "A enviar notificações...")}</span>
+                  </>
+                ) : (
+                  <>
+                    <Send size={13} />
+                    <span>{t("Confirm & Send Decline Notice", "Confirmar e Enviar Notificações")}</span>
+                  </>
                 )}
               </button>
             </div>

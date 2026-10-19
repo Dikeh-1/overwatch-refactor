@@ -39,8 +39,10 @@ import {
   FolderArchive,
   Layers,
   ChevronDown,
+  Globe,
 } from "lucide-react";
 import { Application, Role, roles as defaultRoles, formatPhoneDisplay } from "@/lib/careers";
+import { classifyCandidateLocation } from "@/lib/location-utils";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 import { CandidateProfileView } from "./CandidateProfileView";
@@ -121,6 +123,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
   const [nextPhaseSubFilter, setNextPhaseSubFilter] = useState<"all" | "confirmed" | "awaiting" | "declined">("all");
   const [testingSubFilter, setTestingSubFilter] = useState<"all" | "attended" | "booked" | "unbooked">("all");
   const [screeningSubFilter, setScreeningSubFilter] = useState<"all" | "passed" | "failed">("all");
+  const [locationSubFilter, setLocationSubFilter] = useState<"all" | "mozambique" | "outside_mozambique">("all");
 
   // Selection & bulk actions
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<Set<string>>(new Set());
@@ -350,6 +353,11 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
       list = list.filter((a) => a.status === "archived" || a.status === "rejected" || a.status === "not_advancing");
     }
 
+    // Apply location filter (Mozambique vs Outside Mozambique)
+    if (locationSubFilter !== "all") {
+      list = list.filter((a) => classifyCandidateLocation(a).group === locationSubFilter);
+    }
+
     // Apply text search
     if (candidateSearch.trim()) {
       const q = candidateSearch.toLowerCase().trim();
@@ -363,7 +371,7 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
     }
 
     return list;
-  }, [cohortApps, activeTab, nextPhaseSubFilter, testingSubFilter, screeningSubFilter, candidateSearch]);
+  }, [cohortApps, activeTab, nextPhaseSubFilter, testingSubFilter, screeningSubFilter, locationSubFilter, candidateSearch]);
 
   // Multi-select helpers
   const handleToggleSelectAll = () => {
@@ -947,6 +955,18 @@ export default function ArchiveVaultView({ onBackToActive }: ArchiveVaultViewPro
                   className="w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-4 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none transition-colors"
                 />
               </div>
+
+              {/* Location Filter */}
+              <select
+                value={locationSubFilter}
+                onChange={(e) => setLocationSubFilter(e.target.value as any)}
+                className="px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-700 focus:bg-white focus:outline-none focus:ring-1 focus:ring-sky-500 font-medium cursor-pointer"
+                title={t("Filter section by candidate location", "Filtrar por localização do candidato")}
+              >
+                <option value="all">{t("All Locations", "Todas as Localizações")}</option>
+                <option value="mozambique">{t("🇲🇿 In Mozambique", "🇲🇿 Em Moçambique")}</option>
+                <option value="outside_mozambique">{t("🌐 Outside Mozambique", "🌐 Fora de Moçambique")}</option>
+              </select>
 
               {/* Sub-filters for Next Phase */}
               {activeTab === "next_phase" && (

@@ -26,6 +26,7 @@ import {
   Copy,
 } from "lucide-react";
 import { Application, Role, stages, formatPhoneDisplay, formatSlotDisplay, ArchiveReason } from "@/lib/careers";
+import { classifyCandidateLocation } from "@/lib/location-utils";
 import DocxViewer from "../DocxViewer";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import CelebrationOverlay from "@/components/admin/ui/CelebrationOverlay";
@@ -509,7 +510,18 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                 <div className="divide-y divide-slate-100 border-y border-slate-100 py-1">
                   <div className="py-2 flex items-center justify-between">
                     <span className="text-slate-500">{t("Location", "Localização")}</span>
-                    <span className="font-semibold text-slate-900">{candidate.currentLocation || "Maputo"}</span>
+                    {classifyCandidateLocation(candidate).group === "outside_mozambique" ? (
+                      <span className="font-semibold inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs bg-amber-50 text-amber-800 border border-amber-200">
+                        <Globe size={13} className="text-amber-700" />
+                        <span>{candidate.currentLocation || "Fora de Moçambique"}</span>
+                        <span className="text-[10px] uppercase font-bold text-amber-600 bg-amber-100/80 px-1 rounded">Internacional</span>
+                      </span>
+                    ) : (
+                      <span className="font-semibold text-slate-900 inline-flex items-center gap-1">
+                        <span>🇲🇿</span>
+                        <span>{candidate.currentLocation || "Maputo, Moçambique"}</span>
+                      </span>
+                    )}
                   </div>
                   <div className="py-2 flex items-center justify-between">
                     <span className="text-slate-500">{t("CCTV Experience", "Experiência CCTV")}</span>

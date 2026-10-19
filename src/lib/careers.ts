@@ -90,6 +90,7 @@ export type ArchiveReason =
   | "No Show"
   | "Candidate Withdrew"
   | "Declined Next Phase"
+  | "Outside Mozambique"
   | "Duplicate"
   | "Recruitment Closed"
   | "Other";

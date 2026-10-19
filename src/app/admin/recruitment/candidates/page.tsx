@@ -79,6 +79,7 @@ export default function CandidatesPage() {
       roles={roles}
       onBulkStatusChange={handleBulkStatusChange}
       onBulkArchive={handleBulkArchive}
+      onRefresh={loadData}
     />
   );
 }
