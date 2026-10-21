@@ -138,8 +138,49 @@ export async function GET(request: Request) {
             ? "Não tenho interesse"
             : null);
 
+        // Resolve true historical stage so UI components render the real pipeline stage
+        let historicalStage = a.status;
+        if (a.status === "archived" || !a.status) {
+          if (a.nextPhaseResponse === "yes" || a.nextPhaseStatus === "confirmed") {
+            historicalStage = "interest_confirmed";
+          } else if (a.nextPhaseResponse === "no" || a.nextPhaseStatus === "declined") {
+            historicalStage = "interest_declined";
+          } else if (
+            a.nextPhaseToken ||
+            a.nextPhaseInvitedAt ||
+            a.nextPhaseStatus === "selected" ||
+            a.nextPhaseStatus === "invited"
+          ) {
+            historicalStage = "next_phase_selected";
+          } else if (a.attendedAt || typeof testScore === "number") {
+            historicalStage = "tested";
+          } else if (Boolean(a.testSlot) || Boolean(a.testBookedAt)) {
+            historicalStage = "test_booked";
+          } else if (
+            a.screeningResult?.passedMandatory ||
+            (typeof a.screeningScore === "number" && a.screeningScore >= 50) ||
+            (a.grade12 === "yes" && a.shifts === "yes")
+          ) {
+            historicalStage = "shortlisted";
+          } else if (
+            a.screeningResult?.passedMandatory === false ||
+            a.grade12 === "no" ||
+            a.shifts === "no"
+          ) {
+            historicalStage = "not_advancing";
+          } else {
+            historicalStage = "applied";
+          }
+        }
+
         return {
           ...a,
+          historicalStage,
+          effectiveStatus: historicalStage,
+          // Set status to historicalStage so all standard recruitment views render the true stage
+          status: historicalStage,
+          isArchived: true,
+          cohortArchived: true,
           testScore,
           nextPhaseResponseOption,
         };
@@ -168,7 +209,28 @@ export async function GET(request: Request) {
 
       const role = roles.find((r) => r.id === cohort.roleId || (cohort.roleId === "cctv" && r.id === "cctv_operator"));
       const hiredCount = apps.filter((a) => a.status === "hired").length;
-      const testedCount = apps.filter((a) => a.status === "tested" || a.testScore !== undefined || Boolean(a.attendedAt)).length;
+      const testedCount = apps.filter(
+        (a) =>
+          Boolean(a.testSlot) ||
+          Boolean(a.testBookedAt) ||
+          Boolean(a.attendedAt) ||
+          a.status === "tested" ||
+          a.status === "test_booked" ||
+          a.status === "test_invited" ||
+          typeof a.testScore === "number",
+      ).length;
+      const nextPhaseCount = apps.filter(
+        (a) =>
+          Boolean(a.nextPhaseToken) ||
+          Boolean(a.nextPhaseInvitedAt) ||
+          Boolean(a.nextPhaseResponse) ||
+          a.nextPhaseStatus === "selected" ||
+          a.nextPhaseStatus === "confirmed" ||
+          a.nextPhaseStatus === "declined",
+      ).length;
+      const confirmedCount = apps.filter(
+        (a) => a.nextPhaseResponse === "yes" || a.nextPhaseStatus === "confirmed",
+      ).length;
 
       return {
         ...cohort,
@@ -178,6 +240,8 @@ export async function GET(request: Request) {
         totalApplications: apps.length,
         totalHired: hiredCount,
         totalTested: testedCount,
+        totalNextPhase: nextPhaseCount,
+        totalConfirmed: confirmedCount,
       };
     });
 
