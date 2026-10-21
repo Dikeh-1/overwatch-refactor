@@ -1,7 +1,7 @@
 import "server-only";
 import type { Application } from "./careers";
 
-import { getAllCohorts } from "./careers-campaign-store";
+import { getAllCohorts, getRoleDefinitions } from "./careers-campaign-store";
 import { getTestSlotConfig, updateApplication } from "./careers-store";
 import { getCareersPool } from "./careers-db";
 import { validateReservation } from "./careers-booking-rules";
@@ -13,7 +13,10 @@ export async function getCandidateSlotConfig(candidate: Application) {
   );
   if (cohort?.testSlots)
     return { slots: cohort.testSlots, quota: cohort.slotQuota || 15 };
-  if (cohort?.status === "active") return getTestSlotConfig();
+  if (cohort?.status === "active") {
+    const role = (await getRoleDefinitions()).find(r => r.id === cohort.roleId);
+    if (role?.open && role.activeCohortId === cohort.id) return getTestSlotConfig();
+  }
   // A closed legacy cycle must have its own schedule, not another intake's current slots.
   return { slots: [], quota: 15 };
 }

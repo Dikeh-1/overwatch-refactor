@@ -20,6 +20,21 @@ async function main() {
     assert.equal(response.status, status, path);
     return response.json();
   };
+  const settings = await get("/api/admin/settings");
+  assert.ok(Number.isInteger(settings.quota) && settings.quota > 0);
+  const manager = await get("/api/admin/careers/roles-manager");
+  for (const c of manager.cohorts) {
+    const role = manager.roles.find(r => r.id === c.roleId);
+    if (role && !role.open) assert.notEqual(c.status, "active");
+  }
+  const invalidSettings = await fetch(`${origin}/api/admin/settings`, {
+    method: "POST", headers: { cookie, Origin: origin, "Content-Type": "application/json" }, body: JSON.stringify({ quota: 0 }),
+  });
+  assert.equal(invalidSettings.status, 400);
+  const forbiddenReminders = await fetch(`${origin}/api/admin/careers/send-reminders`, {
+    method: "POST", headers: { cookie, Origin: "https://untrusted.invalid", "Content-Type": "application/json" }, body: "{}",
+  });
+  assert.equal(forbiddenReminders.status, 403);
   const catalog = await get("/api/admin/careers/archive");
   assert.ok(catalog.archivedCohorts.length > 0);
   for (const cohort of catalog.archivedCohorts) {

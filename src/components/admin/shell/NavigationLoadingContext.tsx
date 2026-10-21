@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 interface NavigationLoadingContextValue {
   isNavigating: boolean;
@@ -21,6 +21,7 @@ const NavigationLoadingContext = createContext<NavigationLoadingContextValue>({
 
 export const NavigationLoadingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const pathname = usePathname();
+  const search = useSearchParams().toString();
   const [isNavigating, setIsNavigating] = useState(false);
   const [navLabel, setNavLabel] = useState("");
   const [activeTargetHref, setActiveTargetHref] = useState<string | null>(null);
@@ -53,7 +54,7 @@ export const NavigationLoadingProvider: React.FC<{ children: React.ReactNode }> 
   // Whenever the pathname changes, dismiss the navigation loading heads-up
   useEffect(() => {
     stopNavigating();
-  }, [pathname, stopNavigating]);
+  }, [pathname, search, stopNavigating]);
 
   // Clean up on unmount
   useEffect(() => {

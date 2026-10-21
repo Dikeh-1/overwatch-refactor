@@ -119,6 +119,7 @@ test("successful database closure commits one snapshot without rewriting candida
   calls.length = 0;
   const result = await campaigns.closeAndArchiveRoleCohort("cctv");
   assert.equal(result.role.open, false);
+  assert.equal(result.archivedCohort.name, require("../src/lib/careers-cycle-label.ts").cycleLabel({ name: "", openedAt: role.createdAt, closedAt: result.archivedCohort.closedAt }, role, "pt"));
   assert.equal(result.archivedCohort.closureSnapshot.applications.length, 1);
   assert.equal(
     result.archivedCohort.closureSnapshot.applications[0].status,

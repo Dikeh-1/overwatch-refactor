@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import type { CareerRoleDefinition, CareerCohort, ScreeningRule } from "@/lib/careers-models";
 import { DEFAULT_SCREENING_RULES_BY_ROLE } from "@/lib/careers-models";
-import { Application, roles as defaultRoles } from "@/lib/careers";
+import { Application } from "@/lib/careers";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import { useActiveRole } from "../shell/ActiveRoleContext";
 import Logo from "@/components/ui/Logo";
@@ -181,23 +181,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
 
   const { activeRoleId, setActiveRoleId } = useActiveRole();
 
-  const allRoles: CareerRoleDefinition[] = useMemo(() => {
-    if (initialRoles && initialRoles.length > 0) return initialRoles;
-    return defaultRoles.map((dr) => ({
-      id: dr.id,
-      pt: dr.pt,
-      en: dr.en,
-      department: dr.id.includes("manager") ? "Technical Engineering" : "Security Operations",
-      descriptionEn: "",
-      descriptionPt: "",
-      open: true,
-      activeCohortId: null,
-      pipelineStages: ["applications", "screening", "interview", "hired"],
-      screeningRules: DEFAULT_SCREENING_RULES_BY_ROLE[dr.id] || [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }));
-  }, [initialRoles]);
+  const allRoles: CareerRoleDefinition[] = initialRoles || [];
 
   // Selected Role ID
   const selectedRoleId = useMemo(() => {
@@ -244,9 +228,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
   useEffect(() => {
     if (currentRole) {
       const initialRules =
-        currentRole.screeningRules && currentRole.screeningRules.length > 0
-          ? currentRole.screeningRules
-          : DEFAULT_SCREENING_RULES_BY_ROLE[currentRole.id] || [];
+        currentRole.screeningRules ?? DEFAULT_SCREENING_RULES_BY_ROLE[currentRole.id] ?? [];
       setWorkingRules(initialRules);
       setHasUnsavedChanges(false);
       setSaveSuccessMsg("");
@@ -475,6 +457,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
 
     try {
       await onSaveRole(updatedRole);
+      window.dispatchEvent(new Event("admin:careers-updated"));
       setHasUnsavedChanges(false);
       setSaveSuccessMsg(
         adminLang === "en"
@@ -1579,7 +1562,9 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
                   (r) => r.field === preset.key
                 );
 
-                return (
+                if (!currentRole) return <div role="status" className="rounded-xl border bg-white p-6">{adminLang === "en" ? "No roles are configured. Create a role in All Job Roles first." : "Não existem vagas configuradas. Crie uma vaga em Todas as Vagas."}</div>;
+
+  return (
                   <div
                     key={preset.key}
                     className="p-3.5 rounded-xl border border-slate-200 hover:border-slate-300 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors"

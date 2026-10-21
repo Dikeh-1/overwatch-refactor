@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { cycleLabel } from "@/lib/careers-cycle-label";
 import { csvCell } from "@/lib/csv";
 import Link from "next/link";
 import { ArrowLeft, Download, RefreshCw } from "lucide-react";
@@ -237,7 +238,7 @@ export default function RecruitmentWorkspace({
   };
   if (!data && busy)
     return (
-      <div className="py-20">
+      <div role="status" aria-live="polite" className="flex min-h-[60vh] w-full items-center justify-center p-6">
         <OverwatchOrbitLoader
           label={t("Loading workspace…", "A carregar área de trabalho…")}
         />
@@ -254,6 +255,7 @@ export default function RecruitmentWorkspace({
     );
   const workspaceRole = {
     ...role,
+    open: cohort?.status === "active",
     pipelineStages: configured,
     screeningRules: cohort?.screeningRules ?? role.screeningRules,
   };
@@ -295,7 +297,7 @@ export default function RecruitmentWorkspace({
                     )}
               </p>
               <h1 className="text-xl font-bold mt-1">
-                {cohort?.name || (lang === "pt" ? role.pt : role.en)}
+                {cohort ? cycleLabel(cohort, role, lang) : (lang === "pt" ? role.pt : role.en)}
               </h1>
               <p className="text-xs text-slate-500 mt-1">
                 {t(

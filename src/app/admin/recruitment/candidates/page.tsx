@@ -2,12 +2,14 @@
 
 import { useSearchParams } from "next/navigation";
 import RecruitmentWorkspace from "@/components/admin/recruitment/RecruitmentWorkspace";
+import { useAdminLanguage } from "@/components/admin/shell/AdminLanguageContext";
 import React, { useState, useEffect, useCallback } from "react";
 import { CandidatesTableView } from "@/components/admin/recruitment/CandidatesTableView";
 import { Application, Role, roles as defaultRoles, ArchiveReason } from "@/lib/careers";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 
 export default function CandidatesPage() {
+  const { t } = useAdminLanguage();
   const workspaceRole = useSearchParams().get("role");
   const [applications, setApplications] = useState<Application[]>([]);
   const [roles, setRoles] = useState<Role[]>(defaultRoles);
@@ -55,7 +57,7 @@ export default function CandidatesPage() {
       const res = await fetch("/api/admin/careers", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "bulk_status", ids, status: "archived" }),
+        body: JSON.stringify({ kind: "bulk_status", ids, status: "archived", reason }),
       });
       if (res.ok) {
         await loadData();
@@ -73,7 +75,7 @@ export default function CandidatesPage() {
   if (loading) {
     return (
       <div className="py-24 flex items-center justify-center">
-        <OverwatchOrbitLoader label="A carregar candidatos..." size="md" />
+        <OverwatchOrbitLoader label={t("Loading candidates…", "A carregar candidatos…")} size="md" />
       </div>
     );
   }

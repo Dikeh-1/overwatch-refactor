@@ -13,14 +13,17 @@ export default function FormBuilderPage() {
   const [cohorts, setCohorts] = useState<CareerCohort[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const loadData = useCallback(async () => {
+    setError("");
     try {
       const [careersRes, managerRes] = await Promise.all([
         fetch(`/api/admin/careers?t=${Date.now()}`, { cache: "no-store" }),
         fetch(`/api/admin/careers/roles-manager?t=${Date.now()}`, { cache: "no-store" }),
       ]);
 
+      if (!careersRes.ok || !managerRes.ok) throw new Error("Unable to load form configuration. Please retry.");
       if (careersRes.ok) {
         const cData = await careersRes.json();
         setApplications(cData.applications || []);
@@ -32,7 +35,7 @@ export default function FormBuilderPage() {
         if (mData.cohorts) setCohorts(mData.cohorts);
       }
     } catch (err) {
-      console.error("Failed to load form builder data:", err);
+      setError(err instanceof Error ? err.message : "Unable to load form configuration");
     } finally {
       setLoading(false);
     }
@@ -73,6 +76,8 @@ export default function FormBuilderPage() {
       </div>
     );
   }
+
+  if (error) return <div role="alert" className="rounded-xl border border-red-200 p-6">{error} <button className="underline" onClick={() => void loadData()}>{t("Retry", "Tentar novamente")}</button></div>;
 
   return (
     <FormBuilderStudioView

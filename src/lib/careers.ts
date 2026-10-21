@@ -270,10 +270,8 @@ export function normalizeSlot(slot?: string | null): string {
 /** Check if a given slot is specifically on Friday, 25 September (National Public Holiday in Mozambique) */
 export function isFriday25Sept(slot?: string | null): boolean {
   if (!slot) return false;
-  const norm = normalizeSlot(slot).toLowerCase();
-  const isFriday = norm.includes("sexta") || norm.includes("friday");
-  const has25 = /\b25\b/.test(norm);
-  return isFriday && has25;
+  const date = parseSlotComponents(slot);
+  return Boolean(date && date.month === 9 && date.day === 25);
 }
 
 export function formatSlotDisplay(slot: string, l?: "en" | "pt" | boolean) {

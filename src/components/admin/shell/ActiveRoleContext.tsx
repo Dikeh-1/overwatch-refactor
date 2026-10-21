@@ -2,8 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import { sameRole, isTerminal, recruitmentMetrics } from "@/lib/careers-workflow";
-import type { CareerRoleDefinition, PipelineStageKey } from "@/lib/careers-models";
-import { roles as defaultLegacyRoles, Application } from "@/lib/careers";
+import type { CareerRoleDefinition } from "@/lib/careers-models";
+import { Application } from "@/lib/careers";
 
 interface RoleStats {
   total: number;
@@ -55,31 +55,15 @@ export const ActiveRoleProvider: React.FC<{
       // fallback
     }
 
-    // Default roles fallback
-    const defaults: CareerRoleDefinition[] = defaultLegacyRoles.map((r) => {
-      const isTechMgr = r.id === "cctv_technical_manager";
-      const stages: PipelineStageKey[] = isTechMgr
-        ? ["applications", "screening", "interview", "hired"]
-        : ["applications", "screening", "testing", "gate_checkin", "next_phase", "interview", "hired"];
+    // Retain the last confirmed role states on transient failures. Never invent open roles.
 
-      return {
-        id: r.id,
-        en: r.en,
-        pt: r.pt,
-        department: isTechMgr ? "Engenharia Técnica" : "Operações",
-        open: r.open,
-        activeCohortId: r.open ? `${r.id}_initial_cohort` : null,
-        pipelineStages: stages,
-        screeningRules: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-    });
-    setRoles(defaults);
   }, []);
 
   useEffect(() => {
     refreshRoles().finally(() => setLoading(false));
+    const refresh = () => { void refreshRoles(); };
+    window.addEventListener("admin:careers-updated", refresh);
+    return () => window.removeEventListener("admin:careers-updated", refresh);
   }, [refreshRoles]);
 
   // Read saved active role ID from localStorage
@@ -102,9 +86,9 @@ export const ActiveRoleProvider: React.FC<{
   const activeRole = useMemo(() => {
     if (!activeRoleId || activeRoleId === "all") {
       // Default to first open role or first role
-      return roles.find((r) => r.open) || roles[0] || null;
+      return roles.find((r) => r.open) || null;
     }
-    return roles.find((r) => r.id === activeRoleId) || roles[0] || null;
+    return roles.find((r) => r.id === activeRoleId && r.open) || roles.find((r) => r.open) || null;
   }, [roles, activeRoleId]);
 
   // Compute stats per role
@@ -124,7 +108,7 @@ export const ActiveRoleProvider: React.FC<{
     <ActiveRoleContext.Provider
       value={{
         roles,
-        activeRoleId,
+        activeRoleId: activeRole?.id || "all",
         activeRole,
         setActiveRoleId,
         roleStats,

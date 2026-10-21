@@ -15,7 +15,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const ids: string[] = Array.isArray(body.ids) ? body.ids : [];
+    const ids: string[] = Array.isArray(body.ids) ? [...new Set<string>(body.ids.filter((id: unknown) => typeof id === "string" && /^[\w-]{6,64}$/.test(id)))] : [];
     const sendEmail: boolean = body.sendEmail !== false;
 
     if (ids.length === 0) {
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     for (const id of ids) {
       try {
         const candidate = await getApplication(id);
-        if (!candidate) continue;
+        if (!candidate || ["hired", "disqualified", "rejected"].includes(candidate.status)) continue;
 
         let defaultReason = "Não conformidade com os requisitos eliminatórios do concurso.";
         if (candidate.screeningResult?.failedReasonsPt && candidate.screeningResult.failedReasonsPt.length > 0) {
@@ -60,7 +60,9 @@ export async function POST(request: Request) {
         const updated = await updateApplication(id, {
           testSlot: undefined,
           testBookedAt: undefined,
-          status: "archived",
+          status: "disqualified",
+          archiveReason: "Other",
+          activityLog: [...(candidate.activityLog || []), { id: crypto.randomUUID(), action: "disqualified", details: reason, timestamp: new Date().toISOString(), actor: "Admin" }],
         });
 
         // Send polite formal disqualification notice if requested

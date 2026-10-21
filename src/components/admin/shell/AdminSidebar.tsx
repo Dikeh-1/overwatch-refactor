@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
@@ -101,6 +101,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   onCloseMobile,
 }) => {
   const pathname = usePathname();
+  const router = useRouter();
+  const search = useSearchParams().toString();
   const t = (en: string, pt: string) => (lang === "en" ? en : pt);
 
   const { roles, activeRoleId, activeRole, setActiveRoleId, roleStats } = useActiveRole();
@@ -109,7 +111,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const menuRef = useRef<HTMLDivElement>(null);
 
   const handleNavClick = (label: string, href: string) => {
-    if (pathname !== href) {
+    if (`${pathname}${search ? `?${search}` : ""}` !== href) {
       startNavigating(label, href);
     }
     onCloseMobile();
@@ -133,6 +135,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     return false;
   };
 
+  const openRoles = roles.filter((role) => role.open);
   const currentRoleStats = activeRole ? roleStats[activeRole.id] : null;
   const stages = activeRole?.pipelineStages || [
     "applications",
@@ -195,7 +198,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           <div className="space-y-2 pt-1 border-t border-white/[0.08]" ref={menuRef}>
             <div className="px-1">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                {t("Role Workspace", "Funil da Vaga")}
+                {t("Open Role Workspace", "Vaga aberta")}
               </span>
             </div>
 
@@ -203,6 +206,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             <div className="relative">
               <button
                 type="button"
+                disabled={!openRoles.length}
                 onClick={() => setRoleMenuOpen(!roleMenuOpen)}
                 className="w-full flex items-center justify-between gap-2 p-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.1] text-white text-xs font-semibold transition-all text-left shadow-xs cursor-pointer"
               >
@@ -216,10 +220,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                         ? lang === "en"
                           ? activeRole.en || activeRole.pt
                           : activeRole.pt || activeRole.en
-                        : t("Select Role...", "Selecionar Vaga...")}
+                        : t("No open roles", "Nenhuma vaga aberta")}
                     </span>
                     <span className="text-[10px] text-slate-400 font-normal">
-                      {currentRoleStats ? `${currentRoleStats.total} ${t("applicants", "candidaturas")}` : ""}
+                      {activeRole && !activeRole.open ? t("Applications closed · Archive Vault", "Candidaturas encerradas · Arquivo") : currentRoleStats ? `${currentRoleStats.total} ${t("applicants", "candidaturas")}` : t("View closed cycles in Archive Vault", "Consulte os lotes no Arquivo")}
                     </span>
                   </div>
                 </div>
@@ -238,7 +242,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                     {t("Select Recruitment Role", "Selecionar Vaga de Recrutamento")}
                   </div>
 
-                  {roles.map((r) => {
+                  {!openRoles.length && <p className="p-2 text-xs text-slate-400">{t("No open roles. View closed cycles in Archive Vault.", "Sem vagas abertas. Consulte os lotes no Arquivo.")}</p>}
+                  {openRoles.map((r) => {
                     const isSelected = activeRoleId === r.id;
                     const rTitle = lang === "en" ? r.en || r.pt : r.pt || r.en;
                     const count = roleStats[r.id]?.total || 0;
@@ -250,9 +255,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                         onClick={() => {
                           setActiveRoleId(r.id);
                           setRoleMenuOpen(false);
-                          startNavigating(
-                            lang === "en" ? `Workspace: ${r.en || r.pt}` : `Funil: ${r.pt || r.en}`,
-                          );
+                          const rolePaths = ["/admin/recruitment", "/admin/recruitment/candidates", "/admin/recruitment/testing", "/admin/recruitment/next-phase", "/admin/recruitment/communications", "/admin/recruitment/form-builder"];
+                          const target = `${rolePaths.includes(pathname) ? pathname : "/admin/recruitment"}?role=${encodeURIComponent(r.id)}`;
+                          handleNavClick(rTitle, target);
+                          router.push(target);
                         }}
                         className={`w-full flex items-center justify-between p-2 rounded-lg text-xs transition-colors text-left cursor-pointer ${
                           isSelected
@@ -289,8 +295,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             </div>
           </div>
 
-          {/* TAILORED PIPELINE STAGES FOR ACTIVE ROLE */}
-          <div className="space-y-1">
+          {/* Closed cycles are reached exclusively through the Archive Vault. */}
+          {activeRole?.open && !pathname?.startsWith("/admin/recruitment/archive") && <div className="space-y-1">
             <div className="px-3 pb-1 text-[0.65rem] font-bold uppercase tracking-wider text-slate-400">
               {t("Role Pipeline", "Pipeline da Vaga")}
             </div>
@@ -378,6 +384,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               );
             })()}
           </div>
+
+          }
 
           {/* ALL ROLES & ARCHIVES SECTION */}
           <div className="space-y-1 pt-1 border-t border-white/[0.08]">

@@ -19,6 +19,7 @@ import {
   FolderOpen,
   ShieldCheck,
 } from "lucide-react";
+import { recruitmentMetrics, sameRole, isTerminal, isNextPhase } from "@/lib/careers-workflow";
 import { Application, Role } from "@/lib/careers";
 import type { CareerRoleDefinition, CareerCohort } from "@/lib/careers-models";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
@@ -65,8 +66,8 @@ export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
       : applications.filter(
           (a) => a.role === selectedRoleFilter || (selectedRoleFilter === "cctv" && !a.role),
         );
-    return list.filter((a) => a.status !== "archived");
-  }, [applications, selectedRoleFilter]);
+    return list.filter(a => roleDefs.some(r => r.open && sameRole(r.id, a.role) && (!r.activeCohortId || a.workspaceCohortId === r.activeCohortId || a.cohortId === r.activeCohortId)));
+  }, [applications, selectedRoleFilter, roleDefs]);
 
   // Active role definition and stage capabilities
   const activeRoleDef = roleDefs.find((r) => r.id === selectedRoleFilter) || (selectedRoleFilter === "all" ? null : activeRole);
@@ -75,30 +76,13 @@ export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
   const hasNextPhase = stages.includes("next_phase");
 
   // Exact database calculations
-  const totalApps = activeApplications.length;
-  const testsBooked = activeApplications.filter((a) => Boolean(a.testSlot) && a.status !== "archived" && a.status !== "rejected").length;
-  const testsCompleted = activeApplications.filter((a) => Boolean(a.attendedAt)).length;
+  const workflowMetrics = recruitmentMetrics(activeApplications);
+  const totalApps = workflowMetrics.total;
+  const testsBooked = workflowMetrics.booked;
+  const testsCompleted = workflowMetrics.tested;
 
-  const cvScreenedCount = activeApplications.filter(
-    (a) =>
-      a.status !== "archived" &&
-      a.status !== "rejected" &&
-      (Boolean(a.screeningResult?.passedMandatory) ||
-        (typeof a.screeningScore === "number" && a.screeningScore >= 50) ||
-        a.status === "shortlisted" ||
-        a.status === "screening" ||
-        a.status === "interview" ||
-        a.status === "hired")
-  ).length;
-
-  const inReviewCount = activeApplications.filter(
-    (a) =>
-      a.status !== "archived" &&
-      a.status !== "rejected" &&
-      a.status !== "interview" &&
-      a.status !== "hired" &&
-      (!a.screeningResult || !a.screeningResult.passedMandatory)
-  ).length;
+  const cvScreenedCount = workflowMetrics.qualified;
+  const inReviewCount = activeApplications.filter(a => !isTerminal(a) && ["new", "reviewing", "screening"].includes(a.status)).length;
 
   const interviewCount = activeApplications.filter(
     (a) => a.status === "interview"
@@ -108,26 +92,13 @@ export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
     (a) => a.status === "hired"
   ).length;
 
-  const archivedCount = activeApplications.filter(
+  const archivedCount = applications.filter(
     (a) => a.status === "archived" || a.status === "rejected"
   ).length;
 
   // Dynamic next phase cohort metrics derived from DB applications & roster
   const nextPhaseStats = useMemo(() => {
-    const nextPhaseApps = activeApplications.filter((a) => {
-      if (a.status === "archived" || a.status === "rejected") return false;
-      return (
-        a.status === "next_phase_selected" ||
-        a.status === "next_phase_invited" ||
-        a.status === "awaiting_response" ||
-        a.status === "interest_confirmed" ||
-        a.status === "interest_declined" ||
-        a.nextPhaseStatus === "selected" ||
-        a.nextPhaseStatus === "invited" ||
-        a.nextPhaseStatus === "confirmed" ||
-        a.nextPhaseStatus === "declined"
-      );
-    });
+    const nextPhaseApps = activeApplications.filter(isNextPhase);
 
     const scores = nextPhaseApps
       .map((a) => a.testScore)
@@ -135,14 +106,14 @@ export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
 
     const totalCount = nextPhaseApps.length;
     const minScore = scores.length > 0 ? Math.min(...scores) : 0;
-    const maxScore = scores.length > 0 ? Math.max(...scores) : 100;
+    const maxScore = scores.length > 0 ? Math.max(...scores) : 0;
 
     return { totalCount, minScore, maxScore };
   }, [activeApplications]);
 
-  const nextPhaseSelected = nextPhaseStats.totalCount;
-  const awaitingResponse = activeApplications.filter((a) => a.nextPhaseInvitedAt && !a.nextPhaseResponse).length;
-  const confirmedInterest = activeApplications.filter((a) => a.nextPhaseResponse === "yes").length;
+  const nextPhaseSelected = workflowMetrics.nextPhase;
+  const awaitingResponse = workflowMetrics.awaiting;
+  const confirmedInterest = workflowMetrics.confirmed;
 
   const metrics = useMemo(() => {
     // 1. Role has physical testing & next phase (e.g. CCO)
@@ -543,8 +514,8 @@ export const RecruitmentOverviewView: React.FC<RecruitmentOverviewProps> = ({
               </div>
               <p className="text-xs text-slate-500 leading-relaxed">
                 {t(
-                  `Management has approved ${nextPhaseStats.totalCount} candidates for the CCO practical training pipeline (Scores: ${nextPhaseStats.minScore}% - ${nextPhaseStats.maxScore}%).`,
-                  `A administração aprovou ${nextPhaseStats.totalCount} candidatas para a formação prática de CCO (Pontuações: ${nextPhaseStats.minScore}% - ${nextPhaseStats.maxScore}%).`
+                  `${nextPhaseStats.totalCount} candidates are recorded in the next-phase pipeline (Scores: ${nextPhaseStats.minScore}% - ${nextPhaseStats.maxScore}%).`,
+                  `${nextPhaseStats.totalCount} candidatos estão registados na próxima fase (Pontuações: ${nextPhaseStats.minScore}% - ${nextPhaseStats.maxScore}%).`
                 )}
               </p>
 

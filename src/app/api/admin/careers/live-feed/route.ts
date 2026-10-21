@@ -1,3 +1,4 @@
+import { sameRole } from "@/lib/careers-workflow";
 import { NextResponse } from "next/server";
 import { checkAdminSession } from "@/lib/careers-auth";
 import { getApplications } from "@/lib/careers-store";
@@ -21,14 +22,15 @@ export async function GET(request: Request) {
 
     let filtered = allApps;
     if (roleId && roleId !== "all") {
-      filtered = filtered.filter((a) => a.role === roleId);
+      filtered = filtered.filter((a) => sameRole(a.role, roleId));
     }
 
     const sinceDate = since ? new Date(since).getTime() : 0;
+    if (!Number.isFinite(sinceDate)) return NextResponse.json({ error: "Invalid since timestamp" }, { status: 400 });
     const newOrUpdated = filtered.filter((a) => {
       const createdTime = new Date(a.createdAt).getTime();
       return createdTime > sinceDate;
-    });
+    }).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
     return NextResponse.json({
       success: true,

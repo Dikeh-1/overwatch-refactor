@@ -1,4 +1,6 @@
 import "server-only";
+import { getSystemConfig } from "./careers-config-store";
+import { DEFAULT_ADMIN_SETTINGS } from "./admin-settings";
 import fs from "node:fs";
 import path from "node:path";
 import nodemailer from "nodemailer";
@@ -57,7 +59,7 @@ async function sendViaGmailSmtp(payload: SendEmailOptions) {
   }));
 
   const mailOptions: Record<string, unknown> = {
-    from: `"${payload.sender?.name || "Overwatch"}" <${user}>`,
+    from: { name: payload.sender?.name || "Overwatch", address: user },
     to: payload.to.map((t) => t.email).join(", "),
     replyTo: payload.replyTo
       ? payload.replyTo.email
@@ -144,6 +146,8 @@ async function sendViaBrevo(
 }
 
 export async function sendTransactionalEmail(payload: SendEmailOptions) {
+  const settings = await getSystemConfig("admin_settings", DEFAULT_ADMIN_SETTINGS);
+  payload = { ...payload, sender: { email: payload.sender?.email || "noreply@overwatchmoz.com", name: settings.senderName }, replyTo: payload.replyTo || { name: settings.senderName, email: settings.replyToEmail } };
   const fallbackUser = process.env.FALLBACK_SMTP_USER;
   const fallbackPass = process.env.FALLBACK_SMTP_PASS;
   const hasGmailSmtp = Boolean(fallbackUser && fallbackPass);

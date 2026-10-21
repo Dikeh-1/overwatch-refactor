@@ -152,12 +152,14 @@ export async function purgeLegacySystemRowsFromApplicationsTable(): Promise<void
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type SystemConfigKey =
+  | "admin_settings"
   | "roles_config"
   | "cohorts"
   | "test_slots"
   | "deleted_next_phase";
 
 const FILENAME_MAP: Record<SystemConfigKey, string> = {
+  admin_settings: "admin-settings.json",
   roles_config: "roles_def.json",
   cohorts: "cohorts.json",
   test_slots: "test-slots.json",

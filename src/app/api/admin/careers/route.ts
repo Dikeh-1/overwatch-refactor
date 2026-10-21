@@ -45,7 +45,7 @@ export async function PATCH(request: Request) {
       const app = await getApplication(data.id);
       if (!app) return Response.json({ error: "Candidate not found" }, { status: 404 });
       const updates: Record<string, any> = { status: data.status };
-      if (data.status === "archived") { updates.statusBeforeArchive = app?.status; updates.archiveReason = data.reason || "Other"; }
+      if (data.status === "archived") { updates.statusBeforeArchive = app.status === "archived" ? app.statusBeforeArchive : app.status; updates.archiveReason = data.reason || "Other"; }
       if (data.status === "next_phase_selected" || data.status === "next_phase_invited") {
         updates.nextPhaseStatus = data.status === "next_phase_invited" ? "invited" : "selected";
         if (!app?.nextPhaseToken) {
@@ -75,12 +75,13 @@ export async function PATCH(request: Request) {
       Array.isArray(data.ids) &&
       data.ids.length > 0
     ) {
-      for (const id of data.ids) {
+      if (data.ids.some((id: unknown) => typeof id !== "string" || !/^[\w-]{6,64}$/i.test(id))) return Response.json({ error: "Invalid candidate IDs" }, { status: 400 });
+      for (const id of new Set<string>(data.ids)) {
         if (typeof id === "string" && /^[\w-]{6,64}$/i.test(id.trim())) {
           const app = await getApplication(id);
           if (!app) throw new Error("Candidate not found");
           const updates: Record<string, any> = { status: data.status };
-      if (data.status === "archived") { updates.statusBeforeArchive = app?.status; updates.archiveReason = data.reason || "Other"; }
+      if (data.status === "archived") { updates.statusBeforeArchive = app.status === "archived" ? app.statusBeforeArchive : app.status; updates.archiveReason = data.reason || "Other"; }
           if (data.status === "next_phase_selected" || data.status === "next_phase_invited") {
             updates.nextPhaseStatus = data.status === "next_phase_invited" ? "invited" : "selected";
             if (!app?.nextPhaseToken) {
@@ -111,7 +112,10 @@ export async function PATCH(request: Request) {
       typeof data.id === "string" && /^[\w-]{6,64}$/i.test(data.id.trim())
     ) {
       // Clear booked test slot without changing candidate status
-      await updateApplication(data.id, { testSlot: undefined, testBookedAt: undefined });
+      const candidate = await getApplication(data.id);
+      if (!candidate) return Response.json({ error: "Candidate not found" }, { status: 404 });
+      if (candidate.attendedAt || candidate.testScore !== undefined) return Response.json({ error: "Cannot remove a booking with recorded attendance or results" }, { status: 409 });
+      await updateApplication(data.id, { testSlot: undefined, testBookedAt: undefined, ...(candidate.status === "test_booked" ? { status: "test_invited" as const } : {}) });
     }
     else if (
       data.kind === "score" &&

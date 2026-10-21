@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Archive, ArrowUpRight, Search } from "lucide-react";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import RecruitmentWorkspace from "./RecruitmentWorkspace";
+import { cycleLabel } from "@/lib/careers-cycle-label";
 import type { CareerCohort } from "@/lib/careers-models";
 import type { recruitmentMetrics } from "@/lib/careers-workflow";
 
@@ -28,6 +29,7 @@ export default function ArchiveVaultView({
   const [loading, setLoading] = useState(true);
   const [retry, setRetry] = useState(0);
   useEffect(() => {
+    if (cohortId) return;
     const controller = new AbortController();
     fetch("/api/admin/careers/archive", {
       cache: "no-store",
@@ -46,13 +48,13 @@ export default function ArchiveVaultView({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [retry]);
+  }, [retry, cohortId]);
   if (cohortId)
     return <RecruitmentWorkspace key={cohortId} cohortId={cohortId} />;
-  const visible = entries.filter(
+  const visible = [...entries].sort((a, b) => (b.closedAt || b.openedAt || "").localeCompare(a.closedAt || a.openedAt || "")).filter(
     (e) =>
       (!role || role === "all" || e.roleId === role) &&
-      `${e.name} ${e.roleTitlePt} ${e.roleTitleEn}`
+      `${cycleLabel(e, { en: e.roleTitleEn, pt: e.roleTitlePt }, lang)} ${e.name} ${e.roleTitlePt} ${e.roleTitleEn}`
         .toLowerCase()
         .includes(query.toLowerCase()),
   );
@@ -111,7 +113,7 @@ export default function ArchiveVaultView({
               className="rounded-2xl border border-slate-200 bg-white p-5 hover:border-slate-500"
             >
               <div className="flex justify-between gap-3">
-                <h2 className="font-semibold">{e.name}</h2>
+                <h2 className="font-semibold">{cycleLabel(e, { en: e.roleTitleEn, pt: e.roleTitlePt }, lang)}</h2>
                 <ArrowUpRight size={18} />
               </div>
               <p className="mt-2 text-xs text-slate-500">

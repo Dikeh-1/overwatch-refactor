@@ -1,5 +1,5 @@
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
-import { getApplication, getApplications, updateApplication } from "@/lib/careers-store";
+import { getApplication, updateApplication } from "@/lib/careers-store";
 import { sendRetractionEmail } from "@/lib/careers-email";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +15,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const targetStatus = body.targetStatus || "shortlisted";
+    if (!["new", "reviewing", "screening", "shortlisted"].includes(targetStatus)) return Response.json({ error: "Invalid restoration stage" }, { status: 400 });
     const sendApologyEmail = body.sendApologyEmail !== false;
     const restoreAllArchivedWomen = Boolean(body.restoreAllArchivedWomen);
     const origin =
@@ -26,15 +27,7 @@ export async function POST(request: Request) {
       Array.isArray(body.ids) ? body.ids.filter((id: unknown) => typeof id === "string" && /^[\w-]{6,64}$/i.test(id.trim())) : []
     );
 
-    // If requesting automatic restore of all mistakenly archived female applicants
-    if (restoreAllArchivedWomen) {
-      const allApps = await getApplications();
-      for (const app of allApps) {
-        if (app.status === "archived" && app.sex !== "male") {
-          idsToRestore.add(app.id);
-        }
-      }
-    }
+    if (restoreAllArchivedWomen) return Response.json({ error: "Select explicit candidate IDs to restore." }, { status: 400 });
 
     if (idsToRestore.size === 0) {
       return Response.json(
@@ -54,13 +47,12 @@ export async function POST(request: Request) {
     for (const id of Array.from(idsToRestore)) {
       try {
         const candidate = await getApplication(id);
-        if (!candidate) continue;
+        if (!candidate || !["archived", "rejected", "disqualified"].includes(candidate.status)) continue;
 
         const updated = await updateApplication(id, {
           status: targetStatus,
-          // Reset slot if cancelled so they can choose fresh next-week slot
-          testSlot: undefined,
-          testBookedAt: undefined,
+          archiveReason: undefined,
+          statusBeforeArchive: undefined,
         });
 
         let emailSent = false;

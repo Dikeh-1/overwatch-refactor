@@ -1,7 +1,7 @@
 import { verifyAdminAuthorization } from "@/lib/careers-auth";
 import { getApplications, updateApplication } from "@/lib/careers-store";
 import { sendGatePassEmail } from "@/lib/careers-email";
-import { Application, getSlotDayNumber, getMaputoToday } from "@/lib/careers";
+import { Application, parseSlotComponents, getMaputoToday } from "@/lib/careers";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +65,10 @@ export async function POST(request: Request) {
     // Target day: can be overridden in body (e.g. { targetDay: 17 }) or defaults to Maputo tomorrow
     const targetDay: number = typeof body.targetDay === "number" ? body.targetDay : tomorrowMaputo.day;
 
+    if (!Number.isInteger(targetDay) || targetDay < 1 || targetDay > 31) return Response.json({ error: "Invalid target day" }, { status: 400 });
+    const targetDate = typeof body.targetDate === "string" ? parseSlotComponents(`${body.targetDate}T12:00`) : { ...tomorrowMaputo, day: targetDay };
+    if (!targetDate) return Response.json({ error: "Invalid target date" }, { status: 400 });
+    const sameDate = (a: {year: number; month: number; day: number}, b: {year: number; month: number; day: number}) => a.year === b.year && a.month === b.month && a.day === b.day;
     const allApps = await getApplications();
 
     // STRICT FILTER:
@@ -77,19 +81,15 @@ export async function POST(request: Request) {
       if (a.status === "rejected" || a.status === "archived") return false;
       if (a.email.endsWith(".invalid")) return false;
 
-      const slotDay = getSlotDayNumber(a.testSlot);
-      if (slotDay === null) return false;
-
-      // Skip today's candidates completely
-      if (slotDay === todayMaputo.day) return false;
-
-      return slotDay === targetDay;
+      const slotDate = parseSlotComponents(a.testSlot);
+      if (!slotDate || a.reminderSentAt) return false;
+      return !sameDate(slotDate, todayMaputo) && sameDate(slotDate, targetDate);
     });
 
     const skippedTodayCount = allApps.filter((a) => {
       if (!a.testSlot) return false;
-      const slotDay = getSlotDayNumber(a.testSlot);
-      return slotDay === todayMaputo.day;
+      const slotDate = parseSlotComponents(a.testSlot);
+      return Boolean(slotDate && sameDate(slotDate, todayMaputo));
     }).length;
 
     if (eligibleCandidates.length === 0) {

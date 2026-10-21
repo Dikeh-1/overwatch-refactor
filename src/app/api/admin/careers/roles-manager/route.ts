@@ -1,3 +1,5 @@
+import { buildCohortCatalog } from "@/lib/careers-workflow";
+import { ALL_PIPELINE_STAGES } from "@/lib/careers-models";
 import { NextResponse } from "next/server";
 import { sameOrigin, checkAdminSession } from "@/lib/careers-auth";
 import {
@@ -25,7 +27,7 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       roles,
-      cohorts,
+      cohorts: buildCohortCatalog(cohorts, roles, []),
     });
   } catch (error: any) {
     return NextResponse.json(
@@ -51,6 +53,7 @@ export async function POST(request: Request) {
       if (!role || typeof role.id !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(role.id) || typeof role.pt !== "string" || !role.pt.trim() || typeof role.open !== "boolean" || !Array.isArray(role.pipelineStages) || !Array.isArray(role.screeningRules)) {
         return NextResponse.json({ error: "Invalid role payload" }, { status: 400 });
       }
+      if (typeof role.en !== "string" || !role.en.trim() || role.en.length > 200 || role.pt.length > 200 || role.pipelineStages.some((stage: unknown) => !ALL_PIPELINE_STAGES.some(s => s.key === stage)) || new Set(role.pipelineStages).size !== role.pipelineStages.length) return NextResponse.json({ error: "Invalid role titles or pipeline stages" }, { status: 400 });
       const saved = await saveRoleDefinition(role);
       // Sync open state to legacy role store as well
       await setRole(saved.id, saved.open).catch(() => {});
@@ -76,6 +79,7 @@ export async function POST(request: Request) {
     if (action === "open_role") {
       const { roleId, cohortName } = body;
       if (!roleId) return NextResponse.json({ error: "Missing roleId" }, { status: 400 });
+      if (cohortName !== undefined && (typeof cohortName !== "string" || cohortName.length > 200)) return NextResponse.json({ error: "Invalid cycle name" }, { status: 400 });
       const res = await openRoleCohort(roleId, cohortName);
       return NextResponse.json({ success: true, ...res });
     }
@@ -83,6 +87,7 @@ export async function POST(request: Request) {
     if (action === "close_role") {
       const { roleId, notes } = body;
       if (!roleId) return NextResponse.json({ error: "Missing roleId" }, { status: 400 });
+      if (notes !== undefined && (typeof notes !== "string" || notes.length > 10000)) return NextResponse.json({ error: "Invalid notes" }, { status: 400 });
       const res = await closeAndArchiveRoleCohort(roleId, notes);
       return NextResponse.json({ success: true, ...res });
     }

@@ -1,4 +1,5 @@
 import "server-only";
+import { cycleLabel } from "./careers-cycle-label";
 import {
   type CareerRoleDefinition,
   type CareerCohort,
@@ -488,6 +489,7 @@ function planLifecycle(role: CareerRoleDefinition, cohorts: CareerCohort[], appl
     openedAt: now, status: "active", stages: [...role.pipelineStages], screeningRules: structuredClone(role.screeningRules), roleSnapshot: structuredClone(role),
   } : {
     ...(old || { id: role.activeCohortId || `${role.id}_${crypto.randomUUID()}`, roleId: role.id, name: role.pt, openedAt: role.createdAt }),
+    name: cycleLabel({ name: "", openedAt: role.createdAt, closedAt: now }, role, "pt"),
     status: "closed", closedAt: now, notes: name ?? old?.notes,
     stages: [...role.pipelineStages], screeningRules: structuredClone(role.screeningRules), roleSnapshot: structuredClone(role),
   };

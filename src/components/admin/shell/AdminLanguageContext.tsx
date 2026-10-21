@@ -12,14 +12,14 @@ interface AdminLanguageContextType {
 }
 
 const AdminLanguageContext = createContext<AdminLanguageContextType>({
-  lang: "pt",
+  lang: "en",
   setLang: () => {},
   toggleLang: () => {},
-  t: (en, pt) => pt,
+  t: (en) => en,
 });
 
 export const AdminLanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [lang, setLangState] = useState<AdminLang>("pt");
+  const [lang, setLangState] = useState<AdminLang>("en");
 
   useEffect(() => {
     try {

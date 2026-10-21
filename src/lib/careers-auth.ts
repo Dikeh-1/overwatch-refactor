@@ -47,7 +47,9 @@ export function sameOrigin(request: Request) {
 
 export async function verifyAdminAuthorization(request: Request): Promise<boolean> {
   if (!ADMIN_PASSWORD) return false;
-  if (await authenticated()) return true;
+  if (await authenticated()) {
+    if (["GET", "HEAD", "OPTIONS"].includes(request.method) || sameOrigin(request)) return true;
+  }
   const adminKey = request.headers.get("x-admin-key");
   if (adminKey && equal(adminKey, ADMIN_PASSWORD)) return true;
   const authHeader = request.headers.get("authorization");

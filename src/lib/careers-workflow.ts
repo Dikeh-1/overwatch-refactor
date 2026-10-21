@@ -3,7 +3,7 @@ import type { CareerCohort, CareerRoleDefinition } from "./careers-models";
 import { classifyCandidateLocation } from "./location-utils";
 
 export function canonicalRole(id?: string | null): string {
-  return !id || ["cctv", "cctv_operator", "cco-operator-maputo"].includes(id)
+  return !id || ["cctv", "cctv_operator", "cctv-operator", "cco-operator-maputo"].includes(id)
     ? "cctv"
     : id;
 }
@@ -28,7 +28,7 @@ export const isTerminal = (a: Application) =>
     "interest_declined",
   ].includes(a.status);
 export const isNextPhase = (a: Application) =>
-  !["rejected", "not_advancing", "withdrawn", "disqualified"].includes(
+  !["archived", "rejected", "not_advancing", "withdrawn", "disqualified", "no_show"].includes(
     a.status,
   ) &&
   ([

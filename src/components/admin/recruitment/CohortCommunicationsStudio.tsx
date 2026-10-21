@@ -21,6 +21,7 @@ import {
   ExternalLink,
   Paperclip,
 } from "lucide-react";
+import { cycleLabel } from "@/lib/careers-cycle-label";
 import { Application } from "@/lib/careers";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
@@ -467,7 +468,7 @@ export const CohortCommunicationsStudio: React.FC<CohortCommunicationsStudioProp
                 </span>
                 <span className="rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-700 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
                   <FolderArchive size={11} />
-                  {cohort.name}
+                  {cycleLabel(cohort, { en: cohort.roleSnapshot?.en || cohort.roleId, pt: cohort.roleSnapshot?.pt || cohort.roleId }, lang)}
                 </span>
               </div>
               <h2 className="text-base font-bold text-slate-900 mt-1">

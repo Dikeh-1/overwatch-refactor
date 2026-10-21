@@ -1,6 +1,7 @@
+import { resolveApplication, isTerminal, hasAttended, hasTested } from "@/lib/careers-workflow";
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
 import { getApplications, getApplication, updateApplication, getTestSlotConfig } from "@/lib/careers-store";
-import { DEFAULT_TEST_SLOTS, type Application, isPastDateSlot } from "@/lib/careers";
+import { type Application, isPastDateSlot } from "@/lib/careers";
 import { sendRebookingGraceEmail } from "@/lib/careers-email";
 
 export const dynamic = "force-dynamic";
@@ -14,12 +15,12 @@ export async function GET() {
   }
 
   try {
-    const allApps = await getApplications();
+    const allApps = (await getApplications()).map(resolveApplication);
     const { slots: activeSlots, quota = 15 } = await getTestSlotConfig();
 
     // Only future open slots (Sept 21-25)
     const openFutureSlots = activeSlots.filter((s) => !isPastDateSlot(s));
-    const effectiveSlots = openFutureSlots.length > 0 ? openFutureSlots : [...DEFAULT_TEST_SLOTS];
+    const effectiveSlots = openFutureSlots;
 
     // Compute slot stats for future dates using dynamic quota
     const slotStats: Record<string, { booked: number; max: number; isFull: boolean; remaining: number }> = {};
@@ -48,14 +49,14 @@ export async function GET() {
 
       // Has booked a past slot and did not attend
       const wasBookedPast = a.testSlot && isPastDateSlot(a.testSlot);
-      const notAttended = !a.attendedAt;
-      const hasUnusedGrace = a.rebookingGrace && !a.rebookingGrace.usedAt;
+      const notAttended = !hasAttended(a) && !hasTested(a);
+      const hasUnusedGrace = a.rebookingGrace && !a.rebookingGrace.usedAt && (!a.rebookingGrace.expiresAt || new Date(a.rebookingGrace.expiresAt) > new Date());
 
       return (wasBookedPast && notAttended) || hasUnusedGrace;
     });
 
     const activeGraceCandidates = allApps.filter(
-      (a) => a.rebookingGrace && !a.rebookingGrace.usedAt
+      (a) => !isTerminal(a) && a.rebookingGrace && !a.rebookingGrace.usedAt && (!a.rebookingGrace.expiresAt || new Date(a.rebookingGrace.expiresAt) > new Date())
     );
 
     const rebookedCandidates = allApps.filter(
@@ -117,6 +118,7 @@ export async function POST(request: Request) {
       }
 
       // Single-use safeguard: If candidate has already completed their grace rebooking, block reissuing
+      if (isTerminal(resolveApplication(candidate)) || hasAttended(candidate) || hasTested(candidate)) return Response.json({ error: "Candidate is not eligible for rebooking" }, { status: 409 });
       if (candidate.rebookingGrace?.usedAt && !body.force) {
         return Response.json(
           {
@@ -129,7 +131,7 @@ export async function POST(request: Request) {
         );
       }
 
-      const token = crypto.randomUUID();
+      const token = candidate.rebookingGrace && !candidate.rebookingGrace.usedAt ? candidate.rebookingGrace.token : crypto.randomUUID();
       const grantedAt = new Date().toISOString();
       const previousSlot = candidate.testSlot || candidate.previousTestSlot || undefined;
 
@@ -141,6 +143,7 @@ export async function POST(request: Request) {
         usedAt: null,
       };
 
+      await updateApplication(candidate.id, { rebookingGrace: graceData });
       let emailSent = false;
       let emailError: string | null = null;
 
@@ -207,6 +210,10 @@ export async function POST(request: Request) {
             continue;
           }
 
+          if (isTerminal(resolveApplication(candidate)) || hasAttended(candidate) || hasTested(candidate)) {
+            results.push({ id, name: candidate.name, success: false, error: "Candidate is not eligible for rebooking" });
+            continue;
+          }
           // Skip candidates who have already completed their grace rebooking
           if (candidate.rebookingGrace?.usedAt) {
             results.push({
@@ -218,7 +225,7 @@ export async function POST(request: Request) {
             continue;
           }
 
-          const token = crypto.randomUUID();
+          const token = candidate.rebookingGrace && !candidate.rebookingGrace.usedAt ? candidate.rebookingGrace.token : crypto.randomUUID();
           const grantedAt = new Date().toISOString();
           const previousSlot = candidate.testSlot || candidate.previousTestSlot || undefined;
 
@@ -230,6 +237,7 @@ export async function POST(request: Request) {
             usedAt: null,
           };
 
+          await updateApplication(candidate.id, { rebookingGrace: graceData });
           let emailSent = false;
           if (sendEmail) {
             try {

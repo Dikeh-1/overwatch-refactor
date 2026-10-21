@@ -42,7 +42,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!(await authenticated())) {
+  if (!sameOrigin(request) || !(await authenticated())) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -50,7 +50,8 @@ export async function POST(request: Request) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "local";
   const body = await request.json().catch(() => ({}));
   const sessionId = typeof body.sessionId === "string" && body.sessionId ? body.sessionId : `sid_${ip}`;
-  const name = typeof body.name === "string" ? body.name : "Admin";
+  if (sessionId.length > 128) return Response.json({ error: "Invalid session ID" }, { status: 400 });
+  const name = typeof body.name === "string" ? body.name.slice(0, 120) : "Admin";
 
   map.set(sessionId, {
     id: sessionId,

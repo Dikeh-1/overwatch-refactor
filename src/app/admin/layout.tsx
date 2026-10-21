@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 import type { Metadata } from "next";
 import { AdminShell } from "@/components/admin/shell/AdminShell";
 import NavigationProgressBar from "@/components/layout/NavigationProgressBar";
@@ -20,7 +22,9 @@ export default function AdminRootLayout({
       <body className="min-h-full flex flex-col admin-body antialiased bg-[#F7F8FA]">
         <AdminLaunchExperience />
         <NavigationProgressBar />
-        <AdminShell>{children}</AdminShell>
+        <Suspense fallback={<div role="status" className="flex min-h-screen items-center justify-center"><OverwatchOrbitLoader label="Loading admin workspace…" /></div>}>
+          <AdminShell>{children}</AdminShell>
+        </Suspense>
       </body>
     </html>
   );

@@ -407,3 +407,38 @@ test("local lifecycle preserves stages, snapshots, cohort isolation and deletion
     process.chdir(cwd);
   }
 });
+
+const { cycleLabel, cycleMonth } = require("../src/lib/careers-cycle-label.ts");
+test("archive cycle labels use selected language and closure month in Maputo", () => {
+  const role = { en: "Technical Manager", pt: "Gestor Técnico" };
+  const c = { name: "Concurso Encerrado", openedAt: "2026-09-01", closedAt: "2026-09-30T23:00:00Z" };
+  assert.equal(cycleLabel(c, role, "en"), "Technical Manager — Recruitment cycle October 2026");
+  assert.match(cycleLabel(c, role, "pt"), /Gestor Técnico — Lote outubro de 2026/);
+  assert.equal(cycleMonth("bad date", "en"), "");
+});
+test("legacy archive names keep historical period and localize unassigned records", () => {
+  const role = { en: "Operator", pt: "Operadora" };
+  assert.equal(cycleLabel({ name: "Operadora — Lote Setembro 2026", openedAt: "2026-10-01" }, role, "en"), "Operator — Recruitment cycle September 2026");
+  assert.equal(cycleLabel({ name: "Concurso Encerrado", openedAt: "2026-10-01" }, role, "en"), "Operator — Recruitment cycle October 2026");
+  assert.match(cycleLabel({ unassigned: true }, role, "en"), /Unassigned records/);
+});
+const { validAdminSettings } = require("../src/lib/admin-settings.ts");
+test("settings reject invalid capacity, email and header injection", () => {
+  const valid = { senderName: "Recruitment", replyToEmail: "qa@example.invalid", quota: 15 };
+  assert.equal(validAdminSettings(valid), true);
+  for (const patch of [{ quota: 0 }, { quota: 201 }, { quota: 1.5 }, { replyToEmail: "bad" }, { senderName: "Injected\r\nBcc: hidden@example.invalid" }]) assert.equal(validAdminSettings({ ...valid, ...patch }), false);
+});
+
+test("explicit terminal decisions never reappear in next-phase metrics through stale response data", () => {
+  for (const status of ["archived", "rejected", "not_advancing", "withdrawn", "disqualified", "no_show"]) {
+    const a = candidate("terminal", { status, nextPhaseResponse: "yes", nextPhaseInvitedAt: "2026-09-10", nextPhaseStatus: "confirmed" });
+    assert.equal(w.isNextPhase(a), false, status);
+    assert.equal(w.recruitmentMetrics([a]).confirmed, 0, status);
+  }
+});
+
+test("holiday rescheduling never mistakes another month's 25th for September", () => {
+  const { isFriday25Sept } = require("../src/lib/careers.ts");
+  assert.equal(isFriday25Sept("Sexta-feira, 25 de Dezembro 2026 – 10h00"), false);
+  assert.equal(isFriday25Sept("Sexta-feira, 25 de Setembro 2026 – 10h00"), true);
+});

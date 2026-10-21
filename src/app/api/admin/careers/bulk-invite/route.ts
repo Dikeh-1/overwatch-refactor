@@ -1,6 +1,9 @@
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
 import { getApplication, updateApplication } from "@/lib/careers-store";
-import { DEFAULT_TEST_SLOTS } from "@/lib/careers";
+import { isPastDateSlot, parseSlotComponents } from "@/lib/careers";
+import { getRecruitmentWorkspaceData } from "@/lib/careers-workspace-store";
+import { getCandidateSlotConfig } from "@/lib/careers-booking";
+import { canReceiveTestInvitation } from "@/lib/careers-workflow";
 import { sendTestInvitation } from "@/lib/careers-email";
 
 export const dynamic = "force-dynamic";
@@ -40,10 +43,10 @@ Equipa de Recrutamento
 Overwatch Moçambique`;
 
 
-    const slots: string[] =
+    const requestedSlots: string[] =
       Array.isArray(body.slots) && body.slots.length > 0
         ? body.slots
-        : [...DEFAULT_TEST_SLOTS];
+        : [];
 
     if (candidateIds.length === 0) {
       return Response.json(
@@ -57,10 +60,11 @@ Overwatch Moçambique`;
       process.env.NEXT_PUBLIC_SITE_URL ||
       new URL(request.url).origin;
 
+    const workspace = await getRecruitmentWorkspaceData();
     const results: { id: string; name: string; success: boolean; error?: string }[] =
       [];
 
-    for (const id of candidateIds) {
+    for (const id of new Set(candidateIds)) {
       if (typeof id !== "string" || !/^[\w-]{6,64}$/i.test(id.trim())) {
         results.push({ id, name: "Unknown", success: false, error: "ID inválido" });
         continue;
@@ -78,6 +82,11 @@ Overwatch Moçambique`;
           continue;
         }
 
+        const resolved = workspace.applications.find(a => a.id === candidate.id);
+        if (!resolved || !canReceiveTestInvitation(resolved)) throw new Error("Candidate is not eligible for a test invitation");
+        const config = await getCandidateSlotConfig(candidate);
+        const slots = (requestedSlots.length ? requestedSlots.filter(s => config.slots.includes(s)) : config.slots).filter(s => typeof s === "string" && parseSlotComponents(s) && !isPastDateSlot(s));
+        if (!slots.length) throw new Error("No configured future test slots");
         // Send email invitation
         await sendTestInvitation({
           application: candidate,
@@ -91,7 +100,7 @@ Overwatch Moçambique`;
         await updateApplication(id, {
           invitedAt: new Date().toISOString(),
           invitedSlots: slots,
-          status: "shortlisted",
+          status: "test_invited",
         });
 
         results.push({ id, name: candidate.name, success: true });

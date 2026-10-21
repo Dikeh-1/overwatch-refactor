@@ -143,6 +143,7 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
     try {
       await onSaveRole(role);
       setModalOpen(false);
+      window.dispatchEvent(new Event("admin:careers-updated"));
       await onRefresh();
     } finally {
       setProcessingState({ busy: false, label: "" });
@@ -162,6 +163,7 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
       setArchiveModalOpen(false);
       setArchiveTargetRole(null);
       setArchiveNotes("");
+      window.dispatchEvent(new Event("admin:careers-updated"));
       await onRefresh();
     } catch (err: any) {
       console.error("Failed to close cohort:", err);
@@ -188,6 +190,7 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
       setOpenModalOpen(false);
       setOpenTargetRole(null);
       setNewCohortBatchName("");
+      window.dispatchEvent(new Event("admin:careers-updated"));
       await onRefresh();
     } catch (err: any) {
       console.error("Failed to open cohort:", err);
@@ -216,6 +219,7 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
     });
     try {
       await onDeleteRole(roleId);
+      window.dispatchEvent(new Event("admin:careers-updated"));
       await onRefresh();
     } finally {
       setProcessingState({ busy: false, label: "" });
