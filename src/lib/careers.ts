@@ -156,6 +156,9 @@ export type Application = {
   attendedAt?: string;
   attendedBy?: string;
   attendanceStatus?: "present" | "absent" | "late";
+  historicalAttendanceConfirmed?: boolean;
+  attendanceUpdatedAt?: string;
+  historicalRecordedAttendanceStatus?: "present" | "absent" | "late";
   previousTestSlot?: string;
   rebookingGrace?: {
     token: string;

@@ -164,6 +164,7 @@ export async function POST(request: Request) {
       const updated = await updateApplication(candidate.id, {
         attendedAt: undefined,
         attendanceStatus: "absent",
+        attendanceUpdatedAt: new Date().toISOString(),
       });
       return Response.json({
         success: true,
@@ -179,6 +180,7 @@ export async function POST(request: Request) {
       const updated = await updateApplication(candidate.id, {
         attendedAt: nextAttended,
         attendanceStatus: nextStatus,
+        attendanceUpdatedAt: new Date().toISOString(),
       });
       return Response.json({
         success: true,
@@ -265,6 +267,7 @@ export async function POST(request: Request) {
     const updated = await updateApplication(candidate.id, {
       attendedAt: nowIso,
       attendanceStatus: "present",
+      attendanceUpdatedAt: new Date().toISOString(),
     });
 
     return Response.json({

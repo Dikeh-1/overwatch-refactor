@@ -31,10 +31,14 @@ export function RecruitmentOverviewView({ applications, roleDefs = [], cohorts =
   const dashboard = recruitmentDashboard(applications, roleDefs, cohorts, scope);
   const metricCards = [
     { key: "total", label: t("Applications", "Candidaturas"), detail: t("All candidate records in this scope", "Todos os registos neste âmbito"), icon: Users },
-    { key: "qualified", label: t("Qualified / review", "Qualificados / revisão"), detail: t("Recorded screening / shortlist", "Triagem / pré-selecção registada"), icon: CheckCircle2 },
+    { key: "screened", label: t("Screening assessed", "Candidaturas avaliadas"), detail: t("Evaluated against criteria", "Avaliados pelos critérios"), icon: Users },
+    { key: "screeningPassed", label: t("Screening passed", "Requisitos cumpridos"), detail: t("Met mandatory criteria", "Critérios obrigatórios cumpridos"), icon: CheckCircle2 },
+    { key: "notAdvancing", label: t("Not advancing / archived", "Não avançam / arquivados"), detail: t("Candidate outcomes, not intake closure", "Resultados, não encerramento da vaga"), icon: Archive },
+    { key: "scored", label: t("Results scored", "Com nota"), detail: t("Saved numeric results", "Notas numéricas guardadas"), icon: Award },
+    { key: "qualified", label: t("Qualified to continue", "Qualificados / revisão"), detail: t("Recorded screening / shortlist", "Triagem / pré-selecção registada"), icon: CheckCircle2 },
     { key: "booked", label: t("Tests booked", "Testes agendados"), detail: t("Recorded bookings", "Agendamentos registados"), icon: CalendarCheck },
     { key: "attended", label: t("Attendance recorded", "Presenças registadas"), detail: t("Recorded check-in or attendance", "Entrada ou presença registada"), icon: CheckCircle2 },
-    { key: "tested", label: t("Tests completed / results", "Testes realizados / resultados"), detail: t("Completed stage or saved score", "Etapa concluída ou nota guardada"), icon: Award },
+    { key: "tested", label: t("Tests completed", "Testes realizados / resultados"), detail: t("Gate attendance, results or historical confirmation", "Presença, resultado ou confirmação histórica"), icon: Award },
     { key: "nextPhase", label: t("Next-phase candidates", "Candidatos na próxima fase"), detail: t("Recorded progression", "Progressão registada"), icon: Users },
     { key: "awaiting", label: t("Awaiting response", "Aguardam resposta"), detail: t("Invited without a recorded response", "Convite sem resposta registada"), icon: Clock },
     { key: "confirmed", label: t("Confirmed interest", "Interesse confirmado"), detail: t("Recorded positive responses", "Respostas positivas registadas"), icon: CheckCircle2 },
@@ -78,6 +82,7 @@ export function RecruitmentOverviewView({ applications, roleDefs = [], cohorts =
       </Link>)}
     </section>}
     {dashboard.metrics.booked > 0 && dashboard.metrics.attended === 0 && <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">{t("Historical attendance records are missing. Zero recorded attendance does not mean nobody attended; bookings and test results are separate counts.", "Faltam registos históricos de presença. Zero presenças registadas não significa que ninguém compareceu; agendamentos e resultados são contagens distintas.")}</p>}
+    {dashboard.metrics.unresolved > 0 && <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">{t(`${dashboard.metrics.unresolved} applications have no saved recruitment outcome. They are not counted as rejection decisions.`, `${dashboard.metrics.unresolved} candidaturas não têm resultado guardado. Não são contadas como decisões de rejeição.`)} <Link className="underline" href={`/admin/recruitment/candidates?scope=${scope}&metric=unresolved`}>{t("Review records", "Rever registos")}</Link></p>}
     <div className="grid min-w-0 gap-6 xl:grid-cols-2">
       <section className="min-w-0 rounded-xl border border-slate-200 bg-white p-5">
         <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-sm font-bold">{scope === "all" ? t("Roles · all recruitment history", "Vagas · todo o histórico") : t("Roles · open cycles", "Vagas · lotes abertos")}</h2><Link href="/admin/recruitment/roles" className="text-xs font-semibold text-sky-700">{t("Manage roles", "Gerir vagas")} →</Link></div>

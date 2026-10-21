@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
+import { recruitmentMetrics, sameRole } from "@/lib/careers-workflow";
 import { useSearchParams } from "next/navigation";
 import {
   Briefcase,
@@ -94,36 +95,7 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
     );
   });
 
-  const getRoleMetrics = (roleId: string, activeCohortId?: string | null) => {
-    const roleApps = applications.filter((a) => {
-      const matchesRole =
-        a.role === roleId ||
-        (roleId === "cctv" && (!a.role || a.role === "cctv" || a.role === "cctv_operator"));
-      if (!matchesRole) return false;
-      // If candidate has a specific cohortId from a closed/different cohort, exclude
-      if (activeCohortId && a.cohortId && a.cohortId !== activeCohortId) {
-        return false;
-      }
-      return true;
-    });
-
-    return {
-      total: roleApps.length,
-      active: roleApps.filter((a) => a.status !== "archived" && a.status !== "rejected").length,
-      screened: roleApps.filter(
-        (a) =>
-          a.status !== "archived" &&
-          (Boolean(a.screeningResult?.passedMandatory) ||
-            (typeof a.screeningScore === "number" && a.screeningScore >= 50) ||
-            a.status === "shortlisted" ||
-            a.status === "screening" ||
-            a.status === "interview" ||
-            a.status === "hired")
-      ).length,
-      booked: roleApps.filter((a) => Boolean(a.testSlot) && a.status !== "archived").length,
-      hired: roleApps.filter((a) => a.status === "hired").length,
-    };
-  };
+  const getRoleMetrics = (roleId: string, activeCohortId?: string | null) => recruitmentMetrics(applications.filter(a => sameRole(a.role, roleId) && (!activeCohortId || a.workspaceCohortId === activeCohortId || a.cohortId === activeCohortId)));
 
   const handleOpenEdit = (role: CareerRoleDefinition) => {
     setEditingRole(role);
@@ -293,7 +265,7 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
       {/* Roles Cards / Grid View */}
       <div className="space-y-4">
         {filteredRoles.map((role) => {
-          const metrics = getRoleMetrics(role.id, role.activeCohortId);
+          const metrics = getRoleMetrics(role.id, role.open ? role.activeCohortId : null);
           const activeCohort = cohorts.find((c) => c.id === role.activeCohortId);
           const stageCount = role.pipelineStages?.length || 4;
           const rulesCount = role.screeningRules?.length || 0;
@@ -334,7 +306,7 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
                         <span>
                           {role.open
                             ? t("Open for Applications", "Aberta para Candidaturas")
-                            : t("Closed / Archived", "Encerrada / Arquivada")}
+                            : t("Applications closed", "Candidaturas encerradas")}
                         </span>
                       </span>
 
@@ -451,48 +423,18 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
               </div>
 
               {/* Metrics Strip */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-100">
-                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex flex-col justify-between">
-                  <span className="text-[0.65rem] font-semibold text-slate-500 uppercase tracking-wider">
-                    {role.open
-                      ? (role.pipelineStages?.includes("next_phase")
-                          ? t("Active Cohort Intake", "Candidaturas no Lote")
-                          : t("Total Applications", "Total de Candidaturas"))
-                      : t("Total Applications", "Total de Candidaturas")}
-                  </span>
-                  <span className="text-base font-bold text-slate-900 font-mono mt-0.5">
-                    {metrics.total}
-                  </span>
-                </div>
-
-                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex flex-col justify-between">
-                  <span className="text-[0.65rem] font-semibold text-slate-500 uppercase tracking-wider">
-                    {role.open ? t("In Active Pipeline", "No Funil Ativo") : t("Archived / Closed", "Arquivados / Concluídos")}
-                  </span>
-                  <span className="text-base font-bold text-slate-800 font-mono mt-0.5">
-                    {role.open ? metrics.active : metrics.total - metrics.active}
-                  </span>
-                </div>
-
-                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex flex-col justify-between">
-                  <span className="text-[0.65rem] font-semibold text-slate-500 uppercase tracking-wider">
-                    {role.pipelineStages?.includes("testing")
-                      ? t("Tests Booked", "Testes Agendados")
-                      : t("CV Screened", "Triagem / Qualificados")}
-                  </span>
-                  <span className="text-base font-bold text-sky-700 font-mono mt-0.5">
-                    {role.pipelineStages?.includes("testing") ? metrics.booked : metrics.screened}
-                  </span>
-                </div>
-
-                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex flex-col justify-between">
-                  <span className="text-[0.65rem] font-semibold text-slate-500 uppercase tracking-wider">
-                    {t("Hired to Date", "Contratados")}
-                  </span>
-                  <span className="text-base font-bold text-emerald-700 font-mono mt-0.5">
-                    {metrics.hired}
-                  </span>
-                </div>
+              <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3 lg:grid-cols-4">
+                {[
+                  [t("Total applications", "Total de candidaturas"), metrics.total],
+                  [t("Screening assessed", "Candidaturas avaliadas"), metrics.screened],
+                  [t("Screening passed", "Requisitos cumpridos"), metrics.screeningPassed],
+                  [t("Qualified to continue", "Qualificados para continuar"), metrics.qualified],
+                  [t("Not advancing / archived", "Não avançam / arquivados"), metrics.notAdvancing],
+                  [t("Tests booked", "Testes agendados"), metrics.booked],
+                  [t("Tests completed", "Testes realizados"), metrics.tested],
+                  [t("Hired", "Contratados"), metrics.hired],
+                  ...(metrics.unresolved ? [[t("Outcome needs review", "Resultado por rever"), metrics.unresolved]] : []),
+                ].map(([label, count]) => <div key={label} className="rounded-lg border border-slate-200 bg-slate-50 p-3"><p className="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500">{label}</p><p className="mt-1 font-mono text-base font-bold text-slate-900">{count}</p></div>)}
               </div>
             </div>
           );

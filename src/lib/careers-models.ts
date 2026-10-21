@@ -63,6 +63,7 @@ export interface CareerCohort {
   closureSnapshot?: { capturedAt: string; applications: import("./careers").Application[] };
   testSlots?: string[];
   slotQuota?: number;
+  historicalAttendance?: { applicationIds: string[]; confirmedAt: string; basis: "admin_confirmed_booked_attendees"; previousAbsenceIds?: string[] };
 }
 
 export const ALL_PIPELINE_STAGES: PipelineStageConfig[] = [

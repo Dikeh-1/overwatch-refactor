@@ -12,11 +12,9 @@ export const sameRole = (a?: string | null, b?: string | null) =>
 export const hasScore = (a: Application) =>
   typeof a.testScore === "number" && Number.isFinite(a.testScore);
 export const hasAttended = (a: Application) =>
-  Boolean(a.attendedAt) ||
-  a.attendanceStatus === "present" ||
-  a.attendanceStatus === "late";
+  a.attendanceStatus !== "absent" && (Boolean(a.attendedAt) || a.attendanceStatus === "present" || a.attendanceStatus === "late" || a.historicalAttendanceConfirmed === true);
 export const hasTested = (a: Application) =>
-  hasScore(a) || a.status === "tested";
+  hasAttended(a) || hasScore(a) || a.status === "tested";
 export const isTerminal = (a: Application) =>
   [
     "archived",
@@ -62,6 +60,16 @@ export const isAwaiting = (a: Application) =>
       a.status === "awaiting_response" ||
       a.status === "next_phase_invited",
   );
+/** Assessment is a completed criteria evaluation, not an email or a positive decision. */
+export const isScreened = (a: Application) => Boolean(a.screeningResult) || (typeof a.screeningScore === "number" && Number.isFinite(a.screeningScore));
+export const passedScreening = (a: Application) => a.screeningResult?.passedMandatory === true;
+export const isNotAdvancing = (a: Application) => isTerminal(a) && !(a.status === "archived" && (a.stageSource === "unresolved" || a.archiveReason === "Recruitment Closed"));
+export function applyHistoricalAttendance(a: Application, cohort?: CareerCohort): Application {
+  const confirmation = cohort?.historicalAttendance;
+  const newerCorrection = Boolean(a.attendanceUpdatedAt && confirmation && new Date(a.attendanceUpdatedAt).getTime() > new Date(confirmation.confirmedAt).getTime());
+  const confirmed = Boolean(confirmation?.applicationIds.includes(a.id) && cohort && sameRole(a.role, cohort.roleId) && (!a.cohortId || a.cohortId === cohort.id) && !newerCorrection);
+  return { ...a, historicalAttendanceConfirmed: confirmed, ...(confirmed ? { attendanceStatus: "present" as const, historicalRecordedAttendanceStatus: a.attendanceStatus } : {}) };
+}
 export const isQualified = (a: Application) =>
   !isTerminal(a) &&
   (a.screeningResult?.passedMandatory === true || a.status === "shortlisted");
@@ -247,6 +255,9 @@ export function applicationsForCohort(
 export function recruitmentMetrics(applications: Application[]) {
   return {
     total: applications.length,
+    screened: applications.filter(isScreened).length,
+    screeningPassed: applications.filter(passedScreening).length,
+    notAdvancing: applications.filter(isNotAdvancing).length,
     qualified: applications.filter(isQualified).length,
     eligible: applications.filter(isEligibleForTest).length,
     invited: applications.filter(

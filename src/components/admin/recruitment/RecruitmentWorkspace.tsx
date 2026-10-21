@@ -14,6 +14,9 @@ import {
 import {
   applicationsForCohort,
   hasAttended,
+  isScreened,
+  passedScreening,
+  isNotAdvancing,
   hasScore,
   hasTested,
   isAwaiting,
@@ -147,6 +150,9 @@ export default function RecruitmentWorkspace({
       : savedStages;
   const predicates: Record<string, (a: Application) => boolean> = {
     total: () => true,
+    screened: isScreened,
+    screeningPassed: passedScreening,
+    notAdvancing: isNotAdvancing,
     qualified: isQualified,
     eligible: isEligibleForTest,
     invited: (a) => Boolean(a.invitedAt) || a.status === "test_invited",
@@ -168,12 +174,15 @@ export default function RecruitmentWorkspace({
     : apps;
   const labels: Record<string, string> = {
     total: t("All applications", "Todas as candidaturas"),
-    qualified: t("Qualified / review", "Qualificados / revisão"),
+    screened: t("Screening assessed", "Candidaturas avaliadas"),
+    screeningPassed: t("Screening passed", "Requisitos cumpridos"),
+    notAdvancing: t("Not advancing / archived", "Não avançam / arquivados"),
+    qualified: t("Qualified to continue", "Qualificados para continuar"),
     eligible: t("Ready to invite to test", "Elegíveis para convocar"),
     invited: t("Test invitations", "Convites para teste"),
     booked: t("Test booked", "Testes agendados"),
     attended: t("Attendance recorded", "Presenças registadas"),
-    tested: t("Test completed / result", "Teste realizado / resultado"),
+    tested: t("Tests completed", "Teste realizado / resultado"),
     scored: t("Scored", "Com nota"),
     nextPhase: t("Next phase selected", "Próxima fase"),
     confirmed: t("Accepted conditions", "Condições aceites"),
@@ -182,7 +191,7 @@ export default function RecruitmentWorkspace({
     interview: t("Interviews", "Entrevistas"),
     training: t("Training", "Formação"),
     hired: t("Hired", "Contratados"),
-    unresolved: t("Historical stage needs review", "Etapa histórica por rever"),
+    unresolved: t("Outcome needs review", "Resultado por rever"),
   };
   const exportCsv = () => {
     const rows = [
@@ -261,7 +270,10 @@ export default function RecruitmentWorkspace({
   };
   const metricKeys = [
     "total",
+    "screened",
+    "screeningPassed",
     "qualified",
+    "notAdvancing",
     ...(configured.includes("testing")
       ? ["eligible", "invited", "booked", "attended", "tested", "scored"]
       : []),
@@ -335,17 +347,9 @@ export default function RecruitmentWorkspace({
               )}
             </p>
           )}
-          {apps.some(
-            (a) =>
-              a.stageSource === "recovered" || a.stageSource === "unresolved",
-          ) && (
-            <p className="text-xs text-amber-800">
-              {t(
-                "Some historical stages were overwritten. Recovered stages use saved evidence; unresolved records require review. Attendance and test completion are separate counts.",
-                "Algumas etapas históricas foram substituídas. Etapas recuperadas usam provas guardadas; registos por resolver exigem revisão. Presença e realização do teste são contagens distintas.",
-              )}
-            </p>
-          )}
+          {metrics.unresolved > 0 && <p className="text-xs text-amber-800">{t(`${metrics.unresolved} records have no saved recruitment outcome. Review these records before making a decision.`, `${metrics.unresolved} registos não têm resultado de recrutamento guardado. Reveja-os antes de decidir.`)}</p>}
+          <p className="text-xs text-slate-500">{t("Screening assessed counts applications evaluated against the criteria. Screening passed counts those meeting mandatory criteria. Not advancing / archived counts candidate outcomes; closing applications does not reject candidates.", "Candidaturas avaliadas conta as avaliações pelos critérios. Requisitos cumpridos conta quem passou os critérios obrigatórios. Não avançam / arquivados conta resultados dos candidatos; encerrar candidaturas não rejeita candidatos.")}</p>
+          {cohort?.historicalAttendance && <p className="rounded-lg bg-sky-50 p-3 text-xs text-sky-900">{t(`${cohort.historicalAttendance.applicationIds.length} historical attendees were confirmed by the administrator. Attendance and completed-test counts include that confirmation; QR scan timestamps and scores are not invented.`, `${cohort.historicalAttendance.applicationIds.length} presenças históricas foram confirmadas pelo administrador. As contagens incluem essa confirmação; não foram criadas datas de leitura QR nem notas.`)}</p>}
           {cohort?.closureSnapshot && (
             <button
               className="rounded-lg border px-3 py-2 text-xs"
@@ -434,8 +438,8 @@ export default function RecruitmentWorkspace({
             className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900"
           >
             {t(
-              "Attendance records are missing for this cycle. This does not mean nobody attended. Test-completion totals reflect recorded results only; historical attendance needs reconciliation.",
-              "Faltam registos de presença neste lote. Isto não significa que ninguém compareceu. As contagens de testes realizados reflectem os resultados registados; o histórico de presenças precisa de reconciliação.",
+              "Attendance records are missing for this cycle. This does not mean nobody attended. Test completion follows recorded gate attendance, saved results, or an explicit historical confirmation.",
+              "Faltam registos de presença neste lote. Isto não significa que ninguém compareceu. A realização do teste segue presenças registadas, resultados guardados ou confirmação histórica explícita.",
             )}
           </p>
         )}
@@ -465,8 +469,8 @@ export default function RecruitmentWorkspace({
             </div>
             <p className="text-xs text-slate-500">
               {t(
-                "Click a count to inspect its exact candidate list. A booking or attendance alone does not prove completion of a test.",
-                "Clique numa contagem para ver os candidatos. Agendamento ou presença não comprovam a realização do teste.",
+                "Click a count to inspect its exact candidate list. Completed tests include gate attendance, saved results and confirmed historical attendance.",
+                "Clique numa contagem para ver os candidatos. Testes realizados incluem presenças, resultados e confirmações históricas.",
               )}
             </p>
             {cohort?.closureSnapshot && (

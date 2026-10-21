@@ -1,6 +1,6 @@
 import type { Application } from "./careers";
 import type { CareerCohort, CareerRoleDefinition } from "./careers-models";
-import { applicationsForCohort, hasAttended, hasTested, isAwaiting, isConfirmed, isNextPhase, isQualified, recruitmentMetrics, sameRole } from "./careers-workflow";
+import { applicationsForCohort, hasScore, isScreened, passedScreening, isNotAdvancing, hasAttended, hasTested, isAwaiting, isConfirmed, isNextPhase, isQualified, recruitmentMetrics, sameRole } from "./careers-workflow";
 
 export type DashboardScope = "all" | "open";
 export function isDashboardRoster(params: Pick<URLSearchParams, "has">) {
@@ -8,9 +8,14 @@ export function isDashboardRoster(params: Pick<URLSearchParams, "has">) {
 }
 export const dashboardPredicates: Record<string, (candidate: Application) => boolean> = {
   total: () => true,
+  screened: isScreened,
+  screeningPassed: passedScreening,
+  notAdvancing: isNotAdvancing,
+  unresolved: a => a.stageSource === "unresolved",
   qualified: isQualified,
   booked: a => Boolean(a.testSlot),
   attended: hasAttended,
+  scored: hasScore,
   tested: hasTested,
   nextPhase: isNextPhase,
   awaiting: isAwaiting,

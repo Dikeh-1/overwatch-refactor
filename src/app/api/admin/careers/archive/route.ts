@@ -65,7 +65,19 @@ export async function PATCH(request: Request) {
   if (!(await authenticated()) || !sameOrigin(request))
     return Response.json({ error: "Unauthorized" }, { status: 403 });
   try {
-    const { cohortId, notes } = await request.json();
+    const { cohortId, notes, action, expectedBookingCount, overrideRecordedAbsences } = await request.json();
+    if (action === "confirm_historical_attendance") {
+      if (typeof cohortId !== "string" || !Number.isInteger(expectedBookingCount) || expectedBookingCount < 1) return Response.json({ error: "Invalid attendance confirmation" }, { status: 400 });
+      const workspace = await getRecruitmentWorkspaceData();
+      const cohort = workspace.cohorts.find(c => c.id === cohortId);
+      if (!cohort || cohort.status === "active" || cohort.unassigned) return Response.json({ error: "A closed, confirmed recruitment cycle is required" }, { status: 400 });
+      if (cohort.historicalAttendance) return Response.json({ success: true, confirmedCount: cohort.historicalAttendance.applicationIds.length, alreadyConfirmed: true });
+      const booked = applicationsForCohort(workspace.applications, cohort, workspace.cohorts).filter(a => a.testSlot);
+      if (booked.length !== expectedBookingCount || (booked.some(a => a.attendanceStatus === "absent") && overrideRecordedAbsences !== true)) return Response.json({ error: "Booking count or absence records conflict with the confirmation. Review this cycle first." }, { status: 409 });
+      const historicalAttendance = { applicationIds: booked.map(a => a.id), confirmedAt: new Date().toISOString(), basis: "admin_confirmed_booked_attendees" as const, previousAbsenceIds: booked.filter(a => a.attendanceStatus === "absent").map(a => a.id) };
+      await saveCohort({ ...cohort, historicalAttendance });
+      return Response.json({ success: true, confirmedCount: booked.length });
+    }
     if (
       typeof cohortId !== "string" ||
       typeof notes !== "string" ||

@@ -125,11 +125,15 @@ export default function ArchiveVaultView({
               <dl className="mt-5 grid grid-cols-3 gap-3 text-xs">
                 {[
                   [t("Applications", "Candidaturas"), e.metrics.total],
+                  [t("Screening assessed", "Avaliados"), e.metrics.screened],
+                  [t("Not advancing / archived", "Não avançam / arquivados"), e.metrics.notAdvancing],
                   [t("Booked", "Agendados"), e.metrics.booked],
                   [t("Attended", "Presentes"), e.metrics.attended],
                   [t("Test completed", "Teste realizado"), e.metrics.tested],
+                  [t("Results scored", "Com nota"), e.metrics.scored],
                   [t("Next phase", "Próxima fase"), e.metrics.nextPhase],
                   [t("Confirmed", "Confirmados"), e.metrics.confirmed],
+                  ...(e.metrics.unresolved ? [[t("Outcome needs review", "Resultado por rever"), e.metrics.unresolved]] : []),
                 ].map(([label, count]) => (
                   <div key={label}>
                     <dt className="text-slate-500">{label}</dt>

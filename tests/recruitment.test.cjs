@@ -65,7 +65,7 @@ test("an active cohort is never archived because its ID includes cohort", () => 
   assert.equal(cs[0].status, "active");
   assert.equal(cs.length, 1);
 });
-test("bookings, attendance, completed tests and scores are independent", () => {
+test("bookings do not imply attendance; gate attendance feeds completed tests and scores stay separate", () => {
   const m = w.recruitmentMetrics([
     candidate("booked", { testSlot: "slot" }),
     candidate("attended", { attendedAt: "2026-09-16" }),
@@ -75,7 +75,7 @@ test("bookings, attendance, completed tests and scores are independent", () => {
   ]);
   assert.equal(m.booked, 1);
   assert.equal(m.attended, 1);
-  assert.equal(m.tested, 2);
+  assert.equal(m.tested, 3);
   assert.equal(m.scored, 1);
   assert.equal(m.invited, 1);
 });
@@ -473,7 +473,7 @@ test("every dashboard count opens its exact records, including historical bookin
   const model = recruitmentDashboard(records, roles, cycles, "all");
   assert.equal(model.metrics.booked, 1);
   assert.equal(model.metrics.attended, 1);
-  assert.equal(model.metrics.tested, 1);
+  assert.equal(model.metrics.tested, 2);
 });
 test("dashboard respects explicitly empty role lists and never invents active roles", () => {
   const records = [candidate("legacy")];
@@ -487,4 +487,45 @@ test("role filters retain a dashboard drilldown instead of opening the entire ro
   assert.equal(isDashboardRoster(new URLSearchParams("scope=all&metric=booked&role=cctv")), true);
   assert.equal(isDashboardRoster(new URLSearchParams("scope=open&role=cctv")), true);
   assert.equal(isDashboardRoster(new URLSearchParams("role=cctv")), false);
+});
+
+test("screening assessed, passed and not-advancing are different counts", () => {
+  const records = [candidate("pass", { screeningResult: { passedMandatory: true } }), candidate("fail", { status: "not_advancing", screeningResult: { passedMandatory: false } }), candidate("decline", { status: "not_advancing", screeningResult: { passedMandatory: true } }), candidate("unknown", { status: "archived", stageSource: "unresolved", archiveReason: "Recruitment Closed" })];
+  const m = w.recruitmentMetrics(records);
+  assert.equal(m.total, 4);
+  assert.equal(m.screened, 3);
+  assert.equal(m.screeningPassed, 2);
+  assert.equal(m.qualified, 1);
+  assert.equal(m.notAdvancing, 2);
+});
+test("gate attendance automatically feeds completed tests without fabricating a score", () => {
+  const a = candidate("gate", { status: "test_booked", testSlot: "future", attendedAt: "2026-10-21T10:00:00Z", attendanceStatus: "present" });
+  const m = w.recruitmentMetrics([a]);
+  assert.equal(m.attended, 1);
+  assert.equal(m.tested, 1);
+  assert.equal(m.scored, 0);
+  assert.equal(w.hasTested({ ...a, attendedAt: undefined, attendanceStatus: "absent" }), false);
+});
+test("historical confirmation is scoped to fixed IDs and never creates QR timestamps or scores", () => {
+  const c = cohort("september", { historicalAttendance: { applicationIds: ["one"], confirmedAt: "2026-10-21", basis: "admin_confirmed_booked_attendees" } });
+  const a = w.applyHistoricalAttendance(candidate("one", { cohortId: "september", testSlot: "past" }), c);
+  assert.equal(w.hasAttended(a), true);
+  assert.equal(w.hasTested(a), true);
+  assert.equal(a.attendedAt, undefined);
+  assert.equal(a.testScore, undefined);
+  assert.equal(w.hasTested(w.applyHistoricalAttendance(candidate("later-booking", { cohortId: "september", testSlot: "past" }), c)), false);
+  assert.equal(w.hasTested(w.applyHistoricalAttendance(candidate("one", { cohortId: "october" }), c)), false);
+  assert.equal(w.hasTested(w.applyHistoricalAttendance(candidate("one", { cohortId: "september", role: "technical" }), c)), false);
+  assert.equal(w.hasAttended({ ...a, attendanceStatus: "absent" }), false);
+});
+
+test("historical corrections preserve original absence evidence and later attendance corrections win", () => {
+  const c = cohort("september", { historicalAttendance: { applicationIds: ["one"], confirmedAt: "2026-10-21T12:00:00Z", basis: "admin_confirmed_booked_attendees", previousAbsenceIds: ["one"] } });
+  const raw = candidate("one", { cohortId: "september", attendanceStatus: "absent" });
+  const corrected = w.applyHistoricalAttendance(raw, c);
+  assert.equal(w.hasAttended(corrected), true);
+  assert.equal(corrected.historicalRecordedAttendanceStatus, "absent");
+  assert.equal(raw.attendanceStatus, "absent");
+  const subsequentCorrection = w.applyHistoricalAttendance({ ...raw, attendanceUpdatedAt: "2026-10-21T13:00:00Z" }, c);
+  assert.equal(w.hasAttended(subsequentCorrection), false);
 });
