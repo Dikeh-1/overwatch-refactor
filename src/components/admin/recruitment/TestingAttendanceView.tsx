@@ -4,6 +4,8 @@ import { recordExportRequest } from "@/lib/admin-browser-activity";
 import { csvCell } from "@/lib/csv";
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
+import { candidateProfileTarget } from "@/lib/admin-navigation";
 import {
   Calendar,
   Clock,
@@ -50,6 +52,7 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
   onDispatchGatePasses,
   onSaveSlots,
 }) => {
+  const pathname = usePathname(), params = useSearchParams();
   const { lang: contextLang } = useAdminLanguage();
   const lang = propLang ?? contextLang;
   const t = (en: string, pt: string) => (lang === "en" ? en : pt);
@@ -350,7 +353,7 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
                   <tr key={candidate.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-4 py-3">
                       <Link
-                        href={`/admin/recruitment/candidates/${candidate.id}`}
+                        href={candidateProfileTarget(candidate.id, pathname, new URLSearchParams(params))}
                         className="font-semibold text-slate-900 hover:text-sky-700 block truncate max-w-[220px]"
                       >
                         {candidate.name}
@@ -406,7 +409,7 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
 
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       <Link
-                        href={`/admin/recruitment/candidates/${candidate.id}`}
+                        href={candidateProfileTarget(candidate.id, pathname, new URLSearchParams(params))}
                         className="px-2.5 py-1 rounded border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-medium transition-colors"
                       >
                         {t("View Profile", "Ver Perfil")}

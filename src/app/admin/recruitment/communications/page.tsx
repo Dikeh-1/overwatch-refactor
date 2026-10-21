@@ -8,7 +8,8 @@ import { Application } from "@/lib/careers";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 
 export default function CommunicationsPage() {
-  const workspaceRole = useSearchParams().get("role");
+  const params = useSearchParams();
+  const workspaceRole = params.get("role"), cohortId = params.get("cohortId");
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,7 +30,7 @@ export default function CommunicationsPage() {
     load();
   }, []);
 
-  if (workspaceRole && workspaceRole !== "all") return <RecruitmentWorkspace key={workspaceRole} roleId={workspaceRole} initialTab="communications" />;
+  if (cohortId || (workspaceRole && workspaceRole !== "all")) return <RecruitmentWorkspace key={cohortId || workspaceRole} cohortId={cohortId || undefined} roleId={workspaceRole || undefined} initialTab="communications" />;
 
   if (loading) {
     return (

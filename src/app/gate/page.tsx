@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import jsQR from "jsqr";
 import {
   ShieldCheck,
@@ -19,6 +20,7 @@ import {
   Check,
   FlipHorizontal,
   ArrowRight,
+  ArrowLeft,
   MapPin,
 } from "lucide-react";
 import Logo from "@/components/ui/Logo";
@@ -842,6 +844,7 @@ function GateSecurityContent() {
             </div>
 
             {/* Logout */}
+            <Link href="/admin" title={lang === "en" ? "Back to admin" : "Voltar à administração"} aria-label={lang === "en" ? "Back to admin" : "Voltar à administração"} className="p-2 rounded-lg border border-white/10 text-white/70 hover:text-white"><ArrowLeft size={15}/></Link>
             <button
               type="button"
               onClick={handleLogout}

@@ -17,6 +17,7 @@ import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 import { useLiveRecruitmentFeed } from "@/components/admin/hooks/useLiveRecruitmentFeed";
 import GlobalCelebrationListener from "@/components/admin/ui/GlobalCelebrationListener";
 import { SectionHistoryButton } from "@/components/admin/ActivityHistory";
+import { AdminSectionNavigation } from "./AdminSectionNavigation";
 
 interface AdminShellProps {
   children: React.ReactNode;
@@ -394,13 +395,12 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
             </button>
 
             {/* Breadcrumb */}
+            <AdminSectionNavigation />
             <nav className="flex items-center gap-1.5 text-xs text-slate-500 truncate">
               {breadcrumbs.map((b, idx) => (
                 <React.Fragment key={idx}>
                   {idx > 0 && <span className="text-slate-300">/</span>}
-                  <span className={idx === breadcrumbs.length - 1 ? "font-semibold text-slate-900" : "text-slate-500"}>
-                    {b.label}
-                  </span>
+                  {idx === breadcrumbs.length - 1 ? <span className="font-semibold text-slate-900">{b.label}</span> : <Link className="hover:text-sky-700" href={b.href}>{b.label}</Link>}
                 </React.Fragment>
               ))}
             </nav>

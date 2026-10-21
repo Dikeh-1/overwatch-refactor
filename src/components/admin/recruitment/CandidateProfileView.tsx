@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -28,6 +28,8 @@ import {
 import { Application, Role, stages, formatPhoneDisplay, formatSlotDisplay, ArchiveReason } from "@/lib/careers";
 import { classifyCandidateLocation } from "@/lib/location-utils";
 import { hasAttended, hasScore } from "@/lib/careers-workflow";
+import { adminParent } from "@/lib/admin-navigation";
+import { CommunicationsView } from "./CommunicationsView";
 import DocxViewer from "../DocxViewer";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import CelebrationOverlay from "@/components/admin/ui/CelebrationOverlay";
@@ -40,6 +42,7 @@ interface CandidateProfileViewProps {
   onStatusChange: (id: string, newStatus: string) => Promise<void>;
   onArchive: (id: string, reason: ArchiveReason) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onRefresh?: () => Promise<void>;
 }
 
 export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
@@ -49,6 +52,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
   onStatusChange,
   onArchive,
   onDelete,
+  onRefresh,
 }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -57,6 +61,11 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
   const t = (en: string, pt: string) => (lang === "en" ? en : pt);
 
   const [activeTab, setActiveTab] = useState<"overview" | "application" | "test" | "documents" | "communications" | "activity">("overview");
+  useEffect(() => {
+    const back = (event: Event) => { if (activeTab !== "overview") { event.preventDefault(); setActiveTab("overview"); } };
+    window.addEventListener("admin:back", back);
+    return () => window.removeEventListener("admin:back", back);
+  }, [activeTab]);
   const [translatedCover, setTranslatedCover] = useState<string | null>(null);
   const [translating, setTranslating] = useState(false);
   const [showEnglishCover, setShowEnglishCover] = useState(false);
@@ -222,21 +231,22 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
     { id: "activity", label: t("Activity Log", "Histórico de Auditoria") },
   ];
 
-  const returnQuery = searchParams.toString() ? `?${searchParams.toString()}` : "";
+  const backTarget = adminParent(`/admin/recruitment/candidates/${candidate.id}`, new URLSearchParams(searchParams));
 
   return (
     <div className="space-y-6">
       {/* Back Navigation Bar */}
       <div className="flex items-center justify-between gap-4">
         <Link
-          href={`/admin/recruitment/candidates${returnQuery}`}
+          href={backTarget}
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors"
         >
           <ArrowLeft size={14} />
-          <span>{t("Back to Candidates", "Voltar à Lista de Candidaturas")}</span>
+          <span>{backTarget.startsWith("/admin/recruitment/archive") ? t("Back to archive", "Voltar ao arquivo") : t("Back to Candidates", "Voltar à Lista de Candidaturas")}</span>
         </Link>
 
         <div className="flex items-center gap-2">
+          <button type="button" onClick={() => setActiveTab("communications")} className="inline-flex items-center gap-1.5 rounded-md border border-sky-200 px-3 py-2 text-xs font-semibold text-sky-700"><Mail size={14}/>{t("Send email", "Enviar email")}</button>
           {/* Status Dropdown with Live Processing State */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs text-slate-500 font-medium">{t("Stage:", "Estado:")}</span>
@@ -1237,6 +1247,9 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
 
       {/* TAB 5: COMMUNICATIONS */}
       {activeTab === "communications" && (
+        <div className="space-y-5">
+          <button type="button" onClick={() => setActiveTab("overview")} className="inline-flex items-center gap-1.5 text-xs text-slate-600"><ArrowLeft size={14}/>{t("Back to profile", "Voltar ao perfil")}</button>
+          <CommunicationsView key={candidate.id} applications={[candidate]} fixedRecipient={candidate} cohortId={candidate.cohortId} lang={lang} onSent={onRefresh}/>
         <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-4">
           <h2 className="text-sm font-bold text-slate-900">
             {t("Communication History", "Histórico de Comunicações")}
@@ -1251,9 +1264,10 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                     <div className="text-[0.7rem] text-slate-500">
                       {t("To:", "Para:")} {comm.recipient} • {t("Type:", "Tipo:")} {comm.type}
                     </div>
+                    {comm.bodySnippet && <details className="pt-2"><summary className="cursor-pointer text-sky-700">{t("View message", "Ver mensagem")}</summary><pre className="mt-2 whitespace-pre-wrap break-words font-sans text-xs text-slate-700">{comm.bodySnippet}</pre></details>}
                   </div>
                   <div className="text-right shrink-0">
-                    <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span className={`px-2 py-0.5 rounded text-[0.65rem] font-semibold border ${comm.status === "failed" ? "bg-red-50 text-red-700 border-red-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"}`}>
                       {comm.status.toUpperCase()}
                     </span>
                     <div className="text-[0.65rem] text-slate-400 mt-1">
@@ -1268,6 +1282,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
               </div>
             )}
           </div>
+        </div>
         </div>
       )}
 

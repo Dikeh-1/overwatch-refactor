@@ -27,6 +27,7 @@ export default function CandidateDetailPage() {
         const found = (data.applications || []).find((a: Application) => a.id === id);
         if (found) {
           setCandidate(found);
+          setError(null);
         } else {
           setError("Candidate record not found in database.");
         }
@@ -139,6 +140,7 @@ export default function CandidateDetailPage() {
       onStatusChange={handleStatusChange}
       onArchive={handleArchive}
       onDelete={handleDelete}
+      onRefresh={loadCandidate}
     />
   );
 }

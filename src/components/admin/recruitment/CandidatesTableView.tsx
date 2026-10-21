@@ -2,6 +2,7 @@
 
 import { recordExportRequest } from "@/lib/admin-browser-activity";
 import { csvCell } from "@/lib/csv";
+import { candidateProfileTarget } from "@/lib/admin-navigation";
 import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
@@ -1083,7 +1084,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
 
                       <td className="px-4 py-3">
                         <Link
-                          href={`/admin/recruitment/candidates/${candidate.id}?${searchParams.toString()}`}
+                          href={candidateProfileTarget(candidate.id, pathname, new URLSearchParams(searchParams))}
                           className="block group"
                         >
                           <div className="flex items-center gap-1.5">
@@ -1180,7 +1181,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                             </a>
                           )}
                           <Link
-                            href={`/admin/recruitment/candidates/${candidate.id}?${searchParams.toString()}`}
+                              href={candidateProfileTarget(candidate.id, pathname, new URLSearchParams(searchParams))}
                             className="px-2.5 py-1 rounded border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs font-medium transition-colors inline-flex items-center gap-1 shadow-2xs"
                           >
                             <Eye size={12} className="text-slate-500" />

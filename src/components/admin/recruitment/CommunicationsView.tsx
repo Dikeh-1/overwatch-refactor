@@ -41,6 +41,8 @@ import { triggerCelebration } from "@/lib/celebration";
 
 interface CommunicationsViewProps {
   applications: Application[];
+  fixedRecipient?: Application;
+  onSent?: () => Promise<void>;
   cohortId?: string;
   lang?: "pt" | "en";
 }
@@ -62,6 +64,8 @@ interface CustomTemplate {
 
 export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
   applications,
+  fixedRecipient,
+  onSent,
   cohortId,
   lang: propLang,
 }) => {
@@ -74,10 +78,10 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
   const [includeBookingButton, setIncludeBookingButton] = useState(false);
 
   // Audience Target State
-  const [selectedRole, setSelectedRole] = useState<string>(activeRoleId || "cctv");
-  const [targetAudience, setTargetAudience] = useState<string>("all_role");
+  const [selectedRole, setSelectedRole] = useState<string>(fixedRecipient?.role || activeRoleId || "cctv");
+  const [targetAudience, setTargetAudience] = useState<string>(fixedRecipient ? "individual" : "all_role");
   const [individualSearch, setIndividualSearch] = useState("");
-  const [selectedIndividualId, setSelectedIndividualId] = useState<string>("");
+  const [selectedIndividualId, setSelectedIndividualId] = useState<string>(fixedRecipient?.id || "");
   const [selectedSlot, setSelectedSlot] = useState<string>("");
 
   // Role capability flags for active selection
@@ -94,13 +98,13 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
 
   // Letterhead State
   const [subject, setSubject] = useState(
-    lang === "en"
+    fixedRecipient ? "" : lang === "en"
       ? "Next Phase – Overwatch Selection Process"
       : "Próxima Fase – Processo de Selecção Overwatch"
   );
 
   const [messageBody, setMessageBody] = useState(
-    lang === "en"
+    fixedRecipient ? "" : lang === "en"
       ? `Dear {{candidate_name}},
 
 Following the review of your application for the position of {{role_title}}, we are pleased to inform you that you have been selected to advance to the Next Phase of our evaluation process.
@@ -154,6 +158,7 @@ Agradecemos que consulte as instruções e confirme a sua disponibilidade.`
   const [isDispatching, setIsDispatching] = useState(false);
   const [celebrationOpen, setCelebrationOpen] = useState(false);
   const [dispatchResultCount, setDispatchResultCount] = useState(0);
+  const [deliveryNotice, setDeliveryNotice] = useState<string | null>(null);
 
   // Delivery History Drawer
   const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
@@ -161,6 +166,7 @@ Agradecemos que consulte as instruções e confirme a sua disponibilidade.`
 
   // Sync role change with active role
   useEffect(() => {
+    if (fixedRecipient) return;
     if (activeRoleId) {
       setSelectedRole(activeRoleId);
       const def = roles.find((r) => r.id === activeRoleId);
@@ -169,7 +175,7 @@ Agradecemos que consulte as instruções e confirme a sua disponibilidade.`
         setTargetAudience("all_role");
       }
     }
-  }, [activeRoleId, roles]);
+  }, [activeRoleId, roles, fixedRecipient]);
 
   // Import browser-only templates once, then use the audited shared store.
   useEffect(() => {
@@ -439,6 +445,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
 
   // Calculate Target Recipients
   const targetCandidates = useMemo(() => {
+    if (fixedRecipient) return applications.filter(a => a.id === fixedRecipient.id && (!includeBookingButton || canReceiveTestInvitation(a)));
     if (targetAudience === "individual") {
       if (!selectedIndividualId) return [];
       return applications.filter(a => a.id === selectedIndividualId && (!includeBookingButton || canReceiveTestInvitation(a)));
@@ -468,7 +475,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
     }
 
     return pool.filter((a) => a.status !== "archived");
-  }, [applications, targetAudience, selectedRole, selectedIndividualId, selectedSlot, includeBookingButton]);
+  }, [applications, fixedRecipient, targetAudience, selectedRole, selectedIndividualId, selectedSlot, includeBookingButton]);
 
   // Distinct test slots for slot filter
   const distinctSlots = useMemo(() => {
@@ -498,6 +505,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           cohortId,
+          locale: lang,
           includeBookingButton,
           testOnly: true,
           testEmail: testEmail.trim(),
@@ -550,6 +558,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
 
     try {
       let payload: any = {
+        locale: lang,
         subject,
         message: messageBody,
         roleId: selectedRole,
@@ -557,9 +566,10 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
         attachments,
       };
 
-      if (targetAudience === "individual" && selectedIndividualId) {
+      if (fixedRecipient || (targetAudience === "individual" && selectedIndividualId)) {
         payload.audienceFilter = "individual";
-        payload.candidateId = selectedIndividualId;
+        payload.candidateId = fixedRecipient?.id || selectedIndividualId;
+        payload.roleId = fixedRecipient?.role || selectedRole;
       } else if (targetAudience === "next_phase") {
         payload.audienceFilter = "next_phase";
       } else if (targetAudience === "shortlisted_unbooked") {
@@ -578,13 +588,20 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
 
       const data = await res.json();
       if (res.ok && data.success) {
+        window.dispatchEvent(new Event("admin:careers-updated"));
+        await onSent?.().catch(() => {});
+        if (data.failedCount) throw new Error(t(`${data.sentCount || 0} sent; ${data.failedCount} failed. Review delivery history before retrying.`, `${data.sentCount || 0} enviados; ${data.failedCount} falharam. Consulte o histórico antes de repetir.`));
         const count = data.sentCount ?? 0;
         setDispatchResultCount(count);
-        setCelebrationOpen(true);
+        if (data.historyWarnings?.length) alert(t("Email delivery succeeded, but the profile history could not be updated. Check the section History before sending again.", "O email foi enviado, mas não foi possível atualizar o histórico do perfil. Consulte o Histórico antes de repetir o envio."));
+        if (fixedRecipient) {
+          setDeliveryNotice(t(`Email sent to ${fixedRecipient.email}.`, `Email enviado para ${fixedRecipient.email}.`));
+          setSubject(""); setMessageBody(""); setAttachments([]);
+        } else { setCelebrationOpen(true);
         triggerCelebration({
           title: t("Official Broadcast Dispatched!", "Comunicação Oficial Enviada!"),
           variant: "next_phase",
-        });
+        }); }
       } else {
         alert(data.error || t("Broadcast failed.", "Falha no envio da comunicação."));
       }
@@ -786,6 +803,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       </div>
 
       {/* MAIN 2-COLUMN STUDIO LAYOUT */}
+      {deliveryNotice && <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{deliveryNotice}</p>}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* ========================================================================= */}
         {/* LEFT COLUMN: COMPOSER PALETTE & DISPATCH CONTROLS (5 cols on lg) */}
@@ -804,7 +822,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
             </div>
 
             {/* Role Filter */}
-            <div>
+            {fixedRecipient ? <div className="rounded-lg bg-sky-50 p-3 text-sm"><p className="font-semibold">{fixedRecipient.name}</p><p className="break-all text-slate-600">{fixedRecipient.email}</p><p className="mt-2 text-xs text-slate-500">{t("Individual email · only this candidate will receive this message.", "Email individual · apenas este candidato recebe esta mensagem.")}</p></div> : <><div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 {t("Role Campaign:", "Vaga de Recrutamento:")}
               </label>
@@ -907,6 +925,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
               </div>
             </div>
 
+            </>}
             {/* Slot selector if booked_confirmed */}
             {targetAudience === "booked_confirmed" && distinctSlots.length > 0 && (
               <div>
@@ -929,7 +948,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
             )}
 
             {/* Searchable Individual Applicant Picker */}
-            {targetAudience === "individual" && (
+            {!fixedRecipient && targetAudience === "individual" && (
               <div className="space-y-1.5 pt-1 border-t border-slate-100">
                 <label className="text-[11px] font-semibold text-slate-600 block">
                   {t("Select Applicant:", "Escolher Candidata:")}
@@ -1587,6 +1606,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                 <span className="text-slate-500">{t("Total Recipients:", "Total de Candidatos:")}</span>
                 <span className="font-mono font-bold text-sky-700">{targetCandidates.length}</span>
               </div>
+              {fixedRecipient && <p className="break-all font-semibold text-slate-800">{fixedRecipient.email}</p>}
               <div className="flex justify-between">
                 <span className="text-slate-500">{t("Subject:", "Assunto:")}</span>
                 <span className="font-semibold text-slate-800 truncate max-w-xs">{subject}</span>

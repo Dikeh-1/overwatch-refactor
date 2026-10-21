@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
+import { candidateProfileTarget } from "@/lib/admin-navigation";
 import {
   Award,
   Send,
@@ -73,6 +75,7 @@ interface NextPhaseViewProps {
 }
 
 export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang, cohortId, roleId }) => {
+  const pathname = usePathname(), params = useSearchParams();
   const { lang: contextLang } = useAdminLanguage();
   const { activeRoleId, roles } = useActiveRole();
   const lang = propLang ?? contextLang;
@@ -1269,7 +1272,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang, co
 
                           {cand.matchedId && (
                             <Link
-                              href={`/admin/recruitment/candidates/${cand.matchedId}`}
+                              href={candidateProfileTarget(cand.matchedId!, pathname, new URLSearchParams(params))}
                               className="px-2 py-1 rounded border border-slate-200 hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors"
                               title={t("Open full candidate profile", "Abrir perfil completo")}
                             >
@@ -1680,7 +1683,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang, co
 
                   {selectedCandidate.matchedId && (
                     <Link
-                      href={`/admin/recruitment/candidates/${selectedCandidate.matchedId}`}
+                      href={candidateProfileTarget(selectedCandidate.matchedId!, pathname, new URLSearchParams(params))}
                       className="px-3.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
                     >
                       <span>{t("View Full Profile", "Ver Perfil Completo")}</span>

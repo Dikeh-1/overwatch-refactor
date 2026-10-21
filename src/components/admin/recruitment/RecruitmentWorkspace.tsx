@@ -1,5 +1,6 @@
 "use client";
 import { HistoricalTestEvidence } from "./HistoricalTestEvidence";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cycleLabel } from "@/lib/careers-cycle-label";
@@ -7,7 +8,7 @@ import { useRecruitmentRefresh } from "../hooks/useRecruitmentRefresh";
 import { recordExportRequest } from "@/lib/admin-browser-activity";
 import { csvCell } from "@/lib/csv";
 import Link from "next/link";
-import { ArrowLeft, Download, RefreshCw } from "lucide-react";
+import { ArrowLeft, Download, RefreshCw, Mail } from "lucide-react";
 import type { Application } from "@/lib/careers";
 import {
   ALL_PIPELINE_STAGES,
@@ -59,9 +60,26 @@ export default function RecruitmentWorkspace({
   const [data, setData] = useState<WorkspaceData | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(true);
-  const [tab, setTab] = useState(initialTab);
-  const [metric, setMetric] = useState("");
+  const pathname = usePathname(), router = useRouter(), params = useSearchParams();
+  const tab = params.get("view") || initialTab;
+  const metric = params.get("metric") || "";
+  const navigate = useCallback((view: string, filter = "") => {
+    const query = new URLSearchParams(params);
+    if (view === "overview" && initialTab === "overview") query.delete("view"); else query.set("view", view);
+    if (filter) query.set("metric", filter); else query.delete("metric");
+    router.push(`${pathname}${query.size ? `?${query}` : ""}`, { scroll: false });
+  }, [pathname, router, params, initialTab]);
   const [snapshotMode, setSnapshotMode] = useState(false);
+  useEffect(() => { if (tab === "communications") setSnapshotMode(false); }, [tab]);
+  useEffect(() => {
+    const back = (event: Event) => {
+      if (snapshotMode) { event.preventDefault(); setSnapshotMode(false); }
+      else if (metric) { event.preventDefault(); navigate(tab); }
+      else if (tab !== "overview") { event.preventDefault(); navigate("overview"); }
+    };
+    window.addEventListener("admin:back", back);
+    return () => window.removeEventListener("admin:back", back);
+  }, [snapshotMode, metric, tab, navigate]);
   const [scanner, setScanner] = useState(false);
   const generation = useRef(0);
   const load = useCallback(
@@ -325,6 +343,7 @@ export default function RecruitmentWorkspace({
               </p>
             </div>
             <div className="flex gap-2">
+              <button type="button" onClick={() => { setSnapshotMode(false); navigate("communications"); }} className="rounded-lg border border-sky-200 px-3 py-2 text-xs flex gap-2 items-center text-sky-700"><Mail size={14}/>{t("Communications", "Comunicações")}</button>
               <button
                 onClick={exportCsv}
                 className="rounded-lg border px-3 py-2 text-xs flex gap-2 items-center"
@@ -361,8 +380,7 @@ export default function RecruitmentWorkspace({
               className="rounded-lg border px-3 py-2 text-xs"
               onClick={() => {
                 setSnapshotMode(!snapshotMode);
-                setMetric("");
-                setTab("overview");
+                navigate("overview");
               }}
             >
               {snapshotMode
@@ -398,8 +416,7 @@ export default function RecruitmentWorkspace({
               <button
                 key={item.id}
                 onClick={() => {
-                  setTab(item.id);
-                  setMetric("");
+                  navigate(item.id);
                 }}
                 className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs ${tab === item.id ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700"}`}
               >
@@ -463,7 +480,7 @@ export default function RecruitmentWorkspace({
               {metricKeys.map((key) => (
                 <button
                   key={key}
-                  onClick={() => setMetric(key)}
+                  onClick={() => navigate(tab, key)}
                   className="text-left rounded-xl border border-slate-200 bg-white p-4 hover:border-slate-500"
                 >
                   <p className="text-xs text-slate-500">{labels[key]}</p>
@@ -515,7 +532,7 @@ export default function RecruitmentWorkspace({
               <div className="flex justify-between text-sm">
                 <span>{metric ? labels[metric] : ""}</span>
                 {metric && (
-                  <button onClick={() => setMetric("")}>
+                  <button onClick={() => navigate(tab)}>
                     {t("Back to overview", "Voltar à visão geral")}
                   </button>
                 )}

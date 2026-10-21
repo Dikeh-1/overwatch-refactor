@@ -11,6 +11,7 @@ import type { Application } from "@/lib/careers";
 export const dynamic = "force-dynamic";
 
 interface BroadcastRequest {
+  locale?: "en" | "pt";
   cohortId?: string;
   audienceFilter:
     | "invited_unconfirmed"
@@ -105,7 +106,7 @@ async function handlePOST(request: Request) {
       };
 
       const roleTitle = roleId === "cctv" || !roleId ? "Operadora de CCTV" : roleId;
-      const isEnglish =
+      const isEnglish = body.locale ? body.locale === "en" :
         /Dear\s+/i.test(message) ||
         /Kind regards/i.test(message) ||
         /Please be reminded/i.test(message) ||
@@ -159,11 +160,8 @@ async function handlePOST(request: Request) {
     let targetPool: Application[] = [];
 
     if (audienceFilter === "individual" || candidateId || candidateEmail) {
-      targetPool = allApps.filter(
-        (a) =>
-          (candidateId && a.id === candidateId) ||
-          (candidateEmail && a.email.trim().toLowerCase() === candidateEmail.trim().toLowerCase()),
-      );
+      targetPool = allApps.filter(a => candidateId ? a.id === candidateId : Boolean(candidateEmail && a.email.trim().toLowerCase() === candidateEmail.trim().toLowerCase()));
+      if (roleId && roleId !== "all" && targetPool.some(a => !sameRole(a.role, roleId))) return Response.json({ error: "Candidate outside the selected role" }, { status: 400 });
     } else {
       // Filter by role if specified
       targetPool = roleId && roleId !== "all" ? allApps.filter((a) => sameRole(a.role, roleId)) : allApps;
@@ -222,16 +220,18 @@ async function handlePOST(request: Request) {
 
     let sentCount = 0;
     const errors: { email: string; error: string }[] = [];
+    const historyWarnings: string[] = [];
 
     for (const candidate of deduplicatedCandidates) {
       try {
-        const roleTitle = roleId === "cctv" || !roleId ? "Operadora de CCTV" : roleId;
-        const isEnglish =
+        const isEnglish = body.locale ? body.locale === "en" :
           /Dear\s+/i.test(message) ||
           /Kind regards/i.test(message) ||
           /Please be reminded/i.test(message) ||
           /recruitment process/i.test(message);
 
+        const role = workspace.roles.find(r => sameRole(r.id, candidate.role));
+        const roleTitle = role ? (isEnglish ? role.en : role.pt) : candidate.role;
         const candSubj = substituteCandidateVariables(subject, candidate, roleTitle, isEnglish);
         const candMsg = substituteCandidateVariables(message, candidate, roleTitle, isEnglish);
 
@@ -253,8 +253,13 @@ async function handlePOST(request: Request) {
           attachment: attachments?.map((a) => ({ name: a.name, content: a.content })),
         });
 
-        await updateApplication(candidate.id, { ...(includeBookingButton ? { invitedAt: new Date().toISOString() } : {}), communications: [...(candidate.communications || []), { id: crypto.randomUUID(), type: "custom", subject: candSubj, recipient: candidate.email, sentAt: new Date().toISOString(), status: "sent" }] });
         sentCount++;
+        try {
+          await updateApplication(candidate.id, { ...(includeBookingButton ? { invitedAt: new Date().toISOString() } : {}), communications: [...(candidate.communications || []), { id: crypto.randomUUID(), type: "custom", subject: candSubj, bodySnippet: candMsg, recipient: candidate.email, sentAt: new Date().toISOString(), status: "sent" }] });
+        } catch {
+          // Delivery already succeeded. Reporting failure here invites duplicate emails.
+          historyWarnings.push(candidate.id);
+        }
       } catch (err) {
         await updateApplication(candidate.id, { communications: [...(candidate.communications || []), { id: crypto.randomUUID(), type: "custom", subject, recipient: candidate.email, sentAt: new Date().toISOString(), status: "failed" }] }).catch(() => {});
         errors.push({
@@ -273,6 +278,7 @@ async function handlePOST(request: Request) {
       failedCount: errors.length,
       totalTargeted: deduplicatedCandidates.length,
       errors: errors.length > 0 ? errors : undefined,
+      historyWarnings: historyWarnings.length ? historyWarnings : undefined,
     });
   } catch (error) {
     console.error("Custom broadcast error:", error);

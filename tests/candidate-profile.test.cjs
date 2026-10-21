@@ -9,6 +9,7 @@ Module._load=function(name,...args){
   if(name==='next/navigation')return {useRouter:()=>({}),useSearchParams:()=>new URLSearchParams()};
   if(name==='next/link')return ({href,children,...props})=>React.createElement('a',{href,...props},children);
   if(name==='../shell/AdminLanguageContext')return {useAdminLanguage:()=>({lang:'en'})};
+  if(name==='./CommunicationsView')return {CommunicationsView:()=>null};
   if(name==='../DocxViewer'||name.includes('/ui/CelebrationOverlay')||name.includes('/ui/OverwatchOrbitLoader'))return ()=>null;
   if(name.startsWith('@/lib/'))return original.call(this,path.join(root,'src',name.slice(2)),...args);
   return original.call(this,name,...args);
