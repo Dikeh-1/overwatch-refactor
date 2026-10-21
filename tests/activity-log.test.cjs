@@ -140,3 +140,38 @@ test('CV access is discoverable in candidate history and CCTV role aliases share
   await activity.recordActivity({action:'Alias change',outcome:'succeeded',section:'roles',roleId:'cctv'});
   assert.ok((await activity.listActivity({roleId:'cctv_operator'})).events.some(row=>row.action==='Alias change'));
 });
+
+test('Supabase-only production storage journals events, filters summaries and saves individual templates without overwriting concurrent template IDs',async()=>{
+  const originalFetch=global.fetch;
+  const envKeys=['SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY'];const envBefore=Object.fromEntries(envKeys.map(key=>[key,process.env[key]]));
+  process.env.SUPABASE_URL='https://storage.fixture.invalid';process.env.SUPABASE_SERVICE_ROLE_KEY='fixture-secret';
+  const eventRows=new Map(),templates=new Map(),queries=[];
+  global.fetch=async(input,init={})=>{
+    const url=new URL(input);queries.push(url);const method=init.method||'GET';
+    assert.equal(new Headers(init.headers).get('apikey'),'fixture-secret');
+    if(url.pathname.endsWith('/admin_activity_events')){
+      if(method==='POST'){const row=JSON.parse(init.body);eventRows.set(row.id,row);return new Response(null,{status:201})}
+      const id=url.searchParams.get('id')?.replace('eq.','');
+      if(id)return Response.json(eventRows.has(id)?[{data:eventRows.get(id).data}]:[]);
+      return Response.json([...eventRows.values()].map(row=>{const summary={...row.data};delete summary.details;return summary}));
+    }
+    assert.ok(url.pathname.endsWith('/admin_communication_templates'));
+    const id=url.searchParams.get('id')?.replace('eq.','');
+    if(method==='DELETE'){templates.delete(id);return new Response(null,{status:204})}
+    if(method==='POST'){const row=JSON.parse(init.body);if(!new Headers(init.headers).get('Prefer').includes('ignore-duplicates')||!templates.has(row.id))templates.set(row.id,row);return new Response(null,{status:201})}
+    return Response.json(id?(templates.has(id)?[{data:templates.get(id).data}]:[]):[...templates.values()].map(row=>({data:row.data})));
+  };
+  try {
+    const event=await activity.recordActivity({action:'REST change',outcome:'succeeded',roleId:'cctv',cohortId:'rest-cycle',details:{password:'not-saved',message:'Preserved'}});
+    assert.equal((await activity.getActivity(event.id)).details.password,'[REDACTED]');
+    await activity.listActivity({roleId:'cctv_operator',cohortId:'rest-cycle',before:Buffer.from(JSON.stringify({timestamp:event.timestamp,id:event.id})).toString('base64url')});
+    const query=queries.find(url=>url.searchParams.get('data->>roleId'));
+    assert.equal(query.searchParams.get('data->>roleId'),'in.(cctv,cctv_operator)');assert.equal(query.searchParams.get('data->>cohortId'),'eq.rest-cycle');assert.ok(query.searchParams.get('and').includes('timestamp.lt.'));
+    const route=require(path.join(root,'src/app/api/admin/careers/templates/route.ts'));
+    const a={id:'rest-a',title:'REST A',subject:'A',body:'Full content',createdAt:new Date().toISOString()},b={...a,id:'rest-b'};
+    const change=(action,template)=>route.PATCH(request('/api/admin/careers/templates',{action,template}));
+    assert.equal((await change('save',a)).status,200);assert.equal((await change('save',b)).status,200);
+    await change('import',{...a,body:'Stale'});assert.equal(templates.get(a.id).data.body,'Full content');
+    await change('delete',a);assert.deepEqual([...templates.keys()],['rest-b']);
+  } finally {global.fetch=originalFetch;for(const key of envKeys){if(envBefore[key]===undefined)delete process.env[key];else process.env[key]=envBefore[key]}}
+});

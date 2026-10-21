@@ -15,6 +15,19 @@ type Context = Pick<ActivityEvent, "requestId" | "actor" | "section"> & { roleId
 const context = new AsyncLocalStorage<Context>();
 const directory = path.join(process.cwd(), ".careers-data", "activity");
 let ready: Promise<void> | undefined;
+export function hasActivityRest() {
+  return !!((process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) && (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY));
+}
+export async function activityRest(endpoint: string, init: RequestInit = {}) {
+  const base = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/+$/, "");
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "";
+  const headers = new Headers(init.headers);
+  headers.set("apikey", key); headers.set("Content-Type", "application/json");
+  if (key.startsWith("eyJ")) headers.set("Authorization", `Bearer ${key}`);
+  const response = await fetch(`${base}/rest/v1/${endpoint}`, { ...init, headers, cache: "no-store", signal: AbortSignal.timeout(15000) });
+  if (!response.ok) throw new Error(`Activity storage unavailable (${response.status})`);
+  return response;
+}
 export function changedValues(before: object, after: object): Record<string, { before: unknown; after: unknown }> {
   const left = before as Record<string, unknown>, right = after as Record<string, unknown>;
   return Object.fromEntries([...new Set([...Object.keys(left), ...Object.keys(right)])]
@@ -34,7 +47,7 @@ export function redactActivity(value: unknown): unknown {
       ? "[REDACTED]" : redactActivity(item)]));
   return value;
 }
-async function ensureTable() {
+export async function prepareActivityStore() {
   const pool = getCareersPool();
   if (!pool) return;
   if (!ready) ready = (async () => {
@@ -45,11 +58,16 @@ async function ensureTable() {
     CREATE INDEX IF NOT EXISTS admin_activity_section_time ON admin_activity_events ((data->>'section'), timestamp DESC, id DESC);
     CREATE INDEX IF NOT EXISTS admin_activity_role_time ON admin_activity_events ((data->>'roleId'), timestamp DESC, id DESC);
     CREATE INDEX IF NOT EXISTS admin_activity_cohort_time ON admin_activity_events ((data->>'cohortId'), timestamp DESC, id DESC);
+    CREATE TABLE IF NOT EXISTS admin_communication_templates (id text PRIMARY KEY, data jsonb NOT NULL, updated_at timestamptz DEFAULT NOW());
     ALTER TABLE admin_activity_events ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE admin_communication_templates ENABLE ROW LEVEL SECURITY;
     REVOKE ALL ON admin_activity_events FROM PUBLIC;
+    REVOKE ALL ON admin_communication_templates FROM PUBLIC;
     DO $$ BEGIN
       IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN REVOKE ALL ON admin_activity_events FROM anon; END IF;
       IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN REVOKE ALL ON admin_activity_events FROM authenticated; END IF;
+      IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN REVOKE ALL ON admin_communication_templates FROM anon; END IF;
+      IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN REVOKE ALL ON admin_communication_templates FROM authenticated; END IF;
     END $$;`);
   })().catch(error => { ready = undefined; throw error; });
   await ready;
@@ -69,8 +87,10 @@ export async function recordActivity(input: Pick<ActivityEvent, "action" | "outc
   const event = createActivityEvent(input);
   const pool = getCareersPool();
   if (pool) {
-    await ensureTable();
+    await prepareActivityStore();
     await pool.query("INSERT INTO admin_activity_events (id, timestamp, data) VALUES ($1, $2, $3)", [event.id, event.timestamp, JSON.stringify(event)]);
+  } else if (hasActivityRest()) {
+    await activityRest("admin_activity_events", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ id: event.id, timestamp: event.timestamp, data: event }) });
   } else {
     if (process.env.NODE_ENV === "production") throw new Error("DATABASE_URL is required for durable activity history");
     await mkdir(directory, { recursive: true });
@@ -86,7 +106,7 @@ export async function listActivity(filters: { section?: string; roleId?: string;
   const pool = getCareersPool();
   let events: ActivityEvent[];
   if (pool) {
-    await ensureTable();
+    await prepareActivityStore();
     const args: unknown[] = [];
     const conditions: string[] = [];
     for (const key of ["section", "roleId", "cohortId", "entityId"] as const) if (filters[key]) {
@@ -97,6 +117,15 @@ export async function listActivity(filters: { section?: string; roleId?: string;
     args.push(limit + 1);
     const result = await pool.query(`SELECT data - 'details' AS data FROM admin_activity_events ${conditions.length ? `WHERE ${conditions.join(" AND ")}` : ""} ORDER BY timestamp DESC, id DESC LIMIT $${args.length}`, args);
     events = result.rows.map((row: { data: ActivityEvent }) => row.data);
+  } else if (hasActivityRest()) {
+    const query = new URLSearchParams({ select: "id,timestamp,requestId:data->>requestId,actor:data->>actor,section:data->>section,action:data->>action,outcome:data->>outcome,entityId:data->>entityId,roleId:data->>roleId,cohortId:data->>cohortId", order: "timestamp.desc,id.desc", limit: String(limit + 1) });
+    for (const key of ["roleId", "cohortId", "entityId"] as const) if (filters[key]) query.set(`data->>${key}`, key === "roleId" && ["cctv", "cctv_operator"].includes(filters[key]!) ? "in.(cctv,cctv_operator)" : `eq.${filters[key]}`);
+    const groups: string[] = [];
+    if (filters.section === "form-builder") groups.push("or(data->>section.eq.form-builder,and(data->>section.eq.roles,data->>action.like.*Configuration*))");
+    else if (filters.section) query.set("data->>section", `eq.${filters.section}`);
+    if (cursor) groups.push(`or(timestamp.lt.${cursor.timestamp},and(timestamp.eq.${cursor.timestamp},id.lt.${cursor.id}))`);
+    if (groups.length) query.set("and", `(${groups.join(",")})`);
+    events = await (await activityRest(`admin_activity_events?${query}`)).json();
   } else {
     if (process.env.NODE_ENV === "production") throw new Error("Activity history storage is unavailable");
     let names: string[];
@@ -118,9 +147,10 @@ export async function getActivity(id: string): Promise<ActivityEvent | null> {
   if (!/^[a-f\d-]{36}$/i.test(id)) throw new Error("Invalid event ID");
   const pool = getCareersPool();
   if (pool) {
-    await ensureTable();
+    await prepareActivityStore();
     return (await pool.query("SELECT data FROM admin_activity_events WHERE id = $1", [id])).rows[0]?.data || null;
   }
+  if (hasActivityRest()) return (await (await activityRest(`admin_activity_events?select=data&id=eq.${id}&limit=1`)).json())[0]?.data || null;
   if (process.env.NODE_ENV === "production") throw new Error("Activity history storage is unavailable");
   const names = await readdir(directory).catch((error: NodeJS.ErrnoException) => { if (error.code === "ENOENT") return []; throw error; });
   const name = names.find(name => name.endsWith(`_${id}.json`));

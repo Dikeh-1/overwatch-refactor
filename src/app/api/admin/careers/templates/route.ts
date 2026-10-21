@@ -1,5 +1,5 @@
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
-import { auditRequest, createActivityEvent } from "@/lib/admin-activity";
+import { auditRequest, createActivityEvent, auditChange, activityRest, hasActivityRest, prepareActivityStore } from "@/lib/admin-activity";
 import { getSystemConfig, setSystemConfig } from "@/lib/careers-config-store";
 import { getCareersPool } from "@/lib/careers-db";
 import { exclusive } from "@/lib/careers-store";
@@ -13,9 +13,15 @@ function validTemplate(value: unknown): value is Template {
     (item.title as string).length <= 200 && (item.subject as string).length <= 1000 &&
     (item.body as string).length <= 100000 && Number.isFinite(Date.parse(item.createdAt as string));
 }
+async function readTemplates(): Promise<Template[]> {
+  const pool = getCareersPool();
+  if (pool) { await prepareActivityStore(); return (await pool.query("SELECT data FROM admin_communication_templates ORDER BY updated_at DESC, id DESC")).rows.map((row: { data: Template }) => row.data); }
+  if (hasActivityRest()) return (await (await activityRest("admin_communication_templates?select=data&order=updated_at.desc,id.desc")).json()).map((row: { data: Template }) => row.data);
+  return getSystemConfig<Template[]>("communication_templates", []);
+}
 export async function GET() {
   if (!(await authenticated())) return Response.json({ error: "Unauthorized" }, { status: 401 });
-  try { return Response.json({ templates: await getSystemConfig<Template[]>("communication_templates", []) }, { headers: { "Cache-Control": "no-store" } }); }
+  try { return Response.json({ templates: await readTemplates() }, { headers: { "Cache-Control": "no-store" } }); }
   catch { return Response.json({ error: "Templates could not be loaded" }, { status: 503 }); }
 }
 async function handlePATCH(request: Request) {
@@ -32,17 +38,23 @@ async function handlePATCH(request: Request) {
       try {
         await client.query("BEGIN");
         await client.query("SELECT pg_advisory_xact_lock(724217)");
-        // getSystemConfig maintains this existing configuration table.
-        await client.query("CREATE TABLE IF NOT EXISTS system_configs (key text PRIMARY KEY, value jsonb NOT NULL, updated_at timestamptz DEFAULT NOW())");
-        const row = await client.query("SELECT value FROM system_configs WHERE key = 'communication_templates' FOR UPDATE");
-        const current: Template[] = row.rows[0]?.value || [];
-        templates = update(current);
-        await client.query("INSERT INTO system_configs (key,value,updated_at) VALUES ('communication_templates',$1,NOW()) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value,updated_at=NOW()", [JSON.stringify(templates)]);
-        const event = createActivityEvent({ action: `Communication template ${data.action === "delete" ? "deleted" : data.action === "import" ? "imported from browser storage" : "saved"}`, outcome: "succeeded", section: "communications", entityId: template.id, details: { before: current.find(item => item.id === template.id) || null, after: templates.find(item => item.id === template.id) || null } });
+        const row = await client.query("SELECT data FROM admin_communication_templates WHERE id=$1 FOR UPDATE", [template.id]);
+        const before: Template | null = row.rows[0]?.data || null;
+        if (data.action === "delete") await client.query("DELETE FROM admin_communication_templates WHERE id=$1", [template.id]);
+        else if (data.action !== "import" || !before) await client.query("INSERT INTO admin_communication_templates(id,data,updated_at) VALUES($1,$2,NOW()) ON CONFLICT(id) DO UPDATE SET data=EXCLUDED.data,updated_at=NOW()", [template.id, JSON.stringify(template)]);
+        templates = (await client.query("SELECT data FROM admin_communication_templates ORDER BY updated_at DESC, id DESC")).rows.map((row: { data: Template }) => row.data);
+        const event = createActivityEvent({ action: `Communication template ${data.action === "delete" ? "deleted" : data.action === "import" ? "imported from browser storage" : "saved"}`, outcome: "succeeded", section: "communications", entityId: template.id, details: { before, after: templates.find(item => item.id === template.id) || null } });
         await client.query("INSERT INTO admin_activity_events (id,timestamp,data) VALUES($1,$2,$3)", [event.id, event.timestamp, JSON.stringify(event)]);
         await client.query("COMMIT");
       } catch (error) { await client.query("ROLLBACK"); throw error; }
       finally { client.release(); }
+    } else if (hasActivityRest()) {
+      const before: Template | null = (await (await activityRest(`admin_communication_templates?select=data&id=eq.${template.id}&limit=1`)).json())[0]?.data || null;
+      await auditChange(`Communication template ${data.action === "delete" ? "deleted" : data.action === "import" ? "imported from browser storage" : "saved"}`, { before, after: data.action === "delete" ? null : data.action === "import" && before ? before : template }, async () => {
+        if (data.action === "delete") await activityRest(`admin_communication_templates?id=eq.${template.id}`, { method: "DELETE" });
+        else await activityRest("admin_communication_templates?on_conflict=id", { method: "POST", headers: { Prefer: `resolution=${data.action === "import" ? "ignore" : "merge"}-duplicates,return=minimal` }, body: JSON.stringify({ id: template.id, data: template, updated_at: new Date().toISOString() }) });
+      }, { section: "communications", entityId: template.id });
+      templates = await readTemplates();
     } else {
       templates = await exclusive(async () => {
         const next = update(await getSystemConfig<Template[]>("communication_templates", []));
