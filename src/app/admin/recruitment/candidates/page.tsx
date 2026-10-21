@@ -10,6 +10,8 @@ import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 import type { Application } from "@/lib/careers";
 import type { CareerCohort, CareerRoleDefinition } from "@/lib/careers-models";
 import { dashboardCandidates, dashboardPredicates, isDashboardRoster } from "@/lib/recruitment-dashboard";
+import { sameRole } from "@/lib/careers-workflow";
+import { HistoricalTestEvidence } from "@/components/admin/recruitment/HistoricalTestEvidence";
 
 type Data = { applications: Application[]; roles: CareerRoleDefinition[]; cohorts: CareerCohort[] };
 function GlobalCandidates() {
@@ -40,9 +42,11 @@ function GlobalCandidates() {
   if (error) return <div role="alert" className="rounded-xl border border-red-200 p-6">{error} <button className="underline" onClick={() => void load()}>{t("Retry", "Tentar novamente")}</button></div>;
   if (!data) return <div role="status" className="flex min-h-[60vh] items-center justify-center"><OverwatchOrbitLoader label={t("Loading candidates…", "A carregar candidatos…")}/></div>;
   if (!Object.hasOwn(dashboardPredicates, metric)) return <div role="alert">{t("Unknown dashboard filter", "Filtro desconhecido")} <Link href="/admin/recruitment">{t("Back to overview", "Voltar à visão geral")}</Link></div>;
-  const applications = dashboardCandidates(data.applications, data.roles, data.cohorts, scope, metric);
+  const roleFilter = params.get("role");
+  const applications = dashboardCandidates(data.applications, data.roles, data.cohorts, scope, metric).filter(a => !roleFilter || roleFilter === "all" || sameRole(a.role, roleFilter));
   const metricLabels: Record<string, string> = { unresolved: t("Outcome needs review", "Resultado por rever"), screened: t("Screening assessed", "Candidaturas avaliadas"), screeningPassed: t("Screening passed", "Requisitos cumpridos"), notAdvancing: t("Not advancing / archived", "Não avançam / arquivados"), scored: t("Results scored", "Com nota"), total: t("Applications", "Candidaturas"), qualified: t("Qualified / review", "Qualificados / revisão"), booked: t("Tests booked", "Testes agendados"), attended: t("Attendance recorded", "Presenças registadas"), tested: t("Tests completed", "Testes realizados / resultados"), nextPhase: t("Next-phase candidates", "Candidatos na próxima fase"), awaiting: t("Awaiting response", "Aguardam resposta"), confirmed: t("Confirmed interest", "Interesse confirmado") };
   return <div className="space-y-4">
+    {["tested", "attended", "scored"].includes(metric) && <HistoricalTestEvidence cohorts={data.cohorts.filter(c => (scope === "all" || c.status === "active") && (!roleFilter || roleFilter === "all" || sameRole(c.roleId, roleFilter)))} />}
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm"><span><strong>{metricLabels[metric]}</strong> · {scope === "all" ? t("All cycles", "Todos os lotes") : t("Open cycles only", "Apenas lotes abertos")} · {applications.length} {t("matching records", "registos correspondentes")}</span><Link href={`/admin/recruitment?scope=${scope}`} className="text-xs font-semibold text-sky-700">{t("Back to overview", "Voltar à visão geral")} →</Link></div>
     <CandidatesTableView key={`${scope}-${metric}`} applications={applications} roles={data.roles} onBulkStatusChange={(ids,status) => mutate(ids,status)} onBulkArchive={(ids,reason) => mutate(ids,"archived",reason)} onRefresh={load}/>
   </div>;

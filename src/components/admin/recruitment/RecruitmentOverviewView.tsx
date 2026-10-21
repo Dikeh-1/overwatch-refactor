@@ -11,6 +11,7 @@ import { recruitmentDashboard, type DashboardScope } from "@/lib/recruitment-das
 import { cycleLabel } from "@/lib/careers-cycle-label";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import RoleConfigModal from "./RoleConfigModal";
+import { HistoricalTestEvidence } from "./HistoricalTestEvidence";
 
 type Props = {
   applications: Application[];
@@ -83,7 +84,8 @@ export function RecruitmentOverviewView({ applications, roleDefs = [], cohorts =
     </section>}
     {dashboard.metrics.booked > 0 && dashboard.metrics.attended === 0 && <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">{t("Historical attendance records are missing. Zero recorded attendance does not mean nobody attended; bookings and test results are separate counts.", "Faltam registos históricos de presença. Zero presenças registadas não significa que ninguém compareceu; agendamentos e resultados são contagens distintas.")}</p>}
     {dashboard.metrics.unresolved > 0 && <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">{t(`${dashboard.metrics.unresolved} applications have no saved recruitment outcome. They are not counted as rejection decisions.`, `${dashboard.metrics.unresolved} candidaturas não têm resultado guardado. Não são contadas como decisões de rejeição.`)} <Link className="underline" href={`/admin/recruitment/candidates?scope=${scope}&metric=unresolved`}>{t("Review records", "Rever registos")}</Link></p>}
-    <div className="grid min-w-0 gap-6 xl:grid-cols-2">
+      <HistoricalTestEvidence cohorts={scope === "all" ? cohorts : cohorts.filter(c => c.status === "active")} />
+      <div className="grid min-w-0 gap-6 xl:grid-cols-2">
       <section className="min-w-0 rounded-xl border border-slate-200 bg-white p-5">
         <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-sm font-bold">{scope === "all" ? t("Roles · all recruitment history", "Vagas · todo o histórico") : t("Roles · open cycles", "Vagas · lotes abertos")}</h2><Link href="/admin/recruitment/roles" className="text-xs font-semibold text-sky-700">{t("Manage roles", "Gerir vagas")} →</Link></div>
         <div className="mt-3 divide-y divide-slate-100">
@@ -99,7 +101,7 @@ export function RecruitmentOverviewView({ applications, roleDefs = [], cohorts =
       <section className="min-w-0 rounded-xl border border-slate-200 bg-white p-5"><h2 className="text-sm font-bold">{t("Closed recruitment cycles", "Lotes de recrutamento encerrados")}</h2><p className="mt-1 text-xs text-slate-500">{t("Continue reviewing each cycle in its own workspace.", "Continue a rever cada lote na sua área original.")}</p>
         <div className="mt-4 space-y-3">{dashboard.closedCycles.map(cohort => {
           const role = cohort.roleSnapshot || roleDefs.find(r => r.id === cohort.roleId) || { en: cohort.roleId, pt: cohort.roleId };
-          const metrics = recruitmentMetrics(applicationsForCohort(applications, cohort, cohorts));
+          const metrics = recruitmentMetrics(applicationsForCohort(applications, cohort, cohorts), [cohort]);
           return <Link key={cohort.id} href={`/admin/recruitment/archive?cohortId=${encodeURIComponent(cohort.id)}`} className="block rounded-xl border border-slate-200 p-4 hover:border-sky-300"><div className="flex items-start justify-between gap-3"><h3 className="text-sm font-semibold">{cycleLabel(cohort, role, lang)}</h3><ArrowRight size={16} className="shrink-0"/></div><p className="mt-2 text-xs text-slate-500">{metrics.total} {t("applications", "candidaturas")} · {metrics.booked} {t("booked", "agendados")} · {metrics.tested} {t("test results / completed", "resultados / testes realizados")}</p></Link>;
         })}{!dashboard.closedCycles.length && <p className="py-4 text-sm text-slate-500">{t("No closed cycles yet.", "Ainda não existem lotes encerrados.")}</p>}</div>
       </section>

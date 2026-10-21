@@ -1,4 +1,5 @@
 "use client";
+import { HistoricalTestEvidence } from "./HistoricalTestEvidence";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cycleLabel } from "@/lib/careers-cycle-label";
@@ -135,7 +136,7 @@ export default function RecruitmentWorkspace({
         : data?.applications || [],
     [data, snapshotMode],
   );
-  const metrics = useMemo(() => recruitmentMetrics(apps), [apps]);
+  const metrics = useMemo(() => recruitmentMetrics(apps, !snapshotMode && data?.cohort ? [data.cohort] : []), [apps, data?.cohort, snapshotMode]);
   const role = data?.role;
   const cohort = data?.cohort;
   useEffect(() => {
@@ -156,7 +157,7 @@ export default function RecruitmentWorkspace({
     screened: isScreened,
     screeningPassed: passedScreening,
     notAdvancing: isNotAdvancing,
-    qualified: isQualified,
+    qualified: isNextPhase,
     eligible: isEligibleForTest,
     invited: (a) => Boolean(a.invitedAt) || a.status === "test_invited",
     booked: (a) => Boolean(a.testSlot),
@@ -290,6 +291,7 @@ export default function RecruitmentWorkspace({
   return (
     <CohortRoleProvider role={workspaceRole}>
       <div className="space-y-5">
+        {!snapshotMode && data?.cohort?.historicalTestResults && <HistoricalTestEvidence cohorts={[data.cohort]} />}
         <header className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3">
           <Link
             href={
@@ -353,7 +355,7 @@ export default function RecruitmentWorkspace({
           )}
           {metrics.unresolved > 0 && <p className="text-xs text-amber-800">{t(`${metrics.unresolved} records have no saved recruitment outcome. Review these records before making a decision.`, `${metrics.unresolved} registos não têm resultado de recrutamento guardado. Reveja-os antes de decidir.`)}</p>}
           <p className="text-xs text-slate-500">{t("Screening assessed counts applications evaluated against the criteria. Screening passed counts those meeting mandatory criteria. Not advancing / archived counts candidate outcomes; closing applications does not reject candidates.", "Candidaturas avaliadas conta as avaliações pelos critérios. Requisitos cumpridos conta quem passou os critérios obrigatórios. Não avançam / arquivados conta resultados dos candidatos; encerrar candidaturas não rejeita candidatos.")}</p>
-          {cohort?.historicalAttendance && <p className="rounded-lg bg-sky-50 p-3 text-xs text-sky-900">{t(`${cohort.historicalAttendance.applicationIds.length} historical attendees were confirmed by the administrator. Attendance and completed-test counts include that confirmation; QR scan timestamps and scores are not invented.`, `${cohort.historicalAttendance.applicationIds.length} presenças históricas foram confirmadas pelo administrador. As contagens incluem essa confirmação; não foram criadas datas de leitura QR nem notas.`)}</p>}
+          {cohort?.historicalAttendance && !cohort.historicalTestResults && <p className="rounded-lg bg-sky-50 p-3 text-xs text-sky-900">{t(`${cohort.historicalAttendance.applicationIds.length} historical attendees were confirmed by the administrator. Attendance and completed-test counts include that confirmation; QR scan timestamps and scores are not invented.`, `${cohort.historicalAttendance.applicationIds.length} presenças históricas foram confirmadas pelo administrador. As contagens incluem essa confirmação; não foram criadas datas de leitura QR nem notas.`)}</p>}
           {cohort?.closureSnapshot && (
             <button
               className="rounded-lg border px-3 py-2 text-xs"

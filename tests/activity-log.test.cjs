@@ -52,8 +52,8 @@ test('request journal preserves body for the handler and correlates before/resul
   const res=await activity.auditRequest(req,async()=>{const body=await req.json();assert.equal(body.message,'Full text');return Response.json({sentCount:2,failedCount:1});});
   assert.equal(res.status,200);
   const rows=(await activity.listActivity({section:'communications',roleId:'operator'})).events;
-  assert.equal(rows.length,2); assert.equal(rows[0].requestId,rows[1].requestId);
-  const start=rows.find(e=>e.outcome==='started'); assert.equal(start.actor,'Administrator (shared account)');
+  assert.equal(rows.length,1);
+  const start=await activity.getActivity((await activity.getActivity(rows[0].id)).details.startId); assert.equal(start.actor,'Administrator (shared account)');
   assert.equal((await activity.getActivity(start.id)).details.request.password,'[REDACTED]');
   const done=rows.find(e=>e.outcome==='succeeded'); assert.equal((await activity.getActivity(done.id)).details.result.failedCount,1);
 });
@@ -77,7 +77,7 @@ test('journal storage failure blocks side effects; completion failure preserves 
 test('communication evidence retains full content and failure outcome before a failed delivery',async()=>{
   await assert.rejects(activity.auditChange('Communication delivery',{subject:'Offer details',textContent:'Full message\nSecond line',htmlContent:'<b>Full message</b>',to:[{email:'fixture@example.invalid'}]},async()=>{throw Error('provider offline')},{section:'communications',entityId:'candidate',roleId:'operator'}),/provider offline/);
   const rows=(await activity.listActivity({entityId:'candidate'})).events;
-  const start=rows.find(e=>e.outcome==='started');const done=rows.find(e=>e.outcome==='failed');
+  const done=rows.find(e=>e.outcome==='failed');const start=await activity.getActivity((await activity.getActivity(done.id)).details.startId);
   assert.equal((await activity.getActivity(start.id)).details.textContent,'Full message\nSecond line');assert.equal((await activity.getActivity(done.id)).details.startId,start.id);
   assert.deepEqual(activity.changedValues({status:'shortlisted',score:0},{status:'tested',score:0}),{status:{before:'shortlisted',after:'tested'}});
 });
@@ -108,8 +108,8 @@ test('the actual central email function journals message content and candidate s
     const result=await mail.sendTransactionalEmail({to:[{email:'fixture@example.invalid',name:'Fixture'}],subject:'Message content proof',textContent:'Full content for history',htmlContent:'<p>Full content for history</p>'});
     assert.equal(result.success,true);assert.equal(delivered.length,1);
     const rows=(await activity.listActivity({entityId:'mail-candidate'})).events;
-    assert.equal(rows.length,2);assert.ok(rows.every(row=>row.roleId==='operator'&&row.cohortId==='september'&&row.section==='communications'));
-    const start=await activity.getActivity(rows.find(row=>row.outcome==='started').id);
+    assert.equal(rows.length,1);assert.ok(rows.every(row=>row.roleId==='operator'&&row.cohortId==='september'&&row.section==='communications'));
+    const start=await activity.getActivity((await activity.getActivity(rows[0].id)).details.startId);
     assert.equal(start.details.subject,'Message content proof');assert.equal(start.details.htmlContent,'<p>Full content for history</p>');
   } finally {for(const key of keys){if(before[key]===undefined)delete process.env[key];else process.env[key]=before[key]}}
 });
@@ -136,7 +136,7 @@ test('browser export requests are explicitly labelled and cannot forge a server 
 
 test('CV access is discoverable in candidate history and CCTV role aliases share the same history',async()=>{
   const res=await activity.auditRequest(request('/api/admin/cv?id=cv-candidate',undefined,'GET'),async()=>new Response('fixture',{headers:{'Content-Type':'application/pdf'}}));assert.equal(res.status,200);
-  const rows=(await activity.listActivity({entityId:'cv-candidate'})).events;assert.equal(rows.length,2);
+  const rows=(await activity.listActivity({entityId:'cv-candidate'})).events;assert.equal(rows.length,1);
   await activity.recordActivity({action:'Alias change',outcome:'succeeded',section:'roles',roleId:'cctv'});
   assert.ok((await activity.listActivity({roleId:'cctv_operator'})).events.some(row=>row.action==='Alias change'));
 });

@@ -12,7 +12,7 @@ export const dashboardPredicates: Record<string, (candidate: Application) => boo
   screeningPassed: passedScreening,
   notAdvancing: isNotAdvancing,
   unresolved: a => a.stageSource === "unresolved",
-  qualified: isQualified,
+  qualified: isNextPhase,
   booked: a => Boolean(a.testSlot),
   attended: hasAttended,
   scored: hasScore,
@@ -30,13 +30,13 @@ export function recruitmentDashboard(applications: Application[], roles: CareerR
   const candidates = dashboardCandidates(applications, roles, cohorts, scope);
   return {
     candidates,
-    metrics: recruitmentMetrics(candidates),
+    metrics: recruitmentMetrics(candidates, scope === "all" ? cohorts : cohorts.filter(c => c.status === "active")),
     openRoles: roles.filter(r => r.open),
     closedCycles: cohorts.filter(c => c.status !== "active").sort((a, b) => (b.closedAt || b.openedAt || "").localeCompare(a.closedAt || a.openedAt || "")),
     roles: roles.filter(r => scope === "all" || r.open).map(role => {
       const records = candidates.filter(a => sameRole(a.role, role.id));
       const roleCohorts = cohorts.filter(c => sameRole(c.roleId, role.id));
-      return { role, metrics: recruitmentMetrics(records), cycles: roleCohorts };
+      return { role, metrics: recruitmentMetrics(records, roleCohorts), cycles: roleCohorts };
     }),
   };
 }

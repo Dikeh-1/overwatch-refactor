@@ -16,7 +16,7 @@ Module._load = function(name,...args) {
   if (name === "@/lib/admin-activity") return { auditRequest: async (_, handler) => handler() };
   if(name==='@/lib/careers-auth') return { authenticated: async()=>true, sameOrigin:r=>r.headers.get('origin')==='http://localhost:3100' };
   if(name==='@/lib/careers-workflow') return workflow;
-  if(name==='@/lib/careers-workspace-store') return { getRecruitmentWorkspaceData: async()=>({roles:[],cohorts:[target],applications:members}) };
+  if(name==='@/lib/careers-workspace-store') return { getRecruitmentWorkspaceData: async()=>({roles:[],cohorts:[target],applications:members,raw:members}) };
   if(name==='@/lib/careers-campaign-store') return { getAllCohorts:async()=>[target],saveCohort:async c=>{saved=c;target=c;return c;} };
   return original.call(this,name,...args);
 };
@@ -49,4 +49,15 @@ test('historical confirmation cannot apply to active/unassigned cycles or cross-
   assert.equal((await route.PATCH(request({overrideRecordedAbsences:true}))).status,400);
   assert.equal((await route.PATCH(request({},'https://untrusted.invalid'))).status,403);
   assert.equal(saved,null);
+});
+
+test('source results preserve unlinked names and reject duplicate or cross-role identities',async()=>{
+  reset();
+  const evidence={sourceUrl:'https://drive.google.com/file/d/source/view',results:[{sourceName:'One',score:91,applicationId:'one'},{sourceName:'External',score:72}]};
+  const patch={action:'import_historical_test_results',historicalTestResults:evidence};
+  const result=await route.PATCH(request(patch));assert.equal(result.status,200);
+  assert.deepEqual(await result.json(),{success:true,documentedTests:2,linked:1,unlinked:1});assert.equal(saved.historicalTestResults.results[1].applicationId,undefined);
+  assert.equal((await route.PATCH(request({...patch,historicalTestResults:{...evidence,results:[{sourceName:'Wrong role',score:90,applicationId:'outside'}]}}))).status,400);
+  assert.equal((await route.PATCH(request({...patch,historicalTestResults:{...evidence,results:[evidence.results[0],{...evidence.results[0],sourceName:'Duplicate'}]}}))).status,400);
+  assert.equal((await route.PATCH(request({...patch,historicalTestResults:{...evidence,results:[null]}}))).status,400);
 });

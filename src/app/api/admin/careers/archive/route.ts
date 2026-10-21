@@ -28,7 +28,7 @@ export async function GET(request: Request) {
           cohort,
           role,
           applications: members,
-          metrics: recruitmentMetrics(members),
+          metrics: recruitmentMetrics(members, [cohort]),
         },
         { headers: { "Cache-Control": "no-store" } },
       );
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
         const role =
           c.roleSnapshot || roles.find((r) => sameRole(r.id, c.roleId));
         const metrics = recruitmentMetrics(
-          applicationsForCohort(applications, c, cohorts),
+          applicationsForCohort(applications, c, cohorts), [c],
         );
         const { closureSnapshot, ...summary } = c;
         return {
@@ -66,7 +66,23 @@ async function handlePATCH(request: Request) {
   if (!(await authenticated()) || !sameOrigin(request))
     return Response.json({ error: "Unauthorized" }, { status: 403 });
   try {
-    const { cohortId, notes, action, expectedBookingCount, overrideRecordedAbsences } = await request.json();
+    const { cohortId, notes, action, expectedBookingCount, overrideRecordedAbsences, historicalTestResults } = await request.json();
+    if (action === "import_historical_test_results") {
+      const workspace = await getRecruitmentWorkspaceData();
+      const cohort = workspace.cohorts.find(c => c.id === cohortId);
+      if (!cohort || cohort.status === "active" || cohort.unassigned) return Response.json({ error: "A closed cycle is required" }, { status: 400 });
+      const rows = historicalTestResults?.results;
+      if (!Array.isArray(rows) || !rows.length || rows.length > 1000 || typeof historicalTestResults.sourceUrl !== "string" || !/^https:\/\/drive\.google\.com\//.test(historicalTestResults.sourceUrl)) return Response.json({ error: "Invalid source document" }, { status: 400 });
+      const members = applicationsForCohort(workspace.raw, cohort, workspace.cohorts);
+      const ids = new Set<string>(), names = new Set<string>();
+      for (const row of rows) {
+        if (!row || typeof row.sourceName !== "string" || !row.sourceName.trim() || row.sourceName.length > 200 || !Number.isFinite(row.score) || row.score < 0 || row.score > 100 || names.has(row.sourceName.trim().toLowerCase()) || (row.applicationId && (ids.has(row.applicationId) || !members.some(a => a.id === row.applicationId)))) return Response.json({ error: "Duplicate, invalid or out-of-scope test result" }, { status: 400 });
+        names.add(row.sourceName.trim().toLowerCase()); if (row.applicationId) ids.add(row.applicationId);
+      }
+      const evidence = { sourceUrl: historicalTestResults.sourceUrl, importedAt: new Date().toISOString(), results: rows.map(row => ({ sourceName: row.sourceName.trim(), score: row.score, ...(row.applicationId ? { applicationId: row.applicationId } : {}) })) };
+      await saveCohort({ ...cohort, historicalTestResults: evidence });
+      return Response.json({ success: true, documentedTests: rows.length, linked: ids.size, unlinked: rows.length - ids.size });
+    }
     if (action === "confirm_historical_attendance") {
       if (typeof cohortId !== "string" || !Number.isInteger(expectedBookingCount) || expectedBookingCount < 1) return Response.json({ error: "Invalid attendance confirmation" }, { status: 400 });
       const workspace = await getRecruitmentWorkspaceData();

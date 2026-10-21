@@ -63,8 +63,15 @@ export const isAwaiting = (a: Application) =>
 /** Assessment is a completed criteria evaluation, not an email or a positive decision. */
 export const isScreened = (a: Application) => Boolean(a.screeningResult) || (typeof a.screeningScore === "number" && Number.isFinite(a.screeningScore));
 export const passedScreening = (a: Application) => a.screeningResult?.passedMandatory === true;
-export const isNotAdvancing = (a: Application) => isTerminal(a) && !(a.status === "archived" && (a.stageSource === "unresolved" || a.archiveReason === "Recruitment Closed"));
+export const isNotAdvancing = (a: Application) => isTerminal(a) && !isNextPhase(a) && !(a.status === "archived" && (a.stageSource === "unresolved" || a.archiveReason === "Recruitment Closed"));
 export function applyHistoricalAttendance(a: Application, cohort?: CareerCohort): Application {
+  const source = cohort?.historicalTestResults;
+  if (source && cohort && sameRole(a.role, cohort.roleId) && (!a.cohortId || a.cohortId === cohort.id)) {
+    const correction = a.attendanceUpdatedAt && Date.parse(a.attendanceUpdatedAt) > Date.parse(source.importedAt);
+    const documented = source.results.some(r => r.applicationId === a.id);
+    return { ...a, historicalAttendanceConfirmed: !correction && documented,
+      ...(!correction && documented ? { attendanceStatus: "present" as const, historicalRecordedAttendanceStatus: a.attendanceStatus } : {}) };
+  }
   const confirmation = cohort?.historicalAttendance;
   const newerCorrection = Boolean(a.attendanceUpdatedAt && confirmation && new Date(a.attendanceUpdatedAt).getTime() > new Date(confirmation.confirmedAt).getTime());
   const confirmed = Boolean(confirmation?.applicationIds.includes(a.id) && cohort && sameRole(a.role, cohort.roleId) && (!a.cohortId || a.cohortId === cohort.id) && !newerCorrection);
@@ -252,21 +259,26 @@ export function applicationsForCohort(
   });
 }
 
-export function recruitmentMetrics(applications: Application[]) {
+export function recruitmentMetrics(applications: Application[], cohorts: CareerCohort[] = []) {
+  // Source rows without a verified application match remain separate evidence.
+  // They must never create fake applicants or borrow another person's results.
+  const unlinked = cohorts.filter(c => applications.some(a => sameRole(a.role, c.roleId) && (a.workspaceCohortId || a.cohortId) === c.id))
+    .flatMap(c => c.historicalTestResults?.results || []).filter(r => !r.applicationId).length;
   return {
     total: applications.length,
     screened: applications.filter(isScreened).length,
     screeningPassed: applications.filter(passedScreening).length,
     notAdvancing: applications.filter(isNotAdvancing).length,
-    qualified: applications.filter(isQualified).length,
+    qualified: applications.filter(isNextPhase).length,
     eligible: applications.filter(isEligibleForTest).length,
     invited: applications.filter(
       (a) => Boolean(a.invitedAt) || a.status === "test_invited",
     ).length,
     booked: applications.filter((a) => Boolean(a.testSlot)).length,
-    attended: applications.filter(hasAttended).length,
-    tested: applications.filter(hasTested).length,
-    scored: applications.filter(hasScore).length,
+    attended: applications.filter(hasAttended).length + unlinked,
+    tested: applications.filter(hasTested).length + unlinked,
+    scored: applications.filter(hasScore).length + unlinked,
+    unlinkedTestResults: unlinked,
     nextPhase: applications.filter(isNextPhase).length,
     confirmed: applications.filter(isConfirmed).length,
     awaiting: applications.filter(isAwaiting).length,

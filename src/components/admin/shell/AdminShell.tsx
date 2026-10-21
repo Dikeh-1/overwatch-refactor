@@ -31,6 +31,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
   const [auth, setAuth] = useState<boolean | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [sessionExpiry, setSessionExpiry] = useState<number | null>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // App metrics for sidebar badges
@@ -51,17 +52,47 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
   // Auth check
   const checkSession = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/session");
+      const res = await fetch("/api/admin/session", { cache: "no-store", signal: AbortSignal.timeout(15000) });
+      if (!res.ok) throw new Error("Session check unavailable");
       const data = await res.json();
+      setAuthError("");
       setAuth(Boolean(data.authenticated));
+      setSessionExpiry(data.expiresAt || null);
     } catch {
-      setAuth(false);
+      // A temporary connection failure is not evidence that a session expired.
+      setAuthError("Unable to check your session. Please retry.");
     }
   }, []);
 
   useEffect(() => {
     checkSession();
   }, [checkSession]);
+
+  useEffect(() => {
+    if (!auth) return;
+    const expire = () => { setAuth(false); setSessionExpiry(null); setApplications([]); setDeletedNextPhase([]); };
+    const originalFetch = window.fetch;
+    const guardedFetch: typeof window.fetch = async (input, init) => {
+      const response = await originalFetch(input, init);
+      const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, window.location.href);
+      if (url.origin === window.location.origin && url.pathname.startsWith("/api/admin/") && url.pathname !== "/api/admin/session" && response.status === 401) expire();
+      if (url.origin === window.location.origin && url.pathname.startsWith("/api/admin/") && response.status === 403) {
+        void originalFetch("/api/admin/session", { cache: "no-store" }).then(async r => { if (r.ok && (await r.json()).authenticated === false) expire(); }).catch(() => {});
+      }
+      return response;
+    };
+    window.fetch = guardedFetch;
+    const timer = sessionExpiry ? window.setTimeout(expire, Math.max(0, sessionExpiry - Date.now())) : undefined;
+    const check = () => { if (!document.hidden) void checkSession(); };
+    const interval = window.setInterval(check, 60000);
+    window.addEventListener("focus", check);
+    document.addEventListener("visibilitychange", check);
+    return () => {
+      if (window.fetch === guardedFetch) window.fetch = originalFetch;
+      window.clearTimeout(timer); window.clearInterval(interval);
+      window.removeEventListener("focus", check); document.removeEventListener("visibilitychange", check);
+    };
+  }, [auth, sessionExpiry, checkSession]);
 
   // Load summary data for badges
   const loadSummaryData = useCallback(async () => {
@@ -139,6 +170,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Password incorrect");
       setAuth(true);
+      void checkSession();
       loadSummaryData();
     } catch (err: any) {
       setAuthError(err.message || "Authentication failed");
@@ -302,6 +334,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
   }
 
   if (auth === null) {
+    if (authError) return <div role="alert" className="min-h-screen flex items-center justify-center gap-3"><p>{authError}</p><button className="underline" onClick={() => void checkSession()}>{t("Retry", "Tentar novamente")}</button></div>;
     return (
       <div className="min-h-screen bg-[#F7F8FA] flex items-center justify-center">
         <OverwatchOrbitLoader

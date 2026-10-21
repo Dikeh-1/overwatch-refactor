@@ -27,6 +27,10 @@ export async function authenticated() {
   );
 }
 export const checkAdminSession = authenticated;
+export async function adminSessionExpiry(): Promise<number | null> {
+  if (!(await authenticated())) return null;
+  return Number((await cookies()).get(cookie)?.value.split(".")[0]);
+}
 export async function login() {
   if (!ADMIN_PASSWORD) throw new Error("Configure CAREERS_ADMIN_PASSWORD before signing in");
   const expiry = String(Date.now() + 8 * 60 * 60 * 1000);

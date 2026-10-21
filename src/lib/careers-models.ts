@@ -64,6 +64,10 @@ export interface CareerCohort {
   testSlots?: string[];
   slotQuota?: number;
   historicalAttendance?: { applicationIds: string[]; confirmedAt: string; basis: "admin_confirmed_booked_attendees"; previousAbsenceIds?: string[] };
+  historicalTestResults?: {
+    sourceUrl: string; importedAt: string;
+    results: { sourceName: string; score: number; applicationId?: string }[];
+  };
 }
 
 export const ALL_PIPELINE_STAGES: PipelineStageConfig[] = [

@@ -11,7 +11,7 @@ export type ActivityEvent = {
   entityId?: string; roleId?: string; cohortId?: string;
   details?: unknown;
 };
-type Context = Pick<ActivityEvent, "requestId" | "actor" | "section"> & { roleId?: string; cohortId?: string; entityId?: string };
+type Context = Pick<ActivityEvent, "requestId" | "actor" | "section"> & { roleId?: string; cohortId?: string; entityId?: string; meaningfulChanges?: number };
 const context = new AsyncLocalStorage<Context>();
 const directory = path.join(process.cwd(), ".careers-data", "activity");
 let ready: Promise<void> | undefined;
@@ -108,7 +108,7 @@ export async function listActivity(filters: { section?: string; roleId?: string;
   if (pool) {
     await prepareActivityStore();
     const args: unknown[] = [];
-    const conditions: string[] = [];
+    const conditions: string[] = ["data->>'action' <> 'Section viewed'", "data->>'outcome' <> 'started'"];
     for (const key of ["section", "roleId", "cohortId", "entityId"] as const) if (filters[key]) {
       const aliases = key === "roleId" && ["cctv", "cctv_operator"].includes(filters[key]!);
       args.push(aliases ? ["cctv", "cctv_operator"] : filters[key]); conditions.push(aliases ? `data->>'roleId' = ANY($${args.length}::text[])` : key === "section" && filters[key] === "form-builder" ? `(data->>'section' = $${args.length} OR (data->>'section' = 'roles' AND data->>'action' LIKE '%Configuration%'))` : `data->>'${key}' = $${args.length}`);
@@ -119,6 +119,8 @@ export async function listActivity(filters: { section?: string; roleId?: string;
     events = result.rows.map((row: { data: ActivityEvent }) => row.data);
   } else if (hasActivityRest()) {
     const query = new URLSearchParams({ select: "id,timestamp,requestId:data->>requestId,actor:data->>actor,section:data->>section,action:data->>action,outcome:data->>outcome,entityId:data->>entityId,roleId:data->>roleId,cohortId:data->>cohortId", order: "timestamp.desc,id.desc", limit: String(limit + 1) });
+    query.set("data->>action", "neq.Section viewed");
+    query.set("data->>outcome", "neq.started");
     for (const key of ["roleId", "cohortId", "entityId"] as const) if (filters[key]) query.set(`data->>${key}`, key === "roleId" && ["cctv", "cctv_operator"].includes(filters[key]!) ? "in.(cctv,cctv_operator)" : `eq.${filters[key]}`);
     const groups: string[] = [];
     if (filters.section === "form-builder") groups.push("or(data->>section.eq.form-builder,and(data->>section.eq.roles,data->>action.like.*Configuration*))");
@@ -133,6 +135,7 @@ export async function listActivity(filters: { section?: string; roleId?: string;
     events = [];
     for (const name of names.filter(name => name.endsWith(".json")).sort().reverse()) {
       const event = JSON.parse(await readFile(path.join(directory, name), "utf8")) as ActivityEvent;
+      if (event.action === "Section viewed" || event.outcome === "started") continue;
       if (cursor && (event.timestamp > cursor.timestamp || (event.timestamp === cursor.timestamp && event.id >= cursor.id))) continue;
       if (["section", "roleId", "cohortId", "entityId"].some(key => filters[key as keyof typeof filters] && event[key as keyof ActivityEvent] !== filters[key as keyof typeof filters] && !(key === "section" && filters.section === "form-builder" && event.section === "roles" && event.action.includes("Configuration")) && !(key === "roleId" && ["cctv", "cctv_operator"].includes(filters.roleId || "") && ["cctv", "cctv_operator"].includes(event.roleId || "")))) continue;
       events.push(event); if (events.length > limit) break;
@@ -190,7 +193,7 @@ export async function auditRequest(request: Request, handler: () => Promise<Resp
       const response = await handler();
       const result = response.headers.get("content-type")?.includes("application/json") ? await response.clone().json().catch(() => null) : { status: response.status };
       try {
-        await recordActivity({ action, outcome: response.ok ? "succeeded" : "failed",
+        if (!response.ok || !context.getStore()?.meaningfulChanges) await recordActivity({ action, outcome: response.ok ? "succeeded" : "failed",
           actor: response.ok && url.pathname.endsWith("/session") && request.method === "POST" ? url.pathname.includes("/gate/") ? "Gate operator (shared account)" : "Administrator (shared account)" : actor,
           details: { startId: start.id, status: response.status, result } });
       } catch {
@@ -210,6 +213,7 @@ export async function auditChange<T>(action: string, details: unknown, change: (
   try {
     const result = await change();
     await recordActivity({ ...scope, action, outcome: "succeeded", details: { startId: start.id } }).catch(() => console.error("Change completion could not be persisted", start.id));
+    const parent = context.getStore(); if (parent) parent.meaningfulChanges = (parent.meaningfulChanges || 0) + 1;
     return result;
   } catch (error) {
     await recordActivity({ ...scope, action, outcome: "failed", details: { startId: start.id } }).catch(() => console.error("Change failure could not be persisted", start.id));

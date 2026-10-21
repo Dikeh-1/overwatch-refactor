@@ -101,7 +101,6 @@ export function SectionHistoryButton() {
   const [open, setOpen] = useState(false);
   const opener = useRef<HTMLButtonElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
-  const lastNavigation = useRef("");
   const section = sectionForPage(pathname);
   const roleId = params.get("role") || "", cohortId = params.get("cohortId") || "";
   const entityId = pathname.match(/\/candidates\/([^/]+)$/)?.[1] || "";
@@ -110,14 +109,6 @@ export function SectionHistoryButton() {
     const element = dialog.current, button = opener.current; element?.showModal();
     return () => { element?.close(); button?.focus(); };
   }, [open]);
-  // Navigation telemetry is separate from authoritative server-side mutation events.
-  useEffect(() => {
-    if (pathname.includes("/activity")) return;
-    const navigation = `${pathname}|${roleId}|${cohortId}`;
-    if (lastNavigation.current === navigation) return;
-    lastNavigation.current = navigation;
-    void fetch("/api/admin/activity", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: pathname, roleId, cohortId }) }).catch(() => {});
-  }, [pathname, roleId, cohortId]);
   if (pathname.includes("/activity")) return null;
   return <><button ref={opener} type="button" onClick={() => setOpen(true)} title={t("Section history", "Histórico da secção")} aria-label={t("Section history", "Histórico da secção")} className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-50"><History size={15}/><span className="hidden sm:inline">{t("History", "Histórico")}</span></button>{open && <dialog ref={dialog} onCancel={() => setOpen(false)} onClose={() => setOpen(false)} aria-labelledby="section-history-title" className="m-auto w-[calc(100%-2rem)] max-w-5xl max-h-[85vh] rounded-2xl border border-slate-200 bg-white p-0 shadow-2xl backdrop:bg-slate-900/40"><div className="flex justify-between items-center border-b border-slate-200 p-4"><h2 id="section-history-title" className="font-bold text-slate-900">{t(...labels[section])} · {t("History", "Histórico")}</h2><button type="button" onClick={() => setOpen(false)} aria-label={t("Close history", "Fechar histórico")} className="p-2 rounded hover:bg-slate-100"><X size={18}/></button></div><div className="overflow-auto max-h-[calc(85vh-5rem)] p-4"><ActivityLogView key={`${pathname}-${roleId}-${cohortId}`} initialSection={entityId ? "" : section} roleId={roleId} cohortId={cohortId} entityId={entityId} compact /></div></dialog>}</>;
 }

@@ -495,7 +495,7 @@ test("screening assessed, passed and not-advancing are different counts", () => 
   assert.equal(m.total, 4);
   assert.equal(m.screened, 3);
   assert.equal(m.screeningPassed, 2);
-  assert.equal(m.qualified, 1);
+  assert.equal(m.qualified, 0);
   assert.equal(m.notAdvancing, 2);
 });
 test("gate attendance automatically feeds completed tests without fabricating a score", () => {
@@ -505,6 +505,24 @@ test("gate attendance automatically feeds completed tests without fabricating a 
   assert.equal(m.tested, 1);
   assert.equal(m.scored, 0);
   assert.equal(w.hasTested({ ...a, attendedAt: undefined, attendanceStatus: "absent" }), false);
+});
+
+test("qualification means selection, including a declined offer, rather than screening eligibility", () => {
+  const rows = [candidate("screened", { screeningResult: { passedMandatory: true } }), candidate("yes", { status: "interest_confirmed", nextPhaseResponse: "yes" }), candidate("pending", { status: "next_phase_invited" }), candidate("no", { status: "interest_declined", nextPhaseResponse: "no" }), candidate("out", { status: "not_advancing" })];
+  const m = w.recruitmentMetrics(rows);
+  assert.equal(m.qualified, 3); assert.equal(m.nextPhase, 3); assert.equal(m.confirmed, 1); assert.equal(m.awaiting, 1); assert.equal(m.declined, 1); assert.equal(m.notAdvancing, 1);
+  assert.equal(w.isEligibleForTest(rows[0]), true);
+});
+
+test("documented tests supersede a mistaken booking-based attendance confirmation without inventing identities", () => {
+  const c = cohort("september", { historicalAttendance: {applicationIds:["one", "two"], confirmedAt:"2026-10-20", basis:"admin_confirmed_booked_attendees"}, historicalTestResults: {sourceUrl:"https://drive.google.com/file/d/source/view",importedAt:"2026-10-21",results:[{sourceName:"One",score:81,applicationId:"one"},{sourceName:"External",score:75}]} });
+  const one = w.applyHistoricalAttendance(candidate("one", {cohortId:c.id, testScore:81, attendanceStatus:"absent"}),c);
+  const two = w.applyHistoricalAttendance(candidate("two", {cohortId:c.id, testSlot:"booked"}),c);
+  const m = w.recruitmentMetrics([one,two],[c]);
+  assert.equal(m.total,2); assert.equal(m.attended,2); assert.equal(m.tested,2); assert.equal(m.scored,2); assert.equal(m.unlinkedTestResults,1);
+  assert.equal(one.attendedAt,undefined); assert.equal(one.historicalRecordedAttendanceStatus,"absent"); assert.equal(w.hasAttended(two),false);
+  assert.equal(w.recruitmentMetrics([two],[cohort("other", {historicalTestResults:c.historicalTestResults})]).tested,0);
+  assert.equal(w.hasAttended(w.applyHistoricalAttendance({...one,attendanceStatus:"absent",attendanceUpdatedAt:"2026-10-22"},c)),false);
 });
 test("historical confirmation is scoped to fixed IDs and never creates QR timestamps or scores", () => {
   const c = cohort("september", { historicalAttendance: { applicationIds: ["one"], confirmedAt: "2026-10-21", basis: "admin_confirmed_booked_attendees" } });

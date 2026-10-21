@@ -1,6 +1,7 @@
 import { auditRequest } from "@/lib/admin-activity";
 import {
   authenticated,
+  adminSessionExpiry,
   equal,
   login,
   logout,
@@ -14,8 +15,9 @@ const ADMIN_PASSWORD =
 
 const attempts = new Map<string, { count: number; until: number }>();
 export async function GET() {
+  const expiresAt = await adminSessionExpiry();
   return Response.json(
-    { authenticated: await authenticated() },
+    { authenticated: expiresAt !== null, expiresAt },
     { headers: { "Cache-Control": "no-store" } },
   );
 }

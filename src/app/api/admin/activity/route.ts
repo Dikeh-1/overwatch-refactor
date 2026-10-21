@@ -26,6 +26,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   if (!sameOrigin(request) || !(await authenticated())) return Response.json({ error: "Unauthorized" }, { status: 403 });
   const data = await request.json().catch(() => null);
+  // Older clients may still send navigation telemetry. It is not an audit event.
+  if (data && data.kind === undefined && typeof data.path === "string" && !data.action && !data.outcome) return new Response(null, { status: 204 });
   if (typeof data?.path !== "string" || !/^\/admin(?:\/[a-zA-Z0-9_-]+)*$/.test(data.path) || data.path.length > 250) return Response.json({ error: "Invalid page" }, { status: 400 });
   if (data.kind !== undefined && data.kind !== "export") return Response.json({ error: "Invalid browser event" }, { status: 400 });
   if (data.kind === "export" && (!Number.isInteger(data.count) || data.count < 0 || data.count > 1000000)) return Response.json({ error: "Invalid export count" }, { status: 400 });

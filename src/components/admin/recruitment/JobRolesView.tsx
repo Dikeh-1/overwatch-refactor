@@ -95,7 +95,10 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
     );
   });
 
-  const getRoleMetrics = (roleId: string, activeCohortId?: string | null) => recruitmentMetrics(applications.filter(a => sameRole(a.role, roleId) && (!activeCohortId || a.workspaceCohortId === activeCohortId || a.cohortId === activeCohortId)));
+  const getRoleMetrics = (roleId: string, activeCohortId?: string | null) => recruitmentMetrics(
+    applications.filter(a => sameRole(a.role, roleId) && (!activeCohortId || a.workspaceCohortId === activeCohortId || a.cohortId === activeCohortId)),
+    cohorts.filter(c => sameRole(c.roleId, roleId) && (!activeCohortId || c.id === activeCohortId)),
+  );
 
   const handleOpenEdit = (role: CareerRoleDefinition) => {
     setEditingRole(role);

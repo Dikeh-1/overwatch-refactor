@@ -157,7 +157,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
 
   const roleObj = roles.find((r) => r.id === candidate.role);
   const roleLabel = roleObj ? (lang === "pt" ? roleObj.pt : roleObj.en) : (candidate.role || "Operadora de CCTV");
-  const isTechnicalRole = candidate.role === "cctv_technical_manager" || Boolean(candidate.technicalData || candidate.screeningResult);
+  const isTechnicalRole = candidate.role === "cctv_technical_manager";
 
   // Handle Cover Letter Translation
   const handleTranslateCover = async () => {
@@ -419,7 +419,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
               const prefTotalCount = 7;
 
               const rawScreening = candidate.screeningResult;
-              const passedMandatory = allMandatoryMet;
+              const passedMandatory = rawScreening?.passedMandatory ?? allMandatoryMet;
               const preferredScore = rawScreening?.preferredScore && rawScreening.preferredScore > 0 ? rawScreening.preferredScore : prefCount;
               const preferredTotal = rawScreening?.preferredTotal && rawScreening.preferredTotal >= 6 ? rawScreening.preferredTotal : prefTotalCount;
 
@@ -430,7 +430,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
 
               // If candidate's screening was saved under old unweighted 86%, recalculate with 70/30 weighting
               const matchPercentage =
-                rawScreening?.matchPercentage && rawScreening.matchPercentage !== 86
+                typeof rawScreening?.matchPercentage === "number"
                   ? rawScreening.matchPercentage
                   : calculatedMatch;
 
@@ -492,7 +492,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                           )}
                         </span>
                         <ul className="list-disc list-inside mt-1 text-red-900 font-medium">
-                          {(lang === "pt" && failedReasonsPt.length
+                          {(rawScreening ? (lang === "pt" ? rawScreening.failedReasonsPt || rawScreening.failedReasons : rawScreening.failedReasons) : lang === "pt" && failedReasonsPt.length
                             ? failedReasonsPt
                             : failedReasonsEn
                           ).map((r, i) => (
