@@ -1,5 +1,6 @@
 "use client";
 
+import { useRecruitmentRefresh } from "@/components/admin/hooks/useRecruitmentRefresh";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Application } from "@/lib/careers";
@@ -27,6 +28,7 @@ function GlobalOverview() {
       if (request === generation.current && !signal?.aborted) setError(e instanceof Error ? e.message : "Unable to load dashboard records");
     }
   }, []);
+  useRecruitmentRefresh(load);
   useEffect(() => {
     const controller = new AbortController();
     void Promise.resolve().then(() => load(controller.signal));

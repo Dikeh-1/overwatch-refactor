@@ -25,3 +25,5 @@ Confirmation rejects a mismatched expected booking count and requires an explici
 The generic overwritten-stages banner is removed. Records with no saved outcome retain a specific review count. Actual historical sources remain traceable rather than being silently erased.
 
 Regression coverage includes assessment versus pass/decision counts, attendance-driven completion, no synthetic scores/scan timestamps, membership isolation, fixed-ID historical confirmation, conflict checking, explicit absence override, later corrections, idempotence and origin protection.
+
+Visible recruitment dashboards, cohort workspaces, archive catalogs and role cards refresh every 30 seconds and when focus returns. This allows QR attendance saved on another device to populate the counts without a manual reload. Hidden views do not poll.

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cycleLabel } from "@/lib/careers-cycle-label";
+import { useRecruitmentRefresh } from "../hooks/useRecruitmentRefresh";
 import { csvCell } from "@/lib/csv";
 import Link from "next/link";
 import { ArrowLeft, Download, RefreshCw } from "lucide-react";
@@ -113,6 +114,7 @@ export default function RecruitmentWorkspace({
     },
     [cohortId, roleId],
   );
+  useRecruitmentRefresh(load);
   useEffect(() => {
     const controller = new AbortController();
     void Promise.resolve().then(() => load(controller.signal));

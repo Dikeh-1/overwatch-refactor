@@ -1,5 +1,6 @@
 "use client";
 
+import { useRecruitmentRefresh } from "@/components/admin/hooks/useRecruitmentRefresh";
 import React, { useState, useEffect, useCallback } from "react";
 import { JobRolesView } from "@/components/admin/recruitment/JobRolesView";
 import type { CareerRoleDefinition, CareerCohort } from "@/lib/careers-models";
@@ -41,6 +42,7 @@ export default function RolesPage() {
     }
   }, []);
 
+  useRecruitmentRefresh(() => loadData());
   useEffect(() => {
     loadData();
   }, [loadData]);

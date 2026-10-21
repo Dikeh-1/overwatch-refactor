@@ -1,4 +1,5 @@
 "use client";
+import { useRecruitmentRefresh } from "../hooks/useRecruitmentRefresh";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -28,6 +29,7 @@ export default function ArchiveVaultView({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [retry, setRetry] = useState(0);
+  useRecruitmentRefresh(() => setRetry(n => n + 1), !cohortId);
   useEffect(() => {
     if (cohortId) return;
     const controller = new AbortController();
