@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { Application, Role, stages, formatPhoneDisplay, formatSlotDisplay, ArchiveReason } from "@/lib/careers";
 import { classifyCandidateLocation } from "@/lib/location-utils";
+import { hasAttended, hasScore } from "@/lib/careers-workflow";
 import DocxViewer from "../DocxViewer";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import CelebrationOverlay from "@/components/admin/ui/CelebrationOverlay";
@@ -680,7 +681,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                       className="flex items-center justify-between p-2 rounded bg-slate-50 border border-slate-100"
                     >
                       <div className="flex items-center gap-1.5">
-                        <span className="text-slate-700 font-medium">{detail.label}</span>
+                        <span className="text-slate-700 font-medium">{(() => { const rule = roleObj?.screeningRules?.find(rule => rule.field === detail.key); return rule ? (lang === "en" ? rule.labelEn : rule.labelPt) : detail.label; })()}</span>
                         {detail.mandatory && (
                           <span className="text-[0.6rem] font-bold text-amber-700 bg-amber-50 px-1 py-0.5 rounded border border-amber-200">
                             {t("Mandatory", "Obrigatório")}
@@ -761,14 +762,14 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                 </div>
                 <div className="flex justify-between text-slate-600">
                   <span>{t("Gate Attendance:", "Presença no Portão:")}</span>
-                  <strong className={candidate.attendedAt ? "text-emerald-700 font-semibold" : "text-slate-500"}>
-                    {candidate.attendedAt ? `${t("Present", "Presente")} (${new Date(candidate.attendedAt).toLocaleTimeString(lang === "en" ? "en-GB" : "pt-MZ")})` : t("Awaiting", "Aguardado")}
+                  <strong className={hasAttended(candidate) ? "text-emerald-700 font-semibold" : "text-slate-500"}>
+                    {hasAttended(candidate) ? candidate.attendedAt ? `${t("Present", "Presente")} (${new Date(candidate.attendedAt).toLocaleTimeString(lang === "en" ? "en-GB" : "pt-MZ")})` : t("Present (documented)", "Presente (documentado)") : candidate.attendanceStatus === "absent" ? t("Absent", "Ausente") : t("Not recorded", "Não registado")}
                   </strong>
                 </div>
                 <div className="flex justify-between text-slate-600">
                   <span>{t("Recorded Score:", "Nota Registada:")}</span>
                   <strong className="text-slate-900 font-bold">
-                    {candidate.testScore ? `${candidate.testScore}%` : "—"}
+                    {hasScore(candidate) ? `${candidate.testScore}%` : "—"}
                   </strong>
                 </div>
               </div>
@@ -854,7 +855,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                             ) : (
                               <>
                                 <Copy size={12} className="text-slate-600" />
-                                <span>{t("Copiar Link Dedicado", "Copiar Link Dedicado")}</span>
+                                <span>{t("Copy decision link", "Copiar Link Dedicado")}</span>
                               </>
                             )}
                           </button>
@@ -865,7 +866,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                             className="px-2.5 py-1 rounded-md border border-emerald-300 bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-semibold inline-flex items-center gap-1 transition-colors shadow-2xs"
                           >
                             <ExternalLink size={12} className="text-emerald-600" />
-                            <span>{t("Abrir Portal de Decisão", "Abrir Portal de Decisão")}</span>
+                            <span>{t("Open decision portal", "Abrir Portal de Decisão")}</span>
                           </a>
                         </div>
                       </div>
@@ -977,7 +978,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                 {t("Gate Presence Verification", "Registo de Presença no Portão")}
               </span>
               <div className="text-sm font-bold text-slate-900">
-                {candidate.attendedAt ? (
+                {hasAttended(candidate) ? (
                   <span className="text-emerald-700 flex items-center gap-1">
                     <CheckCircle2 size={16} />
                     <span>{t("Verified Present", "Presença Confirmada")}</span>
@@ -1099,7 +1100,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                       ) : (
                         <>
                           <Copy size={11} className="text-slate-600" />
-                          <span>{t("Copiar Link", "Copiar Link")}</span>
+                          <span>{t("Copy link", "Copiar Link")}</span>
                         </>
                       )}
                     </button>
@@ -1156,7 +1157,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                           ) : (
                             <>
                               <Copy size={11} className="text-slate-600" />
-                              <span>{t("Copiar Link", "Copiar Link")}</span>
+                              <span>{t("Copy link", "Copiar Link")}</span>
                             </>
                           )}
                         </button>
@@ -1167,7 +1168,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                           className="px-2.5 py-1 rounded border border-emerald-300 bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-semibold inline-flex items-center gap-1 transition-colors shadow-2xs"
                         >
                           <ExternalLink size={11} className="text-emerald-600" />
-                          <span>{t("Abrir Portal", "Abrir Portal")}</span>
+                          <span>{t("Open portal", "Abrir Portal")}</span>
                         </a>
                       </div>
                     </>

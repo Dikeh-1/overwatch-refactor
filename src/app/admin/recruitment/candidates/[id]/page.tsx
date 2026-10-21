@@ -68,7 +68,7 @@ export default function CandidateDetailPage() {
       const res = await fetch("/api/admin/careers", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "status", id: candidateId, status: "archived" }),
+        body: JSON.stringify({ kind: "status", id: candidateId, status: "archived", reason }),
       });
       if (!res.ok) throw new Error("Failed to archive candidate");
       await loadCandidate();

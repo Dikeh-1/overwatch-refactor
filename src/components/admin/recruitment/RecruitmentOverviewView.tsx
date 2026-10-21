@@ -36,7 +36,7 @@ export function RecruitmentOverviewView({ applications, roleDefs = [], cohorts =
     { key: "screeningPassed", label: t("Screening passed", "Requisitos cumpridos"), detail: t("Met mandatory criteria", "Critérios obrigatórios cumpridos"), icon: CheckCircle2 },
     { key: "notAdvancing", label: t("Not advancing / archived", "Não avançam / arquivados"), detail: t("Candidate outcomes, not intake closure", "Resultados, não encerramento da vaga"), icon: Archive },
     { key: "scored", label: t("Results scored", "Com nota"), detail: t("Saved numeric results", "Notas numéricas guardadas"), icon: Award },
-    { key: "qualified", label: t("Qualified to continue", "Qualificados / revisão"), detail: t("Recorded screening / shortlist", "Triagem / pré-selecção registada"), icon: CheckCircle2 },
+    { key: "qualified", label: t("Qualified to continue", "Qualificados para continuar"), detail: t("Selected for the next phase", "Selecionados para a próxima fase"), icon: CheckCircle2 },
     { key: "booked", label: t("Tests booked", "Testes agendados"), detail: t("Recorded bookings", "Agendamentos registados"), icon: CalendarCheck },
     { key: "attended", label: t("Attendance recorded", "Presenças registadas"), detail: t("Recorded check-in or attendance", "Entrada ou presença registada"), icon: CheckCircle2 },
     { key: "tested", label: t("Tests completed", "Testes realizados / resultados"), detail: t("Gate attendance, results or historical confirmation", "Presença, resultado ou confirmação histórica"), icon: Award },

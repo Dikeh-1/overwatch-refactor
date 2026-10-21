@@ -26,3 +26,10 @@ test('CCO screening results never select the technical-manager profile or instal
   const manager=renderToStaticMarkup(React.createElement(CandidateProfileView,props({...base,role:'cctv_technical_manager'})));
   assert.match(manager,/Technical Screening &amp; Competencies/);assert.match(manager,/Practical CCTV Installation/);
 });
+
+test('documented attendance, a zero score and configured English criteria agree with the archive',()=>{
+  const a={...base,role:'cctv',testScore:0,historicalAttendanceConfirmed:true,attendanceStatus:'present',screeningResult:{passedMandatory:true,preferredScore:0,preferredTotal:0,matchPercentage:0,failedReasons:[],details:[{key:'grade12',label:'Conclusão da 12.ª Classe',mandatory:true,passed:true}]}};
+  const options={...props(a),roles:[{id:'cctv',en:'CCTV Operator',pt:'Operadora de CCTV',open:false,screeningRules:[{field:'grade12',labelEn:'Grade 12 completion',labelPt:'Conclusão da 12.ª Classe'}]}]};
+  const html=renderToStaticMarkup(React.createElement(CandidateProfileView,options));
+  assert.match(html,/Present \(documented\)/);assert.match(html,/Recorded Score:.*?0%/s);assert.match(html,/Grade 12 completion/);assert.doesNotMatch(html,/Conclusão da 12/);
+});
