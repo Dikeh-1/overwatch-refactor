@@ -1,3 +1,4 @@
+import { auditRequest } from "@/lib/admin-activity";
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
 import { getAllCohorts, saveCohort } from "@/lib/careers-campaign-store";
 import { getRecruitmentWorkspaceData } from "@/lib/careers-workspace-store";
@@ -61,7 +62,7 @@ export async function GET(request: Request) {
     );
   }
 }
-export async function PATCH(request: Request) {
+async function handlePATCH(request: Request) {
   if (!(await authenticated()) || !sameOrigin(request))
     return Response.json({ error: "Unauthorized" }, { status: 403 });
   try {
@@ -94,4 +95,8 @@ export async function PATCH(request: Request) {
   } catch {
     return Response.json({ error: "Unable to save notes" }, { status: 503 });
   }
+}
+
+export async function PATCH(request: Request) {
+  return auditRequest(request, () => handlePATCH(request));
 }

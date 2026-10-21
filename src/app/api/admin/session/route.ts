@@ -1,3 +1,4 @@
+import { auditRequest } from "@/lib/admin-activity";
 import {
   authenticated,
   equal,
@@ -18,7 +19,7 @@ export async function GET() {
     { headers: { "Cache-Control": "no-store" } },
   );
 }
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   if (!sameOrigin(request))
     return Response.json({ error: "Invalid origin" }, { status: 403 });
 
@@ -47,8 +48,16 @@ export async function POST(request: Request) {
   await login();
   return Response.json({ success: true });
 }
-export async function DELETE(request: Request) {
+async function handleDELETE(request: Request) {
   if (!sameOrigin(request)) return new Response(null, { status: 403 });
   await logout();
   return Response.json({ success: true });
+}
+
+export async function POST(request: Request) {
+  return auditRequest(request, () => handlePOST(request));
+}
+
+export async function DELETE(request: Request) {
+  return auditRequest(request, () => handleDELETE(request));
 }

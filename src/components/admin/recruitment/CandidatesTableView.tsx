@@ -1,5 +1,6 @@
 "use client";
 
+import { recordExportRequest } from "@/lib/admin-browser-activity";
 import { csvCell } from "@/lib/csv";
 import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
@@ -460,7 +461,8 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
           {/* Export CSV */}
           <button
             type="button"
-            onClick={() => {
+            onClick={async () => {
+              if (!(await recordExportRequest(filteredCandidates.length))) return;
               const headers = [
                 t("ID", "ID"),
                 t("Name", "Nome"),

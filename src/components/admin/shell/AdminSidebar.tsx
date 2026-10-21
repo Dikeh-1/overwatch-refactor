@@ -24,6 +24,7 @@ import {
   Sliders,
   SlidersHorizontal,
   CheckCircle2,
+  History,
 } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 import { useActiveRole } from "./ActiveRoleContext";
@@ -415,6 +416,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               {t("System & Utilities", "Sistema & Utilitários")}
             </div>
 
+            <NavLinkItem isNavigating={isNavigating} activeTargetHref={activeTargetHref} onNavigate={handleNavClick}
+              href="/admin/activity"
+              label={t("Activity Log", "Registo de Atividade")}
+              icon={History}
+              isActiveMatch={Boolean(pathname?.startsWith("/admin/activity"))}
+            />
             <Link
               href="/gate"
               target="_blank"

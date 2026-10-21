@@ -1,8 +1,9 @@
+import { auditRequest } from "@/lib/admin-activity";
 import { createHash } from "node:crypto";
 import { authenticated } from "@/lib/careers-auth";
 import { getApplication, getCV } from "@/lib/careers-store";
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   if (!(await authenticated())) return new Response(null, { status: 401 });
   const url = new URL(request.url);
   const id = url.searchParams.get("id");
@@ -78,4 +79,8 @@ export async function GET(request: Request) {
       headers: { "Content-Type": "application/json" },
     });
   }
+}
+
+export async function GET(request: Request) {
+  return auditRequest(request, () => handleGET(request));
 }

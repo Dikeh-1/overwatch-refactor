@@ -1,3 +1,4 @@
+import { auditRequest } from "@/lib/admin-activity";
 import { getRecruitmentWorkspaceData } from "@/lib/careers-workspace-store";
 import { applicationsForCohort, isTerminal } from "@/lib/careers-workflow";
 import { verifyAdminAuthorization } from "@/lib/careers-auth";
@@ -7,7 +8,7 @@ import { Application, getSlotDayNumber, getMaputoToday, isSlotToday } from "@/li
 
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   if (!(await verifyAdminAuthorization(request))) {
     return Response.json({ error: "Unauthorized" }, { status: 403 });
   }
@@ -210,4 +211,8 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+}
+
+export async function POST(request: Request) {
+  return auditRequest(request, () => handlePOST(request));
 }

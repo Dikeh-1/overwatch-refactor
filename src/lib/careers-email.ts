@@ -1,3 +1,4 @@
+import { auditChange } from "./admin-activity";
 import "server-only";
 import { getSystemConfig } from "./careers-config-store";
 import { DEFAULT_ADMIN_SETTINGS } from "./admin-settings";
@@ -145,7 +146,7 @@ async function sendViaBrevo(
   return { success: true, provider: "brevo" };
 }
 
-export async function sendTransactionalEmail(payload: SendEmailOptions) {
+async function deliverTransactionalEmail(payload: SendEmailOptions) {
   const settings = await getSystemConfig("admin_settings", DEFAULT_ADMIN_SETTINGS);
   payload = { ...payload, sender: { email: payload.sender?.email || "noreply@overwatchmoz.com", name: settings.senderName }, replyTo: payload.replyTo || { name: settings.senderName, email: settings.replyToEmail } };
   const fallbackUser = process.env.FALLBACK_SMTP_USER;
@@ -3318,4 +3319,19 @@ Website: ${origin}
     htmlContent,
     textContent,
   });
+}
+
+export async function sendTransactionalEmail(payload: SendEmailOptions) {
+  const { getApplications } = await import("./careers-store");
+  const recipients = new Set(payload.to.map(person => person.email.toLowerCase()));
+  const matched = (await getApplications()).filter(app => recipients.has(app.email?.toLowerCase()));
+  const roleIds = [...new Set(matched.map(app => app.role))];
+  const cohortIds = [...new Set(matched.map(app => app.cohortId).filter(Boolean))];
+  return auditChange("Communication delivery", {
+    to: payload.to, cc: payload.cc, subject: payload.subject,
+    textContent: payload.textContent, htmlContent: payload.htmlContent,
+    attachmentNames: payload.attachment?.map(item => item.name),
+    recipientEntities: matched.map(app => ({ entityId: app.id, roleId: app.role, cohortId: app.cohortId })),
+  }, () => deliverTransactionalEmail(payload), { section: "communications", entityId: matched.length === 1 ? matched[0].id : undefined,
+    ...(roleIds.length === 1 ? { roleId: roleIds[0] } : {}), ...(cohortIds.length === 1 ? { cohortId: cohortIds[0] } : {}) });
 }

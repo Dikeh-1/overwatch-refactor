@@ -1,3 +1,4 @@
+import { auditRequest } from "@/lib/admin-activity";
 import { verifyAdminAuthorization } from "@/lib/careers-auth";
 import { getApplications, getApplication, updateApplication } from "@/lib/careers-store";
 import {
@@ -7,7 +8,7 @@ import { Application } from "@/lib/careers";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   if (!(await verifyAdminAuthorization(request))) {
     return Response.json({ error: "Unauthorized" }, { status: 403 });
   }
@@ -177,4 +178,8 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+}
+
+export async function POST(request: Request) {
+  return auditRequest(request, () => handlePOST(request));
 }

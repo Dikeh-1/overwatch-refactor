@@ -13,6 +13,7 @@ function reset() {
 }
 const original = Module._load;
 Module._load = function(name,...args) {
+  if (name === "@/lib/admin-activity") return { auditRequest: async (_, handler) => handler() };
   if(name==='@/lib/careers-auth') return { authenticated: async()=>true, sameOrigin:r=>r.headers.get('origin')==='http://localhost:3100' };
   if(name==='@/lib/careers-workflow') return workflow;
   if(name==='@/lib/careers-workspace-store') return { getRecruitmentWorkspaceData: async()=>({roles:[],cohorts:[target],applications:members}) };

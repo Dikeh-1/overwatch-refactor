@@ -1,3 +1,4 @@
+import { auditRequest } from "@/lib/admin-activity";
 import { getRecruitmentWorkspaceData } from "@/lib/careers-workspace-store";
 import { saveCohort } from "@/lib/careers-campaign-store";
 import { parseSlotComponents } from "@/lib/careers";
@@ -26,7 +27,7 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   if (!(await authenticated()) || !sameOrigin(request)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 403,
@@ -74,3 +75,7 @@ export async function POST(request: Request) {
   }
 }
 
+
+export async function POST(request: Request) {
+  return auditRequest(request, () => handlePOST(request));
+}

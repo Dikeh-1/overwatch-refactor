@@ -1,3 +1,4 @@
+import { auditRequest } from "@/lib/admin-activity";
 import { resolveApplication, isTerminal } from "@/lib/careers-workflow";
 import { getCandidateSlotConfig, reserveTestSlot } from "@/lib/careers-booking";
 import { getApplication, updateApplication, getTestSlotConfig, getApplications } from "@/lib/careers-store";
@@ -96,7 +97,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const body = await request.json();
     const { id, slot } = body;
@@ -199,4 +200,8 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+}
+
+export async function POST(request: Request) {
+  return auditRequest(request, () => handlePOST(request));
 }

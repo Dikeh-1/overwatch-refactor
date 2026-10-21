@@ -1,3 +1,4 @@
+import { auditRequest } from "@/lib/admin-activity";
 import { isNextPhase, resolveApplication } from "@/lib/careers-workflow";
 import { getApplications, updateApplication } from "@/lib/careers-store";
 import { sendNextPhaseConfirmationEmail, sendNextPhaseClosureEmail } from "@/lib/careers-email";
@@ -43,7 +44,7 @@ export async function GET(request: Request) {
   });
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const body = await request.json();
     const { token, choice } = body;
@@ -186,4 +187,8 @@ export async function POST(request: Request) {
     console.error("Next-phase respond error:", err);
     return Response.json({ error: "Erro ao processar resposta" }, { status: 500 });
   }
+}
+
+export async function POST(request: Request) {
+  return auditRequest(request, () => handlePOST(request));
 }

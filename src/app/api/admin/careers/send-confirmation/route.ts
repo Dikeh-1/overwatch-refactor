@@ -1,10 +1,11 @@
+import { auditRequest } from "@/lib/admin-activity";
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
 import { getApplication, updateApplication } from "@/lib/careers-store";
 import { sendCustomBookingConfirmation } from "@/lib/careers-email";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   if (!(await authenticated()) || !sameOrigin(request)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 403,
@@ -139,4 +140,8 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+}
+
+export async function POST(request: Request) {
+  return auditRequest(request, () => handlePOST(request));
 }

@@ -1,3 +1,4 @@
+import { auditRequest } from "@/lib/admin-activity";
 import { notifyApplication } from "@/lib/careers-email";
 import { NextResponse } from "next/server";
 import { MAX_CV, type Application } from "@/lib/careers";
@@ -8,7 +9,7 @@ import { evaluateApplicationWithRules } from "@/lib/careers-evaluator";
 
 export const runtime = "nodejs";
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     if (Number(request.headers.get("content-length")) > MAX_CV + 40000)
       return NextResponse.json({ code: "FILE_INVALID" }, { status: 413 });
@@ -275,4 +276,8 @@ export async function POST(request: Request) {
       { status: closed ? 409 : 503 },
     );
   }
+}
+
+export async function POST(request: Request) {
+  return auditRequest(request, () => handlePOST(request));
 }

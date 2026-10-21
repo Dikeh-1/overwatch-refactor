@@ -127,6 +127,13 @@ test("successful database closure commits one snapshot without rewriting candida
   );
   assert.ok(calls.some(([sql]) => sql.includes("pg_advisory_xact_lock")));
   assert.ok(calls.some(([sql]) => sql === "COMMIT"));
+  const commitIndex = calls.findIndex(([sql]) => sql === "COMMIT");
+  const logged = calls.findIndex(([sql, params]) => sql.includes("INSERT INTO admin_activity_events") && JSON.parse(params[2]).action === "Role cycle changed");
+  assert.ok(logged >= 0 && logged < commitIndex, "lifecycle evidence must commit with the lifecycle state");
+  const event = JSON.parse(calls[logged][1][2]);
+  assert.equal(event.details.role.open.before, true);
+  assert.equal(event.details.role.open.after, false);
+  assert.equal(event.roleId, "cctv");
   assert.equal(
     calls.some(([sql]) => /UPDATE career_applications.*status/.test(sql)),
     false,

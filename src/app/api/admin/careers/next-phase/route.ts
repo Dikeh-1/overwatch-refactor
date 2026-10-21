@@ -1,3 +1,4 @@
+import { auditRequest } from "@/lib/admin-activity";
 import { getRecruitmentWorkspaceData } from "@/lib/careers-workspace-store";
 import { applicationsForCohort, sameRole, isNextPhase, isTerminal } from "@/lib/careers-workflow";
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
@@ -39,7 +40,7 @@ export async function GET(request: Request) {
   } catch (error) { console.error(error); return Response.json({ error: "Unable to load next phase" }, { status: 503 }); }
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   if (!(await authenticated()) || !sameOrigin(request)) return new Response(null, { status: 403 });
 
   try {
@@ -534,7 +535,7 @@ export async function POST(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
+async function handleDELETE(request: Request) {
   if (!(await authenticated()) || !sameOrigin(request)) return new Response(null, { status: 403 });
   try {
     const body = await request.json();
@@ -572,3 +573,11 @@ export async function DELETE(request: Request) {
   }
 }
 
+
+export async function POST(request: Request) {
+  return auditRequest(request, () => handlePOST(request));
+}
+
+export async function DELETE(request: Request) {
+  return auditRequest(request, () => handleDELETE(request));
+}

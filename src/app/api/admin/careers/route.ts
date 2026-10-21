@@ -1,3 +1,4 @@
+import { auditRequest } from "@/lib/admin-activity";
 import { getRecruitmentWorkspaceData } from "@/lib/careers-workspace-store";
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
 import {
@@ -23,7 +24,7 @@ export async function GET() {
     return Response.json({ error: "Candidate storage unavailable. Please retry." }, { status: 503 });
   }
 }
-export async function PATCH(request: Request) {
+async function handlePATCH(request: Request) {
   if (!(await authenticated()) || !sameOrigin(request))
     return new Response(null, { status: 403 });
   try {
@@ -136,7 +137,7 @@ export async function PATCH(request: Request) {
 }
 
 
-  export async function DELETE(request: Request) {
+  async function handleDELETE(request: Request) {
     if (!(await authenticated()) || !sameOrigin(request)) {
       return new Response(null, { status: 403 });
     }
@@ -178,3 +179,11 @@ export async function PATCH(request: Request) {
     }
   }
 
+
+export async function PATCH(request: Request) {
+  return auditRequest(request, () => handlePATCH(request));
+}
+
+export async function DELETE(request: Request) {
+  return auditRequest(request, () => handleDELETE(request));
+}

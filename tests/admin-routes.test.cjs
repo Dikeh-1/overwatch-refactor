@@ -13,6 +13,7 @@ const store = {
   updateApplication: async (id, patch) => { const a = { ...apps.get(id), ...patch }; apps.set(id,a); return a; },
 };
 Module._load = function(name,...args) {
+  if (name === "@/lib/admin-activity") return { auditRequest: async (_, handler) => handler() };
   const mocks = {
     '@/lib/careers-auth': { authenticated: async () => true, sameOrigin: r => r.headers.get('origin') === 'http://localhost:3100' },
     '@/lib/careers-store': store,

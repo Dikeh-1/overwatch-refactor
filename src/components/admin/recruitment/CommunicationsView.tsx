@@ -141,6 +141,8 @@ Agradecemos que consulte as instruções e confirme a sua disponibilidade.`
   const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>([]);
   const [saveTemplateModalOpen, setSaveTemplateModalOpen] = useState(false);
   const [newTemplateTitle, setNewTemplateTitle] = useState("");
+  const templateMutation = useRef(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
 
   // Quick Test Email State
   const [testEmail, setTestEmail] = useState("ebube.michael@overwatchmoz.com");
@@ -169,43 +171,55 @@ Agradecemos que consulte as instruções e confirme a sua disponibilidade.`
     }
   }, [activeRoleId, roles]);
 
-  // Load custom templates from localStorage
+  // Import browser-only templates once, then use the audited shared store.
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("overwatch_custom_templates");
-      if (stored) {
-        setCustomTemplates(JSON.parse(stored));
+    let cancelled = false;
+    const loadTemplates = async () => {
+      try {
+        const response = await fetch("/api/admin/careers/templates", { cache: "no-store" });
+        const data = await response.json();
+        if (!response.ok) throw Error(data.error);
+        let templates: CustomTemplate[] = data.templates;
+        let cached: CustomTemplate[] = [];
+        try { if (!localStorage.getItem("overwatch_templates_migrated")) cached = JSON.parse(localStorage.getItem("overwatch_custom_templates") || "[]"); } catch { /* Browser storage is optional. */ }
+        for (const template of cached) {
+          const imported = await fetch("/api/admin/careers/templates", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "import", template }) });
+          const result = await imported.json(); if (!imported.ok) throw Error(result.error);
+          templates = result.templates;
+        }
+        if (!cancelled) setCustomTemplates(templates);
+        try { localStorage.setItem("overwatch_templates_migrated", "1"); localStorage.setItem("overwatch_custom_templates", JSON.stringify(templates)); } catch { /* Server persistence is authoritative. */ }
+      } catch {
+        if (!cancelled) setTestNotification({ type: "error", text: lang === "en" ? "Saved templates could not be loaded. Please refresh to retry." : "Não foi possível carregar modelos. Atualize para tentar novamente." });
       }
-    } catch {
-      // silent
-    }
-  }, []);
-
-  const saveCustomTemplate = () => {
-    if (!newTemplateTitle.trim()) return;
-    const newTpl: CustomTemplate = {
-      id: `tpl_${Date.now()}`,
-      title: newTemplateTitle.trim(),
-      subject,
-      body: messageBody,
-      createdAt: new Date().toISOString(),
     };
-    const updated = [newTpl, ...customTemplates];
-    setCustomTemplates(updated);
-    try {
-      localStorage.setItem("overwatch_custom_templates", JSON.stringify(updated));
-    } catch {}
-    setNewTemplateTitle("");
-    setSaveTemplateModalOpen(false);
-  };
+    void loadTemplates();
+    return () => { cancelled = true; };
+  }, [lang]);
 
-  const deleteCustomTemplate = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const updated = customTemplates.filter((t) => t.id !== id);
-    setCustomTemplates(updated);
+  const persistTemplate = async (action: "save" | "delete", template: CustomTemplate) => {
+    if (templateMutation.current) return false;
+    templateMutation.current = true; setSavingTemplate(true);
     try {
-      localStorage.setItem("overwatch_custom_templates", JSON.stringify(updated));
-    } catch {}
+      const response = await fetch("/api/admin/careers/templates", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, template, roleId: selectedRole, cohortId }) });
+      const data = await response.json(); if (!response.ok) throw Error(data.error);
+      setCustomTemplates(data.templates);
+      try { localStorage.setItem("overwatch_custom_templates", JSON.stringify(data.templates)); } catch { /* Server persistence is authoritative. */ }
+      return true;
+    } catch {
+      setTestNotification({ type: "error", text: t("Template change could not be saved. Please retry.", "Não foi possível guardar a alteração. Tente novamente.") });
+      return false;
+    } finally { templateMutation.current = false; setSavingTemplate(false); }
+  };
+  const saveCustomTemplate = async () => {
+    if (!newTemplateTitle.trim()) return;
+    const newTpl: CustomTemplate = { id: `tpl_${crypto.randomUUID()}`, title: newTemplateTitle.trim(), subject, body: messageBody, createdAt: new Date().toISOString() };
+    if (await persistTemplate("save", newTpl)) { setNewTemplateTitle(""); setSaveTemplateModalOpen(false); }
+  };
+  const deleteCustomTemplate = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const template = customTemplates.find(item => item.id === id);
+    if (template) await persistTemplate("delete", template);
   };
 
   // Pre-configured Built-in Templates
@@ -1661,7 +1675,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
               </button>
               <button
                 type="button"
-                disabled={!newTemplateTitle.trim()}
+                disabled={!newTemplateTitle.trim() || savingTemplate}
                 onClick={saveCustomTemplate}
                 className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
               >

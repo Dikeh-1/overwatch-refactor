@@ -1,3 +1,4 @@
+import { auditRequest } from "@/lib/admin-activity";
 import { gateAuthorized } from "@/lib/gate-auth";
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
 import { getApplication, getApplications, updateApplication } from "@/lib/careers-store";
@@ -86,7 +87,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   if (!(await gateAuthorized(request)) || !sameOrigin(request)) return Response.json({ error: "Unauthorized" }, { status: 403 });
   try {
     const body = await request.json();
@@ -288,4 +289,8 @@ export async function POST(request: Request) {
     console.error("Check-in POST error:", error);
     return Response.json({ error: "Falha ao registar presença." }, { status: 500 });
   }
+}
+
+export async function POST(request: Request) {
+  return auditRequest(request, () => handlePOST(request));
 }

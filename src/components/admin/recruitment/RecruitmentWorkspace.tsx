@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cycleLabel } from "@/lib/careers-cycle-label";
 import { useRecruitmentRefresh } from "../hooks/useRecruitmentRefresh";
+import { recordExportRequest } from "@/lib/admin-browser-activity";
 import { csvCell } from "@/lib/csv";
 import Link from "next/link";
 import { ArrowLeft, Download, RefreshCw } from "lucide-react";
@@ -195,7 +196,8 @@ export default function RecruitmentWorkspace({
     hired: t("Hired", "Contratados"),
     unresolved: t("Outcome needs review", "Resultado por rever"),
   };
-  const exportCsv = () => {
+  const exportCsv = async () => {
+    if (!(await recordExportRequest(visibleApps.length))) return;
     const rows = [
       [
         "ID",

@@ -1,3 +1,4 @@
+import { auditChange, changedValues, recordActivity } from "./admin-activity";
 import "server-only";
 import { mkdir, readFile, writeFile, rename, unlink } from "node:fs/promises";
 import path from "node:path";
@@ -93,7 +94,7 @@ export async function getRoles(): Promise<Role[]> {
   return getRoleDefinitions();
 }
 
-export async function setRole(id: string, open: boolean) {
+async function persistSetRole(id: string, open: boolean) {
   const pool = getPgPool();
   if (pool) {
     try {
@@ -244,7 +245,7 @@ export async function getApplications(forceFresh = false): Promise<Application[]
   return filtered;
 }
 
-export async function saveApplication(application: Application, cv: Buffer) {
+async function persistSaveApplication(application: Application, cv: Buffer) {
   invalidateApplicationsCache();
   const pool = getPgPool();
   if (pool) {
@@ -302,7 +303,7 @@ export async function saveApplication(application: Application, cv: Buffer) {
   });
 }
 
-export async function setStatus(id: string, status: Application["status"]) {
+async function persistSetStatus(id: string, status: Application["status"]) {
   invalidateApplicationsCache();
   const pool = getPgPool();
   if (pool) {
@@ -420,7 +421,7 @@ export async function getApplication(id: string): Promise<Application | null> {
   return list.find((a) => a.id === id) || null;
 }
 
-export async function updateApplication(
+async function persistUpdateApplication(
   id: string,
   updates: Partial<Application>,
 ): Promise<Application> {
@@ -464,7 +465,7 @@ export async function updateApplication(
   });
 }
 
-export async function bulkSaveApplications(applications: Application[]): Promise<void> {
+async function persistBulkSaveApplications(applications: Application[]): Promise<void> {
   invalidateApplicationsCache();
   const pool = getPgPool();
   if (pool) {
@@ -516,7 +517,7 @@ export async function bulkSaveApplications(applications: Application[]): Promise
   invalidateApplicationsCache();
 }
 
-export async function deleteApplications(ids: string[]): Promise<void> {
+async function persistDeleteApplications(ids: string[]): Promise<void> {
   invalidateApplicationsCache();
   const validIds = ids.filter((id) => /^[\da-f-]{36}$/i.test(id) && !SYSTEM_UUIDS.has(id));
   if (!validIds.length) return;
@@ -612,4 +613,38 @@ export async function addDeletedNextPhaseIdentifiers(identifiers: string[]): Pro
     }
   });
   return setConfiguredDeletedNextPhase(Array.from(set));
+}
+
+export async function saveApplication(application: Application, cv: Buffer) {
+  return auditChange("Application submitted", { after: application }, () => persistSaveApplication(application, cv), { entityId: application.id, roleId: application.role, cohortId: application.cohortId });
+}
+export async function setRole(id: string, open: boolean) {
+  const before = (await getRoles()).find(role => role.id === id)?.open;
+  return auditChange("Role intake changed", { before, after: open }, () => persistSetRole(id, open), { roleId: id });
+}
+export async function setStatus(id: string, status: Application["status"]) {
+  const before = await getApplication(id);
+  return auditChange("Candidate status changed", { before: before?.status, after: status }, () => persistSetStatus(id, status), { entityId: id, roleId: before?.role, cohortId: before?.cohortId });
+}
+export async function updateApplication(id: string, updates: Partial<Application>): Promise<Application> {
+  const before = await getApplication(id);
+  return auditChange("Candidate updated", changedValues(before || {}, { ...before, ...updates }), () => persistUpdateApplication(id, updates), { entityId: id, roleId: before?.role, cohortId: before?.cohortId });
+}
+export async function bulkSaveApplications(applications: Application[]): Promise<void> {
+  const current = new Map((await getApplications(true)).map(app => [app.id, app]));
+  const changes = applications.map(app => ({ entityId: app.id, roleId: app.role, cohortId: app.cohortId, changes: changedValues(current.get(app.id) || {}, app) })).filter(row => Object.keys(row.changes).length);
+  // Preserve the store's batch semantics, while indexing each changed entity separately.
+  const starts = [];
+  for (const row of changes) starts.push(await recordActivity({ action: "Candidate bulk update", outcome: "started", entityId: row.entityId, roleId: row.roleId, cohortId: row.cohortId, details: row.changes }));
+  try {
+    await persistBulkSaveApplications(applications);
+  } catch (error) {
+    for (const start of starts) await recordActivity({ ...start, outcome: "failed", details: { startId: start.id, note: "Batch failed; some rows may have been saved. Verify current state." } }).catch(() => console.error("Batch audit failure", start.id));
+    throw error;
+  }
+  for (const start of starts) await recordActivity({ ...start, outcome: "succeeded", details: { startId: start.id } }).catch(() => console.error("Batch audit completion failure", start.id));
+}
+export async function deleteApplications(ids: string[]): Promise<void> {
+  const selected = (await getApplications(true)).filter(app => ids.includes(app.id));
+  for (const app of selected) await auditChange("Candidate deleted", { before: app }, () => persistDeleteApplications([app.id]), { entityId: app.id, roleId: app.role, cohortId: app.cohortId });
 }

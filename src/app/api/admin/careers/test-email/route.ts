@@ -1,3 +1,4 @@
+import { auditRequest } from "@/lib/admin-activity";
 import { authenticated, sameOrigin } from '@/lib/careers-auth';
 import { DEFAULT_TEST_SLOTS, type Application } from '@/lib/careers';
 import {
@@ -9,7 +10,7 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   if (!(await authenticated()) || !sameOrigin(request)) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 403,
@@ -137,4 +138,8 @@ Overwatch Moçambique`;
       { status: 500 }
     );
   }
+}
+
+export async function POST(request: Request) {
+  return auditRequest(request, () => handlePOST(request));
 }

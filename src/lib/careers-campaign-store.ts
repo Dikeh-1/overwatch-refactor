@@ -1,4 +1,5 @@
 import "server-only";
+import { changedValues, createActivityEvent, recordActivity } from "./admin-activity";
 import { cycleLabel } from "./careers-cycle-label";
 import {
   type CareerRoleDefinition,
@@ -508,6 +509,7 @@ async function changeLifecycle(roleId: string, open: boolean, name?: string, pat
   const pool = getPgPool();
   let result: LifecycleResult;
   if (pool) {
+    const activity = await recordActivity({ action: open ? "Role cycle opening / configuration requested" : "Role cycle closure requested", outcome: "started", roleId, section: "roles" });
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
@@ -533,6 +535,18 @@ async function changeLifecycle(roleId: string, open: boolean, name?: string, pat
       const nextCohorts = [...effectiveCohorts.filter(c => c.id !== result.cohort.id), result.cohort];
       for (const [key, value] of [["roles_config", nextRoles], ["cohorts", nextCohorts]] as const) await client.query("INSERT INTO system_configs (key, value, updated_at) VALUES ($1, $2::jsonb, NOW()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()", [key, JSON.stringify(value)]);
       for (const id of result.role.id === "cctv" || result.role.id === "cctv_operator" ? ["cctv", "cctv_operator"] : [result.role.id]) await client.query("INSERT INTO career_roles (id, open) VALUES ($1,$2) ON CONFLICT (id) DO UPDATE SET open=EXCLUDED.open", [id, open]);
+      // Save lifecycle evidence in the same transaction as the intake and cohort changes.
+      const log = createActivityEvent({ action: "Role cycle changed", outcome: "succeeded", section: "roles", roleId: result.role.id, cohortId: result.cohort.id,
+        details: { startId: activity.id, role: changedValues(current, result.role), cohort: changedValues(cohorts.find(c => c.id === result.cohort.id) || {}, result.cohort), assignedApplicationIds: (result.cohort.closureSnapshot?.applications || []).filter(a => !a.cohortId && !open).map(a => a.id) } });
+      await client.query("INSERT INTO admin_activity_events (id, timestamp, data) VALUES ($1,$2,$3)", [log.id, log.timestamp, JSON.stringify(log)]);
+      if (!open) {
+        const archived = createActivityEvent({ ...log, section: "archive", action: "Recruitment cycle closed and preserved" });
+        await client.query("INSERT INTO admin_activity_events (id, timestamp, data) VALUES ($1,$2,$3)", [archived.id, archived.timestamp, JSON.stringify(archived)]);
+      }
+      if (JSON.stringify(current.screeningRules) !== JSON.stringify(result.role.screeningRules)) {
+        const rules = createActivityEvent({ ...log, section: "form-builder", action: "Screening form / rules changed", details: changedValues({ rules: current.screeningRules }, { rules: result.role.screeningRules }) });
+        await client.query("INSERT INTO admin_activity_events (id, timestamp, data) VALUES ($1,$2,$3)", [rules.id, rules.timestamp, JSON.stringify(rules)]);
+      }
       await client.query("COMMIT");
     } catch (error) {
       await client.query("ROLLBACK");

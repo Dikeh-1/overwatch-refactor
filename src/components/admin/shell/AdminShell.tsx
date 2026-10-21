@@ -16,6 +16,7 @@ import { NavigationLoadingProvider, useNavigationLoading } from "./NavigationLoa
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 import { useLiveRecruitmentFeed } from "@/components/admin/hooks/useLiveRecruitmentFeed";
 import GlobalCelebrationListener from "@/components/admin/ui/GlobalCelebrationListener";
+import { SectionHistoryButton } from "@/components/admin/ActivityHistory";
 
 interface AdminShellProps {
   children: React.ReactNode;
@@ -374,6 +375,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
 
           <div className="flex items-center gap-3">
             {/* Header Language Switcher */}
+            <SectionHistoryButton />
             <div className="flex items-center rounded-md bg-slate-100 p-0.5 text-xs font-semibold">
               <button
                 type="button"

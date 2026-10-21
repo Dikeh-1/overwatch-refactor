@@ -1,3 +1,4 @@
+import { auditChange, changedValues } from "./admin-activity";
 import "server-only";
 import { mkdir, readFile, writeFile, rename, unlink } from "node:fs/promises";
 import path from "node:path";
@@ -153,6 +154,7 @@ export async function purgeLegacySystemRowsFromApplicationsTable(): Promise<void
 
 export type SystemConfigKey =
   | "admin_settings"
+  | "communication_templates"
   | "roles_config"
   | "cohorts"
   | "test_slots"
@@ -160,6 +162,7 @@ export type SystemConfigKey =
 
 const FILENAME_MAP: Record<SystemConfigKey, string> = {
   admin_settings: "admin-settings.json",
+  communication_templates: "communication-templates.json",
   roles_config: "roles_def.json",
   cohorts: "cohorts.json",
   test_slots: "test-slots.json",
@@ -216,7 +219,7 @@ export async function getSystemConfig<T>(key: SystemConfigKey, fallback: T): Pro
   return readLocal<T>(filename, fallback);
 }
 
-export async function setSystemConfig<T>(key: SystemConfigKey, data: T): Promise<T> {
+async function persistSystemConfig<T>(key: SystemConfigKey, data: T): Promise<T> {
   const filename = FILENAME_MAP[key];
 
   // 1. Persist to PostgreSQL system_configs table
@@ -330,4 +333,10 @@ export async function getConfiguredRoles(): Promise<CareerRoleDefinition[]> {
 
 export async function setConfiguredRoles(roles: CareerRoleDefinition[]): Promise<CareerRoleDefinition[]> {
   return setSystemConfig<CareerRoleDefinition[]>("roles_config", roles);
+}
+
+export async function setSystemConfig<T>(key: SystemConfigKey, data: T): Promise<T> {
+  const before = await getSystemConfig<unknown>(key, null);
+  const section = key === "communication_templates" ? "communications" : key === "roles_config" ? "roles" : key === "cohorts" ? "archive" : key === "test_slots" ? "testing" : key === "admin_settings" ? "settings" : "next-phase";
+  return auditChange(`Configuration changed: ${key}`, changedValues({ value: before }, { value: data }), () => persistSystemConfig(key, data), { section });
 }

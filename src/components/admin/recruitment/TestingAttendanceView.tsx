@@ -1,5 +1,6 @@
 "use client";
 
+import { recordExportRequest } from "@/lib/admin-browser-activity";
 import { csvCell } from "@/lib/csv";
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
@@ -125,7 +126,8 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
   const overCount = selectedSlot !== "all" ? Math.max(0, currentSlotOccupancy - slotQuota) : 0;
 
   // Export CSV
-  const handleExportAttendanceCSV = () => {
+  const handleExportAttendanceCSV = async () => {
+    if (!(await recordExportRequest(slotCandidates.length))) return;
     const headers = lang === "en"
       ? ["Name", "Email", "WhatsApp", "Session Slot", "Attendance", "Check-in Time"]
       : ["Nome", "Email", "WhatsApp", "Turno", "Presença", "Hora de Entrada"];

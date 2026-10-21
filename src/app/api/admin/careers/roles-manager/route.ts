@@ -1,3 +1,4 @@
+import { auditRequest } from "@/lib/admin-activity";
 import { buildCohortCatalog } from "@/lib/careers-workflow";
 import { ALL_PIPELINE_STAGES } from "@/lib/careers-models";
 import { NextResponse } from "next/server";
@@ -37,7 +38,7 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const isAuth = await checkAdminSession();
   if (!isAuth || !sameOrigin(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
@@ -99,4 +100,8 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+}
+
+export async function POST(request: Request) {
+  return auditRequest(request, () => handlePOST(request));
 }

@@ -1,3 +1,4 @@
+import { auditRequest } from "@/lib/admin-activity";
 import crypto from "node:crypto";
 import { getRecruitmentWorkspaceData } from "@/lib/careers-workspace-store";
 import { applicationsForCohort, sameRole, canReceiveTestInvitation, isNextPhase, isQualified } from "@/lib/careers-workflow";
@@ -36,7 +37,7 @@ interface BroadcastRequest {
   attachments?: { name: string; content: string; type?: string }[];
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   if (!(await authenticated()) || !sameOrigin(request)) {
     return new Response(null, { status: 403 });
   }
@@ -546,4 +547,8 @@ function generateOfficialBroadcastHtml(params: {
 </body>
 </html>
 `;
+}
+
+export async function POST(request: Request) {
+  return auditRequest(request, () => handlePOST(request));
 }

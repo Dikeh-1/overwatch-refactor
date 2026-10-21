@@ -1,3 +1,4 @@
+import { auditRequest } from "@/lib/admin-activity";
 import { gateAuthorized, gatePin, createGateToken } from "@/lib/gate-auth";
 import { equal, sameOrigin } from "@/lib/careers-auth";
 import { cookies } from "next/headers";
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
   );
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   if (!sameOrigin(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   try {
     const { pin } = await request.json();
@@ -51,8 +52,16 @@ export async function POST(request: Request) {
   }
 }
 
-export async function DELETE() {
+async function handleDELETE(request: Request) {
+  if (!sameOrigin(request)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
   const cookieStore = await cookies();
   cookieStore.delete("ow_gate_session");
   return NextResponse.json({ success: true, loggedOut: true });
+}
+export async function POST(request: Request) {
+  return auditRequest(request, () => handlePOST(request));
+}
+
+export async function DELETE(request: Request) {
+  return auditRequest(request, () => handleDELETE(request));
 }

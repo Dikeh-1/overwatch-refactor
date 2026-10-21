@@ -1,3 +1,4 @@
+import { auditRequest } from "@/lib/admin-activity";
 import { resolveApplication, isTerminal, hasAttended, hasTested } from "@/lib/careers-workflow";
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
 import { getApplications, getApplication, updateApplication, getTestSlotConfig } from "@/lib/careers-store";
@@ -88,7 +89,7 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   if (!(await authenticated()) || !sameOrigin(request)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 403,
@@ -318,4 +319,8 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+}
+
+export async function POST(request: Request) {
+  return auditRequest(request, () => handlePOST(request));
 }
