@@ -442,3 +442,49 @@ test("holiday rescheduling never mistakes another month's 25th for September", (
   assert.equal(isFriday25Sept("Sexta-feira, 25 de Dezembro 2026 – 10h00"), false);
   assert.equal(isFriday25Sept("Sexta-feira, 25 de Setembro 2026 – 10h00"), true);
 });
+
+const { recruitmentDashboard, dashboardCandidates, dashboardPredicates } = require("../src/lib/recruitment-dashboard.ts");
+test("global dashboard retains closed-cycle history when no roles are open", () => {
+  const roles = [{ id: "cctv", open: false, activeCohortId: null }, { id: "technical", open: false }];
+  const cycles = [cohort("september"), cohort("october", { roleId: "technical" })];
+  const records = [candidate("one", { cohortId: "september", testSlot: "2026-09-20", testScore: 82 }), candidate("two", { role: "technical", cohortId: "october" }), candidate("three", { role: "cctv_operator", cohortId: "september", status: "archived" })];
+  const model = recruitmentDashboard(records, roles, cycles, "all");
+  assert.equal(model.metrics.total, 3);
+  assert.equal(model.openRoles.length, 0);
+  assert.equal(model.closedCycles.length, 2);
+  assert.equal(model.roles.find(r => r.role.id === "cctv").metrics.total, 2);
+  assert.equal(recruitmentDashboard(records, roles, cycles, "open").metrics.total, 0);
+});
+test("open dashboard excludes previous cycles after a role reopens and does not guess unassigned membership", () => {
+  const roles = [{ id: "cctv", open: true, activeCohortId: "new" }];
+  const cycles = [cohort("old"), cohort("new", { status: "active" })];
+  const records = [candidate("old-record", { cohortId: "old" }), candidate("new-record", { cohortId: "new" }), candidate("unassigned")];
+  assert.deepEqual(dashboardCandidates(records, roles, cycles, "open").map(a => a.id), ["new-record"]);
+  assert.equal(recruitmentDashboard(records, roles, cycles, "all").metrics.total, 3);
+});
+test("every dashboard count opens its exact records, including historical bookings and outcomes", () => {
+  const roles = [{ id: "cctv", open: false }];
+  const cycles = [cohort("old")];
+  const records = [candidate("booked", { cohortId: "old", status: "rejected", testSlot: "past-slot" }), candidate("attended", { cohortId: "old", attendedAt: "2026-09-20" }), candidate("scored", { cohortId: "old", testScore: 0 }), candidate("confirmed", { cohortId: "old", status: "interest_confirmed", nextPhaseResponse: "yes" })];
+  for (const scope of ["all", "open"]) {
+    const model = recruitmentDashboard(records, roles, cycles, scope);
+    for (const metric of Object.keys(dashboardPredicates)) assert.equal(dashboardCandidates(records, roles, cycles, scope, metric).length, model.metrics[metric], `${scope}/${metric}`);
+  }
+  const model = recruitmentDashboard(records, roles, cycles, "all");
+  assert.equal(model.metrics.booked, 1);
+  assert.equal(model.metrics.attended, 1);
+  assert.equal(model.metrics.tested, 1);
+});
+test("dashboard respects explicitly empty role lists and never invents active roles", () => {
+  const records = [candidate("legacy")];
+  assert.equal(recruitmentDashboard(records, [], [], "all").metrics.total, 1);
+  assert.equal(recruitmentDashboard(records, [], [], "all").roles.length, 0);
+  assert.equal(recruitmentDashboard(records, [], [], "open").metrics.total, 0);
+});
+
+test("role filters retain a dashboard drilldown instead of opening the entire role workspace", () => {
+  const { isDashboardRoster } = require("../src/lib/recruitment-dashboard.ts");
+  assert.equal(isDashboardRoster(new URLSearchParams("scope=all&metric=booked&role=cctv")), true);
+  assert.equal(isDashboardRoster(new URLSearchParams("scope=open&role=cctv")), true);
+  assert.equal(isDashboardRoster(new URLSearchParams("role=cctv")), false);
+});

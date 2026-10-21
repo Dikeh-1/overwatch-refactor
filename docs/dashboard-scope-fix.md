@@ -1,0 +1,11 @@
+# Dashboard scope and drilldown repair
+
+The previous global dashboard mixed four different sources: all non-archived candidate pills, open-cycle summary metrics, all historical role rows, and an unconditional CCO next-phase panel. With all intake closed, this showed 265 supposedly active candidates alongside zero totals and closed roles. Attendance was also described as test completion despite separate metric predicates.
+
+The dashboard now defaults to **All cycles**, showing all historical candidate records including closed-cycle outcomes. **Open cycles only** is an explicit URL-backed scope that uses exact membership in the current authoritative open cohort; it never includes an older cycle when a role reopens. Closed cycles remain accessible in their own clearly labelled panel.
+
+Cards and role rows use the same shared dashboard model. Every count links to a roster filtered with the exact predicate used for that count. The roster identifies the metric/scope and preserves scope in its return link. Applying a role filter within a drilldown keeps that metric roster rather than replacing it with the entire role workspace. Recorded attendance, bookings and completed tests/results remain separate, with missing historical attendance explained rather than inferred. No score ranges, management approvals or role-specific next-phase workflows are invented in the global view.
+
+The global route no longer silently switches into a remembered role's workspace. Explicit role URLs still open the shared role workspace. Closed role rows navigate to Archive Vault; configured roles without a cycle navigate to role management. The dashboard loads one atomic API response instead of combining separate requests and hiding failures. Creating a role now reports failed saves and refreshes shared role state after a successful save.
+
+Verification: five additional regression tests cover closed-only history, reopened intake isolation, exact metric/drilldown equality for both scopes, and empty configured role lists. Browser checks cover all-history counts, the 104-booking drilldown and the empty open-only state. The production build and changed-file lint are checked before release. No recruitment records are rewritten and no emails are sent by these checks.

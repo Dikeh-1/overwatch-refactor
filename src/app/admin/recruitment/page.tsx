@@ -1,75 +1,44 @@
 "use client";
 
-import { useActiveRole } from "@/components/admin/shell/ActiveRoleContext";
 import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { Application } from "@/lib/careers";
+import type { CareerCohort, CareerRoleDefinition } from "@/lib/careers-models";
 import RecruitmentWorkspace from "@/components/admin/recruitment/RecruitmentWorkspace";
-import React, { useState, useEffect, useCallback } from "react";
 import { RecruitmentOverviewView } from "@/components/admin/recruitment/RecruitmentOverviewView";
-import { Application, Role, roles as defaultRoles } from "@/lib/careers";
-import type { CareerRoleDefinition, CareerCohort } from "@/lib/careers-models";
 import { useAdminLanguage } from "@/components/admin/shell/AdminLanguageContext";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 
-export default function RecruitmentOverviewPage() {
+type Data = { applications: Application[]; roles: CareerRoleDefinition[]; cohorts: CareerCohort[] };
+function GlobalOverview() {
   const { t } = useAdminLanguage();
-  const params = useSearchParams();
-  const { activeRoleId } = useActiveRole();
-  const workspaceRole = params.get("role") || activeRoleId;
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [roles, setRoles] = useState<Role[]>(defaultRoles);
-  const [roleDefs, setRoleDefs] = useState<CareerRoleDefinition[]>([]);
-  const [cohorts, setCohorts] = useState<CareerCohort[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(async () => {
+  const [data, setData] = useState<Data | null>(null);
+  const [error, setError] = useState("");
+  const generation = useRef(0);
+  const load = useCallback(async (signal?: AbortSignal) => {
+    if (signal?.aborted) return;
+    const request = ++generation.current;
     try {
-      const [careersRes, managerRes] = await Promise.all([
-        fetch(`/api/admin/careers?t=${Date.now()}`, { cache: "no-store" }),
-        fetch(`/api/admin/careers/roles-manager?t=${Date.now()}`, { cache: "no-store" }),
-      ]);
-
-      if (careersRes.ok) {
-        const data = await careersRes.json();
-        setApplications(data.applications || []);
-        if (data.roles) setRoles(data.roles);
-      }
-
-      if (managerRes.ok) {
-        const mData = await managerRes.json();
-        if (mData.roles) setRoleDefs(mData.roles);
-        if (mData.cohorts) setCohorts(mData.cohorts);
-      }
-    } catch (err) {
-      console.error("Failed to load recruitment overview data:", err);
-    } finally {
-      setLoading(false);
+      const response = await fetch("/api/admin/careers", { cache: "no-store", signal });
+      const payload = await response.json();
+      if (!response.ok || !Array.isArray(payload.applications) || !Array.isArray(payload.roles) || !Array.isArray(payload.cohorts)) throw new Error(payload.error || "Unable to load dashboard records");
+      if (request === generation.current && !signal?.aborted) { setData(payload); setError(""); }
+    } catch (e) {
+      if (request === generation.current && !signal?.aborted) setError(e instanceof Error ? e.message : "Unable to load dashboard records");
     }
   }, []);
-
   useEffect(() => {
-    load();
+    const controller = new AbortController();
+    void Promise.resolve().then(() => load(controller.signal));
+    const refresh = () => { void Promise.resolve().then(() => load(controller.signal)); };
+    window.addEventListener("admin:careers-updated", refresh);
+    return () => { controller.abort(); window.removeEventListener("admin:careers-updated", refresh); };
   }, [load]);
-
-  if (loading) {
-    return (
-      <div className="py-24 flex items-center justify-center">
-        <OverwatchOrbitLoader
-          label={t("Loading recruitment command center...", "A carregar operações de recrutamento...")}
-          size="md"
-        />
-      </div>
-    );
-  }
-
-  if (workspaceRole && workspaceRole !== "all") return <RecruitmentWorkspace key={workspaceRole} roleId={workspaceRole} />;
-
-  return (
-    <RecruitmentOverviewView
-      applications={applications}
-      roles={roles}
-      roleDefs={roleDefs}
-      cohorts={cohorts}
-      onRefresh={load}
-    />
-  );
+  if (error) return <div role="alert" className="rounded-xl border border-red-200 bg-white p-6">{error} <button className="underline" onClick={() => void load()}>{t("Retry", "Tentar novamente")}</button></div>;
+  if (!data) return <div role="status" className="flex min-h-[60vh] items-center justify-center"><OverwatchOrbitLoader label={t("Loading recruitment overview…", "A carregar visão geral…")}/></div>;
+  return <RecruitmentOverviewView applications={data.applications} roleDefs={data.roles} cohorts={data.cohorts} onRefresh={load}/>;
+}
+export default function RecruitmentOverviewPage() {
+  const roleId = useSearchParams().get("role");
+  return roleId && roleId !== "all" ? <RecruitmentWorkspace key={roleId} roleId={roleId}/> : <GlobalOverview/>;
 }
