@@ -183,7 +183,7 @@ export async function auditRequest(request: Request, handler: () => Promise<Resp
   const scope = { requestId: randomUUID(), actor, section: activitySection(url.pathname),
     roleId: typeof body?.roleId === "string" ? body.roleId : typeof body?.role === "string" ? body.role : typeof body?.role?.id === "string" ? body.role.id : undefined,
     cohortId: typeof body?.cohortId === "string" ? body.cohortId : undefined,
-    entityId: typeof body?.id === "string" ? body.id : typeof body?.applicationId === "string" ? body.applicationId : url.pathname.endsWith("/cv") ? url.searchParams.get("id") || undefined : undefined };
+    entityId: typeof body?.id === "string" ? body.id : typeof body?.applicationId === "string" ? body.applicationId : typeof body?.candidateId === "string" ? body.candidateId : url.pathname.endsWith("/cv") ? url.searchParams.get("id") || undefined : undefined };
   return context.run(scope, async () => {
     const action = `${request.method} ${url.pathname}${typeof body?.action === "string" ? ` · ${body.action}` : ""}`;
     let start: ActivityEvent;

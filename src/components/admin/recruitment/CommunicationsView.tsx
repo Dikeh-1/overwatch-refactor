@@ -97,37 +97,8 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
   const roleHasNextPhase = pipelineStages.includes("next_phase");
 
   // Letterhead State
-  const [subject, setSubject] = useState(
-    fixedRecipient ? "" : lang === "en"
-      ? "Next Phase – Overwatch Selection Process"
-      : "Próxima Fase – Processo de Selecção Overwatch"
-  );
-
-  const [messageBody, setMessageBody] = useState(
-    fixedRecipient ? "" : lang === "en"
-      ? `Dear {{candidate_name}},
-
-Following the review of your application for the position of {{role_title}}, we are pleased to inform you that you have been selected to advance to the Next Phase of our evaluation process.
-
-Please find the detailed briefing, location guidelines, and schedule instructions attached to this official correspondence.
-
-1. Training Period: 10 working days intensive induction at Maputo HQ.
-2. Required Documentation: Original Identification (BI/Passport) and certified certificates.
-3. Schedule: Rotating 12-hour shifts as specified in the recruitment guidelines.
-
-Kindly review the attached documents and confirm your acceptance at your earliest convenience.`
-      : `Prezada {{candidate_name}},
-
-Na sequência da avaliação da sua candidatura para a posição de {{role_title}}, temos a satisfação de informar que foi seleccionada para avançar para a Próxima Fase do processo de recrutamento da Overwatch.
-
-Em anexo a esta comunicação oficial, enviamos a documentação necessária com o detalhe do cronograma e requisitos de participação.
-
-1. Período de Formação: 10 dias úteis de capacitação intensiva na Sede em Maputo.
-2. Documentação Obrigatória: Apresentação do BI ou Passaporte original e certificados.
-3. Regime Operacional: Escala de turnos de 12 horas conforme previsto nos termos da vaga.
-
-Agradecemos que consulte as instruções e confirme a sua disponibilidade.`
-  );
+  const [subject, setSubject] = useState("");
+  const [messageBody, setMessageBody] = useState("");
 
   // File Attachments State
   const [attachments, setAttachments] = useState<CommAttachment[]>([]);
@@ -863,7 +834,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                   if (roleHasNextPhase) {
                     list.push({
                       id: "next_phase",
-                      label: t("Next Phase Finalists (15 Cohort)", "Turma Próxima Fase (15 Seleccionadas)"),
+                      label: t(`Next Phase Finalists (${applications.filter(a => isNextPhase(a) && (selectedRole === "all" || sameRole(a.role, selectedRole))).length})`, `Turma Próxima Fase (${applications.filter(a => isNextPhase(a) && (selectedRole === "all" || sameRole(a.role, selectedRole))).length})`),
                     });
                   }
 

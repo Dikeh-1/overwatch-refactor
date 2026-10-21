@@ -10,7 +10,7 @@ Module._load=function(name,...args){
  if(name==='@/lib/careers-workflow')return workflow;
  if(name==='@/lib/site-config')return{siteContact:{email:'fixture@example.invalid',address:{pt:'Fixture address'},whatsappNumber:'000000000'}};
  if(name==='@/lib/careers-store')return{updateApplication:async(id,patch)=>{if(historyFails)throw Error('History unavailable');updated.push({id,patch});return{...applications.find(a=>a.id===id),...patch}}};
- if(name==='@/lib/careers-email')return{sendTransactionalEmail:async mail=>{if(fail)throw Error('Fixture delivery failed');delivered.push(mail)}};
+ if(name==='@/lib/careers-email')return{sendTransactionalEmail:async(mail,id)=>{assert.equal(id,'one');if(fail)throw Error('Fixture delivery failed');delivered.push(mail)}};
  if(name==='@/lib/careers-workspace-store')return{getRecruitmentWorkspaceData:async()=>({applications,roles:[{id:'cctv',en:'CCTV Operator',pt:'Operadora de CCTV'}],cohorts:[{id:'september',roleId:'cctv'}]})};
  return original.call(this,name,...args);
 };

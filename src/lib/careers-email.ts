@@ -3321,10 +3321,10 @@ Website: ${origin}
   });
 }
 
-export async function sendTransactionalEmail(payload: SendEmailOptions) {
+export async function sendTransactionalEmail(payload: SendEmailOptions, applicationId?: string) {
   const { getApplications } = await import("./careers-store");
   const recipients = new Set(payload.to.map(person => person.email.toLowerCase()));
-  const matched = (await getApplications()).filter(app => recipients.has(app.email?.toLowerCase()));
+  const matched = (await getApplications()).filter(app => (!applicationId || app.id === applicationId) && recipients.has(app.email?.toLowerCase()));
   const roleIds = [...new Set(matched.map(app => app.role))];
   const cohortIds = [...new Set(matched.map(app => app.cohortId).filter(Boolean))];
   return auditChange("Communication delivery", {

@@ -13,6 +13,7 @@ let pool = null;
 let signedIn = true;
 const original = Module._load;
 let activity;
+let emailCandidates=[{id:'mail-candidate',email:'fixture@example.invalid',role:'operator',cohortId:'september'}];
 const delivered=[];
 let savedTemplates=[];let configQueue=Promise.resolve();
 Module._load = function(name, ...args) {
@@ -23,7 +24,7 @@ Module._load = function(name, ...args) {
   if (name === '@/lib/careers-db') return { getCareersPool:()=>pool };
   if (name === '@/lib/careers-store') return {exclusive:fn=>{const result=configQueue.then(fn);configQueue=result.catch(()=>{});return result;}};
   if (name === '@/lib/careers-config-store') return {getSystemConfig:async()=>savedTemplates,setSystemConfig:async(_,value)=>{savedTemplates=value;return value}};
-  if (name === './careers-store') return { getApplications: async()=>[{id:'mail-candidate',email:'fixture@example.invalid',role:'operator',cohortId:'september'}] };
+  if (name === './careers-store') return { getApplications: async()=>emailCandidates };
   if (name === './careers-config-store') return { getSystemConfig:async()=>({senderName:'Recruitment',replyToEmail:'fixture@example.invalid'}) };
   if (name === 'nodemailer') return { createTransport:()=>({sendMail:async options=>{delivered.push(options);return {messageId:'fake-smtp-id'}}}) };
   return original.call(this, name, ...args);
@@ -111,6 +112,11 @@ test('the actual central email function journals message content and candidate s
     assert.equal(rows.length,1);assert.ok(rows.every(row=>row.roleId==='operator'&&row.cohortId==='september'&&row.section==='communications'));
     const start=await activity.getActivity((await activity.getActivity(rows[0].id)).details.startId);
     assert.equal(start.details.subject,'Message content proof');assert.equal(start.details.htmlContent,'<p>Full content for history</p>');
+    emailCandidates.push({...emailCandidates[0],id:'duplicate-email-record',role:'different-role',cohortId:'different-cycle'});
+    await mail.sendTransactionalEmail({to:[{email:'fixture@example.invalid',name:'Fixture'}],subject:'Individual identity proof',textContent:'Only this profile',htmlContent:'<p>Only this profile</p>'},'mail-candidate');
+    assert.equal((await activity.listActivity({entityId:'duplicate-email-record'})).events.length,0);
+    const selected=(await activity.listActivity({entityId:'mail-candidate'})).events;
+    assert.equal(selected.length,2);assert.ok(selected.every(row=>row.roleId==='operator'&&row.cohortId==='september'));
   } finally {for(const key of keys){if(before[key]===undefined)delete process.env[key];else process.env[key]=before[key]}}
 });
 

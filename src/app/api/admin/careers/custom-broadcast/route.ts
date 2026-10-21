@@ -251,7 +251,7 @@ async function handlePOST(request: Request) {
           htmlContent: html,
           textContent: candMsg.trim(),
           attachment: attachments?.map((a) => ({ name: a.name, content: a.content })),
-        });
+        }, candidate.id);
 
         sentCount++;
         try {
