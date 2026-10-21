@@ -6,7 +6,7 @@ const DEFAULT_ADMIN_PASSWORD = "OverwatchRecruit2026!";
 const ADMIN_PASSWORD =
   process.env.CAREERS_ADMIN_PASSWORD ||
   process.env.ADMIN_PASSWORD ||
-  DEFAULT_ADMIN_PASSWORD;
+  (process.env.NODE_ENV === "production" ? "" : DEFAULT_ADMIN_PASSWORD);
 
 export function equal(a: string, b: string) {
   const left = Buffer.from(a),
@@ -19,6 +19,7 @@ function sign(value: string) {
     .digest("hex");
 }
 export async function authenticated() {
+  if (!ADMIN_PASSWORD) return false;
   const token = (await cookies()).get(cookie)?.value || "";
   const [expiry, signature] = token.split(".");
   return (
@@ -27,6 +28,7 @@ export async function authenticated() {
 }
 export const checkAdminSession = authenticated;
 export async function login() {
+  if (!ADMIN_PASSWORD) throw new Error("Configure CAREERS_ADMIN_PASSWORD before signing in");
   const expiry = String(Date.now() + 8 * 60 * 60 * 1000);
   (await cookies()).set(cookie, `${expiry}.${sign(expiry)}`, {
     httpOnly: true,
@@ -44,6 +46,7 @@ export function sameOrigin(request: Request) {
 }
 
 export async function verifyAdminAuthorization(request: Request): Promise<boolean> {
+  if (!ADMIN_PASSWORD) return false;
   if (await authenticated()) return true;
   const adminKey = request.headers.get("x-admin-key");
   if (adminKey && equal(adminKey, ADMIN_PASSWORD)) return true;

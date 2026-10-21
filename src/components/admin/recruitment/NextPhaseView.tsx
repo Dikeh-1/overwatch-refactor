@@ -42,7 +42,7 @@ interface NextPhaseCandidate {
   seedIndex: number;
   approvedName: string;
   name: string;
-  score: number;
+  score: number | null;
   email: string;
   phone: string;
   isMatched: boolean;
@@ -68,15 +68,17 @@ interface NextPhaseSummary {
 
 interface NextPhaseViewProps {
   lang?: "pt" | "en";
+  cohortId?: string;
+  roleId?: string;
 }
 
-export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) => {
+export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang, cohortId, roleId }) => {
   const { lang: contextLang } = useAdminLanguage();
   const { activeRoleId, roles } = useActiveRole();
   const lang = propLang ?? contextLang;
   const t = (en: string, pt: string) => (lang === "en" ? en : pt);
 
-  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [roleFilter, setRoleFilter] = useState<string>(roleId || "all");
   const [copiedCandidateId, setCopiedCandidateId] = useState<string | null>(null);
 
   const [candidates, setCandidates] = useState<NextPhaseCandidate[]>([]);
@@ -157,7 +159,9 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
       const res = await fetch("/api/admin/careers/next-phase", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "generate_token", candidateId: cand.matchedId || cand.id }),
+        body: JSON.stringify({
+          cohortId,
+          role: roleId || roleFilter, action: "generate_token", candidateId: cand.matchedId || cand.id }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -181,7 +185,8 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
       const url = roleFilter && roleFilter !== "all"
         ? `/api/admin/careers/next-phase?role=${encodeURIComponent(roleFilter)}`
         : "/api/admin/careers/next-phase";
-      const res = await fetch(url);
+      const res = await fetch(`${url}${url.includes("?") ? "&" : "?"}${cohortId ? `cohortId=${encodeURIComponent(cohortId)}` : ""}`, { cache: "no-store" });
+      setError(null);
       const data = await res.json();
       if (res.ok) {
         setCandidates(data.candidates || []);
@@ -221,7 +226,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
       window.removeEventListener("admin:careers-updated", handleAdminUpdate);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [roleFilter]);
+  }, [roleFilter, cohortId]);
 
   // Filtered candidate list based on metric card click + dropdowns + search query
   const filteredCandidates = useMemo(() => {
@@ -308,6 +313,8 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          cohortId,
+          role: roleId || roleFilter,
           action: "preview",
           previewEmail: previewEmail.trim(),
           subject: emailSubject,
@@ -366,6 +373,8 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          cohortId,
+          role: roleId || roleFilter,
           action: "update_contact",
           candidateId: editingCandidate.id,
           name: editName.trim(),
@@ -424,9 +433,10 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          cohortId,
+          role: roleId || roleFilter,
           action: "dispatch",
           subject: emailSubject,
-          role: activeRoleId,
         }),
       });
       const data = await res.json();
@@ -456,6 +466,8 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          cohortId,
+          role: roleId || roleFilter,
           action: "delete_candidate",
           candidateId: candidateToDelete.id,
           candidateName: candidateToDelete.name,
@@ -511,6 +523,8 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          cohortId,
+          role: roleId || roleFilter,
           action: "bulk_delete",
           candidates: candidatesToPurge.map((c) => ({
             id: c.id,
@@ -1103,7 +1117,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                       {/* Score */}
                       <td className="px-4 py-3 font-mono whitespace-nowrap">
                         <span className="font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded text-[0.75rem]">
-                          {cand.score}%
+                          {cand.score === null ? "—" : `${cand.score}%`}
                         </span>
                       </td>
 
@@ -1341,12 +1355,12 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                       <span className="text-slate-500">{t("Written Test Score:", "Nota do Teste Escrito:")}</span>
                       <div className="flex items-center gap-1.5">
                         <strong className="text-slate-900 font-mono font-bold">
-                          {selectedCandidate.score}%
+                          {selectedCandidate.score === null ? "—" : `${selectedCandidate.score}%`}
                         </strong>
                         <span className="px-1.5 py-0.2 rounded text-[0.6rem] font-bold bg-emerald-100 text-emerald-800">
-                          {selectedCandidate.score >= 80
+                          {selectedCandidate.score === null ? t("Score not recorded", "Nota não registada") : selectedCandidate.score >= 80
                             ? t("PASSED ≥ 80%", "APROVADO ≥ 80%")
-                            : t(`APPROVED (${selectedCandidate.score}%)`, `APROVADO (${selectedCandidate.score}%)`)}
+                            : t(`APPROVED (${selectedCandidate.score === null ? "—" : `${selectedCandidate.score}%`})`, `APROVADO (${selectedCandidate.score === null ? "—" : `${selectedCandidate.score}%`})`)}
                         </span>
                       </div>
                     </div>
@@ -1746,7 +1760,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                       {activeCandidate?.name || t("Candidate Preview", "Pré-visualização da Candidata")}
                     </h3>
                     <span className="px-2 py-0.5 rounded text-[0.68rem] font-bold bg-slate-100 text-slate-800 font-mono border border-slate-200">
-                      {activeCandidate?.score ?? 80}% SCORE
+                      {activeCandidate?.score === null || !activeCandidate ? "—" : `${activeCandidate.score}%`} SCORE
                     </span>
                     {activeCandidate?.invitationStatus === "sent" ? (
                       <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -1869,7 +1883,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                           : " [Not Sent]";
                       return (
                         <option key={cand.id || idx} value={idx}>
-                          #{cand.seedIndex} · {cand.name} ({cand.score}%){statusTag}
+                          #{cand.seedIndex} · {cand.name} ({cand.score === null ? "—" : `${cand.score}%`}){statusTag}
                         </option>
                       );
                     })}
@@ -1993,10 +2007,10 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                     </p>
 
                     <p>
-                      {activeCandidate && activeCandidate.score < 80 ? (
+                      {activeCandidate && typeof activeCandidate.score === "number" && activeCandidate.score < 80 ? (
                         <>O seu resultado no teste (<strong className="text-slate-900">{activeCandidate.score}%</strong>) permitiu-lhe avançar para consideração na próxima fase do processo.</>
                       ) : (
-                        <>O seu resultado no teste (<strong className="text-slate-900">{activeCandidate?.score}% — mais de 80%</strong>) permitiu-lhe avançar para consideração na próxima fase do processo.</>
+                        <>O seu resultado no teste (<strong className="text-slate-900">{activeCandidate?.score ?? "não registado"}%</strong>) permitiu-lhe avançar para consideração na próxima fase do processo.</>
                       )}
                     </p>
 
@@ -2088,10 +2102,10 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang }) 
                     </p>
 
                     <p>
-                      {activeCandidate && activeCandidate.score < 80 ? (
+                      {activeCandidate && typeof activeCandidate.score === "number" && activeCandidate.score < 80 ? (
                         <><strong>Your</strong> test score (<strong className="text-slate-900">{activeCandidate.score}%</strong>) allowed <strong>you</strong> to advance to consideration in the next phase of the process.</>
                       ) : (
-                        <><strong>Your</strong> test score (<strong className="text-slate-900">{activeCandidate?.score}% — more than 80%</strong>) allowed <strong>you</strong> to advance to consideration in the next phase of the process.</>
+                        <><strong>Your</strong> test score (<strong className="text-slate-900">{activeCandidate?.score ?? "not recorded"}%</strong>) allowed <strong>you</strong> to advance to consideration in the next phase of the process.</>
                       )}
                     </p>
 

@@ -51,7 +51,7 @@ export function evaluateApplicationWithRules(
     } else if (rule.type === "number") {
       let num = 0;
       if (typeof rawVal === "number") {
-        num = isNaN(rawVal) ? 0 : rawVal;
+        num = Number.isFinite(rawVal) ? rawVal : 0;
       } else if (typeof rawVal === "string") {
         const cleaned = rawVal.trim().toLowerCase();
         if (
@@ -65,14 +65,16 @@ export function evaluateApplicationWithRules(
           num = 0;
         } else {
           // Extract first integer from range string (e.g. "5-8" -> 5, "1-2" -> 1, "8+" -> 8, "1_2" -> 1)
-          const match = cleaned.match(/(\d+)/);
-          num = match ? parseInt(match[1], 10) : Number(cleaned) || 0;
+          const match = cleaned.match(/^([+-]?\d+(?:[.,]\d+)?)/);
+          num = match ? Number(match[1].replace(",", ".")) : 0;
         }
       }
       const target = Number(rule.expectedValue) || 0;
       passed = num >= target;
     } else {
-      passed = Boolean(rawVal && String(rawVal).trim().length > 0);
+      const actual = String(rawVal ?? "").trim().toLowerCase();
+      const expected = String(rule.expectedValue ?? "").trim().toLowerCase();
+      passed = expected ? actual === expected : actual.length > 0;
     }
 
     details.push({

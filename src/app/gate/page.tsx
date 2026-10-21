@@ -515,7 +515,7 @@ function GateSecurityContent() {
   }, [authed, urlId, executeCheckIn]);
 
   // HIGH-PERFORMANCE THROTTLED QR SCANNING LOOP
-  const scanLoop = useCallback(() => {
+  const scanLoop = useCallback(function scanFrame() {
     if (!videoRef.current || !canvasRef.current || maputoTime.isBeforeNineAm) return;
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -573,7 +573,7 @@ function GateSecurityContent() {
       }
     }
 
-    animFrameRef.current = requestAnimationFrame(scanLoop);
+    animFrameRef.current = requestAnimationFrame(scanFrame);
   }, [executeCheckIn, processing]);
 
   // Start Camera with clean device acquisition

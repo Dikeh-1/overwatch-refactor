@@ -9,7 +9,7 @@ const DEFAULT_ADMIN_PASSWORD = "OverwatchRecruit2026!";
 const ADMIN_PASSWORD =
   process.env.CAREERS_ADMIN_PASSWORD ||
   process.env.ADMIN_PASSWORD ||
-  DEFAULT_ADMIN_PASSWORD;
+  (process.env.NODE_ENV === "production" ? "" : DEFAULT_ADMIN_PASSWORD);
 
 const attempts = new Map<string, { count: number; until: number }>();
 export async function GET() {
@@ -22,6 +22,7 @@ export async function POST(request: Request) {
   if (!sameOrigin(request))
     return Response.json({ error: "Invalid origin" }, { status: 403 });
 
+  if (!ADMIN_PASSWORD) return Response.json({ error: "Administrator access is not configured." }, { status: 503 });
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "local";
   const previous = attempts.get(ip);
   const attempt =

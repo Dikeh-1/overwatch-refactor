@@ -10,7 +10,8 @@ import {
 import { roles as legacyRoles } from "./careers";
 import {
   getApplications,
-  bulkSaveApplications,
+  updateApplication,
+  invalidateApplicationsCache,
   setRole,
 } from "./careers-store";
 import {
@@ -18,23 +19,14 @@ import {
   setConfiguredRoles,
   getConfiguredCohorts,
   setConfiguredCohorts,
+  getSystemConfig,
+  getConfiguredTestSlots,
 } from "./careers-config-store";
 
-import { Pool } from "pg";
+import { getCareersPool as getPgPool } from "./careers-db";
+import { sameRole, applicationsForCohort, buildCohortCatalog } from "./careers-workflow";
+import type { Application } from "./careers";
 
-let pgPool: Pool | null = null;
-function getPgPool(): Pool | null {
-  const dbUrl = process.env.DATABASE_URL;
-  if (!dbUrl) return null;
-  if (!pgPool) {
-    pgPool = new Pool({
-      connectionString: dbUrl,
-      ssl: { rejectUnauthorized: false },
-      max: 10,
-    });
-  }
-  return pgPool;
-}
 
 function getSupabaseUrl() {
   return (
@@ -118,7 +110,7 @@ function buildDefaultRoles(): CareerRoleDefinition[] {
 
     // Tech Manager skips physical aptitude test & gate check-in by default
     const stages: PipelineStageKey[] = isTechMgr
-      ? ["applications", "screening", "interview", "hired"]
+      ? ["applications", "screening", "testing", "interview", "hired"]
       : ["applications", "screening", "testing", "gate_checkin", "next_phase", "interview", "hired"];
 
     return {
@@ -148,8 +140,8 @@ export async function getRoleDefinitions(forceFresh = false): Promise<CareerRole
   let remoteConfigs: CareerRoleDefinition[] | null = null;
 
   // 1. Try dedicated system config store (Supabase storage career-cvs/system-configs/roles_def.json or local)
-  const storedRoles = await getConfiguredRoles();
-  if (Array.isArray(storedRoles) && storedRoles.length > 0) {
+  const storedRoles = await getSystemConfig<CareerRoleDefinition[] | null>("roles_config", null);
+  if (Array.isArray(storedRoles)) {
     remoteConfigs = storedRoles;
   }
 
@@ -213,7 +205,7 @@ export async function getRoleDefinitions(forceFresh = false): Promise<CareerRole
           }
         }
       } catch (pgErr) {
-        console.warn("Could not query career_roles from PG:", pgErr);
+        throw new Error("Unable to read role intake state", { cause: pgErr });
       }
     } else if (getSupabaseUrl() && getSupabaseKey()) {
       try {
@@ -238,20 +230,6 @@ export async function getRoleDefinitions(forceFresh = false): Promise<CareerRole
       ? [...inMemoryRoleDefs]
       : buildDefaultRoles();
 
-    // Ensure all standard default roles exist
-    const defaultRoles = buildDefaultRoles();
-    for (const def of defaultRoles) {
-      const exists = roles.some(
-        (r) =>
-          r.id === def.id ||
-          (def.id === "cctv" && r.id === "cctv_operator") ||
-          (def.id === "cctv_operator" && r.id === "cctv"),
-      );
-      if (!exists) {
-        roles.push(def);
-      }
-    }
-
     // Synchronize open state from Supabase career_roles
     roles = roles.map((role) => {
       let open = role.open;
@@ -263,16 +241,14 @@ export async function getRoleDefinitions(forceFresh = false): Promise<CareerRole
         open = remoteOpenMap["cctv"];
       }
 
-      const activeCohortId = open
-        ? (role.activeCohortId || `${role.id}_cohort`)
-        : null;
+      const activeCohortId = role.activeCohortId || (open ? `${role.id}_cohort` : null);
 
       return {
         ...role,
         open,
         activeCohortId,
         screeningRules:
-          role.screeningRules && role.screeningRules.length > 0
+          Array.isArray(role.screeningRules)
             ? role.screeningRules
             : DEFAULT_SCREENING_RULES_BY_ROLE[role.id] || [],
       };
@@ -284,8 +260,8 @@ export async function getRoleDefinitions(forceFresh = false): Promise<CareerRole
   }
 
   // Local development
-  const local = await getConfiguredRoles();
-  if (local.length > 0) {
+  const local = storedRoles;
+  if (Array.isArray(local)) {
     inMemoryRoleDefs = local;
     inMemoryRoleDefsAt = Date.now();
     return local;
@@ -298,7 +274,7 @@ export async function getRoleDefinitions(forceFresh = false): Promise<CareerRole
   return defaults;
 }
 
-export async function saveRoleDefinition(
+async function persistRoleDefinition(
   role: CareerRoleDefinition,
 ): Promise<CareerRoleDefinition> {
   invalidateCampaignStoreCache();
@@ -314,47 +290,16 @@ export async function saveRoleDefinition(
 
   let nextRoles: CareerRoleDefinition[];
   if (existingIdx >= 0) {
-    const prevRole = roles[existingIdx];
-    // If role was previously open, but is now closed directly, ensure its active cohort is sealed and saved to archive vault
-    if (prevRole.open && !role.open) {
-      try {
-        const cohorts = await getAllCohorts();
-        const activeCohort = cohorts.find(
-          (c) => (c.roleId === role.id || (role.id === "cctv" && c.roleId === "cctv_operator")) && c.status === "active",
-        ) || (prevRole.activeCohortId ? cohorts.find((c) => c.id === prevRole.activeCohortId) : null);
-
-        if (activeCohort) {
-          await saveCohort({
-            ...activeCohort,
-            status: "archived",
-            closedAt: now,
-          });
-        } else {
-          const cohortId = prevRole.activeCohortId || `${role.id}_cohort_${Date.now().toString(36)}`;
-          await saveCohort({
-            id: cohortId,
-            roleId: role.id,
-            name: `${role.pt || role.en} — Concurso Encerrado`,
-            openedAt: prevRole.createdAt || now,
-            closedAt: now,
-            status: "archived",
-            stages: role.pipelineStages || [],
-            screeningRules: role.screeningRules || [],
-          });
-        }
-      } catch (cohortErr) {
-        console.warn("Could not auto-seal cohort on role close:", cohortErr);
-      }
-    }
     nextRoles = roles.map((r, idx) => (idx === existingIdx ? updatedRole : r));
   } else {
     updatedRole.createdAt = now;
     nextRoles = [...roles, updatedRole];
   }
 
-  inMemoryRoleDefs = nextRoles;
   // Clean persistence to dedicated config store (Supabase storage system-configs/ and local file)
   await setConfiguredRoles(nextRoles);
+  inMemoryRoleDefs = nextRoles;
+  inMemoryRoleDefsAt = Date.now();
 
   if (isRemote()) {
     // Also attempt saving to career_roles_config table if present
@@ -411,9 +356,9 @@ export async function deleteRoleDefinition(roleId: string): Promise<void> {
       !(roleId === "cctv" && r.id === "cctv_operator") &&
       !(roleId === "cctv_operator" && r.id === "cctv"),
   );
+  await setConfiguredRoles(nextRoles);
   inMemoryRoleDefs = nextRoles;
   inMemoryRoleDefsAt = Date.now();
-  await setConfiguredRoles(nextRoles);
 
   if (isRemote()) {
     try {
@@ -495,9 +440,10 @@ export async function saveCohort(cohort: CareerCohort): Promise<CareerCohort> {
   const idx = cohorts.findIndex((c) => c.id === cohort.id);
   const next = idx >= 0 ? cohorts.map((c) => (c.id === cohort.id ? cohort : c)) : [cohort, ...cohorts];
 
-  inMemoryCohorts = next;
   // Clean persistence to dedicated config store (Supabase storage system-configs/ and local file)
   await setConfiguredCohorts(next);
+  inMemoryCohorts = next;
+  inMemoryCohortsAt = Date.now();
 
   if (isRemote()) {
     // Also try syncing to career_cohorts table if present
@@ -525,163 +471,101 @@ export async function saveCohort(cohort: CareerCohort): Promise<CareerCohort> {
   return cohort;
 }
 
-/**
- * Open a new recruitment cycle for a role.
- * Generates an isolated, fresh cohort so old candidates never mix in.
- */
-export async function openRoleCohort(
-  roleId: string,
-  customCohortName?: string,
-): Promise<{ role: CareerRoleDefinition; cohort: CareerCohort }> {
-  const roles = await getRoleDefinitions();
-  const role = roles.find(
-    (r) =>
-      r.id === roleId ||
-      (roleId === "cctv" && r.id === "cctv_operator") ||
-      (roleId === "cctv_operator" && r.id === "cctv"),
-  );
-  if (!role) throw new Error(`Role not found: ${roleId}`);
+type LifecycleResult = { role: CareerRoleDefinition; cohort: CareerCohort };
 
-  const now = new Date();
-  const dateStr = now.toLocaleDateString("pt-MZ", { month: "short", year: "numeric" });
-  const cohortId = `${role.id}_${now.getFullYear()}_${now.getMonth() + 1}_${Date.now().toString(36)}`;
-
-  const cohortName =
-    customCohortName?.trim() ||
-    `${role.pt} — Lote ${dateStr.charAt(0).toUpperCase() + dateStr.slice(1)}`;
-
-  const cohort: CareerCohort = {
-    id: cohortId,
-    roleId: role.id,
-    name: cohortName,
-    openedAt: now.toISOString(),
-    status: "active",
-    stages: role.pipelineStages,
-    screeningRules: role.screeningRules,
+function planLifecycle(role: CareerRoleDefinition, cohorts: CareerCohort[], applications: Application[], open: boolean, name?: string): LifecycleResult {
+  const now = new Date().toISOString();
+  const existing = cohorts.find(c => c.id === role.activeCohortId && sameRole(c.roleId, role.id)) ||
+    cohorts.find(c => sameRole(c.roleId, role.id) && c.status === "active");
+  if (open && role.open && existing?.status === "active") return { role, cohort: { ...existing, stages: [...role.pipelineStages], screeningRules: structuredClone(role.screeningRules), roleSnapshot: structuredClone(role) } };
+  // A repeated closure is idempotent, including roles closed by the old implementation.
+  const lastClosed = !open && !role.open ? cohorts.filter(c => sameRole(c.roleId, role.id) && c.status !== "active").sort((a,b) => (b.closedAt || "").localeCompare(a.closedAt || ""))[0] : undefined;
+  const old = existing || lastClosed;
+  if (!open && lastClosed) return { role, cohort: lastClosed };
+  const cohort: CareerCohort = open ? {
+    id: `${role.id}_${crypto.randomUUID()}`, roleId: role.id,
+    name: name?.trim() || `${role.pt} — ${new Date().toLocaleDateString("pt-MZ", { month: "long", year: "numeric", timeZone: "Africa/Maputo" })}`,
+    openedAt: now, status: "active", stages: [...role.pipelineStages], screeningRules: structuredClone(role.screeningRules), roleSnapshot: structuredClone(role),
+  } : {
+    ...(old || { id: role.activeCohortId || `${role.id}_${crypto.randomUUID()}`, roleId: role.id, name: role.pt, openedAt: role.createdAt }),
+    status: "closed", closedAt: now, notes: name ?? old?.notes,
+    stages: [...role.pipelineStages], screeningRules: structuredClone(role.screeningRules), roleSnapshot: structuredClone(role),
   };
-
-  try {
-    await saveCohort(cohort);
-  } catch (err) {
-    console.warn("Failed saving cohort:", err);
+  if (!open) {
+    const catalog = buildCohortCatalog([...cohorts.filter(c => c.id !== cohort.id), { ...cohort, status: "active" }], [role], applications);
+    const members = applicationsForCohort(applications, { ...cohort, status: "active" }, catalog);
+    cohort.closureSnapshot = old?.closureSnapshot || { capturedAt: now, applications: structuredClone(members) };
   }
-
-  const updatedRole: CareerRoleDefinition = {
-    ...role,
-    open: true,
-    activeCohortId: cohortId,
-    updatedAt: now.toISOString(),
-  };
-  await saveRoleDefinition(updatedRole);
-
-  // Synchronize open state in legacy roles and all aliases
-  await setRole(role.id, true).catch(() => {});
-  if (role.id === "cctv" || role.id === "cctv_operator") {
-    await setRole("cctv", true).catch(() => {});
-    await setRole("cctv_operator", true).catch(() => {});
-  }
-
-  return { role: updatedRole, cohort };
+  return { role: { ...role, open, activeCohortId: open ? cohort.id : null, updatedAt: now }, cohort };
 }
 
-/**
- * Close and archive the active recruitment cycle for a role.
- * All candidates and records remain sealed in the historical vault.
- * The active workspace is cleared for the next recruitment cycle.
- */
-export async function closeAndArchiveRoleCohort(
-  roleId: string,
-  archiveNotes?: string,
-): Promise<{ role: CareerRoleDefinition; archivedCohort: CareerCohort | null }> {
-  const roles = await getRoleDefinitions();
-  const role = roles.find(
-    (r) =>
-      r.id === roleId ||
-      (roleId === "cctv" && r.id === "cctv_operator") ||
-      (roleId === "cctv_operator" && r.id === "cctv"),
-  );
-  if (!role) throw new Error(`Role not found: ${roleId}`);
-
-  const cohorts = await getAllCohorts();
-  const now = new Date().toISOString();
-
-  // Find existing active cohort or synthesize one so it always saves to vault
-  let cohortToArchive = role.activeCohortId
-    ? cohorts.find((c) => c.id === role.activeCohortId)
-    : null;
-
-  if (!cohortToArchive) {
-    const cohortId = role.activeCohortId || `${role.id}_cohort_${Date.now().toString(36)}`;
-    cohortToArchive = {
-      id: cohortId,
-      roleId: role.id,
-      name: `${role.pt} — Concurso Encerrado`,
-      openedAt: role.createdAt || now,
-      closedAt: now,
-      status: "archived",
-      stages: role.pipelineStages,
-      screeningRules: role.screeningRules,
-      notes: archiveNotes || "",
-    };
-  } else {
-    cohortToArchive = {
-      ...cohortToArchive,
-      status: "archived",
-      closedAt: now,
-      notes: archiveNotes || cohortToArchive.notes || "",
-    };
-  }
-
-  try {
-    await saveCohort(cohortToArchive);
-  } catch (err) {
-    console.warn("Failed saving archived cohort:", err);
-  }
-
-  // Seal all current candidates belonging to this role cohort
-  try {
-    const allApps = await getApplications();
-    let updatedAny = false;
-    const targetCohortId = cohortToArchive.id;
-
-    const updatedApps = allApps.map((app) => {
-      const isThisRole =
-        app.role === role.id ||
-        (role.id === "cctv" && (!app.role || app.role === "cctv" || app.role === "cctv_operator")) ||
-        (role.id === "cctv_operator" && (!app.role || app.role === "cctv" || app.role === "cctv_operator"));
-
-      if (isThisRole && (!app.cohortId || app.cohortId === role.activeCohortId || app.status !== "archived")) {
-        updatedAny = true;
-        return {
-          ...app,
-          cohortId: targetCohortId,
-          status: (app.status === "hired" ? "hired" : "archived") as any,
-        };
+async function changeLifecycle(roleId: string, open: boolean, name?: string, patch?: CareerRoleDefinition): Promise<LifecycleResult> {
+  const initialRoles = await getRoleDefinitions(true);
+  const initialCohorts = await getAllCohorts(true);
+  const slots = await getConfiguredTestSlots();
+  const pool = getPgPool();
+  let result: LifecycleResult;
+  if (pool) {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      // Serialize lifecycle/configuration transitions across serverless instances.
+      await client.query("SELECT pg_advisory_xact_lock(724216)");
+      const configs = await client.query("SELECT key, value FROM system_configs WHERE key IN ('roles_config', 'cohorts') FOR UPDATE");
+      const roles: CareerRoleDefinition[] = configs.rows.find(r => r.key === "roles_config")?.value ?? initialRoles;
+      const cohorts: CareerCohort[] = configs.rows.find(r => r.key === "cohorts")?.value ?? initialCohorts;
+      const configuredRole = roles.find(r => sameRole(r.id, roleId));
+      const intake = await client.query("SELECT id, open FROM career_roles WHERE id = $1 FOR UPDATE", [configuredRole?.id || roleId]);
+      const current = configuredRole && { ...configuredRole, open: intake.rows[0] ? Boolean(intake.rows[0].open) : configuredRole.open };
+      const effectiveCohorts = cohorts.map(c => current && !current.open && sameRole(c.roleId, current.id) && c.status === "active" ? { ...c, status: "closed" as const } : c);
+      if (!current) throw new Error("Role not found");
+      const rows = await client.query("SELECT id, data FROM career_applications FOR UPDATE");
+      const applications: Application[] = rows.rows.map(r => r.data).filter(a => a && a.role !== "__system_config__");
+      result = planLifecycle(patch ? { ...patch, open: current.open, activeCohortId: current.activeCohortId } : current, effectiveCohorts, applications, open, name);
+      if (!open && !result.cohort.testSlots) { result.cohort.testSlots = slots.slots; result.cohort.slotQuota = slots.quota; }
+      // Only attach previously unassigned members of this intake. Never rewrite stages or older cohort IDs.
+      for (const a of result.cohort.closureSnapshot?.applications || []) {
+        if (!a.cohortId && !open) await client.query("UPDATE career_applications SET data = jsonb_set(data, '{cohortId}', to_jsonb($2::text)) WHERE id = $1 AND COALESCE(data->>'cohortId', '') = ''", [a.id, result.cohort.id]);
       }
-      return app;
-    });
-
-    if (updatedAny) {
-      await bulkSaveApplications(updatedApps);
-    }
-  } catch (err) {
-    console.warn("Could not seal applications to cohort:", err);
+      const nextRoles = roles.map(r => sameRole(r.id, roleId) ? result.role : r);
+      const nextCohorts = [...effectiveCohorts.filter(c => c.id !== result.cohort.id), result.cohort];
+      for (const [key, value] of [["roles_config", nextRoles], ["cohorts", nextCohorts]] as const) await client.query("INSERT INTO system_configs (key, value, updated_at) VALUES ($1, $2::jsonb, NOW()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()", [key, JSON.stringify(value)]);
+      for (const id of result.role.id === "cctv" || result.role.id === "cctv_operator" ? ["cctv", "cctv_operator"] : [result.role.id]) await client.query("INSERT INTO career_roles (id, open) VALUES ($1,$2) ON CONFLICT (id) DO UPDATE SET open=EXCLUDED.open", [id, open]);
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally { client.release(); }
+  } else {
+    const role = initialRoles.find(r => sameRole(r.id, roleId));
+    if (!role) throw new Error("Role not found");
+    const apps = await getApplications(true);
+    result = planLifecycle(patch ? { ...patch, open: role.open, activeCohortId: role.activeCohortId } : role, initialCohorts, apps, open, name);
+    if (!open && !result.cohort.testSlots) { result.cohort.testSlots = slots.slots; result.cohort.slotQuota = slots.quota; }
+    // Persist evidence first and role last. A failure is surfaced and safely retryable.
+    await saveCohort(result.cohort);
+    for (const a of result.cohort.closureSnapshot?.applications || []) if (!a.cohortId && !open) await updateApplication(a.id, { cohortId: result.cohort.id });
+    await persistRoleDefinition(result.role);
+    await setRole(result.role.id, open);
   }
+  invalidateCampaignStoreCache();
+  invalidateApplicationsCache();
+  return result;
+}
 
-  const updatedRole: CareerRoleDefinition = {
-    ...role,
-    open: false,
-    activeCohortId: null,
-    updatedAt: now,
-  };
-  await saveRoleDefinition(updatedRole);
-
-  // Synchronize closed state in legacy roles and all aliases
-  await setRole(role.id, false).catch(() => {});
-  if (role.id === "cctv" || role.id === "cctv_operator") {
-    await setRole("cctv", false).catch(() => {});
-    await setRole("cctv_operator", false).catch(() => {});
+export async function saveRoleDefinition(role: CareerRoleDefinition): Promise<CareerRoleDefinition> {
+  const previous = (await getRoleDefinitions(true)).find(r => sameRole(r.id, role.id));
+  if (previous && (previous.open !== role.open || role.open)) return (await changeLifecycle(role.id, role.open, undefined, role)).role;
+  if (!previous && role.open) {
+    await persistRoleDefinition({ ...role, open: false, activeCohortId: null });
+    return (await changeLifecycle(role.id, true)).role;
   }
+  // Cohort identity is controlled by lifecycle transitions, not the role editor.
+  return persistRoleDefinition({ ...role, activeCohortId: previous?.activeCohortId ?? null });
+}
 
-  return { role: updatedRole, archivedCohort: cohortToArchive };
+export async function openRoleCohort(roleId: string, name?: string) { return changeLifecycle(roleId, true, name); }
+export async function closeAndArchiveRoleCohort(roleId: string, notes?: string) {
+  const result = await changeLifecycle(roleId, false, notes);
+  return { role: result.role, archivedCohort: result.cohort };
 }

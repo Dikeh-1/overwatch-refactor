@@ -1,5 +1,6 @@
 "use client";
 
+import { csvCell } from "@/lib/csv";
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import {
@@ -20,6 +21,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+import { hasAttended, isTerminal } from "@/lib/careers-workflow";
 import { Application, normalizeSlot, formatSlotDisplay, formatPhoneDisplay } from "@/lib/careers";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import { useActiveRole } from "../shell/ActiveRoleContext";
@@ -67,6 +69,8 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("admin:careers-updated"));
       }
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Unable to update attendance");
     } finally {
       setTogglingAttendanceId(null);
     }
@@ -89,7 +93,7 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
   // Candidates in active session filtered by active role workspace
   const bookedCandidates = useMemo(() => {
     return applications.filter((a) => {
-      if (!Boolean(a.testSlot) || a.status === "archived" || a.status === "rejected") return false;
+      if (!a.testSlot || isTerminal(a)) return false;
       if (!activeRoleId || activeRoleId === "all") return true;
       if (activeRoleId === "cctv" || activeRoleId === "cctv_operator") {
         return !a.role || a.role === "cctv" || a.role === "cctv_operator";
@@ -115,7 +119,7 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
     return list;
   }, [bookedCandidates, selectedSlot, searchQuery]);
 
-  const attendedCount = slotCandidates.filter((c) => Boolean(c.attendedAt)).length;
+  const attendedCount = slotCandidates.filter(hasAttended).length;
   const currentSlotOccupancy = slotCandidates.length;
   const isOverCapacity = selectedSlot !== "all" && currentSlotOccupancy > slotQuota;
   const overCount = selectedSlot !== "all" ? Math.max(0, currentSlotOccupancy - slotQuota) : 0;
@@ -125,15 +129,8 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
     const headers = lang === "en"
       ? ["Name", "Email", "WhatsApp", "Session Slot", "Attendance", "Check-in Time"]
       : ["Nome", "Email", "WhatsApp", "Turno", "Presença", "Hora de Entrada"];
-    const rows = slotCandidates.map((c) => [
-      `"${c.name}"`,
-      `"${c.email}"`,
-      `"${c.whatsapp}"`,
-      `"${c.testSlot || ""}"`,
-      c.attendedAt ? (lang === "en" ? '"PRESENT"' : '"PRESENTE"') : (lang === "en" ? '"AWAITING"' : '"AGUARDADO"'),
-      c.attendedAt ? `"${new Date(c.attendedAt).toLocaleTimeString("pt-MZ")}"` : '""',
-    ]);
-    const csv = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\r\n");
+    const rows = slotCandidates.map(c => [c.name, c.email, c.whatsapp, c.testSlot || "", hasAttended(c) ? t("Present", "Presente") : t("Not recorded", "Não registada"), c.attendedAt || ""]);
+    const csv = "\uFEFF" + [headers, ...rows].map(row => row.map(csvCell).join(",")).join("\r\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

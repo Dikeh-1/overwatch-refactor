@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { checkAdminSession } from "@/lib/careers-auth";
+import { sameOrigin, checkAdminSession } from "@/lib/careers-auth";
 import {
   getRoleDefinitions,
   saveRoleDefinition,
@@ -37,17 +37,18 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const isAuth = await checkAdminSession();
-  if (!isAuth) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isAuth || !sameOrigin(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   try {
     const body = await request.json();
     const { action } = body;
+    if (body.roleId && (typeof body.roleId !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(body.roleId))) return NextResponse.json({ error: "Invalid role ID" }, { status: 400 });
 
     if (action === "create_or_update_role") {
       const { role } = body;
-      if (!role || !role.id || !role.pt) {
+      if (!role || typeof role.id !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(role.id) || typeof role.pt !== "string" || !role.pt.trim() || typeof role.open !== "boolean" || !Array.isArray(role.pipelineStages) || !Array.isArray(role.screeningRules)) {
         return NextResponse.json({ error: "Invalid role payload" }, { status: 400 });
       }
       const saved = await saveRoleDefinition(role);
@@ -76,11 +77,6 @@ export async function POST(request: Request) {
       const { roleId, cohortName } = body;
       if (!roleId) return NextResponse.json({ error: "Missing roleId" }, { status: 400 });
       const res = await openRoleCohort(roleId, cohortName);
-      await setRole(roleId, true).catch(() => {});
-      if (roleId === "cctv" || roleId === "cctv_operator") {
-        await setRole("cctv", true).catch(() => {});
-        await setRole("cctv_operator", true).catch(() => {});
-      }
       return NextResponse.json({ success: true, ...res });
     }
 
@@ -88,11 +84,6 @@ export async function POST(request: Request) {
       const { roleId, notes } = body;
       if (!roleId) return NextResponse.json({ error: "Missing roleId" }, { status: 400 });
       const res = await closeAndArchiveRoleCohort(roleId, notes);
-      await setRole(roleId, false).catch(() => {});
-      if (roleId === "cctv" || roleId === "cctv_operator") {
-        await setRole("cctv", false).catch(() => {});
-        await setRole("cctv_operator", false).catch(() => {});
-      }
       return NextResponse.json({ success: true, ...res });
     }
 

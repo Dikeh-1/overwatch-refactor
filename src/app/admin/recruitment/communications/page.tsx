@@ -1,11 +1,14 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
+import RecruitmentWorkspace from "@/components/admin/recruitment/RecruitmentWorkspace";
 import React, { useState, useEffect } from "react";
 import { CommunicationsView } from "@/components/admin/recruitment/CommunicationsView";
 import { Application } from "@/lib/careers";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 
 export default function CommunicationsPage() {
+  const workspaceRole = useSearchParams().get("role");
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -25,6 +28,8 @@ export default function CommunicationsPage() {
     }
     load();
   }, []);
+
+  if (workspaceRole && workspaceRole !== "all") return <RecruitmentWorkspace key={workspaceRole} roleId={workspaceRole} initialTab="communications" />;
 
   if (loading) {
     return (

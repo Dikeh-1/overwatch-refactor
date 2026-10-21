@@ -107,7 +107,6 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
       const data = await res.json();
       if (res.ok && data.success) {
         setCandidateToken(data.token);
-        candidate.nextPhaseToken = data.token;
         if (typeof window !== "undefined") {
           window.dispatchEvent(new CustomEvent("admin:careers-updated"));
         }
@@ -144,7 +143,6 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
         }),
       });
       if (!res.ok) throw new Error("Failed to save score");
-      candidate.testScore = sanitized;
       setSavedScore(sanitized);
       setScoreSuccessMsg(t("Score saved successfully", "Pontuação gravada com sucesso"));
       window.dispatchEvent(new CustomEvent("admin:careers-updated"));
@@ -822,7 +820,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                         {t("Selected Response Option (PT-MZ):", "Opção de Resposta Selecionada (PT-MZ):")}
                       </span>
                       <div className="p-2.5 rounded bg-white border border-sky-200 text-slate-800 italic text-[0.72rem]">
-                        "{candidate.nextPhaseResponseOption || (candidate.nextPhaseResponse === "yes" ? "Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas." : "Não tenho interesse")}"
+                        &quot;{candidate.nextPhaseResponseOption || (candidate.nextPhaseResponse === "yes" ? "Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas." : "Não tenho interesse")}&quot;
                       </div>
                     </div>
                   )}

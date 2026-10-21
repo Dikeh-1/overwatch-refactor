@@ -1,3 +1,4 @@
+import { isNextPhase, resolveApplication } from "@/lib/careers-workflow";
 import { getApplications, updateApplication } from "@/lib/careers-store";
 import { sendNextPhaseConfirmationEmail, sendNextPhaseClosureEmail } from "@/lib/careers-email";
 import crypto from "node:crypto";
@@ -28,6 +29,8 @@ export async function GET(request: Request) {
   if (!candidate) {
     return Response.json({ error: "Token inválido ou não encontrado" }, { status: 404 });
   }
+
+  if (!isNextPhase(resolveApplication(candidate))) return Response.json({ error: "This invitation is no longer active" }, { status: 410 });
 
   return Response.json({
     valid: true,
@@ -65,6 +68,9 @@ export async function POST(request: Request) {
     if (!candidate) {
       return Response.json({ error: "Convite não encontrado ou token inválido" }, { status: 404 });
     }
+
+    const effective = resolveApplication(candidate);
+    if (!isNextPhase(effective) || ["hired", "training", "interview"].includes(effective.status)) return Response.json({ error: "Contact the recruitment team to update this decision." }, { status: 409 });
 
     // Idempotency: If already responded with same choice, return current state
     if (candidate.nextPhaseRespondedAt && candidate.nextPhaseResponse === choice) {

@@ -1,3 +1,5 @@
+import { resolveApplication, isTerminal } from "@/lib/careers-workflow";
+import { getCandidateSlotConfig, reserveTestSlot } from "@/lib/careers-booking";
 import { getApplication, updateApplication, getTestSlotConfig, getApplications } from "@/lib/careers-store";
 import { DEFAULT_TEST_SLOTS, normalizeSlot, isPastDateSlot } from "@/lib/careers";
 import { sendBookingConfirmation } from "@/lib/careers-email";
@@ -19,7 +21,8 @@ export async function GET(request: Request) {
       );
     }
 
-    const candidate = await getApplication(id);
+    const raw = await getApplication(id);
+    const candidate = raw ? resolveApplication(raw) : null;
     if (!candidate) {
       return Response.json(
         { error: "Candidatura não encontrada." },
@@ -28,7 +31,7 @@ export async function GET(request: Request) {
     }
 
     // Block booking link if candidate status is deactivated or archived
-    if (DEACTIVATED_STATUSES.includes(candidate.status as any)) {
+    if (isTerminal(candidate)) {
       return Response.json(
         {
           error: "Este link de convocatória foi desactivado.",
@@ -40,24 +43,13 @@ export async function GET(request: Request) {
     }
 
     const allApps = await getApplications();
-    const { slots: activeSlots, quota = 15 } = await getTestSlotConfig();
+    const { slots: activeSlots, quota = 15 } = await getCandidateSlotConfig(candidate);
     const hasActiveGrace = Boolean(candidate.rebookingGrace && !candidate.rebookingGrace.usedAt);
 
     // Filter available candidate booking slots:
     // If candidate has not booked yet or is using Grace OTL, only provide future open slots.
     // If all configured slots are in the past, fallback to DEFAULT_TEST_SLOTS filtered for future.
-    let candidateSlots = activeSlots;
-    if (hasActiveGrace || !candidate.testSlot) {
-      const futureSlots = candidateSlots.filter((s) => !isPastDateSlot(s));
-      if (futureSlots.length > 0) {
-        candidateSlots = futureSlots;
-      } else {
-        candidateSlots = DEFAULT_TEST_SLOTS.filter((s) => !isPastDateSlot(s));
-        if (candidateSlots.length === 0) {
-          candidateSlots = [...DEFAULT_TEST_SLOTS];
-        }
-      }
-    }
+    const candidateSlots = activeSlots.filter(s => !isPastDateSlot(s));
 
     const maxPerDay = quota;
     const slotStats: Record<string, { booked: number; max: number; isFull: boolean; remaining: number; isPast: boolean }> = {};
@@ -65,7 +57,7 @@ export async function GET(request: Request) {
       const normS = normalizeSlot(s);
       const isPast = isPastDateSlot(s);
       const booked = allApps.filter(
-        (a) => normalizeSlot(a.testSlot) === normS && a.status !== "rejected" && a.status !== "archived" && a.id !== candidate.id
+        (a) => normalizeSlot(a.testSlot) === normS && !isTerminal(resolveApplication(a)) && a.id !== candidate.id
       ).length;
       const isFull = isPast || booked >= maxPerDay;
       slotStats[s] = {
@@ -123,7 +115,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const candidate = await getApplication(id);
+    const raw = await getApplication(id);
+    const candidate = raw ? resolveApplication(raw) : null;
     if (!candidate) {
       return Response.json(
         { error: "Candidatura não encontrada." },
@@ -132,7 +125,7 @@ export async function POST(request: Request) {
     }
 
     // Block booking for deactivated or archived candidates
-    if (DEACTIVATED_STATUSES.includes(candidate.status as any)) {
+    if (isTerminal(candidate)) {
       return Response.json(
         {
           error: "Este link de agendamento foi desactivado. Contacte o departamento de RH para mais informações.",
@@ -171,42 +164,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Slot quota safeguard: enforce dynamic quota (default 15 candidates per day)
-    const { quota = 15 } = await getTestSlotConfig();
-    const allApps = await getApplications();
-    const currentBookings = allApps.filter(
-      (a) => normalizeSlot(a.testSlot) === normalizedSlot && a.status !== "rejected" && a.status !== "archived" && a.id !== id
-    ).length;
-
-    if (currentBookings >= quota) {
-      return Response.json(
-        {
-          error:
-            `As vagas para este dia já se encontram esgotadas (limite de ${quota} candidatas por dia atingido). Por favor seleccione outra data disponível.`,
-          slotFull: true,
-        },
-        { status: 409 },
-      );
-    }
-
-    const bookedAt = new Date().toISOString();
-    const updates: Record<string, any> = {
-      testSlot: normalizedSlot,
-      testBookedAt: bookedAt,
-      status: "interview",
-      attendedAt: undefined,
-      attendanceStatus: undefined,
-    };
-
-    if (hasActiveGrace && candidate.rebookingGrace) {
-      updates.previousTestSlot = candidate.rebookingGrace.previousSlot || candidate.testSlot || undefined;
-      updates.rebookingGrace = {
-        ...candidate.rebookingGrace,
-        usedAt: bookedAt,
-      };
-    }
-
-    const updated = await updateApplication(id, updates);
+    const config = await getCandidateSlotConfig(candidate);
+    const updated = await reserveTestSlot(candidate, normalizedSlot, config, await getApplications(true));
 
     const origin =
       request.headers.get("origin") ||
@@ -232,6 +191,8 @@ export async function POST(request: Request) {
       testBookedAt: updated.testBookedAt,
     });
   } catch (error) {
+    const code = error instanceof Error ? error.message : "";
+    if (["SLOT_FULL", "ALREADY_BOOKED", "INVALID_SLOT", "CANDIDATE_INACTIVE", "INVITATION_REQUIRED"].includes(code)) return Response.json({ error: code === "SLOT_FULL" ? "Este turno está cheio. Escolha outra data." : code === "INVALID_SLOT" ? "Seleccione um turno disponível configurado para este lote." : "Este agendamento não está disponível. Contacte a equipa de recrutamento.", code }, { status: 409 });
     console.error("Test booking POST error:", error);
     return Response.json(
       { error: "Falha ao gravar confirmação do teste." },

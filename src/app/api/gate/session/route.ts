@@ -1,27 +1,12 @@
+import { gateAuthorized, gatePin, createGateToken } from "@/lib/gate-auth";
+import { equal, sameOrigin } from "@/lib/careers-auth";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-const DEFAULT_GATE_PIN = "2026";
-const VALID_PINS = [
-  process.env.GATE_PIN,
-  DEFAULT_GATE_PIN,
-].filter(Boolean) as string[];
-
 export async function GET(request: Request) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("ow_gate_session")?.value;
-  const adminSession = cookieStore.get("admin_session")?.value || cookieStore.get("qa-session")?.value;
-  const headerToken =
-    request.headers.get("x-gate-token") ||
-    request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-
-  const authed =
-    token === "authorized_gate_officer" ||
-    headerToken === "authorized_gate_officer" ||
-    (Boolean(headerToken) && VALID_PINS.includes(headerToken!)) ||
-    Boolean(adminSession);
+  const authed = await gateAuthorized(request);
 
   return NextResponse.json(
     { authenticated: authed },
@@ -36,6 +21,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (!sameOrigin(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   try {
     const { pin } = await request.json();
     if (!pin || typeof pin !== "string") {
@@ -43,18 +29,18 @@ export async function POST(request: Request) {
     }
 
     const cleanPin = pin.trim();
-    const isValid = VALID_PINS.some((p) => p && p.trim() === cleanPin);
+    const isValid = Boolean(gatePin()) && equal(gatePin(), cleanPin);
 
     if (!isValid) {
       return NextResponse.json({ error: "PIN de segurança incorrecto." }, { status: 401 });
     }
 
     const cookieStore = await cookies();
-    cookieStore.set("ow_gate_session", "authorized_gate_officer", {
+    cookieStore.set("ow_gate_session", createGateToken(), {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60 * 8, // 7 days
       path: "/",
     });
 

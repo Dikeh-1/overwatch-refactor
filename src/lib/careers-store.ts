@@ -1,7 +1,7 @@
 import "server-only";
 import { mkdir, readFile, writeFile, rename, unlink } from "node:fs/promises";
 import path from "node:path";
-import { Pool } from "pg";
+import { getCareersPool as getPgPool } from "./careers-db";
 import { roles, type Role, type Application, DEFAULT_TEST_SLOTS } from "./careers";
 import {
   getConfiguredTestSlots,
@@ -14,19 +14,6 @@ import {
 
 const directory = path.join(process.cwd(), ".careers-data");
 
-let pgPool: Pool | null = null;
-function getPgPool(): Pool | null {
-  const dbUrl = process.env.DATABASE_URL;
-  if (!dbUrl) return null;
-  if (!pgPool) {
-    pgPool = new Pool({
-      connectionString: dbUrl,
-      ssl: { rejectUnauthorized: false },
-      max: 10,
-    });
-  }
-  return pgPool;
-}
 
 function getSupabaseUrl() {
   return (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim().replace(/\/+$/, "");
@@ -102,79 +89,8 @@ export function exclusive<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 export async function getRoles(): Promise<Role[]> {
-  try {
-    const { getRoleDefinitions } = await import("./careers-campaign-store");
-    const roleDefs = await getRoleDefinitions().catch(() => null);
-    if (roleDefs && roleDefs.length > 0) {
-      return roleDefs.map((r) => ({
-        id: r.id,
-        en: r.en || r.id,
-        pt: r.pt || r.id,
-        open: Boolean(r.open),
-        department: r.department,
-        descriptionEn: r.descriptionEn,
-        descriptionPt: r.descriptionPt,
-        screeningRules: r.screeningRules,
-        activeCohortId: r.activeCohortId,
-        pipelineStages: r.pipelineStages,
-      }));
-    }
-  } catch {}
-
-  try {
-    const defs = await read<any[]>("roles_def.json", []);
-    if (Array.isArray(defs) && defs.length > 0) {
-      return defs.map((r) => ({
-        id: r.id,
-        en: r.en || r.title_en || r.id,
-        pt: r.pt || r.title_pt || r.id,
-        open: Boolean(r.open),
-      }));
-    }
-  } catch {}
-
-  const pool = getPgPool();
-  if (pool) {
-    try {
-      const res = await pool.query("SELECT id, open FROM career_roles");
-      if (res.rows && res.rows.length > 0) {
-        return roles.map((role) => {
-          const match = res.rows.find(
-            (r: any) =>
-              r.id === role.id ||
-              (role.id === "cctv" && r.id === "cctv_operator") ||
-              (role.id === "cctv_operator" && r.id === "cctv"),
-          );
-          return {
-            ...role,
-            open: match !== undefined ? Boolean(match.open) : role.open,
-          };
-        });
-      }
-    } catch {}
-  }
-
-  if (!isRemote()) return read("roles.json", roles);
-
-  try {
-    const rows = (await (
-      await api("/rest/v1/career_roles?select=id,open")
-    ).json()) as { id: string; open: boolean }[];
-    return roles.map((role) => {
-      const match = rows.find(
-        (r) =>
-          r.id === role.id ||
-          (role.id === "cctv" && r.id === "cctv_operator") ||
-          (role.id === "cctv_operator" && r.id === "cctv"),
-      );
-      return {
-        ...role,
-        open: match !== undefined ? Boolean(match.open) : role.open,
-      };
-    });
-  } catch {
-    return read("roles.json", roles);
-  }
+  const { getRoleDefinitions } = await import("./careers-campaign-store");
+  return getRoleDefinitions();
 }
 
 export async function setRole(id: string, open: boolean) {
@@ -279,7 +195,7 @@ export async function getApplications(forceFresh = false): Promise<Application[]
 
   if (!hasPurgedLegacy) {
     hasPurgedLegacy = true;
-    purgeLegacySystemRowsFromApplicationsTable().catch(() => {});
+    // Do not purge legacy configuration before all keys have been migrated.
   }
 
   const pool = getPgPool();
@@ -299,7 +215,7 @@ export async function getApplications(forceFresh = false): Promise<Application[]
       }).catch(() => {});
       return filtered;
     } catch (pgErr) {
-      console.warn("Direct PostgreSQL query error, falling back to REST/local:", pgErr);
+      throw new Error("Candidate storage unavailable", { cause: pgErr });
     }
   }
 
@@ -317,7 +233,7 @@ export async function getApplications(forceFresh = false): Promise<Application[]
       cachedApplicationsAt = Date.now();
       return filtered;
     } catch (apiErr) {
-      console.warn("REST query error, falling back to local:", apiErr);
+      throw new Error("Candidate storage unavailable", { cause: apiErr });
     }
   }
 
@@ -478,7 +394,7 @@ export async function getCV(id: string): Promise<Buffer> {
 export async function getApplication(id: string): Promise<Application | null> {
   if (cachedApplications && cachedApplications.length > 0) {
     const found = cachedApplications.find((a) => a.id === id);
-    if (found) return found;
+    if (found && Date.now() - cachedApplicationsAt < APPLICATIONS_CACHE_TTL_MS) return found;
   }
 
   const pool = getPgPool();
@@ -512,20 +428,13 @@ export async function updateApplication(
   const pool = getPgPool();
   if (pool) {
     try {
-      const current = await getApplication(id);
-      if (!current) throw new Error("Application not found");
-      const merged = { ...current, ...updates };
-      await pool.query("UPDATE career_applications SET data = $1 WHERE id = $2", [JSON.stringify(merged), id]);
+      const removedKeys = Object.keys(updates).filter(key => updates[key] === undefined);
+      const result = await pool.query("UPDATE career_applications SET data = (data - $3::text[]) || $2::jsonb WHERE id = $1 RETURNING data", [id, JSON.stringify(updates), removedKeys]);
+      if (!result.rows[0]) throw new Error("Application not found");
       invalidateApplicationsCache();
-      exclusive(async () => {
-        try {
-          const list = await read("applications.json", []);
-          await write("applications.json", list.map((a: any) => (a.id === id ? merged : a)));
-        } catch {}
-      }).catch(() => {});
-      return merged;
-    } catch (pgErr) {
-      console.warn("PG updateApplication error, falling back:", pgErr);
+      return result.rows[0].data as Application;
+    } catch (error) {
+      throw new Error("Unable to update candidate", { cause: error });
     }
   }
 

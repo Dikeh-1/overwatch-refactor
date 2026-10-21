@@ -42,6 +42,57 @@ interface AdminSidebarProps {
   };
 }
 
+  const NavLinkItem = ({
+    href,
+    isNavigating,
+    activeTargetHref,
+    onNavigate,
+    label,
+    icon: Icon,
+    isActiveMatch,
+    badge,
+    badgeClass,
+  }: {
+    href: string;
+    isNavigating: boolean;
+    activeTargetHref: string | null;
+    onNavigate: (label: string, href: string) => void;
+    label: string;
+    icon: React.ComponentType<{ size: number; className?: string }>;
+    isActiveMatch: boolean;
+    badge?: React.ReactNode;
+    badgeClass?: string;
+  }) => {
+    const isTargetNavigating = isNavigating && activeTargetHref === href;
+    return (
+      <Link
+        href={href}
+        onClick={() => onNavigate(label, href)}
+        className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+          isActiveMatch
+            ? "bg-white/[0.1] text-white font-semibold"
+            : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
+        }`}
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          <Icon size={15} className={isActiveMatch ? "text-white" : "text-slate-400"} />
+          <span className="truncate">{label}</span>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {isTargetNavigating && (
+            <span className="w-1.5 h-1.5 rounded-full bg-white" />
+          )}
+          {badge !== undefined && badge !== null && (
+            <span className={badgeClass || "px-1.5 py-0.2 rounded text-[0.65rem] font-bold bg-white/10 text-slate-200"}>
+              {badge}
+            </span>
+          )}
+        </div>
+      </Link>
+    );
+  };
+
+
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   lang,
   onToggleLang,
@@ -93,49 +144,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     "hired",
   ];
 
-  const NavLinkItem = ({
-    href,
-    label,
-    icon: Icon,
-    isActiveMatch,
-    badge,
-    badgeClass,
-  }: {
-    href: string;
-    label: string;
-    icon: React.ComponentType<{ size: number; className?: string }>;
-    isActiveMatch: boolean;
-    badge?: React.ReactNode;
-    badgeClass?: string;
-  }) => {
-    const isTargetNavigating = isNavigating && activeTargetHref === href;
-    return (
-      <Link
-        href={href}
-        onClick={() => handleNavClick(label, href)}
-        className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-          isActiveMatch
-            ? "bg-white/[0.1] text-white font-semibold"
-            : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
-        }`}
-      >
-        <div className="flex items-center gap-2.5 min-w-0">
-          <Icon size={15} className={isActiveMatch ? "text-white" : "text-slate-400"} />
-          <span className="truncate">{label}</span>
-        </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          {isTargetNavigating && (
-            <span className="w-1.5 h-1.5 rounded-full bg-white" />
-          )}
-          {badge !== undefined && badge !== null && (
-            <span className={badgeClass || "px-1.5 py-0.2 rounded text-[0.65rem] font-bold bg-white/10 text-slate-200"}>
-              {badge}
-            </span>
-          )}
-        </div>
-      </Link>
-    );
-  };
 
   return (
     <>
@@ -171,7 +179,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 admin-scrollbar">
           {/* Main Overview */}
           <div className="space-y-1">
-            <NavLinkItem
+            <NavLinkItem isNavigating={isNavigating} activeTargetHref={activeTargetHref} onNavigate={handleNavClick}
               href="/admin"
               label={t("Global Overview", "Visão Geral Global")}
               icon={LayoutDashboard}
@@ -291,7 +299,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             {(() => {
               const href = activeRole ? `/admin/recruitment?role=${activeRole.id}` : "/admin/recruitment";
               return (
-                <NavLinkItem
+                <NavLinkItem isNavigating={isNavigating} activeTargetHref={activeTargetHref} onNavigate={handleNavClick}
                   href={href}
                   label={t("Overview & Funnel", "Visão Geral da Vaga")}
                   icon={LayoutDashboard}
@@ -304,7 +312,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             {(() => {
               const href = activeRole ? `/admin/recruitment/candidates?role=${activeRole.id}` : "/admin/recruitment/candidates";
               return (
-                <NavLinkItem
+                <NavLinkItem isNavigating={isNavigating} activeTargetHref={activeTargetHref} onNavigate={handleNavClick}
                   href={href}
                   label={t("Candidates Intake", "Candidaturas")}
                   icon={Users}
@@ -315,10 +323,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             })()}
 
             {/* Testing Stage (Shown only if role includes testing) */}
-            {stages.includes("testing") && (() => {
+            {(stages.includes("testing") || activeRole?.id === "cctv_technical_manager") && (() => {
               const href = activeRole ? `/admin/recruitment/testing?role=${activeRole.id}` : "/admin/recruitment/testing";
               return (
-                <NavLinkItem
+                <NavLinkItem isNavigating={isNavigating} activeTargetHref={activeTargetHref} onNavigate={handleNavClick}
                   href={href}
                   label={t("Testing & Attendance", "Escala & Presenças")}
                   icon={CalendarCheck}
@@ -333,7 +341,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             {stages.includes("next_phase") && (() => {
               const href = activeRole ? `/admin/recruitment/next-phase?role=${activeRole.id}` : "/admin/recruitment/next-phase";
               return (
-                <NavLinkItem
+                <NavLinkItem isNavigating={isNavigating} activeTargetHref={activeTargetHref} onNavigate={handleNavClick}
                   href={href}
                   label={t("Next Phase Cohort", "Turma Próxima Fase")}
                   icon={Award}
@@ -348,7 +356,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             {(() => {
               const href = activeRole ? `/admin/recruitment/communications?role=${activeRole.id}` : "/admin/recruitment/communications";
               return (
-                <NavLinkItem
+                <NavLinkItem isNavigating={isNavigating} activeTargetHref={activeTargetHref} onNavigate={handleNavClick}
                   href={href}
                   label={t("Communications Studio", "Comunicações & Minutas")}
                   icon={Mail}
@@ -361,7 +369,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             {activeRole && (() => {
               const href = `/admin/recruitment/form-builder?role=${activeRole.id}`;
               return (
-                <NavLinkItem
+                <NavLinkItem isNavigating={isNavigating} activeTargetHref={activeTargetHref} onNavigate={handleNavClick}
                   href={href}
                   label={t("Application Form Builder", "Construtor de Formulário")}
                   icon={SlidersHorizontal}
@@ -377,7 +385,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               {t("Roles & Archives", "Vagas & Histórico")}
             </div>
 
-            <NavLinkItem
+            <NavLinkItem isNavigating={isNavigating} activeTargetHref={activeTargetHref} onNavigate={handleNavClick}
               href="/admin/recruitment/roles"
               label={t("All Job Roles", "Todas as Vagas")}
               icon={Briefcase}
@@ -385,7 +393,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               badge={roles.length}
             />
 
-            <NavLinkItem
+            <NavLinkItem isNavigating={isNavigating} activeTargetHref={activeTargetHref} onNavigate={handleNavClick}
               href="/admin/recruitment/archive"
               label={t("Archive Vault", "Cofre de Arquivo")}
               icon={Archive}
@@ -412,7 +420,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               <ExternalLink size={12} className="text-slate-500" />
             </Link>
 
-            <NavLinkItem
+            <NavLinkItem isNavigating={isNavigating} activeTargetHref={activeTargetHref} onNavigate={handleNavClick}
               href="/admin/settings"
               label={t("Settings", "Configurações")}
               icon={Settings}

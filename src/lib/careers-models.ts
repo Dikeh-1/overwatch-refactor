@@ -5,6 +5,7 @@ export type PipelineStageKey =
   | "gate_checkin"      // Physical gate pass check-in
   | "next_phase"        // Next Phase candidate selection & confirmation
   | "interview"         // In-person interview
+  | "training"
   | "hired";            // Final offer & hired
 
 export interface PipelineStageConfig {
@@ -56,6 +57,12 @@ export interface CareerCohort {
   stages: PipelineStageKey[];
   screeningRules: ScreeningRule[];
   notes?: string;
+  legacy?: boolean;
+  unassigned?: boolean;
+  roleSnapshot?: CareerRoleDefinition;
+  closureSnapshot?: { capturedAt: string; applications: import("./careers").Application[] };
+  testSlots?: string[];
+  slotQuota?: number;
 }
 
 export const ALL_PIPELINE_STAGES: PipelineStageConfig[] = [
@@ -113,6 +120,7 @@ export const ALL_PIPELINE_STAGES: PipelineStageConfig[] = [
     enabled: true,
     order: 6,
   },
+  { key: "training", labelPt: "Formação", labelEn: "Training", descriptionPt: "Formação e integração.", descriptionEn: "Training and onboarding.", enabled: true, order: 6.5 },
   {
     key: "hired",
     labelPt: "Contratados",

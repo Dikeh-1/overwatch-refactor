@@ -1,5 +1,7 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
+import RecruitmentWorkspace from "@/components/admin/recruitment/RecruitmentWorkspace";
 import React, { useState, useEffect, useCallback } from "react";
 import { TestingAttendanceView } from "@/components/admin/recruitment/TestingAttendanceView";
 import GateCheckInModal from "@/components/admin/GateCheckInModal";
@@ -7,6 +9,7 @@ import { Application, DEFAULT_TEST_SLOTS } from "@/lib/careers";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 
 export default function TestingPage() {
+  const workspaceRole = useSearchParams().get("role");
   const [applications, setApplications] = useState<Application[]>([]);
   const [broadcastSlots, setBroadcastSlots] = useState<string[]>([...DEFAULT_TEST_SLOTS]);
   const [slotQuota, setSlotQuota] = useState<number>(15);
@@ -103,6 +106,8 @@ export default function TestingPage() {
       return false;
     }
   };
+
+  if (workspaceRole && workspaceRole !== "all") return <RecruitmentWorkspace key={workspaceRole} roleId={workspaceRole} initialTab="testing" />;
 
   if (loading) {
     return (

@@ -1,24 +1,14 @@
+import { gateAuthorized } from "@/lib/gate-auth";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getApplications } from "@/lib/careers-store";
-import { getSlotDayNumber, getMaputoToday } from "@/lib/careers";
+import { getSlotDayNumber, getMaputoToday, isSlotToday } from "@/lib/careers";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const cookieToken = cookieStore.get("ow_gate_session")?.value;
-    const adminSession = cookieStore.get("admin_session")?.value || cookieStore.get("qa-session")?.value;
-    const headerToken =
-      request.headers.get("x-gate-token") ||
-      request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-
-    const isAuthorized =
-      cookieToken === "authorized_gate_officer" ||
-      headerToken === "authorized_gate_officer" ||
-      (Boolean(headerToken) && (headerToken === process.env.GATE_PIN || headerToken === "2026")) ||
-      Boolean(adminSession);
+    const isAuthorized = await gateAuthorized(request);
 
     if (!isAuthorized) {
       return NextResponse.json(
@@ -40,9 +30,9 @@ export async function GET(request: Request) {
     const todayCandidates = all
       .filter((a) => {
         if (!a.testSlot) return false;
-        if (a.status === "rejected" || a.status === "archived") return false;
+        if (["rejected", "archived", "not_advancing", "withdrawn", "disqualified"].includes(a.status)) return false;
         const slotDay = getSlotDayNumber(a.testSlot);
-        return slotDay !== null && slotDay === today.day;
+        return isSlotToday(a.testSlot);
       })
       .map((c) => ({
         id: c.id,

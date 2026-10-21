@@ -81,38 +81,7 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
     label: "",
   });
 
-  // Guarantee that default roles are ALWAYS present and never show an empty screen
-  const effectiveRoles = useMemo(() => {
-    const baseRoles = roleDefs && roleDefs.length > 0
-      ? roleDefs
-      : defaultRoles.map((r) => {
-          const isTechMgr = r.id === "cctv_technical_manager";
-          const stages: PipelineStageKey[] = isTechMgr
-            ? ["applications", "screening", "interview", "hired"]
-            : ["applications", "screening", "testing", "gate_checkin", "next_phase", "interview", "hired"];
-
-          return {
-            id: r.id,
-            en: r.en,
-            pt: r.pt,
-            department: isTechMgr ? "Engenharia Técnica" : "Operações",
-            open: r.open,
-            activeCohortId: r.open ? `${r.id}_initial_cohort` : null,
-            pipelineStages: stages,
-            screeningRules: DEFAULT_SCREENING_RULES_BY_ROLE[r.id] || [],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-        });
-
-    return baseRoles.map((role) => ({
-      ...role,
-      screeningRules:
-        role.screeningRules && role.screeningRules.length > 0
-          ? role.screeningRules
-          : DEFAULT_SCREENING_RULES_BY_ROLE[role.id] || [],
-    }));
-  }, [roleDefs]);
+  const effectiveRoles = useMemo(() => roleDefs.map(role => ({ ...role, screeningRules: role.screeningRules ?? DEFAULT_SCREENING_RULES_BY_ROLE[role.id] ?? [] })), [roleDefs]);
 
   const filteredRoles = effectiveRoles.filter((r) => {
     if (!searchQuery.trim()) return true;
@@ -551,7 +520,7 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
               </div>
               <div>
                 <h3 className="text-base font-bold text-slate-900">
-                  {t("Seal & Archive Recruitment Cohort", "Encerrar & Selar Lote no Cofre")}
+                  {t("Close Applications & Preserve Workspace", "Encerrar Candidaturas & Preservar Lote")}
                 </h3>
                 <p className="text-xs text-slate-500">
                   {lang === "en" ? archiveTargetRole.en || archiveTargetRole.pt : archiveTargetRole.pt} ({archiveTargetRole.id})
@@ -561,8 +530,8 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
 
             <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200 text-xs text-amber-900 leading-relaxed">
               {t(
-                "Closing this role will seal and preserve all current applications, scores, and candidate data into the Historical Archive Vault. When reopened in the future, it starts fresh without mixing candidate records.",
-                "Ao encerrar esta vaga, todas as candidaturas, registos de testes e notas serão selados e preservados no Cofre de Arquivo. Quando a vaga for reaberta, o funil ativo iniciará completamente limpo para não misturar candidatos.",
+                "New applications will stop. Candidate stages, scores and communications are preserved, and selection continues in the Archive Vault workspace. Reopening creates a separate recruitment cycle.",
+                "Novas candidaturas serão encerradas. As etapas, notas e comunicações ficam preservadas; a selecção continua no Cofre de Arquivo. Reabrir cria um lote separado.",
               )}
             </div>
 

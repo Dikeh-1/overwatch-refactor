@@ -1,5 +1,8 @@
+import crypto from "node:crypto";
+import { getRecruitmentWorkspaceData } from "@/lib/careers-workspace-store";
+import { applicationsForCohort, sameRole, canReceiveTestInvitation, isNextPhase, isQualified } from "@/lib/careers-workflow";
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
-import { getApplications } from "@/lib/careers-store";
+import { getApplications, updateApplication } from "@/lib/careers-store";
 import { sendTransactionalEmail } from "@/lib/careers-email";
 import { siteContact } from "@/lib/site-config";
 import type { Application } from "@/lib/careers";
@@ -7,6 +10,7 @@ import type { Application } from "@/lib/careers";
 export const dynamic = "force-dynamic";
 
 interface BroadcastRequest {
+  cohortId?: string;
   audienceFilter:
     | "invited_unconfirmed"
     | "shortlisted_unbooked"
@@ -70,7 +74,10 @@ export async function POST(request: Request) {
         );
       }
 
-      const allApps = await getApplications();
+      const workspace = await getRecruitmentWorkspaceData();
+    const cohort = body.cohortId ? workspace.cohorts.find(c => c.id === body.cohortId) : undefined;
+    if (body.cohortId && !cohort) return Response.json({ error: "Cohort not found" }, { status: 404 });
+    const allApps = cohort ? applicationsForCohort(workspace.applications, cohort, workspace.cohorts) : workspace.applications;
       const matchedCandidate = allApps.find(
         (a) => a.email.trim().toLowerCase() === recipient.toLowerCase(),
       );
@@ -142,7 +149,10 @@ export async function POST(request: Request) {
       });
     }
 
-    const allApps = await getApplications();
+    const workspace = await getRecruitmentWorkspaceData();
+    const cohort = body.cohortId ? workspace.cohorts.find(c => c.id === body.cohortId) : undefined;
+    if (body.cohortId && !cohort) return Response.json({ error: "Cohort not found" }, { status: 404 });
+    const allApps = cohort ? applicationsForCohort(workspace.applications, cohort, workspace.cohorts) : workspace.applications;
 
     // Filter by individual or audience cohort
     let targetPool: Application[] = [];
@@ -155,13 +165,11 @@ export async function POST(request: Request) {
       );
     } else {
       // Filter by role if specified
-      targetPool = roleId && roleId !== "all" ? allApps.filter((a) => a.role === roleId || (roleId === "cctv" && !a.role)) : allApps;
+      targetPool = roleId && roleId !== "all" ? allApps.filter((a) => sameRole(a.role, roleId)) : allApps;
 
       // Filter by audience cohort
       if (audienceFilter === "invited_unconfirmed" || audienceFilter === "shortlisted_unbooked") {
-        targetPool = targetPool.filter(
-          (a) => !a.testSlot && a.status !== "archived" && a.status !== "rejected",
-        );
+        targetPool = targetPool.filter(a => !a.testSlot && !["archived", "rejected", "not_advancing", "withdrawn", "disqualified"].includes(a.status));
       } else if (audienceFilter === "booked_confirmed") {
         targetPool = targetPool.filter(
           (a) => Boolean(a.testSlot) && a.status !== "archived",
@@ -171,36 +179,13 @@ export async function POST(request: Request) {
           (a) => Boolean(a.invitedAt) && a.status !== "archived",
         );
       } else if (audienceFilter === "screened") {
-        targetPool = targetPool.filter(
-          (a) =>
-            a.status !== "archived" &&
-            a.status !== "rejected" &&
-            (Boolean(a.screeningResult?.passedMandatory) ||
-              (typeof a.screeningScore === "number" && a.screeningScore >= 50) ||
-              a.status === "shortlisted" ||
-              a.status === "screening" ||
-              a.status === "interview" ||
-              a.status === "hired"),
-        );
+        targetPool = targetPool.filter(isQualified);
       } else if (audienceFilter === "interview") {
         targetPool = targetPool.filter(
           (a) => a.status === "interview",
         );
       } else if (audienceFilter === "next_phase") {
-        targetPool = targetPool.filter(
-          (a) =>
-            a.status !== "archived" &&
-            a.status !== "rejected" &&
-            (a.status === "next_phase_selected" ||
-              a.status === "next_phase_invited" ||
-              a.status === "awaiting_response" ||
-              a.status === "interest_confirmed" ||
-              a.status === "interest_declined" ||
-              a.nextPhaseStatus === "selected" ||
-              a.nextPhaseStatus === "invited" ||
-              a.nextPhaseStatus === "confirmed" ||
-              a.nextPhaseStatus === "declined"),
-        );
+        targetPool = targetPool.filter(isNextPhase);
       } else if (audienceFilter === "disqualified") {
         targetPool = targetPool.filter((a) => a.status === "archived");
       } else if (audienceFilter === "all_applied" || audienceFilter === "all_role") {
@@ -212,6 +197,8 @@ export async function POST(request: Request) {
         targetPool = targetPool.filter((a) => a.sex === genderFilter);
       }
     }
+
+    if (includeBookingButton) targetPool = targetPool.filter(canReceiveTestInvitation);
 
     // Deduplicate by email address and exclude deactivated candidate
     const seenEmails = new Set<string>();
@@ -265,8 +252,10 @@ export async function POST(request: Request) {
           attachment: attachments?.map((a) => ({ name: a.name, content: a.content })),
         });
 
+        await updateApplication(candidate.id, { ...(includeBookingButton ? { invitedAt: new Date().toISOString() } : {}), communications: [...(candidate.communications || []), { id: crypto.randomUUID(), type: "custom", subject: candSubj, recipient: candidate.email, sentAt: new Date().toISOString(), status: "sent" }] });
         sentCount++;
       } catch (err) {
+        await updateApplication(candidate.id, { communications: [...(candidate.communications || []), { id: crypto.randomUUID(), type: "custom", subject, recipient: candidate.email, sentAt: new Date().toISOString(), status: "failed" }] }).catch(() => {});
         errors.push({
           email: candidate.email,
           error: (err as Error).message || String(err),
@@ -280,6 +269,7 @@ export async function POST(request: Request) {
     return Response.json({
       success: true,
       sentCount,
+      failedCount: errors.length,
       totalTargeted: deduplicatedCandidates.length,
       errors: errors.length > 0 ? errors : undefined,
     });

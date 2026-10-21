@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
+import { sameRole, isTerminal, recruitmentMetrics } from "@/lib/careers-workflow";
 import type { CareerRoleDefinition, PipelineStageKey } from "@/lib/careers-models";
 import { roles as defaultLegacyRoles, Application } from "@/lib/careers";
 
@@ -45,7 +46,7 @@ export const ActiveRoleProvider: React.FC<{
       const res = await fetch(`/api/admin/careers/roles-manager?t=${Date.now()}`, { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
-        if (data.roles && Array.isArray(data.roles) && data.roles.length > 0) {
+        if (Array.isArray(data.roles)) {
           setRoles(data.roles);
           return;
         }
@@ -91,19 +92,19 @@ export const ActiveRoleProvider: React.FC<{
     } catch {}
   }, []);
 
-  const setActiveRoleId = (id: string) => {
+  const setActiveRoleId = useCallback((id: string) => {
     setActiveRoleIdState(id);
     try {
       localStorage.setItem("overwatch_active_role", id);
     } catch {}
-  };
+  }, []);
 
   const activeRole = useMemo(() => {
     if (!activeRoleId || activeRoleId === "all") {
       // Default to first open role or first role
       return roles.find((r) => r.open) || roles[0] || null;
     }
-    return roles.find((r) => r.id === activeRoleId) || null;
+    return roles.find((r) => r.id === activeRoleId) || roles[0] || null;
   }, [roles, activeRoleId]);
 
   // Compute stats per role
@@ -111,26 +112,9 @@ export const ActiveRoleProvider: React.FC<{
     const stats: Record<string, RoleStats> = {};
 
     roles.forEach((r) => {
-      const roleApps = applications.filter(
-        (a) => a.role === r.id || (r.id === "cctv" && (!a.role || a.role === "cctv" || a.role === "cctv_operator" || a.role === "cco-operator-maputo")),
-      );
-      stats[r.id] = {
-        total: roleApps.filter((a) => a.status !== "archived").length,
-        active: roleApps.filter((a) => a.status !== "archived" && a.status !== "rejected").length,
-        testing: roleApps.filter((a) => Boolean(a.testSlot) && a.status !== "archived").length,
-        nextPhase: roleApps.filter(
-          (a) =>
-            a.status === "next_phase_selected" ||
-            a.status === "next_phase_invited" ||
-            a.status === "awaiting_response" ||
-            a.status === "interest_confirmed" ||
-            a.status === "interest_declined" ||
-            a.nextPhaseStatus === "selected" ||
-            a.nextPhaseStatus === "invited" ||
-            a.nextPhaseStatus === "confirmed" ||
-            a.nextPhaseStatus === "declined",
-        ).length,
-      };
+      const roleApps = applications.filter(a => sameRole(a.role, r.id) && (!r.open || !r.activeCohortId || a.workspaceCohortId === r.activeCohortId));
+      const metrics = recruitmentMetrics(roleApps);
+      stats[r.id] = { total: metrics.total, active: roleApps.filter(a => !isTerminal(a)).length, testing: metrics.booked, nextPhase: metrics.nextPhase };
     });
 
     return stats;
@@ -154,3 +138,9 @@ export const ActiveRoleProvider: React.FC<{
 };
 
 export const useActiveRole = () => useContext(ActiveRoleContext);
+
+/** Give embedded open/closed cohort views the same role capabilities without changing the sidebar selection. */
+export function CohortRoleProvider({ role, children }: { role: CareerRoleDefinition; children: React.ReactNode }) {
+  const parent = useActiveRole();
+  return <ActiveRoleContext.Provider value={{ ...parent, activeRoleId: role.id, activeRole: role, roles: [role], setActiveRoleId: () => {} }}>{children}</ActiveRoleContext.Provider>;
+}

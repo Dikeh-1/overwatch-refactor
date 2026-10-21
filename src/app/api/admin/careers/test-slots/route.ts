@@ -1,3 +1,6 @@
+import { getRecruitmentWorkspaceData } from "@/lib/careers-workspace-store";
+import { saveCohort } from "@/lib/careers-campaign-store";
+import { parseSlotComponents } from "@/lib/careers";
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
 import { getTestSlotConfig, saveTestSlotConfig } from "@/lib/careers-store";
 
@@ -51,7 +54,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const quota = typeof body.quota === "number" && body.quota > 0 ? body.quota : 15;
+    const quota = body.quota ?? 15;
+    if (!Number.isInteger(quota) || quota < 1 || quota > 200 || cleanSlots.some((s: string) => !parseSlotComponents(s))) return Response.json({ error: "Invalid slot dates or quota" }, { status: 400 });
+    if (body.cohortId) {
+      const workspace = await getRecruitmentWorkspaceData();
+      const cohort = workspace.cohorts.find(c => c.id === body.cohortId);
+      if (!cohort || cohort.unassigned) return Response.json({ error: "Cohort not found or membership needs review" }, { status: 400 });
+      await saveCohort({ ...cohort, testSlots: [...new Set<string>(cleanSlots)], slotQuota: quota });
+      return Response.json({ success: true, slots: cleanSlots, quota });
+    }
     const saved = await saveTestSlotConfig({ slots: cleanSlots, quota });
     return Response.json({ success: true, slots: saved.slots, quota: saved.quota });
   } catch (error) {

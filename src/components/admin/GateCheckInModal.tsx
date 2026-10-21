@@ -130,7 +130,7 @@ export default function GateCheckInModal({
   );
 
   // QR Scanning Loop
-  const scanLoop = useCallback(() => {
+  const scanLoop = useCallback(function scanFrame() {
     if (!videoRef.current || !canvasRef.current) return;
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -175,7 +175,7 @@ export default function GateCheckInModal({
       }
     }
 
-    animationFrameId.current = requestAnimationFrame(scanLoop);
+    animationFrameId.current = requestAnimationFrame(scanFrame);
   }, [processing, verifyCheckIn]);
 
   // Start camera helper

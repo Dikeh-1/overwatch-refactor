@@ -6,8 +6,8 @@
  *   3. outside_mozambique — Candidates based outside Mozambique entirely
  */
 
-export type LocationGroup = "maputo_region" | "mozambique_other" | "outside_mozambique";
-export type LocationFilterValue = "all" | "maputo_region" | "mozambique_other" | "outside_mozambique";
+export type LocationGroup = "maputo_region" | "mozambique_other" | "outside_mozambique" | "unknown";
+export type LocationFilterValue = "all" | LocationGroup | "unknown";
 
 export interface LocationClassification {
   isMozambique: boolean;
@@ -59,12 +59,13 @@ export function classifyCandidateLocation(candidate: {
     (candidate.technicalData && candidate.technicalData.currentLocation) ||
     ""
   ).trim();
-  const loc = locRaw.toLowerCase();
+  const loc = locRaw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const contains = (word: string) => new RegExp(`(?:^|[^a-z])${word.normalize("NFD").replace(/[\u0300-\u036f]/g, "")}(?:$|[^a-z])`).test(loc);
   const phone = (candidate.whatsapp || "").replace(/[\s\-\(\)]/g, "");
 
   // 1. Explicit foreign keywords take precedence
   for (const fk of FOREIGN_KEYWORDS) {
-    if (loc.includes(fk)) {
+    if (contains(fk)) {
       return {
         isMozambique: false,
         isMaputoRegion: false,
@@ -77,7 +78,7 @@ export function classifyCandidateLocation(candidate: {
 
   // 2. Maputo metropolitan area (checked before generic Mozambique)
   for (const mk of MAPUTO_REGION_KEYWORDS) {
-    if (loc.includes(mk)) {
+    if (contains(mk)) {
       return {
         isMozambique: true,
         isMaputoRegion: true,
@@ -90,7 +91,7 @@ export function classifyCandidateLocation(candidate: {
 
   // 3. Other Mozambican provinces / cities
   for (const ok of OTHER_MOZAMBIQUE_KEYWORDS) {
-    if (loc.includes(ok)) {
+    if (contains(ok)) {
       return {
         isMozambique: true,
         isMaputoRegion: false,
@@ -106,19 +107,19 @@ export function classifyCandidateLocation(candidate: {
   if (isMozPhone) {
     return {
       isMozambique: true,
-      isMaputoRegion: true, // Assume Maputo region when only phone confirms Mozambique
-      group: "maputo_region",
+      isMaputoRegion: false,
+      group: "unknown",
       locationLabel: locRaw || "Moçambique (localização não especificada)",
-      reason: "Contacto com prefixo de Moçambique (+258) — assumido região de Maputo",
+      reason: "Contacto nacional; residência metropolitana por confirmar",
     };
   }
 
-  // 5. Default: unrecognised = outside Mozambique
+  // 5. Unknown locations require review, never automatic rejection.
   return {
     isMozambique: false,
     isMaputoRegion: false,
-    group: "outside_mozambique",
-    locationLabel: locRaw || "Fora de Moçambique",
+    group: "unknown",
+    locationLabel: locRaw || "Localização por confirmar",
     reason: "Localização não identificada como nacional",
   };
 }

@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const ids: string[] = Array.isArray(body.ids) ? body.ids : [];
+    const ids: string[] = Array.isArray(body.ids) ? [...new Set<string>(body.ids.filter((id: unknown) => typeof id === "string"))] : [];
     const isPreview = Boolean(body.preview);
     const previewEmail = (body.previewEmail || "").trim();
     /**
@@ -99,9 +99,15 @@ export async function POST(request: Request) {
     for (const id of ids) {
       try {
         const candidate = await getApplication(id);
-        if (!candidate) continue;
+        if (!candidate) throw new Error("Candidate not found");
+        if (candidate.role !== "cctv_technical_manager") throw new Error("Regional decline is only available for the technical-manager role");
 
         const locInfo = classifyCandidateLocation(candidate);
+        if (locInfo.group !== declineType) throw new Error("Candidate location does not match this decline audience");
+        if (candidate.locationDecline?.type === declineType && candidate.locationDecline.status === "sent") {
+          results.push({ id, name: candidate.name, email: candidate.email, location: locInfo.locationLabel, success: true, emailSent: false });
+          continue;
+        }
 
         // Activity log entry
         const currentLog = candidate.activityLog || [];
@@ -119,6 +125,8 @@ export async function POST(request: Request) {
         await updateApplication(id, {
           status: "not_advancing",
           activityLog: updatedLog,
+          archiveReason: declineType === "mozambique_other" ? "Outside Maputo Region" : "Outside Mozambique",
+          locationDecline: { type: declineType, status: "pending", attemptedAt: new Date().toISOString() },
         });
 
         let emailSent = false;
@@ -140,6 +148,11 @@ export async function POST(request: Request) {
             console.error(`Failed to send decline email to candidate ${id}:`, emailErr);
           }
         }
+
+        await updateApplication(id, {
+          locationDecline: { type: declineType, status: emailSent ? "sent" : body.sendEmail === false ? "pending" : "failed", attemptedAt: new Date().toISOString(), sentAt: emailSent ? new Date().toISOString() : undefined },
+          communications: [...(candidate.communications || []), { id: crypto.randomUUID(), type: "custom", subject: auditLabel, recipient: candidate.email, sentAt: new Date().toISOString(), status: emailSent ? "sent" : "failed" }],
+        });
 
         results.push({
           id,

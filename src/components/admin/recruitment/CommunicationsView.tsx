@@ -29,6 +29,7 @@ import {
   FolderPlus,
   RefreshCw,
 } from "lucide-react";
+import { isNextPhase, isQualified, isTerminal, sameRole, canReceiveTestInvitation } from "@/lib/careers-workflow";
 import { Application, formatSlotDisplay, normalizeSlot } from "@/lib/careers";
 import Logo from "@/components/ui/Logo";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
@@ -40,6 +41,7 @@ import { triggerCelebration } from "@/lib/celebration";
 
 interface CommunicationsViewProps {
   applications: Application[];
+  cohortId?: string;
   lang?: "pt" | "en";
 }
 
@@ -60,6 +62,7 @@ interface CustomTemplate {
 
 export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
   applications,
+  cohortId,
   lang: propLang,
 }) => {
   const { lang: contextLang } = useAdminLanguage();
@@ -67,6 +70,8 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
   const t = (en: string, pt: string) => (lang === "en" ? en : pt);
 
   const { activeRoleId, activeRole, roles } = useActiveRole();
+
+  const [includeBookingButton, setIncludeBookingButton] = useState(false);
 
   // Audience Target State
   const [selectedRole, setSelectedRole] = useState<string>(activeRoleId || "cctv");
@@ -422,51 +427,23 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
   const targetCandidates = useMemo(() => {
     if (targetAudience === "individual") {
       if (!selectedIndividualId) return [];
-      return applications.filter((a) => a.id === selectedIndividualId);
+      return applications.filter(a => a.id === selectedIndividualId && (!includeBookingButton || canReceiveTestInvitation(a)));
     }
 
-    let pool = applications;
+    let pool = includeBookingButton ? applications.filter(canReceiveTestInvitation) : applications;
     if (selectedRole && selectedRole !== "all") {
-      pool = pool.filter((a) => a.role === selectedRole || (selectedRole === "cctv" && !a.role));
+      pool = pool.filter(a => sameRole(a.role, selectedRole));
     }
 
-    if (targetAudience === "next_phase") {
-      return pool.filter((a) => {
-        if (a.status === "archived" || a.status === "rejected") return false;
-        return (
-          a.status === "next_phase_selected" ||
-          a.status === "next_phase_invited" ||
-          a.status === "awaiting_response" ||
-          a.status === "interest_confirmed" ||
-          a.status === "interest_declined" ||
-          a.nextPhaseStatus === "selected" ||
-          a.nextPhaseStatus === "invited" ||
-          a.nextPhaseStatus === "confirmed" ||
-          a.nextPhaseStatus === "declined"
-        );
-      });
-    }
-
-    if (targetAudience === "screened") {
-      return pool.filter(
-        (a) =>
-          a.status !== "archived" &&
-          a.status !== "rejected" &&
-          (Boolean(a.screeningResult?.passedMandatory) ||
-            (typeof a.screeningScore === "number" && a.screeningScore >= 50) ||
-            a.status === "shortlisted" ||
-            a.status === "screening" ||
-            a.status === "interview" ||
-            a.status === "hired")
-      );
-    }
+    if (targetAudience === "next_phase") return pool.filter(isNextPhase);
+    if (targetAudience === "screened") return pool.filter(isQualified);
 
     if (targetAudience === "interview") {
       return pool.filter((a) => a.status === "interview");
     }
 
     if (targetAudience === "shortlisted_unbooked") {
-      return pool.filter((a) => !a.testSlot && a.status !== "archived" && a.status !== "rejected");
+      return pool.filter((a) => !a.testSlot && !isTerminal(a));
     }
 
     if (targetAudience === "booked_confirmed") {
@@ -477,7 +454,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
     }
 
     return pool.filter((a) => a.status !== "archived");
-  }, [applications, targetAudience, selectedRole, selectedIndividualId, selectedSlot]);
+  }, [applications, targetAudience, selectedRole, selectedIndividualId, selectedSlot, includeBookingButton]);
 
   // Distinct test slots for slot filter
   const distinctSlots = useMemo(() => {
@@ -506,6 +483,8 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          cohortId,
+          includeBookingButton,
           testOnly: true,
           testEmail: testEmail.trim(),
           roleId: selectedRole,
@@ -560,6 +539,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
         subject,
         message: messageBody,
         roleId: selectedRole,
+        includeBookingButton,
         attachments,
       };
 
@@ -579,12 +559,12 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       const res = await fetch("/api/admin/careers/custom-broadcast", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, cohortId }),
       });
 
       const data = await res.json();
       if (res.ok && data.success) {
-        const count = data.sentCount || targetCandidates.length;
+        const count = data.sentCount ?? 0;
         setDispatchResultCount(count);
         setCelebrationOpen(true);
         triggerCelebration({
@@ -1111,6 +1091,11 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
               ))}
             </div>
           </div>
+
+          <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 text-xs">
+            <input type="checkbox" checked={includeBookingButton} onChange={event => setIncludeBookingButton(event.target.checked)} />
+            <span>{t("Include a test-booking link. Only eligible candidates in this cycle will receive this invitation.", "Incluir ligação de agendamento. Apenas candidatos elegíveis deste lote receberão a convocatória.")}</span>
+          </label>
 
           {/* CARD 4: FILE ATTACHMENTS (PDF / IMAGE) */}
           <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-3">

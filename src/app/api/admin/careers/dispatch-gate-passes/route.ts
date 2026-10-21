@@ -1,7 +1,9 @@
+import { getRecruitmentWorkspaceData } from "@/lib/careers-workspace-store";
+import { applicationsForCohort, isTerminal } from "@/lib/careers-workflow";
 import { verifyAdminAuthorization } from "@/lib/careers-auth";
 import { getApplications, updateApplication } from "@/lib/careers-store";
 import { sendGatePassEmail } from "@/lib/careers-email";
-import { Application, getSlotDayNumber, getMaputoToday } from "@/lib/careers";
+import { Application, getSlotDayNumber, getMaputoToday, isSlotToday } from "@/lib/careers";
 
 export const dynamic = "force-dynamic";
 
@@ -65,7 +67,11 @@ export async function POST(request: Request) {
     // Target day: defaults to Maputo tomorrow (the next day) or explicit targetDay in body
     const targetDay: number = typeof body.targetDay === "number" ? body.targetDay : tomorrowMaputo.day;
 
-    const allApps = await getApplications();
+    const workspace = await getRecruitmentWorkspaceData();
+    const cohort = body.cohortId ? workspace.cohorts.find(c => c.id === body.cohortId) : undefined;
+    if (body.cohortId && !cohort) return Response.json({ error: "Cohort not found" }, { status: 404 });
+    if (Array.isArray(body.candidateIds) && body.candidateIds.length === 0) return Response.json({ success: true, count: 0, failed: 0 });
+    const allApps = (cohort ? applicationsForCohort(workspace.applications, cohort, workspace.cohorts) : workspace.applications).filter(a => !isTerminal(a));
     let candidatesToDispatch: Application[] = [];
 
     if (Array.isArray(body.candidateIds) && body.candidateIds.length > 0) {
@@ -110,7 +116,7 @@ export async function POST(request: Request) {
         if (slotDay === null) return false;
 
         // Skip today's and past candidates completely
-        if (slotDay <= todayMaputo.day) return false;
+        if (!isSlotToday(a.testSlot, tomorrowDate)) return false;
 
         // Must match the next day (tomorrow)
         return slotDay === targetDay;

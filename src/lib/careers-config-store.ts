@@ -2,7 +2,7 @@ import "server-only";
 import { mkdir, readFile, writeFile, rename, unlink } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
-import { Pool } from "pg";
+import { getCareersPool as getPgPool } from "./careers-db";
 import type { CareerRoleDefinition, CareerCohort } from "./careers-models";
 import { DEFAULT_TEST_SLOTS } from "./careers";
 
@@ -16,19 +16,6 @@ const directory = isServerless
   ? path.join(os.tmpdir(), ".careers-data")
   : path.join(process.cwd(), ".careers-data");
 
-let pgPool: Pool | null = null;
-function getPgPool(): Pool | null {
-  const dbUrl = process.env.DATABASE_URL;
-  if (!dbUrl) return null;
-  if (!pgPool) {
-    pgPool = new Pool({
-      connectionString: dbUrl,
-      ssl: { rejectUnauthorized: false },
-      max: 10,
-    });
-  }
-  return pgPool;
-}
 
 let tableEnsured = false;
 async function ensureSystemConfigsTable(): Promise<boolean> {
@@ -113,10 +100,7 @@ async function writeLocal(filename: string, data: any) {
     await writeFile(tempPath, JSON.stringify(data, null, 2), "utf8");
     await rename(tempPath, finalPath);
   } catch (err) {
-    // Graceful on read-only environments when DB is configured
-    if (!isServerless && !getPgPool()) {
-      throw err;
-    }
+    throw err;
   }
 }
 
@@ -196,7 +180,7 @@ export async function getSystemConfig<T>(key: SystemConfigKey, fallback: T): Pro
         return res.rows[0].value as T;
       }
     } catch (pgErr) {
-      console.warn(`PG getSystemConfig(${key}) warning:`, pgErr);
+      throw new Error(`Unable to read configuration ${key}`, { cause: pgErr });
     }
   }
 
@@ -247,10 +231,11 @@ export async function setSystemConfig<T>(key: SystemConfigKey, data: T): Promise
       );
       pgSaved = true;
     } catch (pgErr) {
-      console.warn(`PG setSystemConfig(${key}) error:`, pgErr);
+      throw new Error(`Unable to save configuration ${key}`, { cause: pgErr });
     }
   }
 
+  let remoteSaved = pgSaved;
   // 2. If remote Supabase is configured, persist to dedicated storage object
   if (getSupabaseUrl() && getSupabaseKey()) {
     try {
@@ -266,6 +251,7 @@ export async function setSystemConfig<T>(key: SystemConfigKey, data: T): Promise
         body: new Uint8Array(jsonBody),
       });
 
+      remoteSaved = true;
       // Also mirror to root storage path for backward-compatibility
       await api(`/storage/v1/object/career-cvs/${filename}`, {
         method: "POST",
@@ -276,11 +262,10 @@ export async function setSystemConfig<T>(key: SystemConfigKey, data: T): Promise
         body: new Uint8Array(jsonBody),
       }).catch(() => {});
     } catch (err) {
-      console.warn(`Failed to sync config ${key} to remote storage:`, err);
+      if (!pgSaved) throw new Error(`Unable to save configuration ${key}`, { cause: err });
     }
 
-    // Trigger cleanup of any legacy rows in career_applications asynchronously
-    purgeLegacySystemRowsFromApplicationsTable().catch(() => {});
+    // Legacy rows are retained until a verified migration has copied every key.
   }
 
   // 3. Best-effort local storage backup (never fails the request if disk is read-only)
@@ -289,9 +274,7 @@ export async function setSystemConfig<T>(key: SystemConfigKey, data: T): Promise
       await writeLocal(filename, data);
     });
   } catch (err) {
-    if (!pgSaved && !isServerless) {
-      console.error(`Failed to write local config ${filename}:`, err);
-    }
+    if (!remoteSaved) throw err;
   }
 
   return data;

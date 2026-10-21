@@ -6,24 +6,7 @@ export const roles = [
     open: true,
   },
   { id: "cctv", en: "CCTV Operator", pt: "Operadora de CCTV", open: true },
-  {
-    id: "operations",
-    en: "Security Operations Manager",
-    pt: "Gestor de Operações de Segurança",
-    open: false,
-  },
-  {
-    id: "technical",
-    en: "Technical Support Specialist",
-    pt: "Especialista de Suporte Técnico",
-    open: false,
-  },
-  {
-    id: "sales",
-    en: "Sales & Business Development",
-    pt: "Vendas e Desenvolvimento de Negócios",
-    open: false,
-  },
+
 ];
 
 export type Role = {
@@ -379,61 +362,27 @@ const MONTH_NAME_TO_INDEX: Record<string, number> = {
 /**
  * Parses any test slot string into its exact components: year, month (1-12), day (1-31), hour (0-23), minute (0-59).
  */
-export function parseSlotComponents(slot?: string | null): {
-  year: number;
-  month: number;
-  day: number;
-  hour: number;
-  minute: number;
-} | null {
-  if (!slot) return null;
-  const s = slot.trim();
-
-  // Try extracting year (e.g. 2026)
-  const yearMatch = s.match(/\b(202\d)\b/);
-  const year = yearMatch ? parseInt(yearMatch[1], 10) : 2026;
-
-  // Try extracting month
-  let month: number | null = null;
-  const monthMatch = s.match(
-    /\b(Janeiro|January|Fevereiro|February|Março|Marco|March|Abril|April|Maio|May|Junho|June|Julho|July|Agosto|August|Setembro|September|Outubro|October|Novembro|November|Dezembro|December)\b/i
-  );
-  if (monthMatch) {
-    const rawMonth = monthMatch[1].toLowerCase();
-    month = MONTH_NAME_TO_INDEX[rawMonth] || null;
-  }
-
-  // ISO date fallback (YYYY-MM-DD)
-  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (iso) {
-    const isoYear = parseInt(iso[1], 10);
-    const isoMonth = parseInt(iso[2], 10);
-    const isoDay = parseInt(iso[3], 10);
-    return { year: isoYear, month: isoMonth, day: isoDay, hour: 10, minute: 0 };
-  }
-
-  // Try extracting day
-  const day = getSlotDayNumber(s);
-  if (!day) return null;
-
-  // Default month if not found in text: September (9)
-  if (!month) {
-    month = 9;
-  }
-
-  // Try extracting time (e.g. 10h00, 10:00, 14h30, 10:00 AM)
-  let hour = 10;
-  let minute = 0;
-  const timeMatch = s.match(/(\d{1,2})(?:h|:)(\d{2})(?:\s*(AM|PM))?/i);
-  if (timeMatch) {
-    let rawHour = parseInt(timeMatch[1], 10);
-    minute = parseInt(timeMatch[2], 10) || 0;
-    const ampm = timeMatch[3]?.toUpperCase();
-    if (ampm === "PM" && rawHour < 12) rawHour += 12;
-    if (ampm === "AM" && rawHour === 12) rawHour = 0;
-    hour = rawHour;
-  }
-
+export function parseSlotComponents(slot?: string | null): { year: number; month: number; day: number; hour: number; minute: number } | null {
+  if (!slot?.trim()) return null;
+  const text = slot.trim();
+  const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const dmy = text.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+  const namedMonth = text.match(/\b(Janeiro|January|Fevereiro|February|Março|Marco|March|Abril|April|Maio|May|Junho|June|Julho|July|Agosto|August|Setembro|September|Outubro|October|Novembro|November|Dezembro|December)\b/i);
+  let year: number, month: number, day: number;
+  if (iso) { year = Number(iso[1]); month = Number(iso[2]); day = Number(iso[3]); }
+  else if (dmy) { year = Number(dmy[3]); month = Number(dmy[2]); day = Number(dmy[1]); }
+  else if (namedMonth) {
+    year = Number(text.match(/\b(20\d{2})\b/)?.[1] || 2026); // Legacy September invitations omitted the year.
+    month = MONTH_NAME_TO_INDEX[namedMonth[1].toLowerCase()];
+    day = getSlotDayNumber(text) || 0;
+  } else return null;
+  const time = text.match(/(?:T|\s|[–—])?(\d{1,2})(?:h|:)(\d{2})(?:\s*(AM|PM))?/i);
+  let hour = time ? Number(time[1]) : 10;
+  const minute = time ? Number(time[2]) : 0;
+  if (time?.[3]?.toUpperCase() === "PM" && hour < 12) hour += 12;
+  if (time?.[3]?.toUpperCase() === "AM" && hour === 12) hour = 0;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day || hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
   return { year, month, day, hour, minute };
 }
 

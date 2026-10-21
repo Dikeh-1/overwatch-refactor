@@ -1,5 +1,8 @@
 "use client";
 
+import { useActiveRole } from "@/components/admin/shell/ActiveRoleContext";
+import { useSearchParams } from "next/navigation";
+import RecruitmentWorkspace from "@/components/admin/recruitment/RecruitmentWorkspace";
 import React, { useState, useEffect, useCallback } from "react";
 import { RecruitmentOverviewView } from "@/components/admin/recruitment/RecruitmentOverviewView";
 import { Application, Role, roles as defaultRoles } from "@/lib/careers";
@@ -9,6 +12,9 @@ import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 
 export default function RecruitmentOverviewPage() {
   const { t } = useAdminLanguage();
+  const params = useSearchParams();
+  const { activeRoleId } = useActiveRole();
+  const workspaceRole = params.get("role") || activeRoleId;
   const [applications, setApplications] = useState<Application[]>([]);
   const [roles, setRoles] = useState<Role[]>(defaultRoles);
   const [roleDefs, setRoleDefs] = useState<CareerRoleDefinition[]>([]);
@@ -54,6 +60,8 @@ export default function RecruitmentOverviewPage() {
       </div>
     );
   }
+
+  if (workspaceRole && workspaceRole !== "all") return <RecruitmentWorkspace key={workspaceRole} roleId={workspaceRole} />;
 
   return (
     <RecruitmentOverviewView

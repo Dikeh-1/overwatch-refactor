@@ -1,10 +1,13 @@
+import { gateAuthorized } from "@/lib/gate-auth";
+import { authenticated, sameOrigin } from "@/lib/careers-auth";
 import { getApplication, getApplications, updateApplication } from "@/lib/careers-store";
 import { siteContact } from "@/lib/site-config";
-import { getSlotDayNumber, getMaputoToday } from "@/lib/careers";
+import { getSlotDayNumber, getMaputoToday, isSlotToday } from "@/lib/careers";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  if (!(await gateAuthorized(request))) return Response.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
@@ -21,7 +24,7 @@ export async function GET(request: Request) {
       const all = await getApplications();
       candidate = all.find((a) => {
         const appPhone = (a.whatsapp || "").replace(/\D/g, "");
-        if (cleanPhone && cleanPhone.length >= 4 && (appPhone.endsWith(cleanPhone) || cleanPhone.endsWith(appPhone))) {
+        if (cleanPhone && cleanPhone.length >= 4 && (appPhone.endsWith(cleanPhone) || (appPhone.length >= 9 && cleanPhone.endsWith(appPhone)))) {
           return true;
         }
         if (a.email && a.email.toLowerCase() === qLower) {
@@ -47,10 +50,10 @@ export async function GET(request: Request) {
     const today = getMaputoToday();
     const bookedDay = getSlotDayNumber(candidate.testSlot);
     const isBooked = Boolean(candidate.testSlot);
-    const isToday = isBooked && bookedDay === today.day;
+    const isToday = isBooked && isSlotToday(candidate.testSlot);
     const isDeactivated =
       candidate.status === "rejected" ||
-      candidate.status === "archived";
+      ["archived", "not_advancing", "withdrawn", "disqualified"].includes(candidate.status);
     const isAlreadyAttended = Boolean(candidate.attendedAt);
 
     return Response.json({
@@ -84,9 +87,12 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (!(await gateAuthorized(request)) || !sameOrigin(request)) return Response.json({ error: "Unauthorized" }, { status: 403 });
   try {
     const body = await request.json();
     const { id, query, action = "check_in", force = false } = body;
+    if (!["check_in", "mark_absent", "toggle"].includes(action)) return Response.json({ error: "Invalid action" }, { status: 400 });
+    if ((force || action !== "check_in") && !(await authenticated())) return Response.json({ error: "Administrator authorization required" }, { status: 403 });
 
     let candidate = null;
 
@@ -99,7 +105,7 @@ export async function POST(request: Request) {
       const all = await getApplications();
       candidate = all.find((a) => {
         const appPhone = (a.whatsapp || "").replace(/\D/g, "");
-        if (cleanPhone && cleanPhone.length >= 4 && (appPhone.endsWith(cleanPhone) || cleanPhone.endsWith(appPhone))) {
+        if (cleanPhone && cleanPhone.length >= 4 && (appPhone.endsWith(cleanPhone) || (appPhone.length >= 9 && cleanPhone.endsWith(appPhone)))) {
           return true;
         }
         if (a.email && a.email.toLowerCase() === qLower) {
@@ -125,7 +131,7 @@ export async function POST(request: Request) {
     // Safeguard 1: Disqualified / Archived or blocked
     if (
       candidate.status === "rejected" ||
-      candidate.status === "archived"
+      ["archived", "not_advancing", "withdrawn", "disqualified"].includes(candidate.status)
     ) {
       return Response.json(
         {
@@ -151,7 +157,7 @@ export async function POST(request: Request) {
 
     const today = getMaputoToday();
     const bookedDay = getSlotDayNumber(candidate.testSlot);
-    const isToday = bookedDay === today.day;
+    const isToday = isSlotToday(candidate.testSlot);
 
     // Action: Mark Absent / Reset Attendance
     if (action === "mark_absent") {

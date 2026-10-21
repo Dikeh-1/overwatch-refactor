@@ -247,37 +247,23 @@ export default function RichMessageEditor({
   };
 
   // File Upload Handlers
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const maxBytes = maxFileSizeMb * 1024 * 1024;
-    const newAttachments: AttachmentItem[] = [];
-
-    Array.from(files).forEach((file) => {
-      if (file.size > maxBytes) {
-        alert(
-          (lang === "en" ? `File exceeds limit of ${maxFileSizeMb}MB:` : `O ficheiro excede o limite de ${maxFileSizeMb}MB:`) +
-            ` ${file.name}`
-        );
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64Data = (reader.result as string).split(",")[1];
-        const item: AttachmentItem = {
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          content: base64Data,
-        };
-        onAttachmentsChange?.([...attachments, item]);
-      };
-      reader.readAsDataURL(file);
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    const accepted = files.filter(file => {
+      if (file.size <= maxFileSizeMb * 1024 * 1024) return true;
+      alert(`${lang === "en" ? "File exceeds size limit" : "Ficheiro excede o limite"}: ${file.name}`);
+      return false;
     });
-
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    try {
+      const additions = await Promise.all(accepted.map(file => new Promise<AttachmentItem>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error(`Unable to read ${file.name}`));
+        reader.onload = () => resolve({ name: file.name, size: file.size, type: file.type, content: String(reader.result).split(",")[1] });
+        reader.readAsDataURL(file);
+      })));
+      if (additions.length) onAttachmentsChange?.([...attachments, ...additions]);
+    } catch (error) { alert(error instanceof Error ? error.message : "Unable to read attachments"); }
   };
 
   const handleRemoveAttachment = (idx: number) => {
@@ -285,7 +271,7 @@ export default function RichMessageEditor({
   };
 
   // Stats
-  const plainText = (editorRef.current?.innerText || value || "").replace(/<[^>]*>/g, "").trim();
+  const plainText = (value || "").replace(/<[^>]*>/g, "").trim();
   const charCount = plainText.length;
   const wordCount = plainText ? plainText.split(/\s+/).filter(Boolean).length : 0;
 

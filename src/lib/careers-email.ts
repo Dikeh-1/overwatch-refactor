@@ -2495,9 +2495,9 @@ export async function sendNextPhaseInvitationEmail(options: {
   const noUrl = `${baseUrl.replace(/\/+$/, "")}/pt/careers/next-phase/${token}?choice=no`;
 
   const scorePhrase =
-    typeof candidate.score === "number" && candidate.score < 80
-      ? "O seu resultado no teste permitiu-lhe avançar para consideração na próxima fase do processo."
-      : "O seu resultado no teste (mais de 80%) permitiu-lhe avançar para consideração na próxima fase do processo.";
+    typeof candidate.score === "number" && Number.isFinite(candidate.score)
+      ? `O seu resultado no teste (${candidate.score}%) permitiu-lhe avançar para consideração na próxima fase do processo.`
+      : "A sua candidatura foi seleccionada para consideração na próxima fase do processo.";
 
   const htmlContent = `
     <!DOCTYPE html>

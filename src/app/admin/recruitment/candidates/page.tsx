@@ -1,11 +1,14 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
+import RecruitmentWorkspace from "@/components/admin/recruitment/RecruitmentWorkspace";
 import React, { useState, useEffect, useCallback } from "react";
 import { CandidatesTableView } from "@/components/admin/recruitment/CandidatesTableView";
 import { Application, Role, roles as defaultRoles, ArchiveReason } from "@/lib/careers";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 
 export default function CandidatesPage() {
+  const workspaceRole = useSearchParams().get("role");
   const [applications, setApplications] = useState<Application[]>([]);
   const [roles, setRoles] = useState<Role[]>(defaultRoles);
   const [loading, setLoading] = useState(true);
@@ -64,6 +67,8 @@ export default function CandidatesPage() {
       console.error("Bulk archive error:", err);
     }
   };
+
+  if (workspaceRole && workspaceRole !== "all") return <RecruitmentWorkspace key={workspaceRole} roleId={workspaceRole} initialTab="applications" />;
 
   if (loading) {
     return (

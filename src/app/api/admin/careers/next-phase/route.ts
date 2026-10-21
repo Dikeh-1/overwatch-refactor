@@ -1,3 +1,5 @@
+import { getRecruitmentWorkspaceData } from "@/lib/careers-workspace-store";
+import { applicationsForCohort, sameRole, isNextPhase, isTerminal } from "@/lib/careers-workflow";
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
 import {
   getApplications,
@@ -16,220 +18,25 @@ function normalizeName(s: string) {
 
 export async function GET(request: Request) {
   if (!(await authenticated())) return new Response(null, { status: 401 });
-
   try {
-    const url = new URL(request.url);
-    const searchParams = url.searchParams;
-    const roleParam = searchParams.get("role");
-    const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || url.host;
-    const proto = request.headers.get("x-forwarded-proto") || url.protocol.replace(":", "") || "https";
-    const baseUrl = `${proto}://${host}`;
-
-    const [allApplications, deletedRaw] = await Promise.all([
-      getApplications(),
-      getDeletedNextPhaseIdentifiers(),
-    ]);
-    const deletedIdentifiers = new Set(deletedRaw);
-
-    // Filter applications by role if specified
-    const applications = allApplications.filter((a) => {
-      if (!roleParam || roleParam === "all") return true;
-      if (roleParam === "cctv" || roleParam === "cctv_operator") {
-        return !a.role || a.role === "cctv" || a.role === "cctv_operator";
-      }
-      return a.role === roleParam;
-    });
-
-    const isCctvRole = !roleParam || roleParam === "all" || roleParam === "cctv" || roleParam === "cctv_operator";
-
-    const isDeleted = (id?: string, name?: string) => {
-      if (id && deletedIdentifiers.has(id)) return true;
-      if (name) {
-        const norm = normalizeName(name);
-        if (deletedIdentifiers.has(norm) || deletedIdentifiers.has(name)) return true;
-      }
-      return false;
-    };
-
-    const matchedAppIds = new Set<string>();
-
-    // Map each of the approved seed candidates to their live application record if in CCTV role workspace
-    const activeSeeds = isCctvRole
-      ? APPROVED_NEXT_PHASE_CANDIDATES.filter((seed, index) => {
-          if (seed.matchedId && isDeleted(seed.matchedId, seed.name)) return false;
-          if (isDeleted(`seed_${index + 1}`, seed.name)) return false;
-          if (isDeleted(undefined, seed.name)) return false;
-          return true;
-        })
-      : [];
-
-    const seededCandidates = await Promise.all(
-      activeSeeds.map(async (seed, index) => {
-        let matchedApp: Application | undefined;
-
-        if (seed.matchedId) {
-          matchedApp = allApplications.find((a) => a.id === seed.matchedId);
-        }
-
-        if (!matchedApp) {
-          const normSeed = normalizeName(seed.name);
-          matchedApp = allApplications.find((a) => {
-            const normApp = normalizeName(a.name);
-            return normApp === normSeed || normApp.includes(normSeed) || normSeed.includes(normApp);
-          });
-        }
-
-        if (!matchedApp) {
-          return null;
-        }
-
-        matchedAppIds.add(matchedApp.id);
-
-        // Ensure token exists on candidate record so live links are 100% stable
-        let token = matchedApp.nextPhaseToken;
-        if (!token) {
-          token = crypto.randomBytes(16).toString("hex");
-          await updateApplication(matchedApp.id, { nextPhaseToken: token });
-        }
-
-        const id = matchedApp.id;
-        const name = matchedApp.name;
-        const email = matchedApp.email || "";
-        const phone = normalizePhone(matchedApp.whatsapp);
-        const score = matchedApp?.testScore ?? seed.score;
-        const nextPhaseStatus = matchedApp?.nextPhaseStatus || "selected";
-        const invitationStatus: "not_sent" | "sent" = matchedApp?.nextPhaseInvitedAt ? "sent" : "not_sent";
-        const invitationSentAt = matchedApp?.nextPhaseInvitedAt || null;
-        const candidateResponse: "confirmed" | "declined" | "awaiting" | null = matchedApp?.nextPhaseResponse === "yes"
-          ? "confirmed"
-          : matchedApp?.nextPhaseResponse === "no"
-            ? "declined"
-            : invitationStatus === "sent"
-              ? "awaiting"
-              : null;
-        const responseDate = matchedApp?.nextPhaseRespondedAt || null;
-        const recruitmentStage = matchedApp?.status || (matchedApp ? "shortlisted" : "selected");
-        const responseOption = matchedApp?.nextPhaseResponse === "yes"
-          ? (matchedApp.nextPhaseResponseOption || "Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas.")
-          : matchedApp?.nextPhaseResponse === "no"
-            ? (matchedApp.nextPhaseResponseOption || "Não tenho interesse")
-            : null;
-
-        const dedicatedLink = `/pt/careers/next-phase/${token}`;
-        const fullDedicatedUrl = `${baseUrl}/pt/careers/next-phase/${token}`;
-
-        return {
-          id,
-          seedIndex: index + 1,
-          approvedName: seed.name,
-          name,
-          score,
-          email,
-          phone,
-          isMatched: Boolean(matchedApp),
-          matchedId: matchedApp?.id,
-          nextPhaseStatus,
-          invitationStatus,
-          invitationSentAt,
-          candidateResponse,
-          responseDate,
-          respondedAt: responseDate,
-          responseOption,
-          recruitmentStage,
-          token: token || `cand_${index + 1}_${seed.score}`,
-          dedicatedLink,
-          fullDedicatedUrl,
-        };
-      })
-    );
-
-    // Also include any other applications explicitly moved to next phase or having next phase tokens/responses
-    const additionalApps = applications.filter((a) => {
-      if (matchedAppIds.has(a.id)) return false;
-      if (isDeleted(a.id, a.name)) return false;
-      return (
-        a.status === "next_phase_selected" ||
-        a.status === "next_phase_invited" ||
-        a.status === "awaiting_response" ||
-        a.status === "interest_confirmed" ||
-        a.status === "interest_declined" ||
-        a.nextPhaseStatus === "selected" ||
-        a.nextPhaseStatus === "invited" ||
-        a.nextPhaseStatus === "confirmed" ||
-        a.nextPhaseStatus === "declined" ||
-        Boolean(a.nextPhaseToken) ||
-        Boolean(a.nextPhaseInvitedAt) ||
-        Boolean(a.nextPhaseResponse)
-      );
-    });
-
-    const additionalCandidates = await Promise.all(
-      additionalApps.map(async (app, idx) => {
-        let token = app.nextPhaseToken;
-        if (!token) {
-          token = crypto.randomBytes(16).toString("hex");
-          await updateApplication(app.id, { nextPhaseToken: token });
-        }
-
-        const invitationStatus: "not_sent" | "sent" = app.nextPhaseInvitedAt ? "sent" : "not_sent";
-        const candidateResponse: "confirmed" | "declined" | "awaiting" | null = app.nextPhaseResponse === "yes"
-          ? "confirmed"
-          : app.nextPhaseResponse === "no"
-            ? "declined"
-            : invitationStatus === "sent"
-              ? "awaiting"
-              : null;
-
-        const dedicatedLink = `/pt/careers/next-phase/${token}`;
-        const fullDedicatedUrl = `${baseUrl}/pt/careers/next-phase/${token}`;
-
-        return {
-          id: app.id,
-          seedIndex: seededCandidates.length + idx + 1,
-          approvedName: app.name,
-          name: app.name,
-          score: app.testScore ?? 0,
-          email: app.email || "",
-          phone: normalizePhone(app.whatsapp),
-          isMatched: true,
-          matchedId: app.id,
-          nextPhaseStatus: app.nextPhaseStatus || "selected",
-          invitationStatus,
-          invitationSentAt: app.nextPhaseInvitedAt || null,
-          candidateResponse,
-          responseDate: app.nextPhaseRespondedAt || null,
-          respondedAt: app.nextPhaseRespondedAt || null,
-          responseOption: app.nextPhaseResponse === "yes"
-            ? (app.nextPhaseResponseOption || "Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas.")
-            : app.nextPhaseResponse === "no"
-              ? (app.nextPhaseResponseOption || "Não tenho interesse")
-              : null,
-          recruitmentStage: app.status || "next_phase_selected",
-          token,
-          dedicatedLink,
-          fullDedicatedUrl,
-        };
-      })
-    );
-
-    const candidates = [...(seededCandidates.filter(Boolean) as any[]), ...additionalCandidates].map((cand, idx) => ({
-      ...cand,
-      seedIndex: idx + 1,
+    const params = new URL(request.url).searchParams;
+    const role = params.get("role");
+    const cohortId = params.get("cohortId");
+    const [workspace, deleted] = await Promise.all([getRecruitmentWorkspaceData(), getDeletedNextPhaseIdentifiers()]);
+    const cohort = cohortId ? workspace.cohorts.find(c => c.id === cohortId) : undefined;
+    if (cohortId && !cohort) return Response.json({ error: "Cohort not found" }, { status: 404 });
+    const members = cohort ? applicationsForCohort(workspace.applications, cohort, workspace.cohorts) : workspace.applications;
+    const candidates = members.filter(a => (!role || role === "all" || sameRole(a.role, role)) && isNextPhase(a) && !deleted.includes(a.id) && !deleted.includes(normalizeName(a.name))).sort((a,b) => (b.testScore ?? -1) - (a.testScore ?? -1) || a.name.localeCompare(b.name)).map((a,index) => ({
+      id: a.id, seedIndex: index+1, approvedName: a.name, name: a.name, score: a.testScore ?? null,
+      email: a.email, phone: normalizePhone(a.whatsapp), isMatched: true, matchedId: a.id,
+      nextPhaseStatus: a.nextPhaseStatus || "selected", invitationStatus: a.nextPhaseInvitedAt ? "sent" : "not_sent", invitationSentAt: a.nextPhaseInvitedAt || null,
+      candidateResponse: a.nextPhaseResponse === "yes" || a.nextPhaseStatus === "confirmed" ? "confirmed" : a.nextPhaseResponse === "no" || a.nextPhaseStatus === "declined" ? "declined" : a.nextPhaseInvitedAt ? "awaiting" : null,
+      responseDate: a.nextPhaseRespondedAt || null, respondedAt: a.nextPhaseRespondedAt || null,
+      responseOption: a.nextPhaseResponseOption || null, recruitmentStage: a.status,
+      token: a.nextPhaseToken || null,
     }));
-
-    const summary = {
-      totalSelected: candidates.length,
-      notSent: candidates.filter((c) => c.invitationStatus === "not_sent").length,
-      awaiting: candidates.filter((c) => c.invitationStatus === "sent" && c.candidateResponse === "awaiting").length,
-      confirmed: candidates.filter((c) => c.candidateResponse === "confirmed").length,
-      declined: candidates.filter((c) => c.candidateResponse === "declined").length,
-    };
-
-    return Response.json({ candidates, summary }, { headers: { "Cache-Control": "no-store" } });
-  } catch (err: any) {
-    console.error("Next-phase GET error:", err);
-    return Response.json({ error: "Failed to load next phase data" }, { status: 500 });
-  }
+    return Response.json({ candidates, summary: { totalSelected: candidates.length, notSent: candidates.filter(c => c.invitationStatus === "not_sent").length, awaiting: candidates.filter(c => c.candidateResponse === "awaiting").length, confirmed: candidates.filter(c => c.candidateResponse === "confirmed").length, declined: candidates.filter(c => c.candidateResponse === "declined").length } }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) { console.error(error); return Response.json({ error: "Unable to load next phase" }, { status: 503 }); }
 }
 
 export async function POST(request: Request) {
@@ -247,10 +54,15 @@ export async function POST(request: Request) {
       | "delete_candidates"
       | "send_instructions"
       | "generate_token";
-    const [applications, deletedRaw] = await Promise.all([
-      getApplications(),
+    const [workspace, deletedRaw] = await Promise.all([
+      getRecruitmentWorkspaceData(),
       getDeletedNextPhaseIdentifiers(),
     ]);
+    const cohort = body.cohortId ? workspace.cohorts.find(c => c.id === body.cohortId) : undefined;
+    if (body.cohortId && !cohort) return Response.json({ error: "Cohort not found" }, { status: 404 });
+    const applications = (cohort ? applicationsForCohort(workspace.applications, cohort, workspace.cohorts) : workspace.applications).filter(a => !body.role || body.role === "all" || sameRole(a.role, body.role));
+    const requestedIds = [...(Array.isArray(body.candidateIds) ? body.candidateIds : []), ...(body.candidateId ? [body.candidateId] : []), ...(body.matchedId ? [body.matchedId] : []), ...(Array.isArray(body.candidates) ? body.candidates.flatMap((c: {id: string; matchedId?: string}) => [c.id, ...(c.matchedId ? [c.matchedId] : [])]) : [])];
+    if (requestedIds.some(id => !applications.some(a => a.id === id))) return Response.json({ error: "Candidate outside this workspace" }, { status: 400 });
     const deletedIdentifiers = new Set(deletedRaw);
     const isDeleted = (id?: string, name?: string) => {
       if (id && deletedIdentifiers.has(id)) return true;
@@ -279,7 +91,8 @@ export async function POST(request: Request) {
         }
       }
       if (!app) return Response.json({ error: "Candidate not found" }, { status: 404 });
-      const token = crypto.randomBytes(16).toString("hex");
+      if (!isNextPhase(app)) return Response.json({ error: "Candidate is not selected for next phase" }, { status: 400 });
+      const token = app.nextPhaseToken || crypto.randomBytes(16).toString("hex");
       const updated = await updateApplication(app.id, { nextPhaseToken: token });
       return Response.json({
         success: true,
@@ -403,32 +216,7 @@ export async function POST(request: Request) {
         const updated = await updateApplication(app.id, updateData);
         return Response.json({ success: true, candidate: updated });
       } else {
-        const { saveApplication } = await import("@/lib/careers-store");
-        const token = crypto.randomBytes(16).toString("hex");
-        const newApp: Application = {
-          id: candidateId.startsWith("seed_") ? crypto.randomUUID() : candidateId,
-          createdAt: new Date().toISOString(),
-          name: cleanName || "Candidate",
-          email: cleanEmail,
-          whatsapp: cleanPhone,
-          role: "cco-operator-maputo",
-          locale: "pt",
-          grade12: "yes",
-          sex: "female",
-          ai: "no",
-          experience: "yes",
-          lastProfession: "Operadora CCO",
-          shifts: "yes",
-          cvName: "assessment.pdf",
-          cvType: "application/pdf",
-          cvSize: 1024,
-          status: "shortlisted",
-          testScore: body.score || 86,
-          nextPhaseStatus: "selected",
-          nextPhaseToken: token,
-        };
-        await saveApplication(newApp, Buffer.from(""));
-        return Response.json({ success: true, candidate: newApp });
+        return Response.json({ error: "Candidate not found" }, { status: 404 });
       }
     }
 
@@ -492,53 +280,8 @@ export async function POST(request: Request) {
 
       const targets: DispatchTarget[] = [];
 
-      if (isCctvRole) {
-        for (const seed of APPROVED_NEXT_PHASE_CANDIDATES) {
-          if (seed.matchedId && isDeleted(seed.matchedId, seed.name)) continue;
-          if (isDeleted(undefined, seed.name)) continue;
-
-          let app: Application | undefined;
-          if (seed.matchedId) {
-            app = applications.find((a) => a.id === seed.matchedId);
-          }
-          if (!app) {
-            const normSeed = normalizeName(seed.name);
-            app = applications.find((a) => normalizeName(a.name) === normSeed);
-          }
-
-          if (!app || !app.email) {
-            failedCount++;
-            results.push({ name: seed.name, status: "skipped_no_email" });
-            continue;
-          }
-
-          handledAppIds.add(app.id);
-          targets.push({ app, score: seed.score });
-        }
-      }
-
-      // Also dispatch to any other dynamically added Next Phase applicants matching role
-      for (const a of applications) {
-        if (handledAppIds.has(a.id)) continue;
-        if (isDeleted(a.id, a.name)) continue;
-        if (roleParam && roleParam !== "all" && a.role !== roleParam) continue;
-
-        const isNextPhase =
-          a.status === "next_phase_selected" ||
-          a.status === "next_phase_invited" ||
-          a.status === "awaiting_response" ||
-          a.status === "interest_confirmed" ||
-          a.status === "interest_declined" ||
-          a.nextPhaseStatus === "selected" ||
-          a.nextPhaseStatus === "invited" ||
-          a.nextPhaseStatus === "confirmed" ||
-          a.nextPhaseStatus === "declined" ||
-          Boolean(a.nextPhaseToken);
-
-        if (isNextPhase && a.email) {
-          handledAppIds.add(a.id);
-          targets.push({ app: a, score: a.testScore });
-        }
+      for (const app of applications) {
+        if (!isDeleted(app.id, app.name) && isNextPhase(app) && !isTerminal(app) && app.email) targets.push({ app, score: app.testScore });
       }
 
       for (const target of targets) {
@@ -665,7 +408,7 @@ export async function POST(request: Request) {
           role_title: "Operadora de CCO",
           slot: (sampleTarget as any).testSlot || "Turma A (09:00 - 11:00)",
           date: new Date().toLocaleDateString("pt-MZ"),
-          location: "Av. do Trabalho, N.º 1948, Maputo",
+          location: "Av. Paulo Samuel Khankhomba, N.º 1948, Maputo",
           company: "Overwatch Lda.",
           email: previewEmail,
         };
@@ -699,7 +442,7 @@ export async function POST(request: Request) {
       const results: any[] = [];
       const now = new Date().toISOString();
 
-      for (const id of candidateIds) {
+      for (const id of [...new Set(candidateIds)]) {
         const app = applications.find((a) => a.id === id);
         if (!app || !app.email) {
           failedCount++;
@@ -722,7 +465,7 @@ export async function POST(request: Request) {
           role_title: roleName,
           slot: app.testSlot || "",
           date: new Date().toLocaleDateString("pt-MZ"),
-          location: "Av. do Trabalho, N.º 1948, Maputo",
+          location: "Av. Paulo Samuel Khankhomba, N.º 1948, Maputo",
           company: "Overwatch Lda.",
           email: app.email,
         };

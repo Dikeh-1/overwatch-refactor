@@ -1,5 +1,6 @@
 "use client";
 
+import { csvCell } from "@/lib/csv";
 import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
@@ -27,6 +28,7 @@ import {
   MapPin,
 } from "lucide-react";
 import { Application, Role, stages, formatPhoneDisplay, formatSlotDisplay } from "@/lib/careers";
+import { hasTested, hasAttended, isTerminal, isNextPhase, isQualified, isEligibleForTest } from "@/lib/careers-workflow";
 import { classifyCandidateLocation, LocationFilterValue } from "@/lib/location-utils";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import { useActiveRole } from "../shell/ActiveRoleContext";
@@ -35,6 +37,7 @@ import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 import StickyScrollContainer from "@/components/admin/ui/StickyScrollContainer";
 
 interface CandidatesTableViewProps {
+  scopedRoleId?: string;
   applications: Application[];
   roles: Role[];
   lang?: "pt" | "en";
@@ -46,6 +49,7 @@ interface CandidatesTableViewProps {
 export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
   applications,
   roles,
+  scopedRoleId,
   lang: propLang,
   onBulkStatusChange,
   onBulkArchive,
@@ -61,9 +65,9 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
 
   // Read URL query params or fallback
   const urlSearch = searchParams.get("search") || "";
-  const urlView = searchParams.get("view") || "all";
-  const urlRole = searchParams.get("role") || "all";
-  const urlStage = searchParams.get("stage") || "all";
+  const urlView = scopedRoleId ? "all" : searchParams.get("view") || "all";
+  const urlRole = scopedRoleId || searchParams.get("role") || "all";
+  const urlStage = scopedRoleId ? "all" : searchParams.get("stage") || "all";
   const urlLoc = (searchParams.get("loc") as LocationFilterValue) || "all";
   const urlPage = parseInt(searchParams.get("page") || "1", 10);
   const urlPageSize = parseInt(searchParams.get("size") || "25", 10);
@@ -75,8 +79,8 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
   const [locationFilter, setLocationFilter] = useState<LocationFilterValue>(urlLoc);
   const [sexFilter, setSexFilter] = useState<"all" | "female" | "male">("all");
   const [expFilter, setExpFilter] = useState<"all" | "yes" | "no">("all");
-  const [currentPage, setCurrentPage] = useState(isNaN(urlPage) ? 1 : urlPage);
-  const [pageSize, setPageSize] = useState(isNaN(urlPageSize) ? 25 : urlPageSize);
+  const [currentPage, setCurrentPage] = useState(Number.isFinite(urlPage) && urlPage > 0 ? urlPage : 1);
+  const [pageSize, setPageSize] = useState([25, 50, 100].includes(urlPageSize) ? urlPageSize : 25);
 
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -101,6 +105,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
 
   // Keep URL search params in sync
   const updateUrlParams = (updates: Record<string, string | number | null>) => {
+    if (scopedRoleId) return;
     const params = new URLSearchParams(searchParams.toString());
     Object.entries(updates).forEach(([key, val]) => {
       if (val === null || val === "all" || val === "" || (key === "page" && val === 1) || (key === "size" && val === 25)) {
@@ -115,33 +120,37 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
   const handleSearchChange = (val: string) => {
     setSearchQuery(val);
     setCurrentPage(1);
+    setSelectedIds(new Set());
     updateUrlParams({ search: val, page: 1 });
   };
 
   const handleViewChange = (view: string) => {
     setActiveView(view);
     setCurrentPage(1);
+    setSelectedIds(new Set());
     updateUrlParams({ view, page: 1 });
   };
 
   const handleRoleChange = (role: string) => {
     setRoleFilter(role);
     setCurrentPage(1);
+    setSelectedIds(new Set());
     updateUrlParams({ role, page: 1 });
   };
 
   const handleLocationChange = (loc: LocationFilterValue) => {
     setLocationFilter(loc);
     setCurrentPage(1);
+    setSelectedIds(new Set());
     updateUrlParams({ loc, page: 1 });
   };
 
   useEffect(() => {
-    const r = searchParams.get("role") || "all";
+    const r = scopedRoleId || searchParams.get("role") || "all";
     setRoleFilter(r);
     const l = (searchParams.get("loc") as LocationFilterValue) || "all";
     setLocationFilter(l);
-  }, [searchParams]);
+  }, [searchParams, scopedRoleId]);
 
   const { activeRole, roles: roleDefs } = useActiveRole();
 
@@ -192,9 +201,9 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
     return applications.filter((cand) => {
       // 1. Saved view logic
       if (activeView === "active") {
-        if (cand.status === "archived" || cand.status === "rejected") return false;
+        if (isTerminal(cand)) return false;
       } else if (activeView === "screened") {
-        if (cand.status === "archived" || cand.status === "rejected") return false;
+        if (isTerminal(cand)) return false;
         const isScreened =
           Boolean(cand.screeningResult?.passedMandatory) ||
           (typeof cand.screeningScore === "number" && cand.screeningScore >= 50) ||
@@ -208,11 +217,11 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
       } else if (activeView === "hired") {
         if (cand.status !== "hired") return false;
       } else if (activeView === "awaiting_booking") {
-        if (cand.status === "archived" || cand.status === "rejected" || cand.testSlot) return false;
+        if (!isEligibleForTest(cand)) return false;
       } else if (activeView === "test_booked") {
         if (!cand.testSlot || cand.status === "archived") return false;
       } else if (activeView === "tested") {
-        if (!cand.attendedAt || cand.status === "archived") return false;
+        if (!hasTested(cand)) return false;
       } else if (activeView === "next_phase") {
         const isNp =
           cand.nextPhaseStatus === "selected" ||
@@ -239,7 +248,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
         if (cand.status !== "archived") return false;
       } else if (activeView === "all") {
         // If user is actively searching, search across all candidates including archived
-        if (!searchQuery.trim() && cand.status === "archived" && stageFilter !== "archived") return false;
+        // All means all records, including unresolved historical and archived records.
       }
 
       // 2. Role filter (robustly normalize CCTV operator aliases)
@@ -377,6 +386,8 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
 
   // Stage badge formatting
   const renderStageBadge = (cand: Application) => {
+    if (cand.stageSource === "unresolved") return <span className="text-xs text-amber-800">{t("Historical stage needs review", "Etapa histórica por rever")}</span>;
+    if (["not_advancing", "rejected", "withdrawn", "disqualified", "archived"].includes(cand.status)) return <span className="text-xs text-slate-600">{cand.status === "not_advancing" ? t("Not advancing", "Não avança") : cand.status}</span>;
     if (cand.nextPhaseResponse === "yes" || cand.nextPhaseStatus === "confirmed") {
       return (
         <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1">
@@ -399,6 +410,14 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
       );
     }
     switch (cand.status) {
+      case "training":
+        return <span className="text-xs text-sky-700">{t("Training", "Formação")}</span>;
+      case "hired":
+        return <span className="text-xs text-emerald-700">{t("Hired", "Contratado")}</span>;
+      case "interview":
+        return <span className="text-xs text-sky-700">{t("Interview", "Entrevista")}</span>;
+      case "tested":
+        return <span className="text-xs text-sky-700">{t("Test completed", "Teste realizado")}</span>;
       case "shortlisted":
         return <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-sky-50 text-sky-700 border border-sky-200">{t("Shortlisted", "Pré-selecionado")}</span>;
       case "test_invited":
@@ -454,19 +473,8 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                 t("Technical Match", "Match Técnico"),
                 t("Test Score", "Pontuação Teste"),
               ];
-              const rows = filteredCandidates.map((c) => [
-                `"${c.id}"`,
-                `"${c.name}"`,
-                `"${c.email}"`,
-                `"${c.whatsapp}"`,
-                `"${c.role || "cctv"}"`,
-                `"${c.status}"`,
-                `"${c.testSlot || ""}"`,
-                c.attendedAt ? `"${t("Attended", "Presente")}"` : `"${t("Awaiting", "Aguardado")}"`,
-                `"${c.screeningResult ? (c.screeningResult.passedMandatory ? `${c.screeningResult.matchPercentage}%` : `Not Qualified (${c.screeningResult.matchPercentage}%)`) : ""}"`,
-                `"${typeof c.testScore === "number" ? `${c.testScore}%` : ""}"`,
-              ]);
-              const csv = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\r\n");
+              const rows = filteredCandidates.map(c => [c.id, c.name, c.email, c.whatsapp, c.role || "cctv", c.status, c.testSlot || "", hasAttended(c) ? t("Attended", "Presente") : t("Not recorded", "Não registada"), c.screeningResult ? `${c.screeningResult.matchPercentage}%` : "", c.testScore ?? ""]);
+              const csv = "\uFEFF" + [headers, ...rows].map(row => row.map(csvCell).join(",")).join("\r\n");
               const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
               const url = URL.createObjectURL(blob);
               const a = document.createElement("a");
@@ -565,6 +573,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
             <option value="all">{t("All Locations", "Todas as Localizações")}</option>
             <option value="maputo_region">{t("🟢 Maputo Metro Area", "🟢 Área Metropolitana de Maputo")}</option>
             <option value="mozambique_other">{t("🇲🇿 Other Provinces (Mozambique)", "🇲🇿 Outras Províncias (Moçambique)")}</option>
+            <option value="unknown">{t("Location needs review", "Localização por confirmar")}</option>
             <option value="outside_mozambique">{t("🌐 Outside Mozambique", "🌐 Fora de Moçambique")}</option>
           </select>
 
@@ -1539,7 +1548,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                   const targetIds =
                     selectedIds.size > 0
                       ? Array.from(selectedIds)
-                      : (pendingInGroup.length > 0 ? pendingInGroup : allInGroup).map((a) => a.id);
+                      : allInGroup.filter(a => a.locationDecline?.status !== "sent").map(a => a.id);
 
                   if (targetIds.length === 0) {
                     alert(t("No candidates found to decline.", "Nenhum candidato encontrado para declinar."));
@@ -1566,6 +1575,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                         count: data.count,
                       });
                       setSelectedIds(new Set());
+                      if (data.emailsSent < data.count) alert(t(`${data.count} decisions saved; ${data.emailsSent} notices sent. Review failed or pending deliveries before retrying.`, `${data.count} decisões guardadas; ${data.emailsSent} notificações enviadas. Reveja os envios pendentes ou falhados.`));
                       setDeclineLocationModalOpen(false);
                       if (onRefresh) await onRefresh();
                       if (typeof window !== "undefined") {
