@@ -42,3 +42,19 @@ test('incoming mail is honest when disconnected and refuses another mailbox even
  process.env.ZOHO_MAIL_ACCESS_TOKEN='fixture';global.fetch=async()=>Response.json({status:{code:200},data:[{primaryEmailAddress:'other@example.invalid',accountId:'123'}]});
  result=await incoming.GET(new Request('http://localhost:3100/api/admin/careers/mail/incoming'));assert.equal(result.status,503);assert.match((await result.json()).error,/does not contain info/);
 });
+
+test('Incoming verifies the comercial mailbox alias and scopes message search and content to info recipients',async()=>{
+ process.env.ZOHO_MAIL_ACCESS_TOKEN='fixture';let verifiedAlias=true,recipient='info@overwatchmoz.com';const paths=[];
+ global.fetch=async(input)=>{const url=new URL(input);paths.push(url);let data;
+ if(url.pathname==='/api/accounts')data=[{primaryEmailAddress:'comercial@overwatchmoz.com',accountId:'123'}];
+ else if(url.pathname==='/api/accounts/123')data={emailAddress:[{mailId:'info@overwatchmoz.com',isConfirmed:verifiedAlias}]};
+ else if(url.pathname.endsWith('/messages/search')){assert.equal(url.searchParams.get('searchKey'),'to:info@overwatchmoz.com::or:cc:info@overwatchmoz.com');data=[{messageId:'456',folderId:'789',subject:'Fixture',fromAddress:'fixture@example.invalid',summary:'Summary',receivedTime:String(Date.now())}]}
+ else if(url.pathname.endsWith('/details'))data={toAddress:recipient,ccAddress:''};
+ else if(url.pathname.endsWith('/content'))data={content:'<p>Hello</p><script>bad</script>'};else throw Error('Unexpected endpoint');
+ return Response.json({status:{code:200},data});};
+ const base='http://localhost:3100/api/admin/careers/mail/incoming';
+ let response=await incoming.GET(new Request(base));assert.equal(response.status,200);assert.equal((await response.json()).items.length,1);
+ response=await incoming.GET(new Request(base+'?messageId=456&folderId=789'));assert.equal(response.status,200);assert.equal((await response.json()).body,'<p>Hello</p>');
+ recipient='commercial-only@example.invalid';paths.length=0;response=await incoming.GET(new Request(base+'?messageId=456&folderId=789'));assert.equal(response.status,404);assert.ok(!paths.some(url=>url.pathname.endsWith('/content')));
+ verifiedAlias=false;response=await incoming.GET(new Request(base));assert.equal(response.status,503);
+});

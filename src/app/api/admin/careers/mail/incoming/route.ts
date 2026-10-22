@@ -2,6 +2,11 @@ import { safeMailHtml } from "@/lib/communication-content";
 import { authenticated } from "@/lib/careers-auth";
 
 export const dynamic = "force-dynamic";
+const mailbox = "info@overwatchmoz.com";
+type ZohoAccount = { primaryEmailAddress?: string; accountId: string; emailAddress?: { mailId?: string; isConfirmed?: boolean }[] };
+function addressedToMailbox(data: { toAddress?: string; ccAddress?: string }) {
+  return [data.toAddress, data.ccAddress].some(value => (String(value || "").match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi) || []).some(address => address.toLowerCase() === mailbox));
+}
 let cachedToken: { token: string; expires: number } | undefined;
 async function zohoToken() {
   if (cachedToken && cachedToken.expires > Date.now()) return cachedToken.token;
@@ -23,16 +28,27 @@ export async function GET(request: Request) {
       const data = await response.json(); if (!response.ok || data.status?.code !== 200) throw Error("Zoho mailbox could not be read. Check its read-only authorization."); return data.data;
     };
     const accounts = await read("https://mail.zoho.com/api/accounts");
-    const account = accounts.find((item: {primaryEmailAddress?: string; accountId: string}) => item.primaryEmailAddress?.toLowerCase() === "info@overwatchmoz.com");
+    let account = accounts.find((item: ZohoAccount) => item.primaryEmailAddress?.toLowerCase() === mailbox) as ZohoAccount | undefined;
+    if (!account) {
+      // The owner confirmed info@ is an alias of comercial@. Verify that relationship with Zoho.
+      const owner = accounts.find((item: ZohoAccount) => item.primaryEmailAddress?.toLowerCase() === "comercial@overwatchmoz.com") as ZohoAccount | undefined;
+      if (owner && /^\d+$/.test(String(owner.accountId))) {
+        const details = await read(`https://mail.zoho.com/api/accounts/${owner.accountId}`) as ZohoAccount;
+        if (details.emailAddress?.some(alias => alias.mailId?.toLowerCase() === mailbox && alias.isConfirmed === true)) account = owner;
+      }
+    }
     if (!account || !/^\d+$/.test(String(account.accountId))) throw Error("The connected Zoho account does not contain info@overwatchmoz.com");
     const params = new URL(request.url).searchParams;
     if (params.has("messageId")) {
       const messageId = params.get("messageId"), folderId = params.get("folderId");
       if (!/^\d+$/.test(messageId || "") || !/^\d+$/.test(folderId || "")) return Response.json({ error: "Invalid message" }, { status: 400 });
+      const metadata = await read(`https://mail.zoho.com/api/accounts/${account.accountId}/folders/${folderId}/messages/${messageId}/details`);
+      if (!addressedToMailbox(metadata)) return Response.json({ error: "This message is not addressed to info@overwatchmoz.com" }, { status: 404 });
       const message = await read(`https://mail.zoho.com/api/accounts/${account.accountId}/folders/${folderId}/messages/${messageId}/content`);
       return Response.json({ body: safeMailHtml(message.content || "") }, { headers: { "Cache-Control": "no-store" } });
     }
-    const rows = await read(`https://mail.zoho.com/api/accounts/${account.accountId}/messages/view?limit=100&includesent=false&includearchive=false`);
+    const search = new URLSearchParams({ searchKey: `to:${mailbox}::or:cc:${mailbox}`, limit: "100", includeto: "true", receivedTime: String(Date.now()) });
+    const rows = await read(`https://mail.zoho.com/api/accounts/${account.accountId}/messages/search?${search}`);
     return Response.json({ connected: true, mailbox: "info@overwatchmoz.com", items: rows.map((item: {messageId: string;receivedTime: string;subject: string;fromAddress: string;summary: string;folderId: string}) => ({ id: String(item.messageId), updated_at: new Date(Number(item.receivedTime)).toISOString(), data: { subject: item.subject, from: item.fromAddress, body: item.summary, status: "received", messageId: item.messageId, folderId: item.folderId } })) }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return Response.json({ error: (error as Error).message }, { status: 503 }); }
 }

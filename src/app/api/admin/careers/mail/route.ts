@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     const scope = params.get("scope") || undefined;
     const items = await listMail(scope);
     // Attachment bytes stay in persisted drafts, but never inflate mailbox listings.
-    return Response.json({ items: items.map(item => ({ ...item, data: { ...item.data, attachments: undefined } })), incomingConnected: Boolean(process.env.ZOHO_MAIL_ACCOUNT_ID && (process.env.ZOHO_MAIL_ACCESS_TOKEN || process.env.ZOHO_MAIL_REFRESH_TOKEN)) }, { headers: { "Cache-Control": "no-store" } });
+    return Response.json({ items: items.map(item => ({ ...item, data: { ...item.data, attachments: undefined } })), incomingConnected: Boolean(process.env.ZOHO_MAIL_ACCESS_TOKEN || (process.env.ZOHO_MAIL_REFRESH_TOKEN && process.env.ZOHO_MAIL_CLIENT_ID && process.env.ZOHO_MAIL_CLIENT_SECRET)) }, { headers: { "Cache-Control": "no-store" } });
   } catch { return Response.json({ error: "Mailbox unavailable. Your draft has not been discarded." }, { status: 503 }); }
 }
 export async function POST(request: Request) {
