@@ -111,6 +111,7 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
 
   // Studio Mode: Edit vs Live Letterhead Preview
   const [canvasTab, setCanvasTab] = useState<"edit" | "preview">("edit");
+  const [arrangingBooking, setArrangingBooking] = useState(false);
   const [selectedPreviewCandidateId, setSelectedPreviewCandidateId] = useState<string>("");
   const [copiedWhatsApp, setCopiedWhatsApp] = useState(false);
 
@@ -1392,6 +1393,8 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                   </div>
                 )}
 
+                {includeBookingButton && <button type="button" aria-pressed={arrangingBooking} onClick={() => setArrangingBooking(value => !value)} className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs font-semibold text-sky-700">{arrangingBooking ? t("Done positioning", "Concluir posicionamento") : t("Position booking button", "Posicionar botão de agendamento")}</button>}
+
                 {/* The Actual Official Letterhead Sheet */}
                 <div className="w-full max-w-2xl rounded-2xl border border-slate-300 bg-white shadow-xl overflow-hidden text-left">
                   {/* Navy Header Band #0a1128 */}
@@ -1449,9 +1452,9 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
 
                   {/* Letter Body Rendered */}
                   <div className="p-6 bg-white space-y-4">
-                    <div onClick={event => { if ((event.target as Element).closest("[data-booking-button]")) event.preventDefault(); }} onDragStart={event => { if ((event.target as Element).closest("[data-booking-button]")) { event.stopPropagation(); event.dataTransfer.setData("application/overwatch-booking", "move"); event.dataTransfer.effectAllowed = "move"; } }} className="text-xs sm:text-sm text-slate-800 leading-relaxed font-sans [&_p]:mb-3 [&_ul]:list-disc [&_ul]:ml-5 [&_ol]:list-decimal [&_ol]:ml-5 [&_li]:mb-1 [&_strong]:font-bold [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-3 [&_blockquote]:italic">
-                      {previewBlocks.map((block,index) => <React.Fragment key={index}>{includeBookingButton && <div onDragOver={event => { event.preventDefault(); event.stopPropagation(); }} onDrop={event => dropBooking(event,index)} className="my-1 min-h-4 rounded border border-dashed border-sky-200 px-2 py-1 text-center text-[10px] text-sky-600">{t("Drop booking button here", "Largar botão aqui")}<button className="ml-2 underline" type="button" onClick={() => setMessageBody(previous => moveBookingToken(previous,index))}>{t("Move here", "Mover aqui")}</button></div>}<div dangerouslySetInnerHTML={{__html:renderStudioMessage(block,sampleCandidate,previewRoleTitle,emailLang,includeBookingButton,true)}}/></React.Fragment>)}
-                      {includeBookingButton && <div onDragOver={event => {event.preventDefault();event.stopPropagation();}} onDrop={event => dropBooking(event,previewBlocks.length)} className="min-h-5 border-t border-dashed border-sky-200 pt-2 text-center text-[10px] text-sky-600"><button type="button" className="underline" onClick={() => setMessageBody(previous => moveBookingToken(previous,previewBlocks.length))}>{t("Move booking button to the end", "Mover botão para o fim")}</button></div>}
+                    <div onClick={event => { if ((event.target as Element).closest("[data-booking-button]")) event.preventDefault(); }} onDragStart={event => { if ((event.target as Element).closest("[data-booking-button]")) { setArrangingBooking(true); event.stopPropagation(); event.dataTransfer.setData("application/overwatch-booking", "move"); event.dataTransfer.effectAllowed = "move"; } }} className="text-xs sm:text-sm text-slate-800 leading-relaxed font-sans [&_p]:mb-3 [&_ul]:list-disc [&_ul]:ml-5 [&_ol]:list-decimal [&_ol]:ml-5 [&_li]:mb-1 [&_strong]:font-bold [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-3 [&_blockquote]:italic">
+                      {previewBlocks.map((block,index) => <React.Fragment key={index}>{includeBookingButton && arrangingBooking && <div onDragOver={event => { event.preventDefault(); event.stopPropagation(); }} onDrop={event => dropBooking(event,index)} className="my-1 min-h-4 rounded border border-dashed border-sky-200 px-2 py-1 text-center text-[10px] text-sky-600">{t("Drop booking button here", "Largar botão aqui")}<button className="ml-2 underline" type="button" onClick={() => setMessageBody(previous => moveBookingToken(previous,index))}>{t("Move here", "Mover aqui")}</button></div>}<div dangerouslySetInnerHTML={{__html:renderStudioMessage(block,sampleCandidate,previewRoleTitle,emailLang,includeBookingButton,true)}}/></React.Fragment>)}
+                      {includeBookingButton && arrangingBooking && <div onDragOver={event => {event.preventDefault();event.stopPropagation();}} onDrop={event => dropBooking(event,previewBlocks.length)} className="min-h-5 border-t border-dashed border-sky-200 pt-2 text-center text-[10px] text-sky-600"><button type="button" className="underline" onClick={() => setMessageBody(previous => moveBookingToken(previous,previewBlocks.length))}>{t("Move booking button to the end", "Mover botão para o fim")}</button></div>}
                     </div>
 
                     {/* Attachments List */}

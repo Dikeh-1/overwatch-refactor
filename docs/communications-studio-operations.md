@@ -29,3 +29,7 @@ Settings > Test schedules by role & recruitment cycle controls the cycle schedul
 ## Screening
 
 The checklist, failed count, eligibility and weighted score use the same cycle snapshot rules. Experience ranges are evaluated using their lower bound; missing/unknown numeric responses do not become zero. Saved raw evaluations remain in the database for evidence, while displayed evaluations are recomputed from the applicable rules. Screening does not overwrite recorded recruitment selections or outcomes.
+
+## Validation limits
+
+Runtime dependency audit reports zero vulnerabilities after updating Next.js to 16.4.2 and removing nodemailer. The full audit still reports five high findings in the ESLint-only dependency chain (braces, micromatch, fast-glob, @next/eslint-plugin-next, eslint-config-next). npm currently proposes an incompatible downgrade to eslint-config-next 14.2.35; it was not forced. Track the upstream fix. Incoming mailbox authorization and real recipient delivery were not exercised in QA; no applicant emails were sent by the agent.
