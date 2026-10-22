@@ -1,6 +1,20 @@
 import type { ScreeningRule } from "./careers-models";
 import type { Application, ScreeningEvaluationResult } from "./careers";
 
+export function screeningValue(app: Partial<Application>, field: string): unknown {
+  const direct = (app as Record<string, unknown>)[field];
+  return direct === undefined || direct === null || (typeof direct === "string" && !direct.trim()) ? app.technicalData?.[field] : direct;
+}
+export function screeningNumber(value: unknown): number | null {
+  if (typeof value === "number") return Number.isFinite(value) && value >= 0 ? value : null;
+  if (typeof value !== "string") return null;
+  const text = value.trim().toLowerCase();
+  if (["none","no","não","nao","sem experiência","sem experiencia"].includes(text)) return 0;
+  const match = text.match(/^([+-]?\d+(?:[.,]\d+)?)(?:\s*(?:[-_–—+]|to\b|a\b|years?\b|anos?\b|plus\b)|$)/);
+  const number = match ? Number(match[1].replace(",", ".")) : NaN;
+  return Number.isFinite(number) && number >= 0 ? number : null;
+}
+
 export function evaluateApplicationWithRules(
   app: Partial<Application>,
   rules: ScreeningRule[],
@@ -33,9 +47,7 @@ export function evaluateApplicationWithRules(
   }> = [];
 
   for (const rule of rules) {
-    const rawVal =
-      (app as Record<string, any>)[rule.field] ??
-      ((app as any).technicalData && (app as any).technicalData[rule.field]);
+    const rawVal = screeningValue(app, rule.field);
     let passed = false;
 
     if (rule.type === "boolean") {
@@ -49,28 +61,9 @@ export function evaluateApplicationWithRules(
         passed = s === exp;
       }
     } else if (rule.type === "number") {
-      let num = 0;
-      if (typeof rawVal === "number") {
-        num = Number.isFinite(rawVal) ? rawVal : 0;
-      } else if (typeof rawVal === "string") {
-        const cleaned = rawVal.trim().toLowerCase();
-        if (
-          cleaned === "" ||
-          cleaned === "0" ||
-          cleaned === "none" ||
-          cleaned === "no" ||
-          cleaned === "não" ||
-          cleaned === "nao"
-        ) {
-          num = 0;
-        } else {
-          // Extract first integer from range string (e.g. "5-8" -> 5, "1-2" -> 1, "8+" -> 8, "1_2" -> 1)
-          const match = cleaned.match(/^([+-]?\d+(?:[.,]\d+)?)/);
-          num = match ? Number(match[1].replace(",", ".")) : 0;
-        }
-      }
-      const target = Number(rule.expectedValue) || 0;
-      passed = num >= target;
+      const num = screeningNumber(rawVal);
+      const target = typeof rule.expectedValue === "number" ? rule.expectedValue : Number(rule.expectedValue);
+      passed = num !== null && Number.isFinite(target) && target >= 0 && num >= target;
     } else {
       const actual = String(rawVal ?? "").trim().toLowerCase();
       const expected = String(rule.expectedValue ?? "").trim().toLowerCase();
@@ -84,7 +77,7 @@ export function evaluateApplicationWithRules(
       mandatory: rule.mandatory,
     });
 
-    const weight = rule.weight && rule.weight > 0 ? rule.weight : 1;
+    const weight = typeof rule.weight === "number" && Number.isFinite(rule.weight) && rule.weight > 0 ? rule.weight : 1;
     if (rule.mandatory) {
       mandatoryTotal += weight;
       if (passed) {

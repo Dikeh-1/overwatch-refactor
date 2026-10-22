@@ -1,6 +1,6 @@
 import type { Application } from "./careers";
 import { isPastDateSlot, normalizeSlot } from "./careers";
-import { isTerminal, resolveApplication } from "./careers-workflow";
+import { isTerminal, resolveApplication, sameRole } from "./careers-workflow";
 
 export function validateReservation(
   candidate: Application,
@@ -32,6 +32,7 @@ export function validateReservation(
     throw new Error("INVALID_SLOT");
   const occupancy = applications.filter(
     (a) =>
+      sameBookingScope(a, candidate) &&
       a.id !== candidate.id &&
       normalizeSlot(a.testSlot) === slot &&
       !isTerminal(resolveApplication(a)),
@@ -51,4 +52,8 @@ export function validateReservation(
         }
       : {}),
   };
+}
+
+export function sameBookingScope(a: Application, b: Application): boolean {
+  return sameRole(a.role, b.role) && (a.cohortId || "") === (b.cohortId || "");
 }

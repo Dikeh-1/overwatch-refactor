@@ -27,9 +27,8 @@ export async function getRecruitmentWorkspaceData() {
     return {
       ...resolved,
       workspaceCohortId: cohort?.id,
-      screeningResult:
-        a.screeningResult ??
-        (rules?.length ? evaluateApplicationWithRules(a, rules) : undefined),
+      screeningRulesApplied: rules,
+      screeningResult: rules ? evaluateApplicationWithRules(a, rules) : a.screeningResult,
     };
   });
   return { raw, roles, cohorts, applications };

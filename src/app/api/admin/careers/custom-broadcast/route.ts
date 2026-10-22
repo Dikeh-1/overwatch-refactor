@@ -1,3 +1,10 @@
+import { after } from "next/server";
+import { processStudioQueue, validFollowUp, deliveryId } from "@/lib/communication-delivery";
+import { getMail, putMail, insertMailBatch } from "@/lib/communication-mail-store";
+import { candidateVariables, studioScope } from "@/lib/communication-content";
+import { renderOfficialMail } from "@/lib/communication-renderer";
+import { getCandidateSlotConfig } from "@/lib/careers-booking";
+import { isPastDateSlot } from "@/lib/careers";
 import { auditRequest } from "@/lib/admin-activity";
 import crypto from "node:crypto";
 import { getRecruitmentWorkspaceData } from "@/lib/careers-workspace-store";
@@ -9,8 +16,11 @@ import { siteContact } from "@/lib/site-config";
 import type { Application } from "@/lib/careers";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 interface BroadcastRequest {
+  draftId?: string;
+  followUp?: { trigger: "booking_confirmed"; subject: string; message: string };
   locale?: "en" | "pt";
   cohortId?: string;
   audienceFilter:
@@ -53,19 +63,21 @@ async function handlePOST(request: Request) {
       candidateEmail,
       subject,
       message,
-      includeBookingButton = true,
+      includeBookingButton = false,
       buttonText = "Confirmar Data do Teste Presencial",
       testOnly = false,
       testEmail,
       attachments,
     } = body;
 
-    if (!subject?.trim() || !message?.trim()) {
+    if (typeof subject !== "string" || typeof message !== "string" || subject.length > 1000 || message.length > 100000 || !subject.trim() || !message.trim()) {
       return Response.json(
         { error: "Subject and message are required." },
         { status: 400 },
       );
     }
+
+    if (body.followUp && (!includeBookingButton || !validFollowUp(body.followUp))) return Response.json({ error: "A booking follow-up needs a booking invitation and a subject and message. It cannot contain another booking link." }, { status: 400 });
 
     if (testOnly) {
       const recipient = testEmail?.trim();
@@ -83,17 +95,16 @@ async function handlePOST(request: Request) {
       const matchedCandidate = allApps.find(
         (a) => a.email.trim().toLowerCase() === recipient.toLowerCase(),
       );
-      const firstCandidate = allApps.find((a) => a.sex === "female" && a.status !== "archived");
 
       const sampleCandidate: Application = {
-        id: matchedCandidate?.id || firstCandidate?.id || "preview-sample-id",
-        name: matchedCandidate?.name || firstCandidate?.name || "Arminda Martins Guambe",
+        id: "preview-only",
+        name: matchedCandidate?.name || "Sample applicant",
         email: recipient,
         whatsapp: matchedCandidate?.whatsapp || "+258 84 287 0793",
         role: roleId || "cctv",
         locale: "pt",
         grade12: "yes",
-        sex: (matchedCandidate?.sex || firstCandidate?.sex || "female") as "female" | "male",
+        sex: (matchedCandidate?.sex || "female") as "female" | "male",
         ai: "no",
         experience: "yes",
         lastProfession: matchedCandidate?.lastProfession || "Operadora de CCTV",
@@ -103,9 +114,11 @@ async function handlePOST(request: Request) {
         cvSize: 102400,
         status: "interview",
         createdAt: new Date().toISOString(),
+        testSlot: matchedCandidate?.testSlot,
       };
 
-      const roleTitle = roleId === "cctv" || !roleId ? "Operadora de CCTV" : roleId;
+      const previewRole = workspace.roles.find(role => sameRole(role.id, roleId));
+      const roleTitle = previewRole ? body.locale === "en" ? previewRole.en : previewRole.pt : roleId === "cctv" || !roleId ? "Operadora de CCTV" : roleId;
       const isEnglish = body.locale ? body.locale === "en" :
         /Dear\s+/i.test(message) ||
         /Kind regards/i.test(message) ||
@@ -127,11 +140,12 @@ async function handlePOST(request: Request) {
 
       const html = generateOfficialBroadcastHtml({
         candidate: sampleCandidate,
-        subject: substitutedSubject,
-        message: substitutedMessage,
+        subject,
+        message,
         includeBookingButton,
         buttonText,
         roleTitle,
+        locale: isEnglish ? "en" : "pt",
       });
 
       await sendTransactionalEmail({
@@ -218,6 +232,33 @@ async function handlePOST(request: Request) {
       );
     }
 
+    if (includeBookingButton) {
+      const configs = new Map<string, Awaited<ReturnType<typeof getCandidateSlotConfig>>>();
+      for (const candidate of deduplicatedCandidates) {
+        const key = `${candidate.role}:${candidate.cohortId}`;
+        const config = configs.get(key) || await getCandidateSlotConfig(candidate); configs.set(key, config);
+        if (!config.slots.some(slot => !isPastDateSlot(slot))) return Response.json({ error: "No future test slots are configured for this applicant's recruitment cycle. Configure its schedule in Settings before inviting." }, { status: 400 });
+      }
+    }
+    if (body.draftId) {
+      const draft = await getMail(body.draftId);
+      const scope = studioScope(body.cohortId, roleId, audienceFilter === "individual" ? candidateId : undefined);
+      if (!draft || draft.kind !== "draft" || draft.scope !== scope) return Response.json({ error: "Save the draft before sending." }, { status: 409 });
+      if (!["draft", "queued"].includes(draft.data.status)) return Response.json({ error: "This draft was already sent. Review Sent mail before creating another message." }, { status: 409 });
+      if (draft.data.followUpEnabled && (!draft.data.includeBookingButton || !validFollowUp({ trigger: "booking_confirmed", subject: draft.data.followUpSubject, message: draft.data.followUpBody }))) return Response.json({ error: "Fix the saved booking follow-up before sending." }, { status: 400 });
+      if (draft.data.status === "draft" && (draft.data.subject !== subject || draft.data.messageBody !== message || Boolean(draft.data.includeBookingButton) !== includeBookingButton)) return Response.json({ error: "The message changed since its last save. Save it again before sending." }, { status: 409 });
+      const queuedItems = draft.data.status === "queued" ? draft.data.queuedItems : deduplicatedCandidates.map(candidate => {
+        const role = workspace.roles.find(r => sameRole(r.id, candidate.role));
+        return { id: deliveryId(`${body.draftId}:${candidate.id}`), kind: "outbox" as const, scope, data: { contentId: body.draftId, subject, candidateId: candidate.id, roleId: candidate.role, cohortId: candidate.cohortId, recipient: candidate.email, campaignId: body.draftId, roleTitle: role ? draft.data.emailLang === "en" ? role.en : role.pt : candidate.role, locale: draft.data.emailLang === "en" ? "en" : "pt", includeBookingButton: Boolean(draft.data.includeBookingButton), status: "queued", deliveryId: crypto.randomUUID() } };
+      });
+      if (!Array.isArray(queuedItems) || !queuedItems.length) return Response.json({ error: "The saved recipient list is unavailable. Review Outbox before retrying." }, { status: 409 });
+      // Freeze content and recipients before making any delivery claimable. Concurrent requests cannot add recipients.
+      if (draft.data.status === "draft") await putMail({ ...draft, data: { ...draft.data, status: "queued", queuedItems } }, draft.version);
+      await insertMailBatch(queuedItems);
+      after(async () => { await processStudioQueue(scope, body.draftId); });
+      return Response.json({ success: true, queued: true, campaignId: body.draftId, totalTargeted: queuedItems.length });
+    }
+
     let sentCount = 0;
     const errors: { email: string; error: string }[] = [];
     const historyWarnings: string[] = [];
@@ -237,11 +278,12 @@ async function handlePOST(request: Request) {
 
         const html = generateOfficialBroadcastHtml({
           candidate,
-          subject: candSubj,
-          message: candMsg,
+          subject,
+          message,
           includeBookingButton,
           buttonText,
           roleTitle,
+          locale: isEnglish ? "en" : "pt",
         });
 
         await sendTransactionalEmail({
@@ -289,272 +331,10 @@ async function handlePOST(request: Request) {
   }
 }
 
-export function substituteCandidateVariables(
-  text: string,
-  candidate: Application,
-  roleTitle?: string,
-  isEnglish?: boolean,
-): string {
-  if (!text) return "";
-  const name = candidate.name.trim();
-  const title =
-    roleTitle ||
-    (candidate.role === "cctv" || candidate.role === "cctv_operator" || !candidate.role
-      ? isEnglish
-        ? "CCTV Operator"
-        : "Operadora de CCTV"
-      : candidate.role === "cctv_technical_manager"
-      ? isEnglish
-        ? "CCTV Technical Manager"
-        : "Gestor Técnico de CCTV"
-      : candidate.role);
-
-  const slot = candidate.testSlot || (isEnglish ? "To be confirmed" : "A definir");
-  const dateStr = new Date().toLocaleDateString(isEnglish ? "en-US" : "pt-MZ", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-  const location = "Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo";
-  const company = "Overwatch Moçambique";
-
-  return text
-    .replace(/\{\{?candidate_name\}\}?/gi, name)
-    .replace(/\{\{?name\}\}?/gi, name)
-    .replace(/\{\{?role_title\}\}?/gi, title)
-    .replace(/\{\{?role\}\}?/gi, title)
-    .replace(/\{\{?company_name\}\}?/gi, company)
-    .replace(/\{\{?company\}\}?/gi, company)
-    .replace(/\{\{?test_slot\}\}?/gi, slot)
-    .replace(/\{\{?slot\}\}?/gi, slot)
-    .replace(/\{\{?date\}\}?/gi, dateStr)
-    .replace(/\{\{?location\}\}?/gi, location);
+export function substituteCandidateVariables(text: string, candidate: Application, roleTitle?: string, isEnglish?: boolean): string {
+  return candidateVariables(text, candidate, roleTitle || (candidate.role === "cctv" ? isEnglish ? "CCTV Operator" : "Operadora de CCTV" : candidate.role), isEnglish ? "en" : "pt");
 }
-
-function generateOfficialBroadcastHtml(params: {
-  candidate: Application;
-  subject: string;
-  message: string;
-  includeBookingButton: boolean;
-  buttonText: string;
-  roleTitle?: string;
-}) {
-  const { candidate, includeBookingButton, buttonText, roleTitle } = params;
-
-  const origin = "https://www.overwatchmoz.com";
-  const logoWhiteUrl = `${origin}/logo-white.png`;
-  const bookingUrl = `${origin}/pt/careers/test-invite/${candidate.id}`;
-
-  const isFemale = candidate.sex === "female";
-  const candidateFullName = candidate.name.trim();
-  const isEnglish =
-    /Dear\s+/i.test(params.message) ||
-    /Kind regards/i.test(params.message) ||
-    /Please be reminded/i.test(params.message) ||
-    /recruitment process/i.test(params.message);
-
-  const substitutedSubject = substituteCandidateVariables(
-    params.subject,
-    candidate,
-    roleTitle,
-    isEnglish,
-  );
-  const substitutedMessage = substituteCandidateVariables(
-    params.message,
-    candidate,
-    roleTitle,
-    isEnglish,
-  );
-  const substitutedButtonText = substituteCandidateVariables(
-    buttonText,
-    candidate,
-    roleTitle,
-    isEnglish,
-  );
-
-  const defaultGreeting = isEnglish
-    ? `Dear ${candidateFullName}`
-    : isFemale
-      ? `Prezada ${candidateFullName}`
-      : candidate.sex === "male"
-        ? `Prezado ${candidateFullName}`
-        : `Prezada(o) ${candidateFullName}`;
-
-  let finalGreeting = defaultGreeting;
-  const isHtml = /<[a-z][\s\S]*>/i.test(substitutedMessage);
-  let formattedContent = "";
-
-  if (isHtml) {
-    formattedContent = substitutedMessage;
-  } else {
-    // Check if message body already begins with a formal greeting line
-    const rawParagraphs = substitutedMessage
-      .split(/\n\s*\n/)
-      .map((p) => p.trim())
-      .filter(Boolean);
-
-    let bodyParagraphs = rawParagraphs;
-    const greetingRegex =
-      /^(Dear|Prezada\(o\)|Prezado\(a\)|Prezada|Prezado|Caro|Cara|Caros|Olá|Ola|Hello|Hi)\b/i;
-
-    if (rawParagraphs.length > 0 && greetingRegex.test(rawParagraphs[0])) {
-      const firstLine = rawParagraphs[0].replace(/[,\s]+$/, "").trim();
-      finalGreeting = firstLine;
-      bodyParagraphs = rawParagraphs.slice(1);
-    }
-
-    // Format message paragraphs and lists cleanly
-    formattedContent = bodyParagraphs
-      .map((block) => {
-        // Check for bullet list
-        if (
-          block.includes("\n•") ||
-          block.includes("\n-") ||
-          block.startsWith("•") ||
-          block.startsWith("-")
-        ) {
-          const lines = block.split("\n");
-          const items: string[] = [];
-          let introText = "";
-          lines.forEach((l) => {
-            const t = l.trim();
-            if (t.startsWith("•") || t.startsWith("-")) {
-              items.push(
-                `<li style="margin-bottom: 6px; color: #334155;">${t.replace(/^[•-]\s*/, "")}</li>`,
-              );
-            } else if (t) {
-              introText += `<p style="font-size: 14px; color: #334155; line-height: 1.6; margin: 0 0 8px 0;">${t}</p>`;
-            }
-          });
-          return `${introText}<ul style="margin: 6px 0 16px 20px; padding: 0; font-size: 14px; line-height: 1.6;">${items.join("")}</ul>`;
-        }
-
-        // Check for numbered list (1. 2. 3.)
-        if (/^\d+\./m.test(block)) {
-          const lines = block.split("\n");
-          const items: string[] = [];
-          let introText = "";
-          lines.forEach((l) => {
-            const t = l.trim();
-            if (/^\d+\./.test(t)) {
-              items.push(
-                `<li style="margin-bottom: 6px; color: #334155;">${t.replace(/^\d+\.\s*/, "")}</li>`,
-              );
-            } else if (t) {
-              introText += `<p style="font-size: 14px; color: #334155; line-height: 1.6; margin: 0 0 8px 0;">${t}</p>`;
-            }
-          });
-          return `${introText}<ol style="margin: 6px 0 16px 20px; padding: 0; font-size: 14px; line-height: 1.6;">${items.join("")}</ol>`;
-        }
-
-        return `<p style="font-size: 14px; color: #334155; line-height: 1.6; margin: 0 0 14px 0;">${block.replace(/\n/g, "<br />")}</p>`;
-      })
-      .join("");
-  }
-
-  return `<!DOCTYPE html>
-<html lang="pt">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${substitutedSubject}</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; -webkit-font-smoothing: antialiased;">
-  <div style="background-color: #f1f5f9; padding: 32px 14px;">
-    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08); overflow: hidden;">
-      
-      <!-- Official Letterhead Header (Dark Navy #0b1329) -->
-      <div style="background-color: #0b1329; padding: 18px 24px; border-bottom: 2px solid rgba(255, 255, 255, 0.15);">
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td style="vertical-align: middle;">
-              <img src="${logoWhiteUrl}" alt="Overwatch" height="22" width="147" style="height: 22px; width: auto; max-width: 145px; display: block; border: 0;" />
-            </td>
-            <td style="vertical-align: middle; text-align: right;">
-              <span style="display: inline-block; background-color: rgba(255, 255, 255, 0.12); color: #ffffff; font-family: monospace; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.2); letter-spacing: 0.04em;">
-                REF: COM-2026/MAPUTO
-              </span>
-              <div style="font-size: 11px; color: #cbd5e1; margin-top: 4px; font-weight: 500;">
-                Departamento de Recursos Humanos
-              </div>
-            </td>
-          </tr>
-        </table>
-      </div>
-
-      <!-- Official Subheading Bar -->
-      <div style="background-color: #f8fafc; padding: 12px 24px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #334155;">
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td style="font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #0b1329;">
-              COMUNICAÇÃO OFICIAL · PROCESSO DE RECRUTAMENTO
-            </td>
-            <td style="text-align: right; color: #64748b; font-size: 11px;">
-              Maputo, Moçambique
-            </td>
-          </tr>
-        </table>
-      </div>
-
-      <!-- Body Content -->
-      <div style="padding: 28px 24px; background-color: #ffffff;">
-        <h1 style="font-size: 18px; font-weight: 700; color: #090d16; margin: 0 0 16px 0;">
-          ${finalGreeting},
-        </h1>
-
-        <div style="margin-bottom: 20px;">
-          ${formattedContent}
-        </div>
-
-        ${
-          includeBookingButton
-            ? `
-        <!-- Direct CTA Button (Official Dark Navy) -->
-        <div style="text-align: center; margin: 28px 0;">
-          <a href="${bookingUrl}" target="_blank" style="display: inline-block; background-color: #0b1329; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; padding: 14px 28px; border-radius: 8px; box-shadow: 0 4px 12px rgba(11, 19, 41, 0.25); letter-spacing: 0.02em;">
-            ${substitutedButtonText} &rarr;
-          </a>
-          <div style="font-size: 11px; color: #64748b; margin-top: 8px;">
-            Link pessoal: <a href="${bookingUrl}" style="color: #0b1329; text-decoration: underline; word-break: break-all;">${bookingUrl}</a>
-          </div>
-        </div>
-        `
-            : ""
-        }
-
-        <!-- Official Premises & Address Box -->
-        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; margin-top: 24px;">
-          <strong style="font-size: 12px; color: #090d16; display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em;">
-            📍 Endereço Oficial das Instalações
-          </strong>
-          <div style="font-size: 13px; color: #475569; line-height: 1.5;">
-            <strong>Overwatch Moçambique:</strong> Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo.<br />
-            <span style="font-size: 12px; color: #64748b;">(Acesso sujeito a confirmação prévia de presença e apresentação de documento de identificação original com fotografia).</span>
-          </div>
-        </div>
-
-        <!-- Sign-Off -->
-        <div style="margin-top: 24px; font-size: 14px; color: #334155; line-height: 1.5;">
-          Com os melhores cumprimentos,<br />
-          <strong style="color: #090d16;">Equipa de Recrutamento</strong><br />
-          Overwatch Moçambique
-        </div>
-      </div>
-
-      <!-- Formal Legal & Contact Footer -->
-      <div style="background-color: #f8fafc; padding: 22px 32px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6;">
-        <strong style="color: #090d16;">Overwatch Moçambique, Lda.</strong><br />
-        ${siteContact.address.pt}<br />
-        Telefone / WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #0b1329; text-decoration: none; font-weight: 600;">+258 84 287 0793</a> · Email: <a href="mailto:${siteContact.email}" style="color: #0b1329; text-decoration: none;">${siteContact.email}</a> · Website: <a href="${origin}" style="color: #64748b; text-decoration: none;">www.overwatchmoz.com</a>
-      </div>
-
-    </div>
-  </div>
-</body>
-</html>
-`;
+export function generateOfficialBroadcastHtml(params: { candidate: Application; subject: string; message: string; includeBookingButton: boolean; buttonText: string; roleTitle?: string; locale?: "en" | "pt" }) {
+  return renderOfficialMail({ ...params, roleTitle: params.roleTitle || params.candidate.role, locale: params.locale || (/Dear\s+|Kind regards|recruitment process/i.test(params.message) ? "en" : "pt") }).html;
 }
-
-export async function POST(request: Request) {
-  return auditRequest(request, () => handlePOST(request));
-}
+export async function POST(request: Request) { return auditRequest(request, () => handlePOST(request)); }

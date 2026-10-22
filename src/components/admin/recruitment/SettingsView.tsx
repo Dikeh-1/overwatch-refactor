@@ -1,5 +1,6 @@
 "use client";
 
+import { RoleTestSlotSettings } from "./RoleTestSlotSettings";
 import React, { useState, useEffect } from "react";
 import { Save, CheckCircle2, Mail, SlidersHorizontal } from "lucide-react";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
@@ -141,6 +142,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ lang: propLang }) =>
           )}
         </div>
       </div>
+      <RoleTestSlotSettings />
     </div>
   );
 };

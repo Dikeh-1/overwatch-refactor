@@ -12,6 +12,7 @@ Module._load=function(name,...args){
  if(name==='@/lib/careers-store')return{updateApplication:async(id,patch)=>{if(historyFails)throw Error('History unavailable');updated.push({id,patch});return{...applications.find(a=>a.id===id),...patch}}};
  if(name==='@/lib/careers-email')return{sendTransactionalEmail:async(mail,id)=>{assert.equal(id,'one');if(fail)throw Error('Fixture delivery failed');delivered.push(mail)}};
  if(name==='@/lib/careers-workspace-store')return{getRecruitmentWorkspaceData:async()=>({applications,roles:[{id:'cctv',en:'CCTV Operator',pt:'Operadora de CCTV'}],cohorts:[{id:'september',roleId:'cctv'}]})};
+ if(name.startsWith('@/lib/'))return original.call(this,require('node:path').resolve(__dirname,'../src',name.slice(2)),...args);
  return original.call(this,name,...args);
 };
 const route=require('../src/app/api/admin/careers/custom-broadcast/route.ts');Module._load=original;

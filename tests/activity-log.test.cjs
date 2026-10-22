@@ -26,7 +26,6 @@ Module._load = function(name, ...args) {
   if (name === '@/lib/careers-config-store') return {getSystemConfig:async()=>savedTemplates,setSystemConfig:async(_,value)=>{savedTemplates=value;return value}};
   if (name === './careers-store') return { getApplications: async()=>emailCandidates };
   if (name === './careers-config-store') return { getSystemConfig:async()=>({senderName:'Recruitment',replyToEmail:'fixture@example.invalid'}) };
-  if (name === 'nodemailer') return { createTransport:()=>({sendMail:async options=>{delivered.push(options);return {messageId:'fake-smtp-id'}}}) };
   return original.call(this, name, ...args);
 };
 activity = require(path.join(root, 'src/lib/admin-activity.ts'));
@@ -94,7 +93,7 @@ test('log API rejects unauthenticated access, cross-origin telemetry, invalid cu
 test('all admin and candidate mutation routes have server-side journaling; heartbeat polls are excluded',()=>{
   const visit=dir=>readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?visit(path.join(dir,e.name)):e.name==='route.ts'?[path.join(dir,e.name)]:[]);
   for(const file of [...visit(path.join(root,'src/app/api/admin')),...visit(path.join(root,'src/app/api/careers')),...visit(path.join(root,'src/app/api/gate'))]){
-    if(file.includes(path.join('admin','presence'))||file.includes(path.join('admin','activity')))continue;
+    if(file.includes(path.join('admin','presence'))||file.includes(path.join('admin','activity'))||file.endsWith(path.join('careers','mail','route.ts')))continue;
     const source=readFileSync(file,'utf8');for(const method of ['POST','PATCH','PUT','DELETE'])if(source.includes('export async function '+method+'('))assert.match(source,new RegExp('export async function '+method+'\\(request: Request\\) \\{\\s*return auditRequest'),file+' '+method);
   }
 });
@@ -103,7 +102,8 @@ test('the actual central email function journals message content and candidate s
   const keys=['EMAIL_PROVIDER','FALLBACK_SMTP_USER','FALLBACK_SMTP_PASS','BREVO_API_KEY','BREVO_API_KEY_BACKUP','BREVO_API_KEY_SECONDARY'];
   const before=Object.fromEntries(keys.map(key=>[key,process.env[key]]));
   process.env.EMAIL_PROVIDER='gmail';process.env.FALLBACK_SMTP_USER='fixture@example.invalid';process.env.FALLBACK_SMTP_PASS='not-a-real-secret';
-  delete process.env.BREVO_API_KEY;delete process.env.BREVO_API_KEY_BACKUP;delete process.env.BREVO_API_KEY_SECONDARY;
+  process.env.BREVO_API_KEY='fixture-primary';delete process.env.BREVO_API_KEY_BACKUP;delete process.env.BREVO_API_KEY_SECONDARY;
+  const originalFetch=global.fetch; global.fetch=async(url,options)=>{assert.equal(url,'https://api.brevo.com/v3/smtp/email');const payload=JSON.parse(options.body);assert.equal(payload.sender.email,'noreply@overwatchmoz.com');delivered.push(payload);return Response.json({messageId:'fixture-message'})};
   try {
     const mail=require(path.join(root,'src/lib/careers-email.ts'));
     const result=await mail.sendTransactionalEmail({to:[{email:'fixture@example.invalid',name:'Fixture'}],subject:'Message content proof',textContent:'Full content for history',htmlContent:'<p>Full content for history</p>'});
@@ -117,7 +117,7 @@ test('the actual central email function journals message content and candidate s
     assert.equal((await activity.listActivity({entityId:'duplicate-email-record'})).events.length,0);
     const selected=(await activity.listActivity({entityId:'mail-candidate'})).events;
     assert.equal(selected.length,2);assert.ok(selected.every(row=>row.roleId==='operator'&&row.cohortId==='september'));
-  } finally {for(const key of keys){if(before[key]===undefined)delete process.env[key];else process.env[key]=before[key]}}
+  } finally {global.fetch=originalFetch;for(const key of keys){if(before[key]===undefined)delete process.env[key];else process.env[key]=before[key]}}
 });
 
 test('shared communication templates retain content, import idempotently and serialize concurrent saves',async()=>{

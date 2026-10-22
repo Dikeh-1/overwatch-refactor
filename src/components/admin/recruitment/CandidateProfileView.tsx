@@ -1,4 +1,6 @@
 "use client";
+import { evaluateApplicationWithRules, screeningValue } from "@/lib/careers-evaluator";
+import { DEFAULT_SCREENING_RULES_BY_ROLE } from "@/lib/careers-models";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -405,276 +407,30 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
             </h2>
 
             {isTechnicalRole ? (() => {
-              const meetsCctvExp = Boolean(
-                candidate.yearsCctvExperience &&
-                candidate.yearsCctvExperience !== "0" &&
-                candidate.yearsCctvExperience !== "none"
-              );
-              const meetsIpCctv = candidate.ipCctv === "yes";
-              const meetsNvrDvr = candidate.nvrDvr === "yes";
-              const meetsNetworking = candidate.networking === "yes";
-              const allMandatoryMet = meetsCctvExp && meetsIpCctv && meetsNvrDvr && meetsNetworking;
-
-              const mandPassedCount = [meetsCctvExp, meetsIpCctv, meetsNvrDvr, meetsNetworking].filter(Boolean).length;
-              const mandTotalCount = 4;
-
-              const prefCount = [
-                candidate.hikvision === "yes",
-                candidate.dahua === "yes",
-                candidate.supervision === "yes",
-                candidate.drivingLicence === "yes",
-                candidate.aiAnalytics === "yes",
-                candidate.remoteMonitoring === "yes",
-                candidate.boqScopes === "yes",
-              ].filter(Boolean).length;
-              const prefTotalCount = 7;
-
-              const rawScreening = candidate.screeningResult;
-              const passedMandatory = rawScreening?.passedMandatory ?? allMandatoryMet;
-              const preferredScore = rawScreening?.preferredScore && rawScreening.preferredScore > 0 ? rawScreening.preferredScore : prefCount;
-              const preferredTotal = rawScreening?.preferredTotal && rawScreening.preferredTotal >= 6 ? rawScreening.preferredTotal : prefTotalCount;
-
-              // Heavy mandatory weighting: 70% mandatory, 30% preferred
-              const mandRatio = mandTotalCount > 0 ? mandPassedCount / mandTotalCount : 1;
-              const prefRatio = preferredTotal > 0 ? preferredScore / preferredTotal : 1;
-              const calculatedMatch = Math.round((mandRatio * 70) + (prefRatio * 30));
-
-              // If candidate's screening was saved under old unweighted 86%, recalculate with 70/30 weighting
-              const matchPercentage =
-                typeof rawScreening?.matchPercentage === "number"
-                  ? rawScreening.matchPercentage
-                  : calculatedMatch;
-
-              const failedReasonsEn: string[] = [];
-              const failedReasonsPt: string[] = [];
-              if (!meetsCctvExp) {
-                failedReasonsEn.push("Missing mandatory requirement: Hands-on CCTV Experience (min 1 year)");
-                failedReasonsPt.push("Requisito obrigatório em falta: Experiência Prática em CCTV (mínimo 1 ano)");
-              }
-              if (!meetsIpCctv) {
-                failedReasonsEn.push("Missing mandatory requirement: IP CCTV & Network Camera Protocols");
-                failedReasonsPt.push("Requisito obrigatório em falta: Sistemas CCTV IP e Protocolos Digitais");
-              }
-              if (!meetsNvrDvr) {
-                failedReasonsEn.push("Missing mandatory requirement: NVR/DVR Setup & Storage Sizing");
-                failedReasonsPt.push("Requisito obrigatório em falta: Configuração de NVRs/DVRs e Armazenamento");
-              }
-              if (!meetsNetworking) {
-                failedReasonsEn.push("Missing mandatory requirement: IP Networking (Switches, VLANs, Routers)");
-                failedReasonsPt.push("Requisito obrigatório em falta: Redes IP (Switches, VLANs, Routers)");
-              }
-
-              return (
-              <div className="space-y-4 text-xs">
-                {/* Screening Verdict Badge */}
-                <div
-                  className={`p-3.5 rounded-lg border ${
-                    passedMandatory
-                      ? "bg-emerald-50/80 border-emerald-200 text-emerald-900"
-                      : "bg-red-50/80 border-red-200 text-red-900"
-                  }`}
-                >
-                  <div className="flex items-center justify-between font-bold text-xs mb-1">
-                    <span>
-                      {passedMandatory
-                        ? t("✓ Mandatory Requirements Passed", "✓ Requisitos Obrigatórios Cumpridos")
-                        : t("✕ Mandatory Requirements Missing", "✕ Requisitos Obrigatórios em Falta")}
-                    </span>
-                    <span className="px-2 py-0.5 rounded text-[0.65rem] bg-white border border-current font-extrabold">
-                      {passedMandatory
-                        ? `${matchPercentage}% ${t("Match", "Score")}`
-                        : `${matchPercentage}% · ${t("Disqualified", "Não Qualif.")}`}
-                    </span>
-                  </div>
-                  <div className="text-[0.72rem] leading-relaxed">
-                    {passedMandatory ? (
-                      <span>
-                        {t(
-                          `All ${mandTotalCount} mandatory requirements met (70% weight) and ${preferredScore}/${preferredTotal} preferred competencies satisfied (${matchPercentage}% total match). Candidate qualified for Management Review.`,
-                          `Todos os ${mandTotalCount} requisitos obrigatórios cumpridos (peso de 70%) e ${preferredScore}/${preferredTotal} competências preferenciais atendidas (${matchPercentage}% de compatibilidade total). Candidato classificado para Revisão de Gestão.`
-                        )}
-                      </span>
-                    ) : (
-                      <div>
-                        <span className="font-semibold text-red-800">
-                          {t(
-                            `Mandatory criteria carry heavy scoring weight (70%). Candidate missing ${failedReasonsEn.length} mandatory requirement(s) and is disqualified from proceeding.`,
-                            `Requisitos obrigatórios têm peso preponderante (70%). O candidato tem ${failedReasonsPt.length} requisito(s) obrigatório(s) em falta e está desqualificado para avançar.`
-                          )}
-                        </span>
-                        <ul className="list-disc list-inside mt-1 text-red-900 font-medium">
-                          {(rawScreening ? (lang === "pt" ? rawScreening.failedReasonsPt || rawScreening.failedReasons : rawScreening.failedReasons) : lang === "pt" && failedReasonsPt.length
-                            ? failedReasonsPt
-                            : failedReasonsEn
-                          ).map((r, i) => (
-                            <li key={i}>{r}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
+              const rules = candidate.screeningRulesApplied ?? roleObj?.screeningRules ?? DEFAULT_SCREENING_RULES_BY_ROLE.cctv_technical_manager;
+              const result = evaluateApplicationWithRules(candidate, rules);
+              const mandatory = result.details?.filter(detail => detail.mandatory) || [];
+              const preferred = result.details?.filter(detail => !detail.mandatory) || [];
+              const missing = mandatory.filter(detail => !detail.passed);
+              const label = (key: string, fallback: string) => { const rule = rules.find(rule => rule.field === key); return rule ? (lang === "en" ? rule.labelEn : rule.labelPt) : fallback; };
+              const years = String(screeningValue(candidate, "yearsCctvExperience") ?? "—");
+              return <div className="space-y-4 text-xs">
+                <div className={`rounded-lg border p-3.5 ${result.passedMandatory ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-red-200 bg-red-50 text-red-900"}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-2 font-bold"><span>{result.passedMandatory ? t("✓ Screening criteria met", "✓ Critérios de avaliação cumpridos") : t("✕ Mandatory requirements missing", "✕ Requisitos obrigatórios em falta")}</span><span className="rounded border border-current bg-white px-2 py-0.5">{result.matchPercentage}% · {result.passedMandatory ? t("Match", "Compatibilidade") : t("Criteria not met", "Critérios não cumpridos")}</span></div>
+                  <p className="mt-2 leading-relaxed">{result.passedMandatory ? t(`All ${mandatory.length} mandatory requirements met. Preferred criteria: ${result.preferredScore}/${result.preferredTotal} weighted points.`, `Todos os ${mandatory.length} requisitos obrigatórios cumpridos. Critérios preferenciais: ${result.preferredScore}/${result.preferredTotal} pontos ponderados.`) : t(`${missing.length} mandatory requirement(s) missing. The checklist and score use the same rules for this recruitment cycle.`, `${missing.length} requisito(s) obrigatório(s) em falta. A lista e a pontuação usam as mesmas regras deste lote.`)}</p>
+                  {missing.length > 0 && <ul className="mt-2 list-disc space-y-1 pl-4">{missing.map(detail => <li key={detail.key}>{label(detail.key,detail.label)}</li>)}</ul>}
+                  <p className="mt-2 text-[11px] opacity-80">{t("Screening is separate from the recorded recruitment decision and next-phase selection.", "A avaliação é distinta da decisão de recrutamento e selecção para a próxima fase.")}</p>
                 </div>
-
-                {/* Candidate Logistics */}
-                <div className="divide-y divide-slate-100 border-y border-slate-100 py-1">
-                  <div className="py-2 flex items-center justify-between">
-                    <span className="text-slate-500">{t("Location", "Localização")}</span>
-                    {classifyCandidateLocation(candidate).group === "outside_mozambique" ? (
-                      <span className="font-semibold inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs bg-amber-50 text-amber-800 border border-amber-200">
-                        <Globe size={13} className="text-amber-700" />
-                        <span>{candidate.currentLocation || "Fora de Moçambique"}</span>
-                        <span className="text-[10px] uppercase font-bold text-amber-600 bg-amber-100/80 px-1 rounded">Internacional</span>
-                      </span>
-                    ) : (
-                      <span className="font-semibold text-slate-900 inline-flex items-center gap-1">
-                        <span>🇲🇿</span>
-                        <span>{candidate.currentLocation || "Maputo, Moçambique"}</span>
-                      </span>
-                    )}
-                  </div>
-                  <div className="py-2 flex items-center justify-between">
-                    <span className="text-slate-500">{t("CCTV Experience", "Experiência CCTV")}</span>
-                    <span className="font-semibold text-slate-900">
-                      {candidate.yearsCctvExperience === "0"
-                        ? t("0 years", "0 anos (Sem experiência)")
-                        : candidate.yearsCctvExperience === "1_2" || candidate.yearsCctvExperience === "1-2"
-                          ? t("1 to 2 years", "1 a 2 anos")
-                          : candidate.yearsCctvExperience === "3_5" || candidate.yearsCctvExperience === "3-5"
-                            ? t("3 to 5 years", "3 a 5 anos")
-                            : candidate.yearsCctvExperience === "5_8" || candidate.yearsCctvExperience === "5-8"
-                              ? t("5 to 8 years", "5 a 8 anos")
-                              : candidate.yearsCctvExperience === "8+" || candidate.yearsCctvExperience === "8_plus" || candidate.yearsCctvExperience === "5_plus"
-                                ? t("More than 8 years", "Mais de 8 anos")
-                                : candidate.yearsCctvExperience || "—"}
-                    </span>
-                  </div>
-                  <div className="py-2 flex items-center justify-between">
-                    <span className="text-slate-500">{t("Availability / Start", "Disponibilidade / Início")}</span>
-                    <span className="font-semibold text-slate-900">
-                      {candidate.startDate === "immediate"
-                        ? t("Immediate", "Imediata")
-                        : candidate.startDate === "2_weeks"
-                          ? t("Within 2 weeks", "Dentro de 2 semanas")
-                          : candidate.startDate === "1_month"
-                            ? t("1 month notice", "1 mês de aviso")
-                            : candidate.startDate === "more_than_month"
-                              ? t("More than 1 month", "Mais de 1 mês")
-                              : candidate.startDate || "—"}
-                    </span>
-                  </div>
-                  <div className="py-2 flex items-center justify-between">
-                    <span className="text-slate-500">{t("Expected Salary", "Salário Pretendido")}</span>
-                    <span className="font-semibold text-slate-900">
-                      {candidate.salaryExpectation || candidate.technicalData?.salaryExpectation || "—"}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Mandatory Requirements Audit */}
-                <div>
-                  <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                    {t("Mandatory Criteria", "Critérios Obrigatórios")}
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between p-2 rounded bg-slate-50 border border-slate-100">
-                      <span className="text-slate-700">{t("Practical CCTV Installation", "Instalação Prática CCTV")}</span>
-                      {candidate.yearsCctvExperience !== "0" ? (
-                        <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✓ SIM</span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-red-50 text-red-700 border border-red-200">✕ NÃO</span>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between p-2 rounded bg-slate-50 border border-slate-100">
-                      <span className="text-slate-700">{t("IP CCTV Systems", "Sistemas CCTV IP")}</span>
-                      {candidate.ipCctv === "yes" ? (
-                        <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✓ SIM</span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-red-50 text-red-700 border border-red-200">✕ NÃO</span>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between p-2 rounded bg-slate-50 border border-slate-100">
-                      <span className="text-slate-700">{t("NVR / DVR Configuration", "Configuração NVR / DVR")}</span>
-                      {candidate.nvrDvr === "yes" ? (
-                        <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✓ SIM</span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-red-50 text-red-700 border border-red-200">✕ NÃO</span>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between p-2 rounded bg-slate-50 border border-slate-100">
-                      <span className="text-slate-700">{t("Networking & IP Addressing", "Redes & Endereçamento IP")}</span>
-                      {candidate.networking === "yes" ? (
-                        <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✓ SIM</span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-red-50 text-red-700 border border-red-200">✕ NÃO</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Preferred Competencies */}
-                <div>
-                  <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                    {t("Preferred Competencies", "Competências Preferenciais")}
-                  </div>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <div className="p-2 rounded bg-slate-50 border border-slate-100 flex items-center justify-between">
-                      <span className="text-slate-700">Hikvision</span>
-                      <span className={`px-1.5 py-0.5 rounded text-[0.62rem] font-bold ${candidate.hikvision === "yes" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
-                        {candidate.hikvision === "yes" ? "SIM" : "NÃO"}
-                      </span>
-                    </div>
-                    <div className="p-2 rounded bg-slate-50 border border-slate-100 flex items-center justify-between">
-                      <span className="text-slate-700">Dahua</span>
-                      <span className={`px-1.5 py-0.5 rounded text-[0.62rem] font-bold ${candidate.dahua === "yes" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
-                        {candidate.dahua === "yes" ? "SIM" : "NÃO"}
-                      </span>
-                    </div>
-                    <div className="p-2 rounded bg-slate-50 border border-slate-100 flex items-center justify-between">
-                      <span className="text-slate-700">{t("Supervision", "Supervisão")}</span>
-                      <span className={`px-1.5 py-0.5 rounded text-[0.62rem] font-bold ${candidate.supervision === "yes" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
-                        {candidate.supervision === "yes" ? "SIM" : "NÃO"}
-                      </span>
-                    </div>
-                    <div className="p-2 rounded bg-slate-50 border border-slate-100 flex items-center justify-between">
-                      <span className="text-slate-700">{t("Driving Licence", "Carta Condução")}</span>
-                      <span className={`px-1.5 py-0.5 rounded text-[0.62rem] font-bold ${candidate.drivingLicence === "yes" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
-                        {candidate.drivingLicence === "yes" ? "SIM" : "NÃO"}
-                      </span>
-                    </div>
-                    <div className="p-2 rounded bg-slate-50 border border-slate-100 flex items-center justify-between">
-                      <span className="text-slate-700">{t("AI Analytics", "Analítica IA")}</span>
-                      <span className={`px-1.5 py-0.5 rounded text-[0.62rem] font-bold ${candidate.aiAnalytics === "yes" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
-                        {candidate.aiAnalytics === "yes" ? "SIM" : "NÃO"}
-                      </span>
-                    </div>
-                    <div className="p-2 rounded bg-slate-50 border border-slate-100 flex items-center justify-between">
-                      <span className="text-slate-700">{t("Remote CCO", "Monitorização")}</span>
-                      <span className={`px-1.5 py-0.5 rounded text-[0.62rem] font-bold ${candidate.remoteMonitoring === "yes" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
-                        {candidate.remoteMonitoring === "yes" ? "SIM" : "NÃO"}
-                      </span>
-                    </div>
-                    <div className="p-2 rounded bg-slate-50 border border-slate-100 flex items-center justify-between col-span-2">
-                      <span className="text-slate-700">{t("BoQ & Scopes of Work", "Cadernos de Encargos & BoQ")}</span>
-                      <span className={`px-1.5 py-0.5 rounded text-[0.62rem] font-bold ${candidate.boqScopes === "yes" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
-                        {candidate.boqScopes === "yes" ? "SIM" : "NÃO"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Largest Project Showcase */}
-                {candidate.largestProjectDescription && (
-                  <div className="pt-2">
-                    <div className="text-[0.65rem] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                      {t("Largest Project Managed / Installed", "Maior Projecto Gerido / Instalado")}
-                    </div>
-                    <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 text-[0.72rem] leading-relaxed whitespace-pre-wrap">
-                      {candidate.largestProjectDescription}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ); })() : candidate.screeningResult?.details && candidate.screeningResult.details.length > 0 ? (
+                <dl className="divide-y divide-slate-100">{[
+                  [t("Location", "Localização"), String(screeningValue(candidate,"currentLocation") || "—")],
+                  [t("CCTV experience", "Experiência CCTV"), years.replace(/[_–—]/g,"-")],
+                  [t("Availability / start", "Disponibilidade / início"), String(screeningValue(candidate,"startDate") || "—")],
+                  [t("Expected salary", "Salário pretendido"), String(screeningValue(candidate,"salaryExpectation") || "—")]
+                ].map(([title,value]) => <div key={title} className="flex items-center justify-between gap-3 py-2.5"><dt className="text-slate-500">{title}</dt><dd className="font-semibold">{value}</dd></div>)}</dl>
+                {[{title:t("Mandatory criteria", "Critérios obrigatórios"),details:mandatory},{title:t("Preferred competencies", "Competências preferenciais"),details:preferred}].map(group => <section key={group.title}><h3 className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">{group.title}</h3><div className="space-y-2">{group.details.map(detail => <div key={detail.key} className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50 p-2.5"><span>{label(detail.key,detail.label)}</span><span className={`shrink-0 rounded border px-2 py-0.5 font-semibold ${detail.passed ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"}`}>{detail.passed ? t("✓ Met", "✓ Cumprido") : t("✕ Not met", "✕ Não cumprido")}</span></div>)}</div></section>)}
+                {Boolean(screeningValue(candidate,"largestProjectDescription")) && <div className="whitespace-pre-wrap rounded-lg border bg-slate-50 p-3">{String(screeningValue(candidate,"largestProjectDescription"))}</div>}
+              </div>;
+            })() : candidate.screeningResult?.details && candidate.screeningResult.details.length > 0 ? (
               <div className="space-y-2 text-xs">
                 {candidate.sex && (
                   <div className="py-2 flex items-center justify-between border-b border-slate-100">

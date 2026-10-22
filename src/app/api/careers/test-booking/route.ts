@@ -1,3 +1,6 @@
+import { bookingFollowUp } from "@/lib/communication-delivery";
+import { after } from "next/server";
+import { sameBookingScope } from "@/lib/careers-booking-rules";
 import { auditRequest } from "@/lib/admin-activity";
 import { resolveApplication, isTerminal } from "@/lib/careers-workflow";
 import { getCandidateSlotConfig, reserveTestSlot } from "@/lib/careers-booking";
@@ -7,6 +10,7 @@ import { sendBookingConfirmation } from "@/lib/careers-email";
 import { siteContact } from "@/lib/site-config";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 const DEACTIVATED_STATUSES = ["archived", "rejected"] as const;
 
@@ -43,6 +47,9 @@ export async function GET(request: Request) {
       );
     }
 
+    if (!candidate.invitedAt && !candidate.testSlot && candidate.status !== "test_invited") return Response.json({ error: "This applicant has not received a test invitation.", code: "INVITATION_REQUIRED" }, { status: 403 });
+    if (!candidate.bookingLinkOpenedAt) await updateApplication(candidate.id, { bookingLinkOpenedAt: new Date().toISOString() });
+
     const allApps = await getApplications();
     const { slots: activeSlots, quota = 15 } = await getCandidateSlotConfig(candidate);
     const hasActiveGrace = Boolean(candidate.rebookingGrace && !candidate.rebookingGrace.usedAt);
@@ -58,7 +65,7 @@ export async function GET(request: Request) {
       const normS = normalizeSlot(s);
       const isPast = isPastDateSlot(s);
       const booked = allApps.filter(
-        (a) => normalizeSlot(a.testSlot) === normS && !isTerminal(resolveApplication(a)) && a.id !== candidate.id
+        (a) => sameBookingScope(a, candidate) && normalizeSlot(a.testSlot) === normS && !isTerminal(resolveApplication(a)) && a.id !== candidate.id
       ).length;
       const isFull = isPast || booked >= maxPerDay;
       slotStats[s] = {
@@ -184,6 +191,8 @@ async function handlePOST(request: Request) {
       console.error("Failed to send booking confirmation email:", emailErr);
     }
 
+    after(async () => { await bookingFollowUp(updated); });
+
     return Response.json({
       success: true,
       id: updated.id,
@@ -193,7 +202,7 @@ async function handlePOST(request: Request) {
     });
   } catch (error) {
     const code = error instanceof Error ? error.message : "";
-    if (["SLOT_FULL", "ALREADY_BOOKED", "INVALID_SLOT", "CANDIDATE_INACTIVE", "INVITATION_REQUIRED"].includes(code)) return Response.json({ error: code === "SLOT_FULL" ? "Este turno está cheio. Escolha outra data." : code === "INVALID_SLOT" ? "Seleccione um turno disponível configurado para este lote." : "Este agendamento não está disponível. Contacte a equipa de recrutamento.", code }, { status: 409 });
+    if (["SLOT_FULL", "ALREADY_BOOKED", "INVALID_SLOT", "CANDIDATE_INACTIVE", "INVITATION_REQUIRED", "BOOKING_CHANGED"].includes(code)) return Response.json({ error: code === "SLOT_FULL" ? "Este turno está cheio. Escolha outra data." : code === "INVALID_SLOT" ? "Seleccione um turno disponível configurado para este lote." : "Este agendamento não está disponível. Contacte a equipa de recrutamento.", code }, { status: 409 });
     console.error("Test booking POST error:", error);
     return Response.json(
       { error: "Falha ao gravar confirmação do teste." },

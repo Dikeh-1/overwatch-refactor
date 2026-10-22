@@ -1,5 +1,9 @@
 "use client";
 
+import Link from "next/link";
+import { useCommunicationDraft } from "../hooks/useCommunicationDraft";
+import { StudioMailbox, type StudioFolder } from "./StudioMailbox";
+import { BOOKING_TOKEN, candidateVariables, renderStudioMessage, messageBlocks, moveBookingToken, studioScope } from "@/lib/communication-content";
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
   Mail,
@@ -36,7 +40,7 @@ import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import { useActiveRole } from "../shell/ActiveRoleContext";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 import CelebrationOverlay from "@/components/admin/ui/CelebrationOverlay";
-import RichMessageEditor, { AttachmentItem } from "./RichMessageEditor";
+import RichMessageEditor, { AttachmentItem, type RichMessageEditorHandle } from "./RichMessageEditor";
 import { triggerCelebration } from "@/lib/celebration";
 
 interface CommunicationsViewProps {
@@ -75,6 +79,7 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
 
   const { activeRoleId, activeRole, roles } = useActiveRole();
 
+  const [emailLang, setEmailLang] = useState<"pt" | "en">("pt");
   const [includeBookingButton, setIncludeBookingButton] = useState(false);
 
   // Audience Target State
@@ -93,7 +98,7 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
     return currentRoleDef?.pipelineStages || (selectedRole === "all" ? ["applications", "screening", "testing", "gate_checkin", "next_phase", "interview", "hired"] : ["applications", "screening", "interview", "hired"]);
   }, [currentRoleDef, selectedRole]);
 
-  const roleHasTesting = pipelineStages.includes("testing");
+  const roleHasTesting = pipelineStages.includes("testing") || selectedRole === "cctv_technical_manager";
   const roleHasNextPhase = pipelineStages.includes("next_phase");
 
   // Letterhead State
@@ -120,7 +125,7 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
   const [savingTemplate, setSavingTemplate] = useState(false);
 
   // Quick Test Email State
-  const [testEmail, setTestEmail] = useState("ebube.michael@overwatchmoz.com");
+  const [testEmail, setTestEmail] = useState("");
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [testNotification, setTestNotification] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -134,6 +139,24 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
   // Delivery History Drawer
   const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
   const [historySearch, setHistorySearch] = useState("");
+
+  const editorHandle = useRef<RichMessageEditorHandle>(null);
+  const followUpHandle = useRef<RichMessageEditorHandle>(null);
+  const lastEditor = useRef<"main" | "followup">("main");
+  const [folder, setFolder] = useState<StudioFolder>("compose");
+  const [followUpEnabled, setFollowUpEnabled] = useState(false);
+  const [followUpSubject, setFollowUpSubject] = useState("");
+  const [followUpBody, setFollowUpBody] = useState("");
+  const scope = studioScope(cohortId, selectedRole, fixedRecipient?.id || (targetAudience === "individual" ? selectedIndividualId || undefined : undefined));
+  const draft = useCommunicationDraft(scope, { emailLang, subject, messageBody, attachments, includeBookingButton, targetAudience, selectedIndividualId, selectedSlot, followUpEnabled, followUpSubject, followUpBody }, data => {
+    setEmailLang(data.emailLang === "en" ? "en" : "pt");
+    setSubject(data.subject || ""); setMessageBody(data.messageBody || ""); setAttachments(data.attachments || []);
+    setIncludeBookingButton(Boolean(data.includeBookingButton)); setFollowUpEnabled(Boolean(data.followUpEnabled));
+    setFollowUpSubject(data.followUpSubject || ""); setFollowUpBody(data.followUpBody || "");
+    if (!fixedRecipient && data.targetAudience) setTargetAudience(data.targetAudience);
+    if (!fixedRecipient && data.selectedIndividualId !== undefined) setSelectedIndividualId(data.selectedIndividualId);
+    if (data.selectedSlot !== undefined) setSelectedSlot(data.selectedSlot);
+  });
 
   // Sync role change with active role
   useEffect(() => {
@@ -206,11 +229,11 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
       name: t("Technical Interview Convocation", "Convocatória Entrevista Técnica"),
       badge: "ENTREVISTA",
       subject:
-        lang === "en"
+        emailLang === "en"
           ? "Technical Interview Convocation — Overwatch"
           : "Convocatória para Entrevista Técnica — Overwatch",
       body:
-        lang === "en"
+        emailLang === "en"
           ? `Dear {{candidate_name}},
 
 Following our screening of your application for the position of {{role_title}}, we are pleased to invite you to an in-person technical interview with our engineering and operations leadership.
@@ -233,11 +256,11 @@ Solicitamos a comparência com 15 minutos de antecedência.`,
       name: t("Screening Qualified Notice", "Qualificação na Triagem Técnica"),
       badge: "TRIAGEM",
       subject:
-        lang === "en"
+        emailLang === "en"
           ? "Application Screening Update — Overwatch"
           : "Actualização da Triagem de Candidatura — Overwatch",
       body:
-        lang === "en"
+        emailLang === "en"
           ? `Dear {{candidate_name}},
 
 We have reviewed your application for the position of {{role_title}} and are pleased to inform you that your profile meets our technical criteria.
@@ -254,11 +277,11 @@ A nossa equipa de recrutamento está a consolidar o cronograma de avaliações e
       name: t("Next Phase Convocation", "Convocatória Próxima Fase"),
       badge: "FASE 2",
       subject:
-        lang === "en"
+        emailLang === "en"
           ? "Next Phase – Overwatch Selection Process"
           : "Próxima Fase – Processo de Selecção Overwatch",
       body:
-        lang === "en"
+        emailLang === "en"
           ? `Dear {{candidate_name}},
 
 Following your evaluation for {{role_title}}, we are pleased to inform you that you have been selected to advance to the Next Phase of our selection program.
@@ -275,11 +298,11 @@ Em anexo disponibilizamos o guia de preparação e cronograma de acolhimento. Le
       name: t("Physical Test & Gate Pass", "Convocatória Teste & Gate Pass"),
       badge: "TESTE",
       subject:
-        lang === "en"
+        emailLang === "en"
           ? "In-Person Test Convocation — Overwatch"
           : "Convocatória para Teste Presencial — Overwatch",
       body:
-        lang === "en"
+        emailLang === "en"
           ? `Dear {{candidate_name}},
 
 You are officially convoked to attend the in-person assessment for {{role_title}} at Overwatch Mozambique Headquarters.
@@ -300,11 +323,11 @@ Requisitos: BI/Passaporte original, vestuário formal e apresentação com 15 mi
       name: t("Attendance Confirmation", "Confirmação de Presença"),
       badge: "RECIBO",
       subject:
-        lang === "en"
+        emailLang === "en"
           ? "Confirmation – Overwatch Selection Process"
           : "Confirmação – Processo de Selecção Overwatch",
       body:
-        lang === "en"
+        emailLang === "en"
           ? `Dear {{candidate_name}},
 
 This confirms receipt of your response. Your participation in the scheduled induction program for {{role_title}} has been registered.
@@ -321,11 +344,11 @@ A equipa de segurança validará o seu acesso na portaria principal no dia marca
       name: t("Application Closure Notice", "Actualização & Encerramento"),
       badge: "ARQUIVO",
       subject:
-        lang === "en"
+        emailLang === "en"
           ? "Overwatch Selection Process Update"
           : "Processo de Selecção Overwatch",
       body:
-        lang === "en"
+        emailLang === "en"
           ? `Dear {{candidate_name}},
 
 Thank you for your interest and the time dedicated to participating in our recruitment process for {{role_title}}.
@@ -374,7 +397,8 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
 
   // Insert Variable at cursor or append
   const handleInsertTag = (tag: string) => {
-    setMessageBody((prev) => `${prev} ${tag}`);
+    if (lastEditor.current === "followup") followUpHandle.current?.insertText(tag);
+    else editorHandle.current?.insertText(tag);
   };
 
   // Handle File Uploads (PDF / Images)
@@ -476,7 +500,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           cohortId,
-          locale: lang,
+          locale: emailLang,
           includeBookingButton,
           testOnly: true,
           testEmail: testEmail.trim(),
@@ -524,12 +548,18 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       return;
     }
 
+    if (followUpEnabled && (!includeBookingButton || !followUpSubject.trim() || !followUpBody.trim())) {
+      alert(t("A booking follow-up needs an invitation, subject and message.", "O seguimento precisa de convite, assunto e mensagem.")); return;
+    }
     setIsDispatching(true);
     setConfirmDispatchOpen(false);
 
     try {
+      const draftId = await draft.flush();
       let payload: any = {
-        locale: lang,
+        draftId,
+        followUp: followUpEnabled ? { trigger: "booking_confirmed", subject: followUpSubject, message: followUpBody } : undefined,
+        locale: emailLang,
         subject,
         message: messageBody,
         roleId: selectedRole,
@@ -559,6 +589,12 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
 
       const data = await res.json();
       if (res.ok && data.success) {
+        if (data.queued) {
+          draft.sent(true); setFolder("outbox");
+          setDeliveryNotice(t(`${data.totalTargeted} emails queued. Delivery continues on the server; follow progress in Outbox and Sent.`, `${data.totalTargeted} emails em fila. O envio continua no servidor; acompanhe na Caixa de saída e Enviados.`));
+          return;
+        }
+        draft.sent();
         window.dispatchEvent(new Event("admin:careers-updated"));
         await onSent?.().catch(() => {});
         if (data.failedCount) throw new Error(t(`${data.sentCount || 0} sent; ${data.failedCount} failed. Review delivery history before retrying.`, `${data.sentCount || 0} enviados; ${data.failedCount} falharam. Consulte o histórico antes de repetir.`));
@@ -604,9 +640,9 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
 
   const activeRoleTitle = useMemo(() => {
     const r = roles.find((item) => item.id === selectedRole) || activeRole;
-    if (!r) return "CCTV Operator";
-    return lang === "en" ? r.en || r.pt : r.pt || r.en;
-  }, [selectedRole, roles, activeRole, lang]);
+    if (!r) return emailLang === "en" ? "CCTV Operator" : "Operadora de CCTV";
+    return emailLang === "en" ? r.en || r.pt : r.pt || r.en;
+  }, [selectedRole, roles, activeRole, emailLang]);
 
   // Dynamic sample candidate for preview simulation
   const sampleCandidate = useMemo(() => {
@@ -620,44 +656,20 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       email: "palmira.mordinho@exemplo.com",
       whatsapp: "+258 84 123 4567",
       role: activeRoleTitle,
-      testSlot: "Turma A (08:30 - 11:30)",
+      testSlot: undefined,
     };
   }, [selectedPreviewCandidateId, targetCandidates, applications, activeRoleTitle]);
 
   // Formatted preview text with universal placeholder substitution and HTML preservation
-  const renderedPreviewText = useMemo(() => {
-    let text = messageBody;
-    const vars: Record<string, string> = {
-      name: sampleCandidate.name,
-      candidate_name: sampleCandidate.name,
-      role: activeRoleTitle,
-      role_title: activeRoleTitle,
-      slot: sampleCandidate.testSlot || (lang === "en" ? "To be confirmed" : "A definir"),
-      test_slot: sampleCandidate.testSlot || (lang === "en" ? "To be confirmed" : "A definir"),
-      date: new Date().toLocaleDateString(lang === "en" ? "en-US" : "pt-MZ", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }),
-      location: "Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo",
-      company: "Overwatch Moçambique",
-      company_name: "Overwatch Moçambique",
-    };
-
-    for (const [key, val] of Object.entries(vars)) {
-      const regex = new RegExp(`\\{\\{?\\s*${key}\\s*\\}\\}?`, "gi");
-      text = text.replace(regex, val);
-    }
-
-    if (!/<[a-z][\s\S]*>/i.test(text)) {
-      text = text
-        .split(/\n\s*\n/)
-        .map((p) => `<p>${p.replace(/\n/g, "<br />")}</p>`)
-        .join("");
-    }
-
-    return text;
-  }, [messageBody, sampleCandidate, activeRoleTitle, lang]);
+  const previewRole = roles.find(role => role.id === sampleCandidate.role);
+  const previewRoleTitle = previewRole ? (emailLang === "en" ? previewRole.en : previewRole.pt) : activeRoleTitle;
+  const previewMessage = includeBookingButton && !messageBody.includes(BOOKING_TOKEN) ? `${messageBody}\n\n${BOOKING_TOKEN}` : messageBody;
+  const renderedPreviewText = useMemo(() => renderStudioMessage(previewMessage, sampleCandidate, previewRoleTitle, emailLang, includeBookingButton, true), [previewMessage, sampleCandidate, previewRoleTitle, emailLang, includeBookingButton]);
+  const previewBlocks = messageBlocks(previewMessage);
+  const dropBooking = (event: React.DragEvent, index: number) => {
+    if (event.dataTransfer.getData("application/overwatch-booking") !== "move") return;
+    event.preventDefault(); event.stopPropagation(); setMessageBody(previous => moveBookingToken(previous, index));
+  };
 
   const handleCopyWhatsApp = () => {
     const plainText = renderedPreviewText.replace(/<[^>]*>/g, "");
@@ -773,9 +785,17 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3"><label className="text-xs font-semibold">{t("Email language", "Idioma do email")}<select aria-label={t("Email language", "Idioma do email")} value={emailLang} onChange={event => setEmailLang(event.target.value as "pt" | "en")} className="ml-3 rounded-lg border px-3 py-2"><option value="pt">Português</option><option value="en">English</option></select></label><span className="text-xs text-slate-500">{t("Controls templates, role names, booking buttons and the letterhead. The admin interface can stay in English.", "Controla os modelos, nomes de vagas, botões de agendamento e o timbre.")}</span></div>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3">
+        <nav aria-label={t("Mailbox folders", "Pastas de correio")} className="flex flex-wrap gap-1">{([
+          ["compose", t("Compose", "Escrever")], ["drafts", t("Drafts", "Rascunhos")], ["incoming", t("Incoming", "Recebidos")], ["sent", t("Sent", "Enviados")], ["outbox", t("Outbox", "Caixa de saída")]
+        ] as const).map(([key,label]) => <button key={key} type="button" aria-pressed={folder === key} onClick={() => setFolder(key)} className={`rounded-lg px-3 py-2 text-xs font-medium ${folder === key ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"}`}>{label}</button>)}</nav>
+        <div className="flex items-center gap-3"><span role="status" className="max-w-sm text-xs text-slate-500">{draft.status}</span><button type="button" disabled={!draft.ready || isDispatching} onClick={() => { void draft.newDraft().then(() => setFolder("compose")).catch(error => setDeliveryNotice(error.message)); }} className="rounded-lg border px-3 py-2 text-xs font-medium">{t("New draft", "Novo rascunho")}</button></div>
+      </div>
+      {folder !== "compose" && <StudioMailbox scope={scope} folder={folder} applications={applications} onOpenDraft={async id => { await draft.open(id); setFolder("compose"); }}/ >}
       {/* MAIN 2-COLUMN STUDIO LAYOUT */}
       {deliveryNotice && <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{deliveryNotice}</p>}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div hidden={folder !== "compose"} inert={!draft.ready || isDispatching} className={folder !== "compose" ? "hidden" : "grid grid-cols-1 lg:grid-cols-12 gap-6 items-start"}>
         {/* ========================================================================= */}
         {/* LEFT COLUMN: COMPOSER PALETTE & DISPATCH CONTROLS (5 cols on lg) */}
         {/* ========================================================================= */}
@@ -1086,6 +1106,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                 <button
                   key={v.tag}
                   type="button"
+                  onMouseDown={event => event.preventDefault()}
                   onClick={() => handleInsertTag(v.tag)}
                   className="px-2 py-1 rounded-md bg-white hover:bg-slate-50 hover:border-sky-400 hover:text-sky-700 text-slate-700 text-[10px] font-mono font-medium border border-slate-200 transition-colors cursor-pointer shadow-2xs"
                   title={v.label}
@@ -1097,9 +1118,24 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
           </div>
 
           <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 text-xs">
-            <input type="checkbox" checked={includeBookingButton} onChange={event => setIncludeBookingButton(event.target.checked)} />
+            <input type="checkbox" aria-label={t("Include test booking button", "Incluir botão de agendamento")} checked={includeBookingButton} onChange={event => {
+              const checked = event.target.checked; setIncludeBookingButton(checked);
+              if (checked && !messageBody.includes(BOOKING_TOKEN)) {
+                if (canvasTab === "edit") editorHandle.current?.insertText(BOOKING_TOKEN);
+                else setMessageBody(previous => moveBookingToken(previous, messageBlocks(previous).length));
+              } else if (!checked) { setMessageBody(previous => previous.replaceAll(BOOKING_TOKEN,"")); setFollowUpEnabled(false); }
+            }} />
             <span>{t("Include a test-booking link. Only eligible candidates in this cycle will receive this invitation.", "Incluir ligação de agendamento. Apenas candidatos elegíveis deste lote receberão a convocatória.")}</span>
           </label>
+
+          <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 text-xs">
+            <Link href={`/admin/settings?roleId=${encodeURIComponent(selectedRole)}${cohortId ? `&cohortId=${encodeURIComponent(cohortId)}` : ""}#test-slots`} className="font-semibold text-sky-700">{t("Configure this role's test dates, times & capacity →", "Configurar datas, horas e capacidade desta vaga →")}</Link>
+            <p className="leading-relaxed text-slate-500">{t("Test slot shows the applicant's actual booking. Before booking, the email asks them to choose a time. The booking button opens their personal cycle schedule.", "O turno mostra o agendamento real. Antes de agendar, o email pede a escolha de um turno. O botão abre o horário pessoal do lote.")}</p>
+            {includeBookingButton && <><p>{t("Drag the booking button between paragraphs in Preview, or move its {{booking_link}} token in the editor.", "Arraste o botão entre parágrafos na pré-visualização ou mova {{booking_link}} no editor.")}</p>
+              <label className="flex items-center gap-2 font-semibold"><input type="checkbox" checked={followUpEnabled} onChange={event => setFollowUpEnabled(event.target.checked)}/>{t("Send an automatic follow-up after booking", "Enviar seguimento automático após agendamento")}</label>
+              {followUpEnabled && <div className="space-y-3 border-t border-slate-100 pt-3" onFocusCapture={() => { lastEditor.current = "followup"; }}><p className="text-slate-500">{t("When this applicant successfully books, send the message below in addition to the standard confirmation. It uses their chosen date and time and appears in Sent / Outbox.", "Quando o candidato agendar, envie a mensagem abaixo além da confirmação padrão. Usa a data e hora escolhidas e aparece em Enviados / Caixa de saída.")}</p><label className="block font-medium">{t("Follow-up subject", "Assunto do seguimento")}<input aria-label={t("Follow-up subject", "Assunto do seguimento")} value={followUpSubject} onChange={event => setFollowUpSubject(event.target.value)} className="mt-1 w-full rounded-lg border p-2"/></label><RichMessageEditor ariaLabel={t("Follow-up message", "Mensagem de seguimento")} ref={followUpHandle} value={followUpBody} onChange={setFollowUpBody} lang={lang} availableVariables={[{code:"{{candidate_name}}",label:t("Name","Nome")},{code:"{{test_slot}}",label:t("Booked test date & time","Data e hora agendadas")},{code:"{{role_title}}",label:t("Role","Vaga")}]} /></div>}
+            </>}
+          </div>
 
           {/* CARD 4: FILE ATTACHMENTS (PDF / IMAGE) */}
           <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-3">
@@ -1179,6 +1215,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
           {/* Main Studio Canvas Container */}
           <div
             onDragOver={(e) => {
+              if (!e.dataTransfer.types.includes("application/json")) return;
               e.preventDefault();
               setIsDragOverLetterhead(true);
             }}
@@ -1192,7 +1229,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
           >
             {/* Drag Over Visual Hint Banner */}
             {isDragOverLetterhead && (
-              <div className="absolute inset-0 z-40 bg-sky-950/70 backdrop-blur-xs flex items-center justify-center p-6 text-center text-white">
+              <div className="pointer-events-none absolute inset-0 z-40 bg-sky-950/70 backdrop-blur-xs flex items-center justify-center p-6 text-center text-white">
                 <div className="p-4 rounded-xl bg-sky-900 border border-sky-400 shadow-xl flex flex-col items-center gap-2">
                   <FileText size={32} className="text-sky-300" />
                   <span className="text-sm font-bold">
@@ -1285,7 +1322,8 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                     {attachments.length} {t("attachment(s)", "anexo(s)")}
                   </span>
                 </div>
-                <RichMessageEditor
+                <div onFocusCapture={() => { lastEditor.current = "main"; }}><RichMessageEditor
+                  ref={editorHandle}
                   value={messageBody}
                   onChange={setMessageBody}
                   attachments={attachments}
@@ -1304,7 +1342,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                     { code: "{{location}}", label: t("HQ Facility Address", "Endereço das Instalações") },
                     { code: "{{company_name}}", label: t("Company Name", "Overwatch Moçambique") },
                   ]}
-                />
+                /></div>
               </div>
             </div>
 
@@ -1361,10 +1399,10 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                     <Logo variant="light" size="sm" />
                     <div className="text-right">
                       <span className="inline-block bg-white/10 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded border border-white/15 tracking-wider">
-                        REF: OW-COMMS/2026/MAPUTO
+                        REF: COM-{new Date().getFullYear()}/MAPUTO
                       </span>
                       <span className="block text-[10px] text-slate-300 font-medium mt-0.5">
-                        {t("Recruitment & Operations Command", "Recrutamento & Operações")}
+                        {emailLang === "en" ? "Human Resources Department" : "Departamento de Recursos Humanos"}
                       </span>
                     </div>
                   </div>
@@ -1372,7 +1410,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                   {/* Sub-bar */}
                   <div className="bg-slate-50 px-6 py-2.5 border-b border-slate-200 flex items-center justify-between text-[11px] text-slate-600 font-medium">
                     <span className="font-bold text-slate-900 tracking-wider uppercase text-[10px]">
-                      {t("Official Communication · Selection Process", "Comunicação Oficial · Processo de Selecção")}
+                      {emailLang === "en" ? "OFFICIAL COMMUNICATION · RECRUITMENT PROCESS" : "COMUNICAÇÃO OFICIAL · PROCESSO DE RECRUTAMENTO"}
                     </span>
                     <span>Maputo, Moçambique</span>
                   </div>
@@ -1381,7 +1419,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                   <div className="p-6 pb-4 border-b border-slate-100 bg-white grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                     <div>
                       <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                        {t("To / Recipient:", "Para / Destinatário:")}
+                        {emailLang === "en" ? "To / Recipient:" : "Para / Destinatário:"}
                       </span>
                       <span className="font-bold text-slate-900 truncate block mt-0.5">
                         {sampleCandidate.name}
@@ -1389,18 +1427,18 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                     </div>
                     <div>
                       <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                        {t("Position / Role:", "Vaga / Função:")}
+                        {emailLang === "en" ? "Position / Role:" : "Vaga / Função:"}
                       </span>
                       <span className="font-semibold text-slate-800 truncate block mt-0.5">
-                        {activeRoleTitle}
+                        {previewRoleTitle}
                       </span>
                     </div>
                     <div>
                       <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                        {t("Date / Data:", "Data de Emissão:")}
+                        {emailLang === "en" ? "Date:" : "Data de Emissão:"}
                       </span>
                       <span className="font-mono text-slate-700 block mt-0.5">
-                        {new Date().toLocaleDateString(lang === "en" ? "en-US" : "pt-PT", {
+                        {new Date().toLocaleDateString(emailLang === "en" ? "en-US" : "pt-PT", {
                           day: "numeric",
                           month: "long",
                           year: "numeric",
@@ -1409,22 +1447,12 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                     </div>
                   </div>
 
-                  {/* Subject Display */}
-                  <div className="px-6 py-3 border-b border-slate-100 bg-white flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-900 uppercase tracking-wider shrink-0">
-                      {t("Subject:", "Assunto:")}
-                    </span>
-                    <span className="text-xs sm:text-sm font-semibold text-slate-900">
-                      {subject}
-                    </span>
-                  </div>
-
                   {/* Letter Body Rendered */}
                   <div className="p-6 bg-white space-y-4">
-                    <div
-                      className="text-xs sm:text-sm text-slate-800 leading-relaxed font-sans prose prose-slate max-w-none [&_p]:mb-3 [&_ul]:list-disc [&_ul]:ml-5 [&_ol]:list-decimal [&_ol]:ml-5 [&_li]:mb-1 [&_strong]:font-bold [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-3 [&_blockquote]:italic"
-                      dangerouslySetInnerHTML={{ __html: renderedPreviewText }}
-                    />
+                    <div onClick={event => { if ((event.target as Element).closest("[data-booking-button]")) event.preventDefault(); }} onDragStart={event => { if ((event.target as Element).closest("[data-booking-button]")) { event.stopPropagation(); event.dataTransfer.setData("application/overwatch-booking", "move"); event.dataTransfer.effectAllowed = "move"; } }} className="text-xs sm:text-sm text-slate-800 leading-relaxed font-sans [&_p]:mb-3 [&_ul]:list-disc [&_ul]:ml-5 [&_ol]:list-decimal [&_ol]:ml-5 [&_li]:mb-1 [&_strong]:font-bold [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-3 [&_blockquote]:italic">
+                      {previewBlocks.map((block,index) => <React.Fragment key={index}>{includeBookingButton && <div onDragOver={event => { event.preventDefault(); event.stopPropagation(); }} onDrop={event => dropBooking(event,index)} className="my-1 min-h-4 rounded border border-dashed border-sky-200 px-2 py-1 text-center text-[10px] text-sky-600">{t("Drop booking button here", "Largar botão aqui")}<button className="ml-2 underline" type="button" onClick={() => setMessageBody(previous => moveBookingToken(previous,index))}>{t("Move here", "Mover aqui")}</button></div>}<div dangerouslySetInnerHTML={{__html:renderStudioMessage(block,sampleCandidate,previewRoleTitle,emailLang,includeBookingButton,true)}}/></React.Fragment>)}
+                      {includeBookingButton && <div onDragOver={event => {event.preventDefault();event.stopPropagation();}} onDrop={event => dropBooking(event,previewBlocks.length)} className="min-h-5 border-t border-dashed border-sky-200 pt-2 text-center text-[10px] text-sky-600"><button type="button" className="underline" onClick={() => setMessageBody(previous => moveBookingToken(previous,previewBlocks.length))}>{t("Move booking button to the end", "Mover botão para o fim")}</button></div>}
+                    </div>
 
                     {/* Attachments List */}
                     {attachments.length > 0 && (
@@ -1455,9 +1483,9 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                     {/* Official Sign-off block */}
                     <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-start gap-4 text-xs text-slate-600">
                       <div>
-                        <span className="block">{t("With highest regards,", "Com os melhores cumprimentos,")}</span>
+                        <span className="block">{emailLang === "en" ? "Kind regards," : "Com os melhores cumprimentos,"}</span>
                         <span className="font-bold text-slate-900 block mt-1">
-                          {t("Talent & Recruitment Operations", "Equipa de Recrutamento & Operações")}
+                          {emailLang === "en" ? "Recruitment team" : "Equipa de Recrutamento"}
                         </span>
                         <span className="font-semibold text-slate-700 block">Overwatch Moçambique, Lda.</span>
                       </div>
@@ -1472,8 +1500,8 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
 
                   {/* Security & Confidentiality Footer */}
                   <div className="bg-slate-50 px-6 py-3 border-t border-slate-200 text-[10px] text-slate-500 flex items-center justify-between">
-                    <span>{t("Official Confidential Communication · Overwatch Moçambique", "Comunicação Oficial Confidencial · Overwatch Moçambique")}</span>
-                    <span className="font-mono">ENCRYPTED/256</span>
+                    <span>{emailLang === "en" ? "Official Confidential Communication · Overwatch Moçambique" : "Comunicação Oficial Confidencial · Overwatch Moçambique"}</span>
+
                   </div>
                 </div>
               </div>
@@ -1531,7 +1559,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
 
               <button
                 type="button"
-                disabled={targetCandidates.length === 0 || !subject.trim() || !messageBody.trim()}
+                disabled={!draft.ready || isDispatching || targetCandidates.length === 0 || !subject.trim() || !messageBody.trim()}
                 onClick={() => setConfirmDispatchOpen(true)}
                 className="px-6 py-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg disabled:opacity-50 cursor-pointer"
               >

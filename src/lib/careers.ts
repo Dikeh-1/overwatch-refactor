@@ -134,6 +134,7 @@ export type Application = {
   salaryExpectation?: string;
   largestProjectDescription?: string;
   technicalData?: Record<string, any>;
+  screeningRulesApplied?: import("./careers-models").ScreeningRule[];
   screeningResult?: ScreeningEvaluationResult;
   screeningScore?: number;
   testScore?: number;
@@ -146,6 +147,7 @@ export type Application = {
   archiveReason?: ArchiveReason;
   communications?: CommunicationRecord[];
   activityLog?: ActivityRecord[];
+  bookingLinkOpenedAt?: string;
   invitedAt?: string;
   invitedSlots?: string[];
   testSlot?: string;
@@ -281,6 +283,13 @@ export function formatSlotDisplay(slot: string, l?: "en" | "pt" | boolean) {
   if (!slot) return "";
   const normalized = normalizeSlot(slot);
   const isPt = l === "pt" || l === true;
+  if (/^\d{4}-\d{2}-\d{2}/.test(normalized)) {
+    const parts = parseSlotComponents(normalized);
+    if (parts) {
+      const date = new Date(Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute));
+      return new Intl.DateTimeFormat(isPt ? "pt-MZ" : "en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" }).format(date) + " (Maputo)";
+    }
+  }
   if (isPt) return normalized;
   return normalized
     .replace("Segunda-feira", "Monday")

@@ -166,7 +166,7 @@ export function activitySection(pathname: string) {
   if (/roles-manager|\/roles$/.test(pathname)) return "roles";
   if (/next-phase/.test(pathname)) return "next-phase";
   if (/test-slots|check-in|test-booking|\/testing/.test(pathname)) return "testing";
-  if (/broadcast|invite|email|confirmation|reminder|gate-passes|rebooking|reschedule|address-correction|communications|templates/.test(pathname)) return "communications";
+  if (/broadcast|invite|email|confirmation|reminder|gate-passes|rebooking|reschedule|address-correction|communications|templates|\/mail(?:\/|$)/.test(pathname)) return "communications";
   if (/form-builder/.test(pathname)) return "form-builder";
   if (/candidates|\/cv$|\/api\/admin\/careers(?:$|\/restore|\/disqualify|\/decline-location)|^\/api\/careers$/.test(pathname)) return "candidates";
   return "overview";

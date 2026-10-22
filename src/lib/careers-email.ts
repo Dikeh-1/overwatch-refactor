@@ -4,7 +4,6 @@ import { getSystemConfig } from "./careers-config-store";
 import { DEFAULT_ADMIN_SETTINGS } from "./admin-settings";
 import fs from "node:fs";
 import path from "node:path";
-import nodemailer from "nodemailer";
 import QRCode from "qrcode";
 import { roles, type Application, formatSlotDisplay } from "./careers";
 import { siteContact } from "./site-config";
@@ -42,82 +41,6 @@ interface SendEmailOptions {
   attachment?: { name: string; content: string }[];
 }
 
-async function sendViaGmailSmtp(payload: SendEmailOptions) {
-  const user = process.env.FALLBACK_SMTP_USER;
-  const pass = process.env.FALLBACK_SMTP_PASS;
-  if (!user || !pass) {
-    throw new Error("Missing FALLBACK_SMTP_USER or FALLBACK_SMTP_PASS.");
-  }
-
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: { user, pass },
-  });
-
-  const attachments = payload.attachment?.map((att) => ({
-    filename: att.name,
-    content: Buffer.from(att.content, "base64"),
-  }));
-
-  const mailOptions: Record<string, unknown> = {
-    from: { name: payload.sender?.name || "Overwatch", address: user },
-    to: payload.to.map((t) => t.email).join(", "),
-    replyTo: payload.replyTo
-      ? payload.replyTo.email
-      : payload.sender?.email || "info@overwatchmoz.com",
-    subject: payload.subject,
-    html: payload.htmlContent,
-    text: payload.textContent,
-    attachments,
-  };
-
-  if (payload.cc && payload.cc.length > 0) {
-    mailOptions.cc = payload.cc.map((c) => c.email).join(", ");
-  }
-
-  if (ADMIN_BCC_EMAIL) {
-    mailOptions.bcc = ADMIN_BCC_EMAIL;
-  }
-
-  const info = await transporter.sendMail(mailOptions);
-  return { success: true, provider: "gmail-smtp", messageId: info.messageId };
-}
-
-const brevoCreditsCache = new Map<string, { hasCredits: boolean; checkedAt: number }>();
-
-async function checkBrevoAccountCredits(apiKey: string): Promise<boolean> {
-  const now = Date.now();
-  const cached = brevoCreditsCache.get(apiKey);
-  if (cached && now - cached.checkedAt < 3 * 60 * 1000) {
-    return cached.hasCredits;
-  }
-  try {
-    const res = await fetch("https://api.brevo.com/v3/account", {
-      headers: { "api-key": apiKey },
-      signal: AbortSignal.timeout(3000),
-    });
-    if (!res.ok) {
-      brevoCreditsCache.set(apiKey, { hasCredits: false, checkedAt: now });
-      return false;
-    }
-    const data = await res.json();
-    const sendLimitPlan = data?.plan?.find(
-      (p: { creditsType?: string; type?: string }) =>
-        p.creditsType === "sendLimit" || p.type === "free",
-    );
-    const credits =
-      typeof sendLimitPlan?.credits === "number" ? sendLimitPlan.credits : 0;
-    const hasCredits = credits > 0;
-    brevoCreditsCache.set(apiKey, { hasCredits, checkedAt: now });
-    if (!hasCredits) {
-      console.warn(`[Email Provider] Brevo key ending ...${apiKey.slice(-6)} has ${credits} credits remaining.`);
-    }
-    return hasCredits;
-  } catch {
-    return false;
-  }
-}
-
 async function sendViaBrevo(
   apiKey: string,
   payload: SendEmailOptions,
@@ -137,70 +60,44 @@ async function sendViaBrevo(
       "api-key": apiKey,
     },
     body: JSON.stringify(brevoPayload),
-    signal: AbortSignal.timeout(4000),
+    signal: AbortSignal.timeout(15000),
   });
   if (!res.ok) {
     const errText = await res.text().catch(() => "");
-    throw new Error(`Brevo API error ${res.status}: ${errText}`);
+    const error = new Error(`Brevo rejected this email (${res.status}): ${errText}`) as Error & { allowFailover?: boolean };
+    // Only a definite rejection permits another account to try; an ambiguous timeout may already have sent.
+    error.allowFailover = [401,402,403,429].includes(res.status) || (res.status === 400 && /credit|quota|limit/i.test(errText));
+    throw error;
   }
-  return { success: true, provider: "brevo" };
+  const result = await res.json().catch(() => ({}));
+  return { success: true, provider: "brevo", messageId: result.messageId };
 }
 
 async function deliverTransactionalEmail(payload: SendEmailOptions) {
   const settings = await getSystemConfig("admin_settings", DEFAULT_ADMIN_SETTINGS);
-  payload = { ...payload, sender: { email: payload.sender?.email || "noreply@overwatchmoz.com", name: settings.senderName }, replyTo: payload.replyTo || { name: settings.senderName, email: settings.replyToEmail } };
-  const fallbackUser = process.env.FALLBACK_SMTP_USER;
-  const fallbackPass = process.env.FALLBACK_SMTP_PASS;
-  const hasGmailSmtp = Boolean(fallbackUser && fallbackPass);
-
-  const defaultSender = {
-    name: "Overwatch Recrutamento",
-    email: "noreply@overwatchmoz.com",
-  };
-  const outgoingSender = payload.sender?.email ? payload.sender : defaultSender;
-
-  const primaryBrevoKey = process.env.BREVO_API_KEY?.trim();
-  const secondaryBrevoKey = (
-    process.env.BREVO_API_KEY_BACKUP ||
-    process.env.BREVO_API_KEY_SECONDARY ||
-    ""
-  ).trim();
-
-  // If Gmail SMTP is explicitly forced via EMAIL_PROVIDER=gmail
-  if (hasGmailSmtp && process.env.EMAIL_PROVIDER === "gmail") {
-    return sendViaGmailSmtp({ ...payload, sender: outgoingSender });
-  }
-
-  // ─── TIER 1: Primary Brevo Account ──────────────────────────────────
-  if (primaryBrevoKey && (await checkBrevoAccountCredits(primaryBrevoKey))) {
+  const outgoingSender = { email: "noreply@overwatchmoz.com", name: settings.senderName || "Overwatch Recrutamento" };
+  payload = { ...payload, sender: outgoingSender, replyTo: payload.replyTo || { name: outgoingSender.name, email: settings.replyToEmail || "info@overwatchmoz.com" } };
+  const keys = [...new Set([process.env.BREVO_API_KEY, process.env.BREVO_API_KEY_BACKUP || process.env.BREVO_API_KEY_SECONDARY].map(key => key?.trim()).filter((key): key is string => Boolean(key)))];
+  if (!keys.length) throw new Error("No Brevo connection is configured. Personal SMTP delivery is disabled.");
+  const start = brevoAccountCursor % keys.length;
+  for (let attempt = 0; attempt < keys.length; attempt++) {
+    const index = (start + attempt) % keys.length;
     try {
-      return await sendViaBrevo(primaryBrevoKey, payload, outgoingSender);
-    } catch (err) {
-      console.warn("[Failover] Tier 1 Primary Brevo failed. Attempting Tier 2 Secondary Brevo:", err);
+      const result = await sendViaBrevo(keys[index], payload, outgoingSender);
+      brevoAccountCursor = index + 1;
+      return result;
+    } catch (error) {
+      if (!(error as Error & { allowFailover?: boolean }).allowFailover || attempt === keys.length - 1) throw error;
     }
   }
-
-  // ─── TIER 2: Secondary Brevo Account (New Backup) ───────────────────
-  if (secondaryBrevoKey && (await checkBrevoAccountCredits(secondaryBrevoKey))) {
-    try {
-      return await sendViaBrevo(secondaryBrevoKey, payload, outgoingSender);
-    } catch (err) {
-      console.warn("[Failover] Tier 2 Secondary Brevo failed. Falling back to Tier 3 Gmail SMTP:", err);
-    }
-  }
-
-  // ─── TIER 3: Gmail SMTP (Final High-Reliability Failover) ───────────
-  if (hasGmailSmtp) {
-    return sendViaGmailSmtp({ ...payload, sender: outgoingSender });
-  }
-
-  throw new Error("No email provider available to send message.");
+  throw new Error("Both Brevo connections rejected the email. Review Outbox before retrying.");
 }
+let brevoAccountCursor = 0;
 
 export async function notifyApplication(application: Application, cv: Buffer) {
   // Never dispatch test fixture emails to production inboxes
   if (
-    (!process.env.BREVO_API_KEY && !process.env.FALLBACK_SMTP_PASS) ||
+    (!process.env.BREVO_API_KEY && !process.env.BREVO_API_KEY_BACKUP && !process.env.BREVO_API_KEY_SECONDARY) ||
     application.email.endsWith(".invalid") ||
     process.env.CAREERS_TEST_MODE === "true"
   ) {
@@ -898,7 +795,7 @@ export async function sendTestInvitation({
   baseUrl?: string;
 }) {
   if (
-    (!process.env.BREVO_API_KEY && !process.env.FALLBACK_SMTP_PASS) ||
+    (!process.env.BREVO_API_KEY && !process.env.BREVO_API_KEY_BACKUP && !process.env.BREVO_API_KEY_SECONDARY) ||
     application.email.endsWith(".invalid") ||
     process.env.CAREERS_TEST_MODE === "true"
   ) {
@@ -1081,7 +978,7 @@ export async function sendGatePassEmail({
   subject?: string;
 }) {
   if (
-    (!process.env.BREVO_API_KEY && !process.env.FALLBACK_SMTP_PASS) ||
+    (!process.env.BREVO_API_KEY && !process.env.BREVO_API_KEY_BACKUP && !process.env.BREVO_API_KEY_SECONDARY) ||
     application.email.endsWith(".invalid") ||
     process.env.CAREERS_TEST_MODE === "true"
   ) {
@@ -1435,7 +1332,7 @@ export async function sendDisqualificationEmail({
   baseUrl?: string;
 }) {
   if (
-    (!process.env.BREVO_API_KEY && !process.env.FALLBACK_SMTP_PASS) ||
+    (!process.env.BREVO_API_KEY && !process.env.BREVO_API_KEY_BACKUP && !process.env.BREVO_API_KEY_SECONDARY) ||
     application.email.endsWith(".invalid") ||
     process.env.CAREERS_TEST_MODE === "true"
   ) {
@@ -1572,7 +1469,7 @@ export async function sendRetractionEmail({
   baseUrl?: string;
 }) {
   if (
-    (!process.env.BREVO_API_KEY && !process.env.FALLBACK_SMTP_PASS) ||
+    (!process.env.BREVO_API_KEY && !process.env.BREVO_API_KEY_BACKUP && !process.env.BREVO_API_KEY_SECONDARY) ||
     application.email.endsWith(".invalid") ||
     process.env.CAREERS_TEST_MODE === "true"
   ) {
@@ -1726,7 +1623,7 @@ export async function sendRebookingGraceEmail({
   baseUrl?: string;
 }) {
   if (
-    (!process.env.BREVO_API_KEY && !process.env.FALLBACK_SMTP_PASS) ||
+    (!process.env.BREVO_API_KEY && !process.env.BREVO_API_KEY_BACKUP && !process.env.BREVO_API_KEY_SECONDARY) ||
     application.email.endsWith(".invalid") ||
     process.env.CAREERS_TEST_MODE === "true"
   ) {
@@ -1957,7 +1854,7 @@ export async function sendAddressCorrectionBroadcastEmail({
   baseUrl?: string;
 }) {
   if (
-    (!process.env.BREVO_API_KEY && !process.env.FALLBACK_SMTP_PASS) ||
+    (!process.env.BREVO_API_KEY && !process.env.BREVO_API_KEY_BACKUP && !process.env.BREVO_API_KEY_SECONDARY) ||
     application.email.endsWith(".invalid") ||
     process.env.CAREERS_TEST_MODE === "true"
   ) {
@@ -2233,7 +2130,7 @@ export async function sendHolidayRescheduleEmail({
   baseUrl?: string;
 }) {
   if (
-    (!process.env.BREVO_API_KEY && !process.env.FALLBACK_SMTP_PASS) ||
+    (!process.env.BREVO_API_KEY && !process.env.BREVO_API_KEY_BACKUP && !process.env.BREVO_API_KEY_SECONDARY) ||
     application.email.endsWith(".invalid") ||
     process.env.CAREERS_TEST_MODE === "true"
   ) {
@@ -3053,7 +2950,7 @@ export async function sendTechnicalLocationDeclineEmail({
   recipientEmail?: string;
 }) {
   if (
-    (!process.env.BREVO_API_KEY && !process.env.FALLBACK_SMTP_PASS) ||
+    (!process.env.BREVO_API_KEY && !process.env.BREVO_API_KEY_BACKUP && !process.env.BREVO_API_KEY_SECONDARY) ||
     application.email.endsWith(".invalid") ||
     process.env.CAREERS_TEST_MODE === "true"
   ) {
@@ -3194,7 +3091,7 @@ export async function sendTechnicalRegionDeclineEmail({
   recipientEmail?: string;
 }) {
   if (
-    (!process.env.BREVO_API_KEY && !process.env.FALLBACK_SMTP_PASS) ||
+    (!process.env.BREVO_API_KEY && !process.env.BREVO_API_KEY_BACKUP && !process.env.BREVO_API_KEY_SECONDARY) ||
     application.email.endsWith(".invalid") ||
     process.env.CAREERS_TEST_MODE === "true"
   ) {

@@ -1,3 +1,5 @@
+import { evaluateApplicationWithRules } from "./careers-evaluator";
+import { DEFAULT_SCREENING_RULES_BY_ROLE } from "./careers-models";
 /**
  * Reusable Screening Engine for Technical and Specialist Roles at Overwatch.
  *
@@ -417,6 +419,8 @@ export function evaluateTechnicalScreening(
   roleId: string,
   data: Record<string, any>
 ): ScreeningEvaluationResult {
+  const configured = DEFAULT_SCREENING_RULES_BY_ROLE[roleId];
+  if (configured) return evaluateApplicationWithRules(data, configured);
   const config = getRoleScreeningConfig(roleId);
   const now = new Date().toISOString();
 

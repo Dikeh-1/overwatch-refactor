@@ -1,5 +1,6 @@
 "use client";
 
+import { safeMailHtml } from "@/lib/communication-content";
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   Bold,
@@ -38,12 +39,16 @@ export interface AttachmentItem {
   content: string; // base64
 }
 
+export type RichMessageEditorHandle = { insertText: (text: string) => void };
+
 interface RichMessageEditorProps {
+  ref?: React.Ref<RichMessageEditorHandle>;
   value: string;
   onChange: (value: string) => void;
   attachments?: AttachmentItem[];
   onAttachmentsChange?: (attachments: AttachmentItem[]) => void;
   placeholder?: string;
+  ariaLabel?: string;
   lang?: "pt" | "en";
   availableVariables?: { code: string; label: string }[];
   maxFileSizeMb?: number;
@@ -78,11 +83,13 @@ const HIGHLIGHT_COLORS = [
 ];
 
 export default function RichMessageEditor({
+  ref: externalRef,
   value,
   onChange,
   attachments = [],
   onAttachmentsChange,
   placeholder = "Write your official correspondence here...",
+  ariaLabel,
   lang = "pt",
   availableVariables = DEFAULT_VARIABLES,
   maxFileSizeMb = 10,
@@ -96,17 +103,51 @@ export default function RichMessageEditor({
   const [fontSize, setFontSize] = useState<string>("14px");
 
   const editorRef = useRef<HTMLDivElement>(null);
+  const rawRef = useRef<HTMLTextAreaElement>(null);
+  const savedRange = useRef<Range | null>(null);
+  const [activeCommands, setActiveCommands] = useState<Record<string, boolean>>({});
+  const rememberSelection = useCallback(() => {
+    const selection = window.getSelection();
+    if (!selection?.rangeCount || !editorRef.current?.contains(selection.anchorNode)) return;
+    savedRange.current = selection.getRangeAt(0).cloneRange();
+    const states: Record<string, boolean> = {};
+    for (const cmd of ["bold", "italic", "underline", "strikeThrough", "insertUnorderedList", "insertOrderedList", "justifyLeft", "justifyCenter", "justifyRight", "justifyFull"]) {
+      states[cmd] = document.queryCommandState(cmd);
+    }
+    const node = selection.anchorNode?.nodeType === Node.ELEMENT_NODE ? selection.anchorNode as Element : selection.anchorNode?.parentElement;
+    states.blockquote = Boolean(node?.closest("blockquote"));
+    if (node) {
+      const style = window.getComputedStyle(node);
+      setFontSize(style.fontSize);
+      setFontFamily(/Georgia|Cambria|Times New Roman/i.test(style.fontFamily) ? "serif" : /mono|Menlo|Consolas/i.test(style.fontFamily) ? "mono" : "sans");
+    }
+    setActiveCommands(states);
+  }, []);
+  useEffect(() => {
+    document.addEventListener("selectionchange", rememberSelection);
+    return () => document.removeEventListener("selectionchange", rememberSelection);
+  }, [rememberSelection]);
+  const restoreSelection = () => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.focus();
+    const selection = window.getSelection();
+    const range = savedRange.current;
+    if (selection && range && editor.contains(range.commonAncestorContainer)) {
+      selection.removeAllRanges(); selection.addRange(range);
+    } else if (selection) {
+      const fallback = document.createRange(); fallback.selectNodeContents(editor); fallback.collapse(false);
+      selection.removeAllRanges(); selection.addRange(fallback);
+    }
+  };
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isUpdatingFromProps = useRef<boolean>(false);
   const normalizeToHtml = useCallback((val: string) => {
     if (!val) return "";
-    if (!val.includes("<p>") && !val.includes("<div>") && !val.includes("<br>")) {
-      return val
-        .split(/\n\s*\n/)
-        .map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`)
-        .join("");
+    if (!/<[a-z][\s\S]*>/i.test(val)) {
+      return val.split(/\n\s*\n/).map(p => `<p>${p.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>")}</p>`).join("");
     }
-    return val;
+    return safeMailHtml(val);
   }, []);
 
   // Sync incoming value to contentEditable when not user typing
@@ -162,8 +203,10 @@ export default function RichMessageEditor({
   // Execute standard formatting commands
   const execCmd = (command: string, cmdValue: string | undefined = undefined) => {
     if (editorMode === "raw") return;
-    editorRef.current?.focus();
+    restoreSelection();
+    document.execCommand("styleWithCSS", false, "true");
     document.execCommand(command, false, cmdValue);
+    rememberSelection();
     handleContentChange();
   };
 
@@ -177,37 +220,36 @@ export default function RichMessageEditor({
 
   const handleFontSizeChange = (size: string) => {
     setFontSize(size);
-    // Use inline styling via selection or execCommand fontSize mapping
-    editorRef.current?.focus();
-    const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
-      const range = selection.getRangeAt(0);
-      const span = document.createElement("span");
-      span.style.fontSize = size;
-      range.surroundContents(span);
-      handleContentChange();
-    } else {
-      execCmd("fontSize", "3");
-    }
+    restoreSelection();
+    document.execCommand("fontSize", false, "7");
+    editorRef.current?.querySelectorAll('font[size="7"], [style*="xxx-large"]').forEach(node => {
+      const span = document.createElement("span"); span.style.fontSize = size;
+      span.innerHTML = node.innerHTML; node.replaceWith(span);
+    });
+    rememberSelection(); handleContentChange();
   };
 
   const handleInsertVariable = (varCode: string) => {
-    editorRef.current?.focus();
     if (editorMode === "visual") {
-      document.execCommand("insertText", false, varCode);
-      handleContentChange();
+      restoreSelection(); document.execCommand("insertText", false, varCode);
+      rememberSelection(); handleContentChange();
     } else {
-      onChange(`${value} ${varCode}`);
+      const field = rawRef.current;
+      const start = field?.selectionStart ?? value.length, end = field?.selectionEnd ?? start;
+      onChange(value.slice(0, start) + varCode + value.slice(end));
+      requestAnimationFrame(() => { field?.focus(); field?.setSelectionRange(start + varCode.length, start + varCode.length); });
     }
     setShowVariablePicker(false);
   };
+
+  React.useImperativeHandle(externalRef, () => ({ insertText: handleInsertVariable }));
 
   const handleInsertLink = () => {
     const url = prompt(
       lang === "en" ? "Enter link URL (e.g. https://...):" : "Insira o link URL (ex.: https://...):"
     );
-    if (url) {
-      execCmd("createLink", url);
+    if (url && /^(https?:|mailto:|tel:)/i.test(url.trim())) {
+      execCmd("createLink", url.trim());
     }
   };
 
@@ -216,7 +258,7 @@ export default function RichMessageEditor({
   };
 
   const handleInsertQuote = () => {
-    execCmd("formatBlock", "blockquote");
+    execCmd("formatBlock", activeCommands.blockquote ? "p" : "blockquote");
   };
 
   // Keyboard shortcut listener
@@ -280,7 +322,7 @@ export default function RichMessageEditor({
       {/* =========================================================================
           TOOLBAR HEADER
          ========================================================================= */}
-      <div className="border-b border-slate-200 bg-slate-50/80 p-2 sm:p-2.5 flex flex-wrap items-center justify-between gap-2 select-none">
+      <div onMouseDown={event => { if (!(event.target as Element).closest("select,input")) event.preventDefault(); }} className="border-b border-slate-200 bg-slate-50/80 p-2 sm:p-2.5 flex flex-wrap items-center justify-between gap-2 select-none">
         {/* Left Toolbar: Actions */}
         <div className="flex flex-wrap items-center gap-1">
           {/* History Undo / Redo */}
@@ -288,7 +330,7 @@ export default function RichMessageEditor({
             <button
               type="button"
               onClick={() => execCmd("undo")}
-              className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 transition-colors cursor-pointer aria-pressed:bg-sky-100 aria-pressed:text-sky-800 aria-pressed:ring-1 aria-pressed:ring-sky-300"
               title="Undo (Ctrl+Z)"
             >
               <RotateCcw size={14} />
@@ -296,7 +338,7 @@ export default function RichMessageEditor({
             <button
               type="button"
               onClick={() => execCmd("redo")}
-              className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 transition-colors cursor-pointer aria-pressed:bg-sky-100 aria-pressed:text-sky-800 aria-pressed:ring-1 aria-pressed:ring-sky-300"
               title="Redo (Ctrl+Y)"
             >
               <RotateCw size={14} />
@@ -341,32 +383,40 @@ export default function RichMessageEditor({
           <div className="flex items-center border-r border-slate-200 pr-1.5 mr-1 gap-0.5">
             <button
               type="button"
+              disabled={editorMode === "raw"}
+              aria-pressed={Boolean(activeCommands.bold)}
               onClick={() => execCmd("bold")}
-              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 font-bold transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 font-bold transition-colors cursor-pointer aria-pressed:bg-sky-100 aria-pressed:text-sky-800 aria-pressed:ring-1 aria-pressed:ring-sky-300"
               title="Bold (Ctrl+B)"
             >
               <Bold size={14} />
             </button>
             <button
               type="button"
+              disabled={editorMode === "raw"}
+              aria-pressed={Boolean(activeCommands.italic)}
               onClick={() => execCmd("italic")}
-              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 italic transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 italic transition-colors cursor-pointer aria-pressed:bg-sky-100 aria-pressed:text-sky-800 aria-pressed:ring-1 aria-pressed:ring-sky-300"
               title="Italic (Ctrl+I)"
             >
               <Italic size={14} />
             </button>
             <button
               type="button"
+              disabled={editorMode === "raw"}
+              aria-pressed={Boolean(activeCommands.underline)}
               onClick={() => execCmd("underline")}
-              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 underline transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 underline transition-colors cursor-pointer aria-pressed:bg-sky-100 aria-pressed:text-sky-800 aria-pressed:ring-1 aria-pressed:ring-sky-300"
               title="Underline (Ctrl+U)"
             >
               <Underline size={14} />
             </button>
             <button
               type="button"
+              disabled={editorMode === "raw"}
+              aria-pressed={Boolean(activeCommands.strikeThrough)}
               onClick={() => execCmd("strikeThrough")}
-              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 line-through transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 line-through transition-colors cursor-pointer aria-pressed:bg-sky-100 aria-pressed:text-sky-800 aria-pressed:ring-1 aria-pressed:ring-sky-300"
               title="Strikethrough"
             >
               <Strikethrough size={14} />
@@ -447,32 +497,40 @@ export default function RichMessageEditor({
           <div className="flex items-center border-r border-slate-200 pr-1.5 mr-1 gap-0.5">
             <button
               type="button"
+              disabled={editorMode === "raw"}
+              aria-pressed={Boolean(activeCommands.justifyLeft)}
               onClick={() => execCmd("justifyLeft")}
-              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 transition-colors cursor-pointer aria-pressed:bg-sky-100 aria-pressed:text-sky-800 aria-pressed:ring-1 aria-pressed:ring-sky-300"
               title="Align Left"
             >
               <AlignLeft size={14} />
             </button>
             <button
               type="button"
+              disabled={editorMode === "raw"}
+              aria-pressed={Boolean(activeCommands.justifyCenter)}
               onClick={() => execCmd("justifyCenter")}
-              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 transition-colors cursor-pointer aria-pressed:bg-sky-100 aria-pressed:text-sky-800 aria-pressed:ring-1 aria-pressed:ring-sky-300"
               title="Align Center"
             >
               <AlignCenter size={14} />
             </button>
             <button
               type="button"
+              disabled={editorMode === "raw"}
+              aria-pressed={Boolean(activeCommands.justifyRight)}
               onClick={() => execCmd("justifyRight")}
-              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 transition-colors cursor-pointer aria-pressed:bg-sky-100 aria-pressed:text-sky-800 aria-pressed:ring-1 aria-pressed:ring-sky-300"
               title="Align Right"
             >
               <AlignRight size={14} />
             </button>
             <button
               type="button"
+              disabled={editorMode === "raw"}
+              aria-pressed={Boolean(activeCommands.justifyFull)}
               onClick={() => execCmd("justifyFull")}
-              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 transition-colors cursor-pointer aria-pressed:bg-sky-100 aria-pressed:text-sky-800 aria-pressed:ring-1 aria-pressed:ring-sky-300"
               title="Justify"
             >
               <AlignJustify size={14} />
@@ -483,24 +541,30 @@ export default function RichMessageEditor({
           <div className="flex items-center border-r border-slate-200 pr-1.5 mr-1 gap-0.5">
             <button
               type="button"
+              disabled={editorMode === "raw"}
+              aria-pressed={Boolean(activeCommands.insertUnorderedList)}
               onClick={() => execCmd("insertUnorderedList")}
-              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 transition-colors cursor-pointer aria-pressed:bg-sky-100 aria-pressed:text-sky-800 aria-pressed:ring-1 aria-pressed:ring-sky-300"
               title="Bullet List"
             >
               <List size={14} />
             </button>
             <button
               type="button"
+              disabled={editorMode === "raw"}
+              aria-pressed={Boolean(activeCommands.insertOrderedList)}
               onClick={() => execCmd("insertOrderedList")}
-              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 transition-colors cursor-pointer aria-pressed:bg-sky-100 aria-pressed:text-sky-800 aria-pressed:ring-1 aria-pressed:ring-sky-300"
               title="Numbered List"
             >
               <ListOrdered size={14} />
             </button>
             <button
               type="button"
+              disabled={editorMode === "raw"}
+              aria-pressed={Boolean(activeCommands.blockquote)}
               onClick={handleInsertQuote}
-              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 transition-colors cursor-pointer aria-pressed:bg-sky-100 aria-pressed:text-sky-800 aria-pressed:ring-1 aria-pressed:ring-sky-300"
               title="Quote Block"
             >
               <Quote size={14} />
@@ -508,7 +572,7 @@ export default function RichMessageEditor({
             <button
               type="button"
               onClick={handleInsertHorizontalRule}
-              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 transition-colors cursor-pointer aria-pressed:bg-sky-100 aria-pressed:text-sky-800 aria-pressed:ring-1 aria-pressed:ring-sky-300"
               title="Horizontal Divider"
             >
               <Minus size={14} />
@@ -516,7 +580,7 @@ export default function RichMessageEditor({
             <button
               type="button"
               onClick={handleInsertLink}
-              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 transition-colors cursor-pointer aria-pressed:bg-sky-100 aria-pressed:text-sky-800 aria-pressed:ring-1 aria-pressed:ring-sky-300"
               title="Insert Link"
             >
               <Link2 size={14} />
@@ -613,22 +677,34 @@ export default function RichMessageEditor({
         {/* ContentEditable Visual Element (Persistently preserved in DOM) */}
         <div
           ref={editorRef}
+          role="textbox"
+          aria-label={ariaLabel || (lang === "en" ? "Message body" : "Corpo da mensagem")}
+          aria-multiline="true"
+          onPaste={event => {
+            event.preventDefault(); restoreSelection();
+            const html = event.clipboardData.getData("text/html");
+            if (html) document.execCommand("insertHTML", false, safeMailHtml(html));
+            else document.execCommand("insertText", false, event.clipboardData.getData("text/plain"));
+            rememberSelection(); handleContentChange();
+          }}
           contentEditable
           onInput={handleContentChange}
           onKeyDown={handleKeyDown}
           data-placeholder={placeholder}
           style={{ display: editorMode === "visual" ? "block" : "none" }}
-          className="outline-none min-h-[300px] text-sm text-slate-900 leading-relaxed font-sans empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400 empty:before:pointer-events-none prose prose-slate max-w-none prose-p:my-2 prose-ul:my-2 prose-ol:my-2"
+          className="outline-none min-h-[300px] text-sm text-slate-900 leading-relaxed font-sans empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400 empty:before:pointer-events-none prose prose-slate max-w-none [&_p]:my-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_blockquote]:my-3 [&_blockquote]:border-l-4 [&_blockquote]:border-sky-300 [&_blockquote]:pl-4 [&_blockquote]:text-slate-600"
         />
 
         {/* Source Textarea Element (Persistently preserved in DOM) */}
         <textarea
+          ref={rawRef}
+          aria-label={lang === "en" ? "Message HTML source" : "Código HTML da mensagem"}
           value={value}
           onChange={(e) => {
             const newHtml = e.target.value;
             onChange(newHtml);
             if (editorRef.current) {
-              editorRef.current.innerHTML = newHtml;
+              editorRef.current.innerHTML = normalizeToHtml(newHtml);
             }
           }}
           rows={14}

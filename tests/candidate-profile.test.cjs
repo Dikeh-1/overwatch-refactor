@@ -25,7 +25,7 @@ test('CCO screening results never select the technical-manager profile or instal
   assert.match(html,/Qualification Checklist/);assert.match(html,/Grade 12 High School Completion/);
   assert.doesNotMatch(html,/Technical Screening &amp; Competencies|Practical CCTV Installation|NVR \/ DVR Configuration|Mandatory Requirements Missing/);
   const manager=renderToStaticMarkup(React.createElement(CandidateProfileView,props({...base,role:'cctv_technical_manager'})));
-  assert.match(manager,/Technical Screening &amp; Competencies/);assert.match(manager,/Practical CCTV Installation/);
+  assert.match(manager,/Technical Screening &amp; Competencies/);assert.match(manager,/Hands-on CCTV Experience/);
 });
 
 test('documented attendance, a zero score and configured English criteria agree with the archive',()=>{
@@ -33,4 +33,24 @@ test('documented attendance, a zero score and configured English criteria agree 
   const options={...props(a),roles:[{id:'cctv',en:'CCTV Operator',pt:'Operadora de CCTV',open:false,screeningRules:[{field:'grade12',labelEn:'Grade 12 completion',labelPt:'Conclusão da 12.ª Classe'}]}]};
   const html=renderToStaticMarkup(React.createElement(CandidateProfileView,options));
   assert.match(html,/Present \(documented\)/);assert.match(html,/Recorded Score:.*?0%/s);assert.match(html,/Grade 12 completion/);assert.doesNotMatch(html,/Conclusão da 12/);
+});
+
+const {evaluateApplicationWithRules,screeningNumber,screeningValue}=require('../src/lib/careers-evaluator.ts');
+test('experience ranges are evaluated numerically and missing values never become zero experience',()=>{
+ for(const value of ['1_2','1 to 2 years','1 a 2 anos','1–2','1-2'])assert.equal(screeningNumber(value),1,value);
+ assert.equal(screeningNumber('5_plus'),5);assert.equal(screeningNumber('8+ years'),8);assert.equal(screeningNumber('1,5 anos'),1.5);
+ for(const value of [undefined,null,'unknown','',-1,Infinity])assert.equal(screeningNumber(value),null);
+ assert.equal(screeningValue({yearsCctvExperience:'',technicalData:{yearsCctvExperience:'1_2'}},'yearsCctvExperience'),'1_2');
+ assert.equal(screeningValue({yearsCctvExperience:0,technicalData:{yearsCctvExperience:'1_2'}},'yearsCctvExperience'),0);
+ const rules=[{field:'yearsCctvExperience',labelEn:'Experience',labelPt:'Experiência',type:'number',expectedValue:1,mandatory:true}];
+ assert.equal(evaluateApplicationWithRules({yearsCctvExperience:'1_2'},rules).passedMandatory,true);
+ assert.equal(evaluateApplicationWithRules({},[{...rules[0],expectedValue:0}]).passedMandatory,false);
+});
+test('manager profile ignores stale cached disqualification and shows score, count and checklist from the same cycle rules',()=>{
+ const rule={field:'yearsCctvExperience',labelEn:'Cycle experience',labelPt:'Experiência do lote',type:'number',expectedValue:1,mandatory:true};
+ const candidate={...base,role:'cctv_technical_manager',yearsCctvExperience:'1_2',screeningRulesApplied:[rule],screeningResult:{passedMandatory:false,matchPercentage:83,failedReasons:['outdated result'],details:[]}};
+ const html=renderToStaticMarkup(React.createElement(CandidateProfileView,props(candidate)));
+ assert.match(html,/100% · Match/);assert.match(html,/All 1 mandatory requirements met/);assert.doesNotMatch(html,/outdated result|0 mandatory requirement\(s\) missing|Disqualified/);
+ const failed=renderToStaticMarkup(React.createElement(CandidateProfileView,props({...candidate,yearsCctvExperience:'0'})));
+ assert.match(failed,/1 mandatory requirement\(s\) missing/);assert.match(failed,/Cycle experience/);assert.match(failed,/0% · Criteria not met/);
 });
