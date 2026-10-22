@@ -114,3 +114,12 @@ test('concurrent resume requests share one five-email worker and never resurrect
  assert.equal(sent.length,10);assert.equal(peakSends,5);assert.equal((await store.getMail(delivery.deliveryId('batch-campaign:batch-10'))).data.status,'deleted');
  await delivery.processStudioQueue(scope);assert.equal(sent.length,10);sendDelay=0;
 });
+
+
+test('a definitely rejected email can reuse immutable content from its completed campaign',async()=>{
+ rows.clear();sent.length=0;applications.clear();
+ const candidate={id:'retry-completed',name:'Retry',role:'cctv',cohortId:'sept',email:'retry@example.invalid',status:'test_invited'};applications.set(candidate.id,candidate);
+ await store.putMail({id:'completed-content',kind:'draft',scope:'retry-scope',data:{status:'completed',subject:'Original frozen subject',messageBody:'Original frozen message',attachments:[]}},0);
+ const item=await delivery.enqueueStudioMail(candidate,{contentId:'completed-content',includeBookingButton:false},'retry-scope','retry-campaign');
+ await delivery.deliverQueuedItem(item);assert.equal(sent.length,1);assert.equal(sent[0].subject,'Original frozen subject');assert.equal((await store.getMail(item.id)).data.status,'sent');
+});

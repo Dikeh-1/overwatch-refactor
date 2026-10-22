@@ -30,7 +30,7 @@ export async function deliverQueuedItem(item: MailItem) {
   try {
     if (item.data.contentId) {
       const content = await getMail(item.data.contentId);
-      if (!content || content.kind !== "draft" || content.scope !== item.scope || !["queued", "sent"].includes(content.data.status)) throw Error("The saved message is unavailable. Review this draft before sending.");
+      if (!content || content.kind !== "draft" || content.scope !== item.scope || !["queued", "sent", "completed"].includes(content.data.status)) throw Error("The saved message is unavailable. Review this draft before sending.");
       item = { ...item, data: { ...item.data, subject: content.data.subject, messageBody: content.data.messageBody, attachments: await hydrateMailAttachments(content.data.attachments, item.scope), followUp: content.data.followUpEnabled ? { trigger: "booking_confirmed", subject: content.data.followUpSubject, message: content.data.followUpBody } : undefined } };
     }
     const candidate = await getApplication(item.data.candidateId);
