@@ -1,5 +1,6 @@
 "use client";
 
+import { RecruitmentMetricPanel } from "./RecruitmentMetricPanel";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -55,8 +56,8 @@ export function RecruitmentOverviewView({ applications, roleDefs = [], cohorts =
     setModalOpen(false);
   };
   return <div className="min-w-0 space-y-6">
-    <header className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-5">
-      <div><h1 className="text-xl font-bold text-slate-900">{t("Recruitment overview", "Visão geral do recrutamento")}</h1>
+    <header className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div><p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700">{t("Overwatch · People operations", "Overwatch · Gestão de pessoas")}</p><h1 className="text-2xl font-semibold tracking-tight text-slate-900">{t("Recruitment overview", "Visão geral do recrutamento")}</h1>
         <p className="mt-1 text-sm text-slate-500">{t("Recruitment records across open and closed cycles.", "Registos de recrutamento em lotes abertos e encerrados.")}</p></div>
       <div className="flex flex-wrap gap-2">
         <Link href="/admin/recruitment/archive" className="inline-flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-xs font-semibold"><Archive size={15}/>{t("Archive Vault", "Cofre de Arquivo")}</Link>
@@ -76,11 +77,15 @@ export function RecruitmentOverviewView({ applications, roleDefs = [], cohorts =
       </div>
       <p className="mt-3 text-xs text-slate-500">{scope === "all" ? t("All recruitment history, including closed cycles and recorded candidate outcomes.", "Todo o histórico, incluindo lotes encerrados e resultados dos candidatos.") : t("Only candidates belonging to the current open intakes. Closed cycles are excluded.", "Apenas candidatos dos lotes actualmente abertos. Os lotes encerrados são excluídos.")}</p>
     </section>
-    {scope === "open" && !dashboard.candidates.length ? <section className="rounded-xl border border-slate-200 bg-white p-8 text-center"><h2 className="font-semibold">{t("No applications in open cycles", "Sem candidaturas em lotes abertos")}</h2><p className="mt-2 text-sm text-slate-500">{t("Select All cycles to review historical totals or open Archive Vault to continue an existing recruitment cycle.", "Seleccione Todos os lotes para consultar o histórico ou abra o Arquivo para continuar um lote existente.")}</p></section> : <section aria-label={t("Recruitment metrics", "Métricas de recrutamento")} className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-      {metricCards.map(card => <Link key={card.key} href={`/admin/recruitment/candidates?scope=${scope}&metric=${card.key}`} className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:border-sky-300">
-        <div className="flex items-start justify-between gap-2"><h2 className="text-xs font-semibold text-slate-600">{card.label}</h2><card.icon size={16} className="shrink-0 text-slate-400"/></div>
-        <p className="mt-3 text-3xl font-bold text-slate-900">{dashboard.metrics[card.key as keyof typeof dashboard.metrics]}</p><p className="mt-2 text-xs text-slate-500">{card.detail}</p>
-      </Link>)}
+    {scope === "open" && !dashboard.candidates.length ? <section className="rounded-xl border border-slate-200 bg-white p-8 text-center"><h2 className="font-semibold">{t("No applications in open cycles", "Sem candidaturas em lotes abertos")}</h2><p className="mt-2 text-sm text-slate-500">{t("Select All cycles to review historical totals or open Archive Vault to continue an existing recruitment cycle.", "Seleccione Todos os lotes para consultar o histórico ou abra o Arquivo para continuar um lote existente.")}</p></section> : <section aria-label={t("Recruitment metrics", "Métricas de recrutamento")}>
+      <RecruitmentMetricPanel
+        highlights={["total", "tested", "nextPhase", "confirmed"].map(key => { const card = metricCards.find(c => c.key === key)!; return { ...card, value: dashboard.metrics[key as keyof typeof dashboard.metrics], href: `/admin/recruitment/candidates?scope=${scope}&metric=${key}` }; })}
+        groups={[
+          { title: t("Applications & screening", "Candidaturas e avaliação"), keys: ["screened", "screeningPassed", "qualified", "notAdvancing"] },
+          { title: t("Testing & attendance", "Testes e presenças"), keys: ["booked", "attended", "scored"] },
+          { title: t("Next phase", "Próxima fase"), keys: ["nextPhase", "confirmed", "awaiting"] },
+        ].map(group => ({ title: group.title, metrics: group.keys.map(key => { const card = metricCards.find(c => c.key === key)!; return { ...card, value: dashboard.metrics[key as keyof typeof dashboard.metrics], href: `/admin/recruitment/candidates?scope=${scope}&metric=${key}` }; }) }))}
+      />
     </section>}
     {dashboard.metrics.booked > 0 && dashboard.metrics.attended === 0 && <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">{t("Historical attendance records are missing. Zero recorded attendance does not mean nobody attended; bookings and test results are separate counts.", "Faltam registos históricos de presença. Zero presenças registadas não significa que ninguém compareceu; agendamentos e resultados são contagens distintas.")}</p>}
     {dashboard.metrics.unresolved > 0 && <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">{t(`${dashboard.metrics.unresolved} applications have no saved recruitment outcome. They are not counted as rejection decisions.`, `${dashboard.metrics.unresolved} candidaturas não têm resultado guardado. Não são contadas como decisões de rejeição.`)} <Link className="underline" href={`/admin/recruitment/candidates?scope=${scope}&metric=unresolved`}>{t("Review records", "Rever registos")}</Link></p>}

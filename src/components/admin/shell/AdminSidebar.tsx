@@ -184,14 +184,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           {/* Main Overview */}
           <div className="space-y-1">
             <NavLinkItem isNavigating={isNavigating} activeTargetHref={activeTargetHref} onNavigate={handleNavClick}
-              href="/admin"
+              href="/admin/recruitment"
               label={t("Global Overview", "Visão Geral Global")}
               icon={LayoutDashboard}
-              isActiveMatch={
-                isActive("/admin") &&
-                !pathname?.startsWith("/admin/recruitment") &&
-                !pathname?.startsWith("/admin/settings")
-              }
+              isActiveMatch={pathname === "/admin/recruitment" && (!new URLSearchParams(search).get("role") || new URLSearchParams(search).get("role") === "all")}
             />
           </div>
 

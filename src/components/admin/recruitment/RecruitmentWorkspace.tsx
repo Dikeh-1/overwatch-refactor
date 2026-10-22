@@ -1,4 +1,5 @@
 "use client";
+import { RecruitmentMetricPanel } from "./RecruitmentMetricPanel";
 import { HistoricalTestEvidence } from "./HistoricalTestEvidence";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
@@ -310,20 +311,19 @@ export default function RecruitmentWorkspace({
   return (
     <CohortRoleProvider role={workspaceRole}>
       <div className="space-y-5">
-        {!snapshotMode && data?.cohort?.historicalTestResults && <HistoricalTestEvidence cohorts={[data.cohort]} />}
-        <header className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3">
-          <Link
+        <header className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 space-y-4">
+          <a
             href={
               cohortId
                 ? "/admin/recruitment/archive"
                 : "/admin/recruitment/roles"
             }
-            className="inline-flex gap-2 items-center text-xs text-slate-500"
+            className="inline-flex gap-2 items-center rounded-lg bg-slate-100 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-sky-50 hover:text-sky-700"
           >
             <ArrowLeft size={14} />
             {t("All recruitment cycles", "Todos os lotes")}
-          </Link>
-          <div className="flex flex-wrap justify-between gap-3">
+          </a>
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-xs font-semibold text-slate-500">
                 {cohort?.status === "active"
@@ -333,7 +333,7 @@ export default function RecruitmentWorkspace({
                       "Candidaturas encerradas · selecção em curso",
                     )}
               </p>
-              <h1 className="text-xl font-bold mt-1">
+              <h1 className="mt-2 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
                 {cohort ? cycleLabel(cohort, role, lang) : (lang === "pt" ? role.pt : role.en)}
               </h1>
               <p className="text-xs text-slate-500 mt-1">
@@ -343,7 +343,7 @@ export default function RecruitmentWorkspace({
                 )}
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2 self-start">
               <button type="button" onClick={() => { setSnapshotMode(false); navigate("communications"); }} className="rounded-lg border border-sky-200 px-3 py-2 text-xs flex gap-2 items-center text-sky-700"><Mail size={14}/>{t("Communications", "Comunicações")}</button>
               <button
                 onClick={exportCsv}
@@ -374,7 +374,7 @@ export default function RecruitmentWorkspace({
             </p>
           )}
           {metrics.unresolved > 0 && <p className="text-xs text-amber-800">{t(`${metrics.unresolved} records have no saved recruitment outcome. Review these records before making a decision.`, `${metrics.unresolved} registos não têm resultado de recrutamento guardado. Reveja-os antes de decidir.`)}</p>}
-          <p className="text-xs text-slate-500">{t("Screening assessed counts applications evaluated against the criteria. Screening passed counts those meeting mandatory criteria. Not advancing / archived counts candidate outcomes; closing applications does not reject candidates.", "Candidaturas avaliadas conta as avaliações pelos critérios. Requisitos cumpridos conta quem passou os critérios obrigatórios. Não avançam / arquivados conta resultados dos candidatos; encerrar candidaturas não rejeita candidatos.")}</p>
+
           {cohort?.historicalAttendance && !cohort.historicalTestResults && <p className="rounded-lg bg-sky-50 p-3 text-xs text-sky-900">{t(`${cohort.historicalAttendance.applicationIds.length} historical attendees were confirmed by the administrator. Attendance and completed-test counts include that confirmation; QR scan timestamps and scores are not invented.`, `${cohort.historicalAttendance.applicationIds.length} presenças históricas foram confirmadas pelo administrador. As contagens incluem essa confirmação; não foram criadas datas de leitura QR nem notas.`)}</p>}
           {cohort?.closureSnapshot && (
             <button
@@ -398,7 +398,7 @@ export default function RecruitmentWorkspace({
           <nav
             style={snapshotMode ? { display: "none" } : undefined}
             aria-label={t("Recruitment stages", "Etapas de recrutamento")}
-            className="flex gap-2 overflow-x-auto border-t pt-3"
+            className="flex gap-1 overflow-x-auto border-t border-slate-100 pt-4 pb-1"
           >
             {[
               { id: "overview", label: t("Overview", "Visão geral") },
@@ -477,21 +477,16 @@ export default function RecruitmentWorkspace({
         )}
         {!snapshotMode && tab === "overview" && !metric && (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {metricKeys.map((key) => (
-                <Link
-                  key={key}
-                  href={workspaceHref(tab, key)}
-                  scroll={false}
-                  className="text-left rounded-xl border border-slate-200 bg-white p-4 hover:border-slate-500"
-                >
-                  <p className="text-xs text-slate-500">{labels[key]}</p>
-                  <p className="mt-2 text-3xl font-semibold">
-                    {metrics[key as keyof typeof metrics]}
-                  </p>
-                </Link>
-              ))}
-            </div>
+            <RecruitmentMetricPanel
+              highlights={["total", "tested", "nextPhase", "confirmed"].filter(key => metricKeys.includes(key)).map(key => ({ key, label: labels[key], value: metrics[key as keyof typeof metrics], href: workspaceHref(tab, key) }))}
+              groups={[
+                { title: t("Applications & screening", "Candidaturas e avaliação"), keys: ["screened", "screeningPassed", "qualified", "notAdvancing", "unresolved"] },
+                { title: t("Testing & attendance", "Testes e presenças"), keys: ["eligible", "invited", "booked", "attended", "scored"] },
+                { title: t("Selection & outcomes", "Selecção e resultados"), keys: ["nextPhase", "confirmed", "awaiting", "declined", "interview", "training", "hired"] },
+              ].map(group => ({ title: group.title, metrics: group.keys.filter(key => metricKeys.includes(key)).map(key => ({ key, label: labels[key], value: metrics[key as keyof typeof metrics], href: workspaceHref(tab, key) })) }))}
+            />
+            <details className="rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-500"><summary className="cursor-pointer font-medium text-slate-700">{t("How these counts work", "Como funcionam as contagens")}</summary><div className="mt-3 leading-relaxed"><p className="text-xs text-slate-500">{t("Screening assessed counts applications evaluated against the criteria. Screening passed counts those meeting mandatory criteria. Not advancing / archived counts candidate outcomes; closing applications does not reject candidates.", "Candidaturas avaliadas conta as avaliações pelos critérios. Requisitos cumpridos conta quem passou os critérios obrigatórios. Não avançam / arquivados conta resultados dos candidatos; encerrar candidaturas não rejeita candidatos.")}</p></div></details>
+            {!snapshotMode && cohort?.historicalTestResults && <HistoricalTestEvidence cohorts={[cohort]} />}
             <p className="text-xs text-slate-500">
               {t(
                 "Click a count to inspect its exact candidate list. Completed tests include gate attendance, saved results and confirmed historical attendance.",

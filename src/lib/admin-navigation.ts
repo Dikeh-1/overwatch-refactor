@@ -1,4 +1,9 @@
 /** Only local admin destinations may be used as a return target. */
+export function isAdminHome(path: string, params: URLSearchParams): boolean {
+  return path === "/admin" || path === "/admin/overview" ||
+    (path === "/admin/recruitment" && (!params.get("role") || params.get("role") === "all"));
+}
+
 export function adminReturnTarget(value: string | null): string | null {
   if (!value || !value.startsWith("/admin") || /[\\\r\n]/.test(value)) return null;
   try {

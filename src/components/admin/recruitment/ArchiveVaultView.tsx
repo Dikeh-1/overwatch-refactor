@@ -8,6 +8,7 @@ import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import RecruitmentWorkspace from "./RecruitmentWorkspace";
 import { cycleLabel } from "@/lib/careers-cycle-label";
 import type { CareerCohort } from "@/lib/careers-models";
+import { sameRole } from "@/lib/careers-workflow";
 import type { recruitmentMetrics } from "@/lib/careers-workflow";
 
 type Entry = CareerCohort & {
@@ -32,6 +33,8 @@ export default function ArchiveVaultView({
   useRecruitmentRefresh(() => setRetry(n => n + 1), !cohortId);
   useEffect(() => {
     if (cohortId) return;
+    setLoading(true);
+    setError("");
     const controller = new AbortController();
     fetch("/api/admin/careers/archive", {
       cache: "no-store",
@@ -41,7 +44,7 @@ export default function ArchiveVaultView({
         const data = await response.json();
         if (!response.ok)
           throw new Error(data.error || "Unable to load archive");
-        setEntries(data.archivedCohorts || []);
+        if (!controller.signal.aborted) setEntries(data.archivedCohorts || []);
       })
       .catch((e) => {
         if (e.name !== "AbortError") setError(e.message);
@@ -55,30 +58,32 @@ export default function ArchiveVaultView({
     return <RecruitmentWorkspace key={cohortId} cohortId={cohortId} />;
   const visible = [...entries].sort((a, b) => (b.closedAt || b.openedAt || "").localeCompare(a.closedAt || a.openedAt || "")).filter(
     (e) =>
-      (!role || role === "all" || e.roleId === role) &&
+      (!role || role === "all" || sameRole(e.roleId, role)) &&
       `${cycleLabel(e, { en: e.roleTitleEn, pt: e.roleTitlePt }, lang)} ${e.name} ${e.roleTitlePt} ${e.roleTitleEn}`
         .toLowerCase()
         .includes(query.toLowerCase()),
   );
   return (
     <div className="space-y-6">
-      <header className="rounded-2xl border bg-white p-6">
+      <header className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 p-6 text-white shadow-sm sm:p-8">
+        <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-300">{t("Recruitment history", "Histórico de recrutamento")}</p>
         <div className="flex items-center gap-3">
           <Archive size={24} />
-          <h1 className="text-2xl font-bold">
+          <h1 className="text-2xl font-semibold tracking-tight">
             {t("Archive Vault", "Cofre de Arquivo")}
           </h1>
         </div>
-        <p className="mt-3 text-sm text-slate-500">
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300">
           {t(
             "Closed applications, complete recruitment workspaces. Continue reviewing candidates and managing each stage in its original cycle.",
             "Candidaturas encerradas, áreas de recrutamento completas. Continue a rever candidatos e a gerir cada etapa no lote original.",
           )}
         </p>
-        <button onClick={onBackToActive} className="mt-4 text-xs underline">
-          {t("Back to active recruitment", "Voltar ao recrutamento activo")}
+        <button onClick={onBackToActive} className="mt-5 inline-flex rounded-lg border border-white/20 px-3 py-2 text-xs font-medium text-white hover:bg-white/10">
+          {t("Recruitment overview", "Visão geral do recrutamento")}
         </button>
       </header>
+      <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-semibold tracking-tight">{t("All recruitment cycles", "Todos os lotes")}</h2><p className="mt-1 text-xs text-slate-500">{visible.length} {t("cycles · select one to open its workspace", "lotes · seleccione um para abrir")}</p></div>
       <label className="flex gap-2 items-center rounded-xl border bg-white px-4 py-3">
         <Search size={16} />
         <span className="sr-only">{t("Search cycles", "Pesquisar lotes")}</span>
@@ -88,7 +93,7 @@ export default function ArchiveVaultView({
           placeholder={t("Search recruitment cycles…", "Pesquisar lotes…")}
           className="w-full bg-transparent text-sm outline-none"
         />
-      </label>
+      </label></div>
       {error && (
         <div role="alert" className="rounded-xl border border-red-200 p-4">
           {error}{" "}
@@ -112,11 +117,11 @@ export default function ArchiveVaultView({
             <Link
               key={e.id}
               href={`/admin/recruitment/archive?cohortId=${encodeURIComponent(e.id)}`}
-              className="rounded-2xl border border-slate-200 bg-white p-5 hover:border-slate-500"
+              className="group overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-sky-300 hover:shadow-md sm:p-6"
             >
               <div className="flex justify-between gap-3">
                 <h2 className="font-semibold">{cycleLabel(e, { en: e.roleTitleEn, pt: e.roleTitlePt }, lang)}</h2>
-                <ArrowUpRight size={18} />
+                <ArrowUpRight size={18} className="shrink-0 text-slate-400 group-hover:text-sky-600" />
               </div>
               <p className="mt-2 text-xs text-slate-500">
                 {lang === "pt" ? e.roleTitlePt : e.roleTitleEn} ·{" "}
@@ -124,15 +129,12 @@ export default function ArchiveVaultView({
                   ? t("Membership needs review", "Associação por rever")
                   : t("Applications closed", "Candidaturas encerradas")}
               </p>
-              <dl className="mt-5 grid grid-cols-3 gap-3 text-xs">
+              <dl className="mt-5 grid grid-cols-2 gap-x-5 gap-y-4 border-t border-slate-100 pt-5 text-xs sm:grid-cols-3">
                 {[
                   [t("Applications", "Candidaturas"), e.metrics.total],
-                  [t("Screening assessed", "Avaliados"), e.metrics.screened],
                   [t("Not advancing / archived", "Não avançam / arquivados"), e.metrics.notAdvancing],
                   [t("Booked", "Agendados"), e.metrics.booked],
-                  [t("Attended", "Presentes"), e.metrics.attended],
                   [t("Test completed", "Teste realizado"), e.metrics.tested],
-                  [t("Results scored", "Com nota"), e.metrics.scored],
                   [t("Next phase", "Próxima fase"), e.metrics.nextPhase],
                   [t("Confirmed", "Confirmados"), e.metrics.confirmed],
                   ...(e.metrics.unresolved ? [[t("Outcome needs review", "Resultado por rever"), e.metrics.unresolved]] : []),
@@ -142,7 +144,7 @@ export default function ArchiveVaultView({
                     <dd className="mt-1 text-xl font-semibold">{count}</dd>
                   </div>
                 ))}
-              </dl>
+              </dl><p className="mt-5 border-t border-slate-100 pt-4 text-xs font-semibold text-sky-700">{t("Open recruitment workspace", "Abrir área de recrutamento")} →</p>
             </Link>
           ))}
         </div>

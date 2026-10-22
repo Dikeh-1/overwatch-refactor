@@ -13,3 +13,16 @@ test('back has safe destinations for direct entry and rejects external return UR
  assert.equal(adminParent('/admin/settings',new URLSearchParams()),'/admin');
  assert.equal(adminParent('/admin/recruitment/candidates/id',new URLSearchParams('cohortId=september')),'/admin/recruitment/archive?cohortId=september&view=applications');
 });
+const {isAdminHome}=require('../src/lib/admin-navigation.ts');
+test('home has no back loop, while a role workspace keeps its back navigation',()=>{
+ for(const path of ['/admin','/admin/overview','/admin/recruitment']) assert.equal(isAdminHome(path,new URLSearchParams()),true);
+ assert.equal(isAdminHome('/admin/recruitment',new URLSearchParams('scope=all&role=all')),true);
+ assert.equal(isAdminHome('/admin/recruitment',new URLSearchParams('role=cctv')),false);
+ assert.equal(isAdminHome('/admin/recruitment/archive',new URLSearchParams()),false);
+});
+test('archive hierarchy drops stage filters before returning to all cycles',()=>{
+ const path='/admin/recruitment/archive';
+ const overview=adminParent(path,new URLSearchParams('cohortId=september&view=testing&metric=booked'));
+ assert.equal(overview,path+'?cohortId=september');
+ assert.equal(adminParent(path,new URL(overview,'https://fixture.invalid').searchParams),path);
+});
