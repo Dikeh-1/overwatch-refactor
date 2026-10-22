@@ -1,5 +1,6 @@
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
 import { getMail, listMail, putMail, storeMailAttachments, hydrateMailAttachments } from "@/lib/communication-mail-store";
+import { recordActivity } from "@/lib/admin-activity";
 
 export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
@@ -16,8 +17,29 @@ export async function POST(request: Request) {
   if (!(await authenticated()) || !sameOrigin(request)) return Response.json({ error: "Unauthorized" }, { status: 403 });
   try {
     const body = await request.json();
+    if (body.action === "delete") {
+      if (typeof body.scope !== "string" || !Array.isArray(body.ids) || !body.ids.length || body.ids.length > 500 || body.ids.some((id: unknown) => typeof id !== "string" || !/^[\w-]{1,120}$/.test(id))) return Response.json({ error: "Invalid message selection" }, { status: 400 });
+      const deleted: string[] = [], blocked: string[] = [];
+      for (const id of [...new Set<string>(body.ids)]) {
+        const item = await getMail(id);
+        if (!item || item.scope !== body.scope || !["outbox", "automation"].includes(item.kind) || !["queued", "failed", "skipped", "waiting_for_booking", "needs_attention", "deleted"].includes(item.data.status)) { blocked.push(id); continue; }
+        try {
+          await putMail({ ...item, data: { ...item.data, status: "deleted", deletedAt: new Date().toISOString() } }, item.version);
+          deleted.push(id);
+        } catch { blocked.push(id); }
+      }
+      if (deleted.length) await recordActivity({ action: "Outbox messages cancelled", section: "communications", outcome: "succeeded", details: { scope: body.scope, messageIds: deleted } }).catch(() => console.error("Outbox cancellation history could not be saved"));
+      return Response.json({ deleted, blocked });
+    }
     if (!/^[\w-]{1,120}$/.test(body.id || "") || typeof body.scope !== "string" || body.scope.length > 250) return Response.json({ error: "Invalid draft" }, { status: 400 });
     const current = await getMail(body.id);
+    if (body.action === "retry") {
+      const safeFailure = /attachment is missing|^This applicant is no longer eligible for a booking invitation\.$/.test(current?.data.error || "");
+      if (current?.kind !== "outbox" || current.scope !== body.scope || current.data.status !== "failed" || !safeFailure) return Response.json({ error: "This delivery cannot be safely retried. Verify its provider history first." }, { status: 409 });
+      await putMail({ ...current, data: { ...current.data, status: "queued", error: undefined } }, current.version);
+      await recordActivity({ action: "Failed email requeued", section: "communications", outcome: "succeeded", details: { messageId: current.id, scope: current.scope } }).catch(() => {});
+      return Response.json({ success: true });
+    }
     if (body.action === "load") {
       if (current?.kind !== "draft" || current.scope !== body.scope) return Response.json({ error: "Draft not found" }, { status: 404 });
       return Response.json({ item: { ...current, data: { ...current.data, attachments: await hydrateMailAttachments(current.data.attachments, current.scope) } } });

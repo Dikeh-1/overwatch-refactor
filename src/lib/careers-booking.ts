@@ -10,7 +10,7 @@ import { validateReservation, sameBookingScope } from "./careers-booking-rules";
 
 export async function getCandidateSlotConfig(candidate: Application) {
   if (!candidate.cohortId) return { slots: [], quota: 15 };
-  const cohort = (await getAllCohorts()).find(
+  const cohort = (await getAllCohorts(true)).find(
     (c) => c.id === candidate.cohortId,
   );
   if (cohort?.testSlots && sameRole(cohort.roleId, candidate.role))

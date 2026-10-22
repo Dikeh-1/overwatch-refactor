@@ -247,7 +247,7 @@ async function persistSystemConfig<T>(key: SystemConfigKey, data: T): Promise<T>
       const jsonBody = Buffer.from(JSON.stringify(data, null, 2), "utf8");
 
       // Save to system-configs/ namespace in career-cvs bucket
-      await api(`/storage/v1/object/career-cvs/system-configs/${filename}`, {
+      const saved = await api(`/storage/v1/object/career-cvs/system-configs/${filename}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -255,7 +255,7 @@ async function persistSystemConfig<T>(key: SystemConfigKey, data: T): Promise<T>
         },
         body: new Uint8Array(jsonBody),
       });
-
+      if (!saved.ok) throw new Error(`Configuration storage rejected save (${saved.status})`);
       remoteSaved = true;
       // Also mirror to root storage path for backward-compatibility
       await api(`/storage/v1/object/career-cvs/${filename}`, {

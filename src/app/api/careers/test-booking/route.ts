@@ -180,18 +180,15 @@ async function handlePOST(request: Request) {
       process.env.NEXT_PUBLIC_SITE_URL ||
       new URL(request.url).origin;
 
-    // Send confirmation email to applicant with location & details
-    try {
-      await sendBookingConfirmation({
-        application: updated,
-        slot: normalizedSlot,
-        baseUrl: origin,
-      });
-    } catch (emailErr) {
-      console.error("Failed to send booking confirmation email:", emailErr);
-    }
-
-    after(async () => { await bookingFollowUp(updated); });
+    // Booking is already committed. Neither email blocks confirmation of the
+    // reservation, and a slow standard receipt cannot delay the configured follow-up.
+    after(async () => {
+      const outcomes = await Promise.allSettled([
+        bookingFollowUp(updated),
+        sendBookingConfirmation({ application: updated, slot: normalizedSlot, baseUrl: origin }),
+      ]);
+      for (const result of outcomes) if (result.status === "rejected") console.error("Booking email needs attention:", result.reason);
+    });
 
     return Response.json({
       success: true,

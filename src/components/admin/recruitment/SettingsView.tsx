@@ -84,8 +84,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ lang: propLang }) =>
           </div>
           <p className="text-[0.7rem] text-slate-400 mt-1">
             {t(
-              "Sessions exceeding this threshold will display an explicit 'Over capacity · +X' operational warning.",
-              "Sessões que ultrapassem este limite apresentarão um aviso operacional 'Capacidade excedida · +X'."
+              "This is the default capacity. Each saved recruitment cycle has its own capacity below; changing this default does not overwrite existing cycle schedules.",
+              "Esta é a capacidade padrão. Cada lote guardado tem a sua própria capacidade abaixo; alterar este padrão não substitui os horários dos lotes existentes."
             )}
           </p>
         </div>

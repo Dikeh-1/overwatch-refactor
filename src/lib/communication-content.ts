@@ -53,3 +53,16 @@ export function moveBookingToken(message: string, index: number): string {
   blocks.splice(Math.max(0, Math.min(blocks.length,index)), 0, /<[a-z][\s\S]*>/i.test(message) ? `<p>${BOOKING_TOKEN}</p>` : BOOKING_TOKEN);
   return blocks.join(/<[a-z][\s\S]*>/i.test(message) ? "" : "\n\n");
 }
+
+/** Preserve received/sent mail structure. The viewer additionally isolates it
+ * in a sandbox with a restrictive CSP, preventing scripts and tracking loads. */
+export function safeEmailDocument(html: string): string {
+  return sanitizeHtml(html, {
+    allowedTags: [...sanitizeHtml.defaults.allowedTags, "img", "font"],
+    allowedAttributes: { "*": ["style", "align", "valign", "width", "height", "bgcolor"], a: ["href", "title", "target", "rel"], img: ["src", "alt", "width", "height", "style"], font: ["face", "size", "color"] },
+    allowedSchemes: ["http", "https", "mailto", "tel"],
+    allowedSchemesByTag: { img: ["https", "data"] },
+    allowProtocolRelative: false,
+    transformTags: { a: sanitizeHtml.simpleTransform("a", { target: "_blank", rel: "noopener noreferrer" }) },
+  });
+}

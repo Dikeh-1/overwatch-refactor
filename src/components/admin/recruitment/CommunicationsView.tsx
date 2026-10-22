@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCommunicationDraft } from "../hooks/useCommunicationDraft";
 import { StudioMailbox, type StudioFolder } from "./StudioMailbox";
+import { DeliveryProgress } from "./DeliveryProgress";
 import { BOOKING_TOKEN, candidateVariables, renderStudioMessage, messageBlocks, moveBookingToken, studioScope } from "@/lib/communication-content";
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
@@ -80,6 +81,7 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
   const { activeRoleId, activeRole, roles } = useActiveRole();
 
   const [emailLang, setEmailLang] = useState<"pt" | "en">("pt");
+  const [deliveryCampaign, setDeliveryCampaign] = useState<string | null>(null);
   const [includeBookingButton, setIncludeBookingButton] = useState(false);
 
   // Audience Target State
@@ -591,6 +593,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       const data = await res.json();
       if (res.ok && data.success) {
         if (data.queued) {
+          setDeliveryCampaign(data.campaignId);
           draft.sent(true); setFolder("outbox");
           setDeliveryNotice(t(`${data.totalTargeted} emails queued. Delivery continues on the server; follow progress in Outbox and Sent.`, `${data.totalTargeted} emails em fila. O envio continua no servidor; acompanhe na Caixa de saída e Enviados.`));
           return;
@@ -704,7 +707,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
           });
         });
       }
-      if (app.invitedAt) {
+      if (app.invitedAt && !(app.communications || []).some(comm => Math.abs(new Date(comm.sentAt).getTime() - new Date(app.invitedAt!).getTime()) < 60000)) {
         list.push({
           id: `conv_${app.id}`,
           candidateName: app.name,
@@ -732,6 +735,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
 
   return (
     <div className="space-y-6 relative">
+      {deliveryCampaign && <DeliveryProgress scope={scope} campaignId={deliveryCampaign} onClose={() => setDeliveryCampaign(null)} />}
       {/* Universal Overwatch Processing Animation */}
       {isDispatching && (
         <OverwatchOrbitLoader

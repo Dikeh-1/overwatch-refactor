@@ -549,3 +549,7 @@ textarea {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Make interactive controls discoverable, while preserving disabled feedback. */
+button:not(:disabled), a[href], [role="button"]:not([aria-disabled="true"]), summary, select { cursor: pointer; }
+button:disabled, [aria-disabled="true"] { cursor: not-allowed; }

@@ -50,6 +50,8 @@ async function sendViaBrevo(
     ...payload,
     sender: outgoingSender,
   };
+  // Brevo rejects an explicitly empty list, although attachments are optional.
+  if (!payload.attachment?.length) delete brevoPayload.attachment;
   if (ADMIN_BCC_EMAIL) {
     brevoPayload.bcc = [{ email: ADMIN_BCC_EMAIL, name: "Overwatch Admin" }];
   }
@@ -61,6 +63,9 @@ async function sendViaBrevo(
     },
     body: JSON.stringify(brevoPayload),
     signal: AbortSignal.timeout(15000),
+  }).catch(error => {
+    // A broken connection may happen after acceptance. Do not offer a blind retry.
+    throw Object.assign(error instanceof Error ? error : new Error("Delivery connection interrupted"), { deliveryUncertain: true });
   });
   if (!res.ok) {
     const errText = await res.text().catch(() => "");

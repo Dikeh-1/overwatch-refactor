@@ -1,4 +1,4 @@
-import { safeMailHtml } from "@/lib/communication-content";
+import { safeEmailDocument } from "@/lib/communication-content";
 import { authenticated } from "@/lib/careers-auth";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +45,7 @@ export async function GET(request: Request) {
       const metadata = await read(`https://mail.zoho.com/api/accounts/${account.accountId}/folders/${folderId}/messages/${messageId}/details`);
       if (!addressedToMailbox(metadata)) return Response.json({ error: "This message is not addressed to info@overwatchmoz.com" }, { status: 404 });
       const message = await read(`https://mail.zoho.com/api/accounts/${account.accountId}/folders/${folderId}/messages/${messageId}/content`);
-      return Response.json({ body: safeMailHtml(message.content || "") }, { headers: { "Cache-Control": "no-store" } });
+      return Response.json({ body: safeEmailDocument(message.content || "") }, { headers: { "Cache-Control": "no-store" } });
     }
     const search = new URLSearchParams({ searchKey: `to:${mailbox}::or:cc:${mailbox}`, limit: "100", includeto: "true", receivedTime: String(Date.now()) });
     const rows = await read(`https://mail.zoho.com/api/accounts/${account.accountId}/messages/search?${search}`);

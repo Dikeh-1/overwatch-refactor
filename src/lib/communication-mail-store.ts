@@ -7,7 +7,7 @@ import { createHash } from "node:crypto";
 
 // Persisted JSON supports versioned draft, delivery and automation payloads; each API validates its own input.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type MailItem = { id: string; kind: "draft" | "outbox" | "automation" | "incoming" | "attachment"; scope: string; version: number; updated_at: string; data: Record<string, any> };
+export type MailItem = { id: string; kind: "draft" | "outbox" | "automation" | "incoming" | "attachment" | "worker"; scope: string; version: number; updated_at: string; data: Record<string, any> };
 const directory = path.join(process.cwd(), ".careers-data", "mail");
 let ready: Promise<void> | undefined;
 export async function prepareMailStore() {

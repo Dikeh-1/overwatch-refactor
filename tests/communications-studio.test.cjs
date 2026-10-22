@@ -28,7 +28,7 @@ test('equal slot labels in another role or cycle do not consume this cycle capac
  assert.throws(()=>validateReservation(candidate,slot,config,[{...candidate,id:'same',role:'cctv_operator',testSlot:slot}],at),/SLOT_FULL/);
 });
 
-const rows=new Map(), applications=new Map(), sent=[];let providerFails=false,historyFails=false;
+const rows=new Map(), applications=new Map(), sent=[];let providerFails=false,historyFails=false,sendDelay=0,activeSends=0,peakSends=0;
 const store={
  getMail:async id=>structuredClone(rows.get(id)||null),
  hydrateMailAttachments:async items=>items||[],
@@ -38,8 +38,9 @@ const store={
 };
 const original=Module._load;
 Module._load=function(name,...args){
+ if(name==='./careers-workspace-store')return {getRecruitmentWorkspaceData:async()=>({applications:[...applications.values()]})};
  if(name==='./communication-mail-store')return store;
- if(name==='./careers-email')return {sendTransactionalEmail:async mail=>{if(providerFails)throw Error('Fixture provider failure');sent.push(mail);return {success:true}}};
+ if(name==='./careers-email')return {sendTransactionalEmail:async mail=>{if(providerFails)throw Error('Fixture provider failure');activeSends++;peakSends=Math.max(peakSends,activeSends);try{if(sendDelay)await new Promise(resolve=>setTimeout(resolve,sendDelay));sent.push(mail);return {success:true,messageId:'<fixture>'}}finally{activeSends--}}};
  if(name==='./careers-store')return {getApplication:async id=>structuredClone(applications.get(id)||null),updateApplication:async(id,patch)=>{if(historyFails)throw Error('Fixture history failure');applications.set(id,{...applications.get(id),...patch});return applications.get(id)}};
  if(name==='./careers-campaign-store')return {getRoleDefinitions:async()=>[]};
  return original.call(this,name,...args);
@@ -97,4 +98,19 @@ test('nested quotes and lists remain complete when moving the preview booking bu
  const body='<blockquote><p>One</p><ul><li>Two</li></ul></blockquote><p>End</p>';
  const blocks=content.messageBlocks(body);assert.equal(blocks.length,2);assert.equal(blocks[0],'<blockquote><p>One</p><ul><li>Two</li></ul></blockquote>');
  assert.doesNotMatch(content.renderStudioMessage(content.moveBookingToken(body,1),{id:'fixture',name:'Fixture',role:'cctv'},'Operadora','pt',true),/&lt;\/blockquote/);
+});
+
+
+test('concurrent resume requests share one five-email worker and never resurrect cancelled deliveries',async()=>{
+ rows.clear();sent.length=0;applications.clear();sendDelay=10;peakSends=0;
+ const scope='batch-five';
+ for(let index=0;index<11;index++) {
+  const candidate={id:`batch-${index}`,name:`Fixture ${index}`,role:'cctv',cohortId:'sept',email:`batch-${index}@example.invalid`,status:'test_invited'};
+  applications.set(candidate.id,candidate);
+  const item=await delivery.enqueueStudioMail(candidate,{subject:'Subject',messageBody:'Body',includeBookingButton:false},scope,'batch-campaign');
+  if(index===10)await store.putMail({...item,data:{...item.data,status:'deleted'}},item.version);
+ }
+ await Promise.all([delivery.processStudioQueue(scope),delivery.processStudioQueue(scope)]);
+ assert.equal(sent.length,10);assert.equal(peakSends,5);assert.equal((await store.getMail(delivery.deliveryId('batch-campaign:batch-10'))).data.status,'deleted');
+ await delivery.processStudioQueue(scope);assert.equal(sent.length,10);sendDelay=0;
 });

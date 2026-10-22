@@ -20,8 +20,8 @@ const request=(data,origin='http://localhost:3100')=>new Request('http://localho
 const payload={sender:{email:'personal@example.invalid',name:'Personal'},to:[{email:'fixture@example.invalid',name:'Fixture'}],subject:'Fixture',textContent:'Fixture',htmlContent:'<p>Fixture</p>'};
 test('both Brevo connections rotate with no-reply sender; definitive quota rejection fails over but an ambiguous send never retries',async()=>{
  process.env.BREVO_API_KEY='primary';process.env.BREVO_API_KEY_BACKUP='secondary';process.env.EMAIL_PROVIDER='gmail';process.env.FALLBACK_SMTP_USER='personal@example.invalid';process.env.FALLBACK_SMTP_PASS='fixture';
- const seen=[];let mode='ok';global.fetch=async(url,options)=>{assert.equal(url,'https://api.brevo.com/v3/smtp/email');const body=JSON.parse(options.body);assert.equal(body.sender.email,'noreply@overwatchmoz.com');assert.equal(body.replyTo.email,'info@overwatchmoz.com');seen.push(options.headers['api-key']);if(mode==='quota'&&seen.length===1)return new Response('credits exhausted',{status:402});if(mode==='ambiguous')throw Error('Network timeout');return Response.json({messageId:'fixture'})};
- await email.sendTransactionalEmail(payload);await email.sendTransactionalEmail(payload);assert.deepEqual(new Set(seen),new Set(['primary','secondary']));
+ const seen=[];let mode='ok';global.fetch=async(url,options)=>{assert.equal(url,'https://api.brevo.com/v3/smtp/email');const body=JSON.parse(options.body);assert.equal(body.sender.email,'noreply@overwatchmoz.com');if(!body.attachment?.length)assert.ok(!Object.hasOwn(body,'attachment'));assert.equal(body.replyTo.email,'info@overwatchmoz.com');seen.push(options.headers['api-key']);if(mode==='quota'&&seen.length===1)return new Response('credits exhausted',{status:402});if(mode==='ambiguous')throw Error('Network timeout');return Response.json({messageId:'fixture'})};
+ await email.sendTransactionalEmail({...payload,attachment:[]});await email.sendTransactionalEmail(payload);assert.deepEqual(new Set(seen),new Set(['primary','secondary']));
  mode='quota';seen.length=0;await email.sendTransactionalEmail(payload);assert.equal(seen.length,2);
  mode='ambiguous';seen.length=0;await assert.rejects(email.sendTransactionalEmail(payload),/Network timeout/);assert.equal(seen.length,1);
  delete process.env.BREVO_API_KEY;delete process.env.BREVO_API_KEY_BACKUP;await assert.rejects(email.sendTransactionalEmail(payload),/Personal SMTP delivery is disabled/);
@@ -57,4 +57,13 @@ test('Incoming verifies the comercial mailbox alias and scopes message search an
  response=await incoming.GET(new Request(base+'?messageId=456&folderId=789'));assert.equal(response.status,200);assert.equal((await response.json()).body,'<p>Hello</p>');
  recipient='commercial-only@example.invalid';paths.length=0;response=await incoming.GET(new Request(base+'?messageId=456&folderId=789'));assert.equal(response.status,404);assert.ok(!paths.some(url=>url.pathname.endsWith('/content')));
  verifiedAlias=false;response=await incoming.GET(new Request(base));assert.equal(response.status,503);
+});
+
+
+test('outbox removal is scope checked, cancels queued mail and never removes an active delivery',async()=>{
+ const scope='cycle:operator:bulk';
+ for(const [id,status,mailScope] of [['queued-removal','queued',scope],['sending-guard','sending',scope],['other-cycle','queued','other']])rows.set(id,{id,kind:'outbox',scope:mailScope,version:1,data:{status}});
+ const response=await drafts.POST(request({action:'delete',scope,ids:['queued-removal','sending-guard','other-cycle']}));
+ assert.equal(response.status,200);const result=await response.json();assert.deepEqual(result.deleted,['queued-removal']);assert.equal(result.blocked.length,2);
+ assert.equal(rows.get('queued-removal').data.status,'deleted');assert.equal(rows.get('sending-guard').data.status,'sending');assert.equal(rows.get('other-cycle').data.status,'queued');
 });
