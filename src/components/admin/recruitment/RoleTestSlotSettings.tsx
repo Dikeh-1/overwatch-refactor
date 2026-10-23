@@ -1,14 +1,25 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import { cycleLabel } from "@/lib/careers-cycle-label";
 import type { CareerCohort } from "@/lib/careers-models";
-import { formatSlotDisplay } from "@/lib/careers";
+import { formatSlotDisplay, parseSlotComponents } from "@/lib/careers";
 
 type CatalogRole = { id: string; en: string; pt: string; open?: boolean; activeCohortId?: string | null };
 type Catalog = { roles: CatalogRole[]; cohorts: CareerCohort[] };
+
+function slotToDateTimeInputs(slot: string): { date: string; time: string } {
+  const parsed = parseSlotComponents(slot);
+  if (!parsed) return { date: "", time: "10:00" };
+  const yyyy = String(parsed.year).padStart(4, "0");
+  const mm = String(parsed.month).padStart(2, "0");
+  const dd = String(parsed.day).padStart(2, "0");
+  const hh = String(parsed.hour).padStart(2, "0");
+  const min = String(parsed.minute).padStart(2, "0");
+  return { date: `${yyyy}-${mm}-${dd}`, time: `${hh}:${min}` };
+}
 
 export function RoleTestSlotSettings() {
   const { lang, t } = useAdminLanguage();
@@ -17,11 +28,16 @@ export function RoleTestSlotSettings() {
   const [cycleId, setCycleId] = useState("");
   const [slots, setSlots] = useState<string[]>([]);
   const [quota, setQuota] = useState(15);
+  const [quotaInput, setQuotaInput] = useState("15");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("10:00");
+  const [editingSlot, setEditingSlot] = useState<string | null>(null);
+  const [editDate, setEditDate] = useState("");
+  const [editTime, setEditTime] = useState("10:00");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const isEditingQuotaRef = useRef(false);
 
   const loadCatalog = useCallback(
     async (signal?: AbortSignal, preserveSelection = false) => {
@@ -45,7 +61,11 @@ export function RoleTestSlotSettings() {
           const targetCohort = data.cohorts.find((c) => c.id === targetId);
           if (targetCohort) {
             setSlots(targetCohort.testSlots || []);
-            setQuota(targetCohort.slotQuota || 15);
+            if (!isEditingQuotaRef.current) {
+              const nextQ = targetCohort.slotQuota || 15;
+              setQuota(nextQ);
+              setQuotaInput(String(nextQ));
+            }
           }
           return targetId;
         });
@@ -71,15 +91,23 @@ export function RoleTestSlotSettings() {
 
   const select = (id: string) => {
     const cohort = catalog?.cohorts.find((c) => c.id === id);
+    const nextQ = cohort?.slotQuota || 15;
     setCycleId(id);
     setSlots(cohort?.testSlots || []);
-    setQuota(cohort?.slotQuota || 15);
+    setQuota(nextQ);
+    setQuotaInput(String(nextQ));
+    setEditingSlot(null);
     setNotice("");
     setError("");
   };
 
-  const persistSchedule = async (nextSlots: string[], nextQuota: number) => {
+  const persistSchedule = async (
+    nextSlots: string[],
+    nextQuota: number,
+    renamedSlot?: { from: string; to: string }
+  ) => {
     if (!cycleId) return;
+    const validQuota = Number.isInteger(nextQuota) && nextQuota >= 1 && nextQuota <= 200 ? nextQuota : quota;
     setBusy(true);
     setError("");
     setNotice("");
@@ -87,24 +115,33 @@ export function RoleTestSlotSettings() {
       const response = await fetch("/api/admin/careers/test-slots", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cohortId: cycleId, slots: nextSlots, quota: nextQuota }),
+        body: JSON.stringify({
+          cohortId: cycleId,
+          slots: nextSlots,
+          quota: validQuota,
+          ...(renamedSlot ? { renamedSlot } : {}),
+        }),
       });
       const data = await response.json();
       if (!response.ok) throw Error(data.error);
-      setSlots(data.slots || nextSlots);
+      const savedSlots = data.slots || nextSlots;
+      const savedQuota = typeof data.quota === "number" ? data.quota : validQuota;
+      setSlots(savedSlots);
+      setQuota(savedQuota);
+      setQuotaInput(String(savedQuota));
       setCatalog(
         (current) =>
           current && {
             ...current,
             cohorts: current.cohorts.map((c) =>
-              c.id === cycleId ? { ...c, testSlots: data.slots, slotQuota: nextQuota } : c
+              c.id === cycleId ? { ...c, testSlots: savedSlots, slotQuota: savedQuota } : c
             ),
           }
       );
       setNotice(
         t(
-          "Schedule saved live. Applicant booking pages and testing rosters for this selected recruitment cycle now reflect these slots immediately.",
-          "Horário guardado em tempo real. As páginas de agendamento dos candidatos e listas de teste deste lote seleccionado reflectem estes turnos imediatamente."
+          "Schedule & slot capacity saved live. Applicant booking pages and testing rosters for this selected recruitment cycle now reflect these changes immediately.",
+          "Horário e capacidade por turno guardados em tempo real. As páginas de agendamento e listas de teste deste lote seleccionado reflectem estas alterações imediatamente."
         )
       );
       window.dispatchEvent(new Event("admin:careers-updated"));
@@ -115,8 +152,26 @@ export function RoleTestSlotSettings() {
     }
   };
 
+  const handleQuotaCommit = (rawVal: string) => {
+    isEditingQuotaRef.current = false;
+    const parsed = parseInt(rawVal, 10);
+    if (!Number.isFinite(parsed) || parsed < 1 || parsed > 200) {
+      setQuotaInput(String(quota));
+      return;
+    }
+    setQuota(parsed);
+    setQuotaInput(String(parsed));
+    if (parsed !== quota) {
+      void persistSchedule(slots, parsed);
+    }
+  };
+
   const save = async () => {
-    await persistSchedule(slots, quota);
+    const parsed = parseInt(quotaInput, 10);
+    const effectiveQuota = Number.isFinite(parsed) && parsed >= 1 && parsed <= 200 ? parsed : quota;
+    setQuota(effectiveQuota);
+    setQuotaInput(String(effectiveQuota));
+    await persistSchedule(slots, effectiveQuota);
   };
 
   return (
@@ -127,8 +182,8 @@ export function RoleTestSlotSettings() {
         </h2>
         <p className="mt-1 text-xs leading-relaxed text-slate-500">
           {t(
-            "Dates and times use Maputo time (UTC+2). Adding, changing, or removing a slot here immediately updates applicant booking pages and testing schedules for the selected recruitment cycle.",
-            "Datas e horas de Maputo (UTC+2). Adicionar, alterar ou remover um turno aqui actualiza imediatamente as páginas de agendamento e a escala de testes apenas para o lote de recrutamento seleccionado."
+            "Dates and times use Maputo time (UTC+2). Adding, editing, or removing a slot or changing slot capacity here immediately updates applicant booking pages and testing schedules for the selected recruitment cycle.",
+            "Datas e horas de Maputo (UTC+2). Adicionar, editar ou remover um turno ou alterar a capacidade por turno aqui actualiza imediatamente as páginas de agendamento e a escala de testes apenas para o lote de recrutamento seleccionado."
           )}
         </p>
       </div>
@@ -199,30 +254,114 @@ export function RoleTestSlotSettings() {
                 type="number"
                 min={1}
                 max={200}
-                value={quota}
-                onChange={(e) => setQuota(Number(e.target.value))}
+                value={quotaInput}
+                onFocus={() => {
+                  isEditingQuotaRef.current = true;
+                }}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setQuotaInput(val);
+                  const num = parseInt(val, 10);
+                  if (Number.isFinite(num) && num >= 1 && num <= 200) {
+                    setQuota(num);
+                  }
+                }}
+                onBlur={(e) => handleQuotaCommit(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleQuotaCommit((e.target as HTMLInputElement).value);
+                  }
+                }}
                 className="mt-1 block w-24 rounded-lg border p-2"
               />
             </label>
           </div>
           <ul className="divide-y divide-slate-100">
-            {slots.map((slot) => (
-              <li key={slot} className="flex items-center justify-between gap-3 py-2 text-sm">
-                <span>{formatSlotDisplay(slot, lang)}</span>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => {
-                    const next = slots.filter((s) => s !== slot);
-                    setSlots(next);
-                    void persistSchedule(next, quota);
-                  }}
-                  className="text-xs font-medium text-rose-700 hover:underline disabled:opacity-40"
-                >
-                  {t("Remove", "Remover")}
-                </button>
-              </li>
-            ))}
+            {slots.map((slot) => {
+              const isEditingThis = editingSlot === slot;
+              return (
+                <li key={slot} className="flex flex-wrap items-center justify-between gap-3 py-2.5 text-sm">
+                  {isEditingThis ? (
+                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                      <input
+                        type="date"
+                        value={editDate}
+                        onChange={(e) => setEditDate(e.target.value)}
+                        aria-label={t("Edit slot date", "Editar data do turno")}
+                        className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs"
+                      />
+                      <input
+                        type="time"
+                        value={editTime}
+                        onChange={(e) => setEditTime(e.target.value)}
+                        aria-label={t("Edit slot time", "Editar hora do turno")}
+                        className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs"
+                      />
+                      <button
+                        type="button"
+                        disabled={!editDate || !editTime || busy}
+                        onClick={() => {
+                          const updatedSlot = `${editDate} - ${editTime}`;
+                          const next = slots.map((s) => (s === slot ? updatedSlot : s));
+                          const uniqueNext = [...new Set(next)];
+                          setEditingSlot(null);
+                          setSlots(uniqueNext);
+                          void persistSchedule(
+                            uniqueNext,
+                            quota,
+                            updatedSlot !== slot ? { from: slot, to: updatedSlot } : undefined
+                          );
+                        }}
+                        className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-700 disabled:opacity-40"
+                      >
+                        {t("Apply", "Aplicar")}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => setEditingSlot(null)}
+                        className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                      >
+                        {t("Cancel", "Cancelar")}
+                      </button>
+                    </div>
+                  ) : (
+                    <span>{formatSlotDisplay(slot, lang)}</span>
+                  )}
+                  <div className="flex items-center gap-3">
+                    {!isEditingThis && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => {
+                          const initial = slotToDateTimeInputs(slot);
+                          setEditDate(initial.date);
+                          setEditTime(initial.time);
+                          setEditingSlot(slot);
+                        }}
+                        className="text-xs font-medium text-sky-700 hover:underline disabled:opacity-40"
+                      >
+                        {t("Edit", "Editar")}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => {
+                        const next = slots.filter((s) => s !== slot);
+                        setSlots(next);
+                        if (editingSlot === slot) setEditingSlot(null);
+                        void persistSchedule(next, quota);
+                      }}
+                      className="text-xs font-medium text-rose-700 hover:underline disabled:opacity-40"
+                    >
+                      {t("Remove", "Remover")}
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
           {!slots.length && (
             <p className="text-xs text-slate-500">

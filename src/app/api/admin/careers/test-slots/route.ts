@@ -1,9 +1,10 @@
 import { auditRequest } from "@/lib/admin-activity";
 import { getRecruitmentWorkspaceData } from "@/lib/careers-workspace-store";
 import { saveCohort, invalidateCampaignStoreCache } from "@/lib/careers-campaign-store";
-import { parseSlotComponents } from "@/lib/careers";
+import { parseSlotComponents, normalizeSlot } from "@/lib/careers";
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
-import { getTestSlotConfig, saveTestSlotConfig, invalidateApplicationsCache } from "@/lib/careers-store";
+import { getTestSlotConfig, saveTestSlotConfig, updateApplication, invalidateApplicationsCache } from "@/lib/careers-store";
+import { applicationsForCohort } from "@/lib/careers-workflow";
 
 export const dynamic = "force-dynamic";
 
@@ -104,6 +105,22 @@ async function handlePOST(request: Request) {
         return Response.json({ error: "Cohort not found or membership needs review" }, { status: 400 });
       }
       await saveCohort({ ...cohort, testSlots: uniqueSlots, slotQuota: quota });
+      if (
+        body.renamedSlot &&
+        typeof body.renamedSlot.from === "string" &&
+        typeof body.renamedSlot.to === "string" &&
+        body.renamedSlot.from.trim() &&
+        body.renamedSlot.to.trim()
+      ) {
+        const fromNorm = normalizeSlot(body.renamedSlot.from);
+        const toClean = body.renamedSlot.to.trim();
+        const cohortMembers = applicationsForCohort(workspace.raw, cohort, workspace.cohorts);
+        for (const member of cohortMembers) {
+          if (member.testSlot && normalizeSlot(member.testSlot) === fromNorm) {
+            await updateApplication(member.id, { testSlot: toClean }).catch(() => {});
+          }
+        }
+      }
       invalidateCampaignStoreCache();
       invalidateApplicationsCache();
       return Response.json({ success: true, slots: uniqueSlots, quota, cohortId: cohort.id });

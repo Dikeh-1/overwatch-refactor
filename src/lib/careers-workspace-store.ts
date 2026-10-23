@@ -12,7 +12,7 @@ import { evaluateApplicationWithRules } from "./careers-evaluator";
 
 export async function getRecruitmentWorkspaceData() {
   const [raw, roles, savedCohorts] = await Promise.all([
-    getApplications(),
+    getApplications(true),
     getRoleDefinitions(true),
     getAllCohorts(true),
   ]);

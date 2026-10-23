@@ -50,7 +50,7 @@ export async function GET(request: Request) {
     if (!candidate.invitedAt && !candidate.testSlot && candidate.status !== "test_invited") return Response.json({ error: "This applicant has not received a test invitation.", code: "INVITATION_REQUIRED" }, { status: 403 });
     if (!candidate.bookingLinkOpenedAt) await updateApplication(candidate.id, { bookingLinkOpenedAt: new Date().toISOString() });
 
-    const allApps = await getApplications();
+    const allApps = await getApplications(true);
     const { slots: activeSlots, quota = 15 } = await getCandidateSlotConfig(candidate);
     const hasActiveGrace = Boolean(candidate.rebookingGrace && !candidate.rebookingGrace.usedAt);
 
