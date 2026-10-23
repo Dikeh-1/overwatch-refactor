@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Languages, Lock } from "lucide-react";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import { safeEmailDocument } from "@/lib/communication-content";
+import { renderOfficialMail } from "@/lib/communication-renderer";
 import type { Application } from "@/lib/careers";
 
 type MessageRow = {
@@ -25,6 +26,10 @@ type MessageRow = {
     campaignId?: string;
     fullContent?: boolean;
     candidateId?: string;
+    roleId?: string;
+    roleTitle?: string;
+    locale?: "en" | "pt";
+    includeBookingButton?: boolean;
     events?: { name: string; time: string; link?: string }[];
     error?: string;
   };
@@ -741,6 +746,29 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
               a.id === item.data.candidateId ||
               (item.data.recipient && a.email.trim().toLowerCase() === item.data.recipient.trim().toLowerCase())
           );
+          const previewCandidate: Application = matchedCandidate || {
+            id: item.data.candidateId || "preview",
+            name: item.data.candidateName || item.data.recipient || "Candidato(a)",
+            email: item.data.recipient || "candidato@exemplo.com",
+            whatsapp: "+258 84 000 0000",
+            role: item.data.roleId || "cctv_technical_manager",
+            locale: item.data.locale || "pt",
+            status: "test_invited",
+            createdAt: item.updated_at || new Date().toISOString(),
+            cvName: "cv.pdf",
+            cvSize: 1024,
+            cvType: "application/pdf",
+          };
+          const scheduledHtml =
+            item.data.htmlContent ||
+            renderOfficialMail({
+              candidate: previewCandidate,
+              subject: item.data.subject || "",
+              message: item.data.message || item.data.messageBody || "",
+              roleTitle: item.data.roleTitle || previewCandidate.role,
+              locale: item.data.locale || "pt",
+              includeBookingButton: false,
+            }).html;
           return (
             <details key={item.id} className="rounded-xl border border-indigo-200/80 bg-white p-4 select-none">
               <summary className="cursor-pointer">
@@ -761,16 +789,22 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
                   </div>
                 </div>
               </summary>
-              <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-3 text-xs text-slate-700 space-y-2">
+              <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-3 text-xs text-slate-700 space-y-3">
                 <p className="text-[11px] font-semibold text-indigo-800">
                   {t(
                     "Trigger: Automatically dispatches immediately when candidate confirms a test slot.",
                     "Gatilho: Envia automaticamente assim que o candidato confirmar uma vaga de teste."
                   )}
                 </p>
-                <pre className="whitespace-pre-wrap break-words font-sans text-xs text-slate-700">
-                  {item.data.message || item.data.messageBody || ""}
-                </pre>
+                <iframe
+                  title={item.data.subject || "Follow-up Email"}
+                  sandbox="allow-popups allow-popups-to-escape-sandbox"
+                  referrerPolicy="no-referrer"
+                  className="h-[620px] w-full rounded-lg border bg-white"
+                  srcDoc={`<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src https://www.overwatchmoz.com data:;">${safeEmailDocument(
+                    scheduledHtml
+                  )}`}
+                />
               </div>
             </details>
           );
@@ -923,14 +957,44 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
                   </pre>
                 </div>
               )}
-              {item.data.htmlContent || (folder === "incoming" && item.data.fullContent && item.data.body) ? (
+              {item.data.htmlContent ||
+              (folder === "incoming" && item.data.fullContent && item.data.body) ||
+              (folder !== "incoming" && Boolean(item.data.messageBody || item.data.message)) ? (
                 <iframe
                   title={item.data.subject || "Email"}
                   sandbox="allow-popups allow-popups-to-escape-sandbox"
                   referrerPolicy="no-referrer"
                   className="h-[620px] w-full rounded-lg border bg-white"
                   srcDoc={`<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src https://www.overwatchmoz.com data:;">${safeEmailDocument(
-                    item.data.htmlContent || item.data.body || ""
+                    item.data.htmlContent ||
+                      (folder === "incoming"
+                        ? item.data.body || ""
+                        : renderOfficialMail({
+                            candidate:
+                              applications.find(
+                                (a) =>
+                                  a.id === item.data.candidateId ||
+                                  (item.data.recipient &&
+                                    a.email.trim().toLowerCase() === item.data.recipient.trim().toLowerCase())
+                              ) || {
+                                id: item.data.candidateId || "preview",
+                                name: item.data.candidateName || item.data.recipient || "Candidato(a)",
+                                email: item.data.recipient || "candidato@exemplo.com",
+                                whatsapp: "+258 84 000 0000",
+                                role: item.data.roleId || "cctv_technical_manager",
+                                locale: item.data.locale || "pt",
+                                status: "test_invited",
+                                createdAt: item.updated_at || new Date().toISOString(),
+                                cvName: "cv.pdf",
+                                cvSize: 1024,
+                                cvType: "application/pdf",
+                              },
+                            subject: item.data.subject || "",
+                            message: item.data.messageBody || item.data.message || "",
+                            roleTitle: item.data.roleTitle || item.data.roleId || "Overwatch",
+                            locale: item.data.locale || "pt",
+                            includeBookingButton: Boolean(item.data.includeBookingButton),
+                          }).html)
                   )}`}
                 />
               ) : (
