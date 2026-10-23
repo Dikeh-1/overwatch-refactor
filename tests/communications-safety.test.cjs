@@ -9,7 +9,7 @@ Module._load=function(name,...args){
  if(name==='./admin-activity')return {auditChange:async(_action,_details,fn)=>fn()};
  if(name==='./careers-config-store')return {getSystemConfig:async()=>({senderName:'Recruitment'})};
  if(name==='@/lib/careers-auth')return {authenticated:async()=>signedIn,sameOrigin:r=>r.headers.get('origin')===new URL(r.url).origin};
- if(name==='@/lib/communication-mail-store')return store;
+ if(name==='@/lib/communication-mail-store'||name==='./communication-mail-store')return store;
  if(name.startsWith('@/lib/'))return original.call(this,path.join(root,'src',name.slice(2)),...args);
  return original.call(this,name,...args);
 };
@@ -66,4 +66,25 @@ test('outbox removal is scope checked, cancels queued mail and never removes an 
  const response=await drafts.POST(request({action:'delete',scope,ids:['queued-removal','sending-guard','other-cycle']}));
  assert.equal(response.status,200);const result=await response.json();assert.deepEqual(result.deleted,['queued-removal']);assert.equal(result.blocked.length,2);
  assert.equal(rows.get('queued-removal').data.status,'deleted');assert.equal(rows.get('sending-guard').data.status,'sending');assert.equal(rows.get('other-cycle').data.status,'queued');
+});
+
+
+test('a queued parent campaign is cancellable while sent and in-flight recipients remain protected',async()=>{
+ const scope='campaign-cancel-scope',id='cancel-parent';
+ const child=(id,status)=>({id,kind:'outbox',scope,version:1,data:{status,campaignId:'cancel-parent'}});
+ const queued=child('cancel-queued','queued'),sent=child('cancel-sent','sent'),sending=child('cancel-sending','sending');
+ for(const row of [queued,sent,sending])rows.set(row.id,row);
+ rows.set(id,{id,kind:'draft',scope,version:1,data:{status:'queued',queuedItems:[queued,sent,sending]}});
+ let response=await drafts.POST(request({action:'delete',scope:'wrong-cycle',ids:[id]}));assert.deepEqual((await response.json()).deleted,[]);
+ response=await drafts.POST(request({action:'delete',scope,ids:[id]}));assert.equal(response.status,200);assert.deepEqual((await response.json()).deleted,[id]);
+ assert.equal(rows.get(id).data.status,'cancelled');assert.equal(rows.get(queued.id).data.status,'deleted');assert.equal(rows.get(sent.id).data.status,'sent');assert.equal(rows.get(sending.id).data.status,'sending');
+});
+
+test('mailbox read reconciles completed campaign envelopes and does not invent completion for missing recipients',async()=>{
+ const scope='campaign-projection';const child={id:'project-child',kind:'outbox',scope,version:1,data:{campaignId:'project-parent',status:'deleted'}};
+ rows.set(child.id,child);rows.set('project-parent',{id:'project-parent',kind:'draft',scope,version:1,data:{status:'queued',queuedItems:[child]}});
+ rows.set('missing-parent',{id:'missing-parent',kind:'draft',scope,version:1,data:{status:'queued',queuedItems:[{...child,id:'missing-child'}]}});
+ const response=await drafts.GET(new Request('http://localhost:3100/api/admin/careers/mail?scope='+scope));const items=(await response.json()).items;
+ assert.equal(items.find(row=>row.id==='project-parent').data.status,'completed');assert.equal(items.find(row=>row.id==='missing-parent').data.status,'queued');
+ assert.equal(rows.get('project-parent').data.status,'queued','GET reconciliation is read-only');
 });

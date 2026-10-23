@@ -1,5 +1,6 @@
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
 import { getMail, listMail, putMail, storeMailAttachments, hydrateMailAttachments } from "@/lib/communication-mail-store";
+import { campaignStatus, cancelCampaign } from "@/lib/communication-campaigns";
 import { recordActivity } from "@/lib/admin-activity";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +11,7 @@ export async function GET(request: Request) {
     const scope = params.get("scope") || undefined;
     const items = await listMail(scope);
     // Attachment bytes stay in persisted drafts, but never inflate mailbox listings.
-    return Response.json({ items: items.map(item => ({ ...item, data: { ...item.data, attachments: undefined } })), incomingConnected: Boolean(process.env.ZOHO_MAIL_ACCESS_TOKEN || (process.env.ZOHO_MAIL_REFRESH_TOKEN && process.env.ZOHO_MAIL_CLIENT_ID && process.env.ZOHO_MAIL_CLIENT_SECRET)) }, { headers: { "Cache-Control": "no-store" } });
+    return Response.json({ items: items.map(item => ({ ...item, data: { ...item.data, status: campaignStatus(item, items), attachments: undefined } })), incomingConnected: Boolean(process.env.ZOHO_MAIL_ACCESS_TOKEN || (process.env.ZOHO_MAIL_REFRESH_TOKEN && process.env.ZOHO_MAIL_CLIENT_ID && process.env.ZOHO_MAIL_CLIENT_SECRET)) }, { headers: { "Cache-Control": "no-store" } });
   } catch { return Response.json({ error: "Mailbox unavailable. Your draft has not been discarded." }, { status: 503 }); }
 }
 export async function POST(request: Request) {
@@ -22,6 +23,10 @@ export async function POST(request: Request) {
       const deleted: string[] = [], blocked: string[] = [];
       for (const id of [...new Set<string>(body.ids)]) {
         const item = await getMail(id);
+        if (item?.kind === "draft" && item.scope === body.scope && item.data.status === "queued") {
+          try { await cancelCampaign(item); deleted.push(id); } catch { blocked.push(id); }
+          continue;
+        }
         if (!item || item.scope !== body.scope || !["outbox", "automation"].includes(item.kind) || !["queued", "failed", "skipped", "waiting_for_booking", "needs_attention", "deleted"].includes(item.data.status)) { blocked.push(id); continue; }
         try {
           await putMail({ ...item, data: { ...item.data, status: "deleted", deletedAt: new Date().toISOString() } }, item.version);

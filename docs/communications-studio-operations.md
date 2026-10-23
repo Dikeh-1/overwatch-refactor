@@ -56,3 +56,8 @@ Provider events reported through both content and statistics endpoints are dedup
 
 
 Local browser verification used one marked, disposable failed Outbox record addressed to qa@example.invalid. Cancel retained it; Confirm displayed Deleting/disabled controls, then removed it and displayed the success result. Rapid Outbox/Sent/Incoming switching exposed no old Outbox rows or controls in Incoming. The fixture was removed afterwards. No applicant messages were sent or deleted in QA. TypeScript and focused ESLint checks passed; the production build completed successfully.
+
+
+## Parent campaign cancellation (23 October 2026)
+
+A queued campaign envelope is now selectable alongside its pending recipient rows. Cancelling it first freezes the parent as cancelled, then tombstones pending and not-yet-inserted frozen recipients in bounded groups of five. Already sent, sending and unconfirmed deliveries remain intact. A stale recovery worker cannot resend a cancelled campaign: recovery rechecks its parent, and delivery checks cancellation before calling Brevo. Mailbox reads reconcile envelopes against every frozen recipient, hiding terminal campaigns from Outbox without mutating storage on GET or guessing completion when recipient records are missing. This fixes an orphan Queued campaign with one sent email and no queued recipients. The full suite passes 92 tests, including parent cancellation, scope isolation, missing-recipient reconciliation and cancelled-campaign recovery races.

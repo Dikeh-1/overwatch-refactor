@@ -30,6 +30,10 @@ export async function deliverQueuedItem(item: MailItem) {
   try {
     if (item.data.contentId) {
       const content = await getMail(item.data.contentId);
+      if (content?.kind === "draft" && content.scope === item.scope && content.data.status === "cancelled") {
+        await putMail({ ...claimed, data: { ...claimed.data, status: "deleted", deletedAt: new Date().toISOString() } }, claimed.version);
+        return;
+      }
       if (!content || content.kind !== "draft" || content.scope !== item.scope || !["queued", "sent", "completed"].includes(content.data.status)) throw Error("The saved message is unavailable. Review this draft before sending.");
       item = { ...item, data: { ...item.data, subject: content.data.subject, messageBody: content.data.messageBody, attachments: await hydrateMailAttachments(content.data.attachments, item.scope), followUp: content.data.followUpEnabled ? { trigger: "booking_confirmed", subject: content.data.followUpSubject, message: content.data.followUpBody } : undefined } };
     }
@@ -71,7 +75,7 @@ export async function processStudioQueue(scope: string, campaignId?: string) {
   catch (error) { if ((error as Error).message === "MAIL_CONFLICT") return; throw error; }
   try {
     const drafts = await listMail(scope,"draft","queued");
-    for (const draft of drafts) if (draft.data.status === "queued" && Array.isArray(draft.data.queuedItems)) await insertMailBatch(draft.data.queuedItems);
+    for (const draft of drafts) if (draft.data.status === "queued" && Array.isArray(draft.data.queuedItems) && (await getMail(draft.id))?.data.status === "queued") await insertMailBatch(draft.data.queuedItems);
     const until = Date.now() + 230000;
     while (Date.now() < until) {
       const queued = (await listMail(scope,"outbox","queued")).filter(item => item.data.status === "queued").slice(0,5);

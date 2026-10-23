@@ -124,3 +124,12 @@ test('a definitely rejected email can reuse immutable content from its completed
  const item=await delivery.enqueueStudioMail(candidate,{contentId:'completed-content',includeBookingButton:false},'retry-scope','retry-campaign');
  await delivery.deliverQueuedItem(item);assert.equal(sent.length,1);assert.equal(sent[0].subject,'Original frozen subject');assert.equal((await store.getMail(item.id)).data.status,'sent');
 });
+
+
+test('a cancelled campaign cannot send even if a stale worker restores a frozen recipient',async()=>{
+ rows.clear();sent.length=0;applications.clear();
+ const candidate={id:'cancel-race',name:'Fixture',role:'cctv',cohortId:'sept',email:'cancel@example.invalid',status:'test_invited'};applications.set(candidate.id,candidate);
+ await store.putMail({id:'cancelled-campaign',kind:'draft',scope:'cancel-race',data:{status:'cancelled',subject:'Must never send',messageBody:'Frozen content'}},0);
+ const restored=await delivery.enqueueStudioMail(candidate,{contentId:'cancelled-campaign',includeBookingButton:false},'cancel-race','cancelled-campaign');
+ await delivery.deliverQueuedItem(restored);assert.equal(sent.length,0);assert.equal((await store.getMail(restored.id)).data.status,'deleted');
+});
