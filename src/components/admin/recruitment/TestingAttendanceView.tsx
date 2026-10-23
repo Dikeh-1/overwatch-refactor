@@ -218,6 +218,8 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
         </div>
       </div>
 
+      {/* Sticky Session Navigation & Search Toolbar */}
+      <div className="sticky top-[var(--workspace-sticky-top,48px)] z-20 bg-[#F7F8FA]/95 backdrop-blur-md pt-2 pb-2 space-y-3">
       {/* Session Navigation Tabs */}
       <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto pb-1 admin-scrollbar">
         <button
@@ -332,6 +334,7 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
             <span>{t("Export Roster CSV", "Exportar Lista CSV")}</span>
           </button>
         </div>
+      </div>
       </div>
 
       {/* Roster Table */}

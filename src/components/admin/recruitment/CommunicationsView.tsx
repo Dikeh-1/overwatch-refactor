@@ -814,7 +814,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       </div>
 
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3"><label className="text-xs font-semibold">{t("Email language", "Idioma do email")}<select aria-label={t("Email language", "Idioma do email")} value={emailLang} onChange={event => setEmailLang(event.target.value as "pt" | "en")} className="ml-3 rounded-lg border px-3 py-2"><option value="pt">Português</option><option value="en">English</option></select></label><span className="text-xs text-slate-500">{t("Controls templates, role names, booking buttons and the letterhead. The admin interface can stay in English.", "Controla os modelos, nomes de vagas, botões de agendamento e o timbre.")}</span></div>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3">
+      <div className="sticky top-[var(--workspace-sticky-top,48px)] z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white/95 backdrop-blur-md p-3 shadow-sm">
         <nav aria-label={t("Mailbox folders", "Pastas de correio")} className="flex flex-wrap gap-1">{([
           ["compose", t("Compose", "Escrever")],
           ["drafts", t("Drafts", "Rascunhos")],
@@ -1263,7 +1263,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
             }}
             onDragLeave={() => setIsDragOverLetterhead(false)}
             onDrop={handleDropOnLetterhead}
-            className={`rounded-2xl border transition-all shadow-xl overflow-hidden relative bg-white ${
+            className={`rounded-2xl border transition-all shadow-xl relative bg-white ${
               isDragOverLetterhead
                 ? "border-sky-500 ring-4 ring-sky-100"
                 : "border-slate-300"
@@ -1271,7 +1271,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
           >
             {/* Drag Over Visual Hint Banner */}
             {isDragOverLetterhead && (
-              <div className="pointer-events-none absolute inset-0 z-40 bg-sky-950/70 backdrop-blur-xs flex items-center justify-center p-6 text-center text-white">
+              <div className="pointer-events-none absolute inset-0 z-40 rounded-2xl bg-sky-950/70 backdrop-blur-xs flex items-center justify-center p-6 text-center text-white">
                 <div className="p-4 rounded-xl bg-sky-900 border border-sky-400 shadow-xl flex flex-col items-center gap-2">
                   <FileText size={32} className="text-sky-300" />
                   <span className="text-sm font-bold">
@@ -1282,7 +1282,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
             )}
 
             {/* Studio Canvas Mode Header Tabs */}
-            <div className="border-b border-slate-200 bg-slate-50/80 px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="sticky top-[calc(var(--workspace-sticky-top,48px)+60px)] z-10 rounded-t-2xl border-b border-slate-200 bg-slate-50/95 backdrop-blur-md px-6 py-3 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200">
                 <button
                   type="button"

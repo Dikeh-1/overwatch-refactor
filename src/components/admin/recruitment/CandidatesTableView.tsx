@@ -494,6 +494,8 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
         </div>
       </div>
 
+      {/* Sticky Navigation, Filter & Bulk Action Header */}
+      <div className="sticky top-[var(--workspace-sticky-top,48px)] z-20 bg-[#F7F8FA]/95 backdrop-blur-md pt-2 pb-2 space-y-3">
       {/* Saved View Tabs */}
       <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto pb-1 admin-scrollbar">
         {savedViews.map((sv) => (
@@ -847,6 +849,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
           </div>
         </div>
       )}
+      </div>
 
       {/* Outside Mozambique Notice & Quick Action Banner */}
       {locationFilter === "outside_mozambique" && (

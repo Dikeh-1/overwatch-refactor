@@ -500,7 +500,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
       {/* =========================================================================
           TOP STUDIO HEADER (Patterned after Communications Studio)
          ========================================================================= */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-5">
+      <div className="sticky top-[48px] z-20 bg-white/95 backdrop-blur-md rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">

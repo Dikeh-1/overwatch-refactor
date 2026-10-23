@@ -236,7 +236,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
   const backTarget = adminParent(`/admin/recruitment/candidates/${candidate.id}`, new URLSearchParams(searchParams));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 [--workspace-sticky-top:100px]">
       {/* Back Navigation Bar */}
       <div className="flex items-center justify-between gap-4">
         <Link
@@ -375,24 +375,24 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
             </a>
           </div>
         </div>
+      </div>
 
-        {/* Tab Navigation Strip */}
-        <div className="flex items-center gap-2 border-t border-slate-100 mt-5 pt-3 overflow-x-auto admin-scrollbar">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
-                activeTab === tab.id
-                  ? "bg-slate-100 text-slate-900 font-semibold"
-                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+      {/* Sticky Tab Navigation Strip */}
+      <div className="sticky top-[48px] z-20 flex items-center gap-2 rounded-xl border border-slate-200 bg-white/95 backdrop-blur-md p-2 shadow-sm overflow-x-auto admin-scrollbar">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+              activeTab === tab.id
+                ? "bg-slate-900 text-white font-semibold"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* TAB 1: OVERVIEW */}
