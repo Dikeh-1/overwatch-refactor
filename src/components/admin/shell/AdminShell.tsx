@@ -101,18 +101,24 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
     if (!auth) return;
     const originalFetch = window.fetch;
     const guardedFetch: typeof window.fetch = async (input, init) => {
-      const response = await originalFetch(input, init);
+      let response = await originalFetch(input, init);
       const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, window.location.href);
       if (url.origin === window.location.origin && url.pathname.startsWith("/api/admin/")) {
-        const contentType = response.headers.get("content-type") || "";
+        let contentType = response.headers.get("content-type") || "";
+        const method = (init?.method || (input instanceof Request ? input.method : "GET")).toUpperCase();
+        if (contentType.includes("text/html") && !url.pathname.startsWith("/api/admin/cv") && method === "GET") {
+          await new Promise((r) => window.setTimeout(r, 1200));
+          response = await originalFetch(input, init);
+          contentType = response.headers.get("content-type") || "";
+        }
         // Protect JSON consumers if Vercel Security Checkpoint or gateway returns an HTML page
         if (contentType.includes("text/html") && !url.pathname.startsWith("/api/admin/cv")) {
           return new Response(
             JSON.stringify({
               error:
                 lang === "en"
-                  ? "Browser security verification or connection update in progress. Please wait a moment or click Refresh."
-                  : "Verificação de segurança do navegador ou atualização de ligação em curso. Aguarde um instante ou clique em Actualizar.",
+                  ? "Connection is refreshing. Please wait a moment or click Refresh."
+                  : "A ligação está a actualizar. Aguarde um instante ou clique em Actualizar.",
             }),
             { status: 503, headers: { "Content-Type": "application/json" } },
           );
@@ -136,7 +142,13 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
     // Prompt 5 seconds before sessionExpiry (or immediately if reached)
     const delayMs = sessionExpiry ? Math.max(0, sessionExpiry - Date.now() - 5000) : undefined;
     const timer = delayMs !== undefined ? window.setTimeout(triggerSessionWarning, delayMs) : undefined;
-    const check = () => { if (!document.hidden && !warningActiveRef.current) void checkSession(false); };
+    let lastCheckAt = Date.now();
+    const check = () => {
+      if (document.hidden || warningActiveRef.current) return;
+      if (Date.now() - lastCheckAt < 25000) return;
+      lastCheckAt = Date.now();
+      void checkSession(false);
+    };
     const interval = window.setInterval(check, 60000);
     window.addEventListener("focus", check);
     document.addEventListener("visibilitychange", check);
@@ -221,8 +233,10 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
       loadSummaryData();
     };
 
+    let lastVisLoad = Date.now();
     const handleVisibility = () => {
-      if (typeof document !== "undefined" && !document.hidden) {
+      if (typeof document !== "undefined" && !document.hidden && Date.now() - lastVisLoad >= 25000) {
+        lastVisLoad = Date.now();
         loadSummaryData();
       }
     };

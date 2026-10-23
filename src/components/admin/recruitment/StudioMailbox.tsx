@@ -179,7 +179,10 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
 
   useEffect(() => {
     if ((folder !== "outbox" && folder !== "scheduled") || action || confirmIds) return;
-    const timer = setInterval(() => setRetry((n) => n + 1), 6000);
+    const timer = setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      setRetry((n) => n + 1);
+    }, 10000);
     return () => clearInterval(timer);
   }, [folder, action, confirmIds]);
 
@@ -818,7 +821,12 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
             key={item.id}
             onToggle={(event) => {
               if (event.currentTarget.open && !item.data.fullContent) {
-                if (folder === "sent" || folder === "incoming") void readWithFeedback(item);
+                if (
+                  folder === "incoming" ||
+                  (folder === "sent" && !item.data.htmlContent && !item.data.messageBody && !item.data.message)
+                ) {
+                  void readWithFeedback(item);
+                }
               }
             }}
             className="rounded-xl border border-slate-200 p-4"
