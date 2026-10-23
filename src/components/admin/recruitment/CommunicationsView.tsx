@@ -596,7 +596,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       if (res.ok && data.success) {
         if (data.queued) {
           setDeliveryCampaign(data.campaignId);
-          draft.sent(true); setFolder("outbox");
+          draft.sent(true);
           setDeliveryNotice(t(`${data.totalTargeted} emails queued. Delivery continues on the server; follow progress in Outbox and Sent.`, `${data.totalTargeted} emails em fila. O envio continua no servidor; acompanhe na Caixa de saída e Enviados.`));
           return;
         }
@@ -737,7 +737,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
 
   return (
     <div className="space-y-6 relative">
-      {deliveryCampaign && <DeliveryProgress scope={scope} campaignId={deliveryCampaign} applications={applications} onClose={() => setDeliveryCampaign(null)} onViewSent={() => { setDeliveryCampaign(null); setFolder("sent"); }} onComplete={() => { window.dispatchEvent(new Event("admin:careers-updated")); void onSent?.().catch(() => {}); }} />}
+      {deliveryCampaign && <DeliveryProgress scope={scope} campaignId={deliveryCampaign} applications={applications} onClose={() => setDeliveryCampaign(null)} onViewSent={() => { setDeliveryCampaign(null); setFolder("sent"); }} onComplete={() => { setDeliveryNotice(t("Official correspondence dispatched successfully. Delivered messages are in your Sent folder.", "Correspondência oficial enviada com sucesso. As mensagens entregues encontram-se na pasta Enviados.")); window.dispatchEvent(new Event("admin:careers-updated")); void onSent?.().catch(() => {}); }} />}
       {/* Universal Overwatch Processing Animation */}
       {isDispatching && (
         <OverwatchOrbitLoader

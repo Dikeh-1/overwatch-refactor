@@ -362,6 +362,14 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
   const activeCampaignId = items.find(
     (item) => item.kind === "outbox" && ["queued", "sending", "failed"].includes(item.data.status) && item.data.campaignId
   )?.data.campaignId;
+  const primaryRows =
+    folder === "outbox"
+      ? all.filter((item) => !(item.kind === "automation" && item.data.status === "waiting_for_booking"))
+      : all;
+  const standbyFollowUps =
+    folder === "outbox"
+      ? all.filter((item) => item.kind === "automation" && item.data.status === "waiting_for_booking")
+      : [];
 
   return (
     <section aria-busy={busy || Boolean(action)} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
@@ -575,13 +583,18 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
           </p>
         </div>
       )}
-      {!busy && !all.length && !error && !loadError && (folder !== "incoming" || connected) && (
-        <p className="py-6 text-center text-sm text-slate-500">
-          {t("No messages in this folder.", "Sem mensagens nesta pasta.")}
-        </p>
+      {!busy && !primaryRows.length && !error && !loadError && (folder !== "incoming" || connected) && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 text-center text-sm text-emerald-900">
+          {folder === "outbox"
+            ? t(
+                "Outbox is clear — no pending or failed emails. All dispatched emails are in your Sent folder.",
+                "A caixa de saída está limpa — sem emails pendentes ou com falha. Todos os emails enviados encontram-se na pasta Enviados."
+              )
+            : t("No messages in this folder.", "Sem mensagens nesta pasta.")}
+        </div>
       )}
 
-      {all.map((item) => (
+      {primaryRows.map((item) => (
         <details
           key={item.id}
           onToggle={(event) => {
@@ -749,6 +762,60 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
           </div>
         </details>
       ))}
+
+      {folder === "outbox" && standbyFollowUps.length > 0 && (
+        <details className="rounded-xl border border-indigo-200 bg-indigo-50/40 p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-indigo-950 flex flex-wrap items-center justify-between gap-2">
+            <span>
+              {t(
+                `Scheduled Post-Booking Auto Follow-Ups (${standbyFollowUps.length} waiting for candidate to book a test slot)`,
+                `Seguimentos Automáticos Pós-Agendamento (${standbyFollowUps.length} a aguardar que o candidato escolha vaga)`
+              )}
+            </span>
+            <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-bold text-indigo-800">
+              {t("Triggers automatically on booking", "Envia automaticamente após agendamento")}
+            </span>
+          </summary>
+          <p className="mt-2 text-xs text-indigo-900/80">
+            {t(
+              "These are NOT unsent Outbox emails. Your main invitation emails were already delivered (see Sent folder). Each item below is an automatic follow-up rule that will send only when that candidate books their test appointment.",
+              "Estes NÃO são emails pendentes por enviar. Os convites principais já foram entregues (ver pasta Enviados). Cada item abaixo é uma regra automática que será enviada apenas quando o respectivo candidato confirmar o agendamento."
+            )}
+          </p>
+          <div className="mt-3 space-y-2">
+            {standbyFollowUps.map((item) => (
+              <div
+                key={item.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-indigo-200/80 bg-white p-3 text-xs"
+              >
+                <div>
+                  <label className="inline-flex items-center gap-2 font-semibold text-slate-900">
+                    <input
+                      aria-label={t("Select message", "Seleccionar mensagem")}
+                      type="checkbox"
+                      disabled={Boolean(action)}
+                      checked={selected.includes(item.id)}
+                      onChange={(event) =>
+                        setSelected((current) =>
+                          event.target.checked ? [...current, item.id] : current.filter((id) => id !== item.id)
+                        )
+                      }
+                    />
+                    <span className="rounded bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-800">
+                      {t("Auto Follow-Up", "Seguimento Automático")}
+                    </span>
+                    <span>{item.data.subject || t("Follow-up message", "Mensagem de seguimento")}</span>
+                  </label>
+                  <span className="mt-1 block text-slate-500">
+                    {item.data.recipient} · {t("Armed at", "Activado às")} {new Date(item.updated_at).toLocaleString()} ·{" "}
+                    {statusLabel(item.data.status)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
     </section>
   );
 }

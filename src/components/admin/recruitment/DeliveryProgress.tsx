@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, AlertCircle, RefreshCw, Send, Clock, XCircle } from "lucide-react";
+import { CheckCircle2, AlertCircle, RefreshCw, Send, Clock, XCircle, X } from "lucide-react";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import type { Application } from "@/lib/careers";
 
@@ -203,9 +203,19 @@ export function DeliveryProgress({
               </p>
             </div>
           </div>
-          <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-white/10 border border-white/15 shrink-0">
-            {counts.sent}/{counts.total} ({percent}%)
-          </span>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-white/10 border border-white/15">
+              {counts.sent}/{counts.total} ({percent}%)
+            </span>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t("Close", "Fechar")}
+              className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
 
         {/* Body */}
@@ -428,10 +438,10 @@ export function DeliveryProgress({
             )}
             <button
               type="button"
-              className="rounded-lg bg-sky-600 hover:bg-sky-700 px-4 py-2 text-xs font-bold text-white cursor-pointer"
+              className="rounded-lg bg-sky-600 hover:bg-sky-700 px-5 py-2 text-xs font-bold text-white cursor-pointer"
               onClick={onClose}
             >
-              {finished ? t("Done / View Outbox", "Concluir / Ver Caixa de Saída") : t("View Outbox", "Ver caixa de saída")}
+              {t("Close", "Fechar")}
             </button>
           </div>
         </div>
