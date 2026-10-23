@@ -34,14 +34,17 @@ export async function deliverQueuedItem(item: MailItem) {
         await putMail({ ...claimed, data: { ...claimed.data, status: "deleted", deletedAt: new Date().toISOString() } }, claimed.version);
         return;
       }
-      if (!content || content.kind !== "draft" || content.scope !== item.scope || !["queued", "sent", "completed"].includes(content.data.status)) throw Error("The saved message is unavailable. Review this draft before sending.");
+      if (!content || content.kind !== "draft" || content.scope !== item.scope || !["draft", "queued", "sent", "completed"].includes(content.data.status)) throw Error("The saved message is unavailable. Review this draft before sending.");
       item = { ...item, data: { ...item.data, subject: content.data.subject, messageBody: content.data.messageBody, attachments: await hydrateMailAttachments(content.data.attachments, item.scope), followUp: content.data.followUpEnabled ? { trigger: "booking_confirmed", subject: content.data.followUpSubject, message: content.data.followUpBody } : undefined } };
     }
-    const candidate = await getApplication(item.data.candidateId);
+    const rawCandidate = await getApplication(item.data.candidateId);
+    const workspaceApps = item.data.includeBookingButton ? ((await getRecruitmentWorkspaceData().catch(() => ({ applications: [] as Application[] }))).applications || []) : [];
+    const workspaceCandidate = workspaceApps.find(a => a.id === item.data.candidateId);
+    const candidate = rawCandidate || workspaceCandidate;
     if (!candidate || !sameRole(candidate.role, item.data.roleId) || candidate.cohortId !== item.data.cohortId || candidate.email !== item.data.recipient) throw Error("Candidate identity or cycle changed. Review before sending.");
     // Queue creation uses recovered stages and cycle-specific screening. Use the
     // same evaluation here instead of rejecting against stale stored scores.
-    const evaluated = item.data.includeBookingButton ? (await getRecruitmentWorkspaceData()).applications.find(a => a.id === candidate.id) : candidate;
+    const evaluated = item.data.includeBookingButton ? workspaceCandidate : candidate;
     if (item.data.includeBookingButton && (!evaluated || !canReceiveTestInvitation(evaluated))) {
       await putMail({ ...claimed, data: { ...claimed.data, status: "skipped", error: "Invitation skipped: the applicant is no longer eligible. No email was sent." } }, claimed.version);
       return;
@@ -71,7 +74,7 @@ export async function processStudioQueue(scope: string, campaignId?: string) {
   const workerId = deliveryId(`mail-worker:${scope}`), current = await getMail(workerId);
   if (current?.data.status === "processing" && current.data.expiresAt > Date.now()) return;
   let lease: MailItem;
-  try { lease = await putMail({ id: workerId, kind: "worker", scope, data: { status: "processing", expiresAt: Date.now() + 300000 } }, current?.version || 0); }
+  try { lease = await putMail({ id: workerId, kind: "worker", scope, data: { status: "processing", expiresAt: Date.now() + 25000 } }, current?.version || 0); }
   catch (error) { if ((error as Error).message === "MAIL_CONFLICT") return; throw error; }
   try {
     const drafts = await listMail(scope,"draft","queued");
@@ -88,6 +91,7 @@ export async function processStudioQueue(scope: string, campaignId?: string) {
         return;
       }
       await Promise.all(queued.map(deliverQueuedItem));
+      lease = await putMail({ ...lease, data: { status: "processing", expiresAt: Date.now() + 25000 } }, lease.version).catch(() => lease);
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
   } finally { await putMail({ ...lease, data: { status: "idle" } }, lease.version).catch(() => {}); }

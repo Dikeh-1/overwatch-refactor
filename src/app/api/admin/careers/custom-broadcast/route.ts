@@ -8,7 +8,7 @@ import { isPastDateSlot } from "@/lib/careers";
 import { auditRequest } from "@/lib/admin-activity";
 import crypto from "node:crypto";
 import { getRecruitmentWorkspaceData } from "@/lib/careers-workspace-store";
-import { applicationsForCohort, sameRole, canReceiveTestInvitation, isNextPhase, isQualified } from "@/lib/careers-workflow";
+import { applicationsForCohort, sameRole, canReceiveTestInvitation, hasSentCommunication, isNextPhase, isQualified } from "@/lib/careers-workflow";
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
 import { getApplications, updateApplication } from "@/lib/careers-store";
 import { sendTransactionalEmail } from "@/lib/careers-email";
@@ -202,7 +202,7 @@ async function handlePOST(request: Request) {
       } else if (audienceFilter === "disqualified") {
         targetPool = targetPool.filter((a) => a.status === "archived");
       } else if (audienceFilter === "all_applied" || audienceFilter === "all_role") {
-        targetPool = targetPool.filter((a) => a.status !== "archived");
+        targetPool = targetPool.filter((a) => a.status !== "archived" && !hasSentCommunication(a));
       }
 
       // Filter by gender
@@ -249,7 +249,7 @@ async function handlePOST(request: Request) {
       if (draft.data.status === "draft" && (draft.data.subject !== subject || draft.data.messageBody !== message || Boolean(draft.data.includeBookingButton) !== includeBookingButton)) return Response.json({ error: "The message changed since its last save. Save it again before sending." }, { status: 409 });
       const queuedItems = draft.data.status === "queued" ? draft.data.queuedItems : deduplicatedCandidates.map(candidate => {
         const role = workspace.roles.find(r => sameRole(r.id, candidate.role));
-        return { id: deliveryId(`${body.draftId}:${candidate.id}`), kind: "outbox" as const, scope, data: { contentId: body.draftId, subject, candidateId: candidate.id, roleId: candidate.role, cohortId: candidate.cohortId, recipient: candidate.email, campaignId: body.draftId, roleTitle: role ? draft.data.emailLang === "en" ? role.en : role.pt : candidate.role, locale: draft.data.emailLang === "en" ? "en" : "pt", includeBookingButton: Boolean(draft.data.includeBookingButton), status: "queued", deliveryId: crypto.randomUUID() } };
+        return { id: deliveryId(`${body.draftId}:${candidate.id}`), kind: "outbox" as const, scope, data: { contentId: body.draftId, subject, candidateId: candidate.id, candidateName: candidate.name, roleId: candidate.role, cohortId: candidate.cohortId, recipient: candidate.email, campaignId: body.draftId, roleTitle: role ? draft.data.emailLang === "en" ? role.en : role.pt : candidate.role, locale: draft.data.emailLang === "en" ? "en" : "pt", includeBookingButton: Boolean(draft.data.includeBookingButton), status: "queued", deliveryId: crypto.randomUUID() } };
       });
       if (!Array.isArray(queuedItems) || !queuedItems.length) return Response.json({ error: "The saved recipient list is unavailable. Review Outbox before retrying." }, { status: 409 });
       // Freeze content and recipients before making any delivery claimable. Concurrent requests cannot add recipients.

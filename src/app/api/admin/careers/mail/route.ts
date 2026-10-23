@@ -16,8 +16,10 @@ export async function GET(request: Request) {
 }
 export async function POST(request: Request) {
   if (!(await authenticated()) || !sameOrigin(request)) return Response.json({ error: "Unauthorized" }, { status: 403 });
+  let requestedId = "";
   try {
     const body = await request.json();
+    requestedId = typeof body?.id === "string" ? body.id : "";
     if (body.action === "delete") {
       if (typeof body.scope !== "string" || !Array.isArray(body.ids) || !body.ids.length || body.ids.length > 500 || body.ids.some((id: unknown) => typeof id !== "string" || !/^[\w-]{1,120}$/.test(id))) return Response.json({ error: "Invalid message selection" }, { status: 400 });
       const deleted: string[] = [], blocked: string[] = [];
@@ -36,23 +38,62 @@ export async function POST(request: Request) {
       if (deleted.length) await recordActivity({ action: "Outbox messages cancelled", section: "communications", outcome: "succeeded", details: { scope: body.scope, messageIds: deleted } }).catch(() => console.error("Outbox cancellation history could not be saved"));
       return Response.json({ deleted, blocked });
     }
+    if (body.action === "retry") {
+      const targetIds: string[] = Array.isArray(body.ids)
+        ? body.ids.filter((id: unknown): id is string => typeof id === "string" && /^[\w-]{1,120}$/.test(id))
+        : typeof body.id === "string" && /^[\w-]{1,120}$/.test(body.id)
+          ? [body.id]
+          : [];
+      if (!targetIds.length || targetIds.length > 500 || typeof body.scope !== "string" || body.scope.length > 250) {
+        return Response.json({ error: "Invalid retry selection" }, { status: 400 });
+      }
+      const retried: string[] = [], blocked: string[] = [];
+      const reopenedParents = new Set<string>();
+      for (const id of [...new Set(targetIds)]) {
+        const item = await getMail(id);
+        if (!item || item.kind !== "outbox" || item.scope !== body.scope || !["failed", "skipped"].includes(item.data.status)) {
+          blocked.push(id);
+          continue;
+        }
+        try {
+          const parentId = item.data.contentId || item.data.campaignId;
+          if (parentId && !reopenedParents.has(parentId)) {
+            reopenedParents.add(parentId);
+            const parent = await getMail(parentId);
+            if (parent && parent.kind === "draft" && parent.scope === body.scope && ["completed", "cancelled"].includes(parent.data.status)) {
+              await putMail({ ...parent, data: { ...parent.data, status: "queued" } }, parent.version).catch(() => {});
+            }
+          }
+          await putMail({ ...item, data: { ...item.data, status: "queued", error: undefined } }, item.version);
+          retried.push(id);
+        } catch {
+          blocked.push(id);
+        }
+      }
+      if (!retried.length && targetIds.length === 1) {
+        return Response.json({ error: "This delivery cannot be safely retried. Verify its provider history first." }, { status: 409 });
+      }
+      if (retried.length) {
+        await recordActivity({ action: "Failed email requeued", section: "communications", outcome: "succeeded", details: { messageIds: retried, scope: body.scope } }).catch(() => {});
+      }
+      return Response.json({ success: true, retried, blocked });
+    }
     if (!/^[\w-]{1,120}$/.test(body.id || "") || typeof body.scope !== "string" || body.scope.length > 250) return Response.json({ error: "Invalid draft" }, { status: 400 });
     const current = await getMail(body.id);
-    if (body.action === "retry") {
-      const safeFailure = /attachment is missing|^This applicant is no longer eligible for a booking invitation\.$/.test(current?.data.error || "");
-      if (current?.kind !== "outbox" || current.scope !== body.scope || current.data.status !== "failed" || !safeFailure) return Response.json({ error: "This delivery cannot be safely retried. Verify its provider history first." }, { status: 409 });
-      await putMail({ ...current, data: { ...current.data, status: "queued", error: undefined } }, current.version);
-      await recordActivity({ action: "Failed email requeued", section: "communications", outcome: "succeeded", details: { messageId: current.id, scope: current.scope } }).catch(() => {});
-      return Response.json({ success: true });
-    }
     if (body.action === "load") {
       if (current?.kind !== "draft" || current.scope !== body.scope) return Response.json({ error: "Draft not found" }, { status: 404 });
       return Response.json({ item: { ...current, data: { ...current.data, attachments: await hydrateMailAttachments(current.data.attachments, current.scope) } } });
     }
     if (!Number.isInteger(body.version) || body.version < 0 || !body.data || typeof body.data.subject !== "string" || typeof body.data.messageBody !== "string" || body.data.subject.length > 1000 || body.data.messageBody.length > 100000 || JSON.stringify(body.data).length > 25000000) return Response.json({ error: "Draft exceeds supported limits" }, { status: 400 });
-    if (current && (current.kind !== "draft" || current.scope !== body.scope || current.data.status !== "draft")) return Response.json({ error: "This draft is no longer editable. Start a new draft." }, { status: 409 });
+    if (current && (current.kind !== "draft" || current.scope !== body.scope || current.data.status !== "draft")) return Response.json({ error: "This draft is no longer editable. Start a new draft.", currentVersion: current.version, currentStatus: current.data.status }, { status: 409 });
     const attachments = body.data.attachments === undefined ? current?.data.attachments || [] : await storeMailAttachments(body.data.attachments, body.scope);
     const item = await putMail({ id: body.id, kind: "draft", scope: body.scope, data: { ...body.data, attachments, status: "draft" } }, body.version);
     return Response.json({ item: { ...item, data: { ...item.data, attachments: undefined } } });
-  } catch (error) { return Response.json({ error: (error as Error).message === "MAIL_CONFLICT" ? "This draft changed in another tab. Reload it before editing; your local recovery copy is preserved." : "Draft could not be saved. Keep this page open and retry." }, { status: (error as Error).message === "MAIL_CONFLICT" ? 409 : 503 }); }
+  } catch (error) {
+    if ((error as Error).message === "MAIL_CONFLICT") {
+      const latest = requestedId && /^[\w-]{1,120}$/.test(requestedId) ? await getMail(requestedId).catch(() => null) : null;
+      return Response.json({ error: "This draft changed in another tab. Reload it before editing; your local recovery copy is preserved.", currentVersion: latest?.version, currentStatus: latest?.data?.status }, { status: 409 });
+    }
+    return Response.json({ error: "Draft could not be saved. Keep this page open and retry." }, { status: 503 });
+  }
 }

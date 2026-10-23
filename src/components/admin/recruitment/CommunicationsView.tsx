@@ -34,7 +34,7 @@ import {
   FolderPlus,
   RefreshCw,
 } from "lucide-react";
-import { isNextPhase, isQualified, isTerminal, sameRole, canReceiveTestInvitation } from "@/lib/careers-workflow";
+import { isNextPhase, isQualified, isTerminal, sameRole, canReceiveTestInvitation, hasSentCommunication } from "@/lib/careers-workflow";
 import { Application, formatSlotDisplay, normalizeSlot } from "@/lib/careers";
 import Logo from "@/components/ui/Logo";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
@@ -171,7 +171,7 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
       const def = roles.find((r) => r.id === activeRoleId);
       const st = def?.pipelineStages || [];
       if (!st.includes("next_phase")) {
-        setTargetAudience("all_role");
+        setTargetAudience((prev) => (prev === "next_phase" ? "all_role" : prev));
       }
     }
   }, [activeRoleId, roles, fixedRecipient]);
@@ -474,7 +474,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       return pool.filter((a) => Boolean(a.testSlot) && a.status !== "archived");
     }
 
-    return pool.filter((a) => a.status !== "archived");
+    return pool.filter((a) => a.status !== "archived" && !isTerminal(a) && !hasSentCommunication(a));
   }, [applications, fixedRecipient, targetAudience, selectedRole, selectedIndividualId, selectedSlot, includeBookingButton]);
 
   // Distinct test slots for slot filter
@@ -737,7 +737,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
 
   return (
     <div className="space-y-6 relative">
-      {deliveryCampaign && <DeliveryProgress scope={scope} campaignId={deliveryCampaign} onClose={() => setDeliveryCampaign(null)} />}
+      {deliveryCampaign && <DeliveryProgress scope={scope} campaignId={deliveryCampaign} applications={applications} onClose={() => setDeliveryCampaign(null)} onViewSent={() => { setDeliveryCampaign(null); setFolder("sent"); }} onComplete={() => { window.dispatchEvent(new Event("admin:careers-updated")); void onSent?.().catch(() => {}); }} />}
       {/* Universal Overwatch Processing Animation */}
       {isDispatching && (
         <OverwatchOrbitLoader
@@ -799,7 +799,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
         ] as const).map(([key,label]) => <button key={key} type="button" aria-pressed={folder === key} onClick={() => setFolder(key)} className={`rounded-lg px-3 py-2 text-xs font-medium ${folder === key ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"}`}>{label}</button>)}</nav>
         <div className="flex items-center gap-3"><span role="status" className="max-w-sm text-xs text-slate-500">{draft.status}</span><button type="button" disabled={!draft.ready || isDispatching || openingDraft} onClick={() => { if (newDraftLock.current) return; newDraftLock.current = true; setOpeningDraft(true); void draft.newDraft().then(() => setFolder("compose")).catch(error => setDeliveryNotice(error.message)).finally(() => { newDraftLock.current = false; setOpeningDraft(false); }); }} className="rounded-lg border px-3 py-2 text-xs font-medium">{openingDraft ? t("Creating draft…", "A criar rascunho…") : t("New draft", "Novo rascunho")}</button></div>
       </div>
-      {folder !== "compose" && <StudioMailbox scope={scope} folder={folder} applications={applications} onOpenDraft={async id => { await draft.open(id); setFolder("compose"); }}/ >}
+      {folder !== "compose" && <StudioMailbox scope={scope} folder={folder} applications={applications} onOpenDraft={async id => { await draft.open(id); setFolder("compose"); }} onOpenProgress={campaignId => setDeliveryCampaign(campaignId)} />}
       {/* MAIN 2-COLUMN STUDIO LAYOUT */}
       {deliveryNotice && <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{deliveryNotice}</p>}
       <div hidden={folder !== "compose"} inert={!draft.ready || isDispatching} className={folder !== "compose" ? "hidden" : "grid grid-cols-1 lg:grid-cols-12 gap-6 items-start"}>
@@ -832,10 +832,10 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                   const def = roles.find((r) => r.id === newRole);
                   const st = def?.pipelineStages || [];
                   if (!st.includes("next_phase") && targetAudience === "next_phase") {
-                    setTargetAudience("all_role");
+                    setTargetAudience((prev) => (prev === "next_phase" ? "all_role" : prev));
                   }
                   if (!st.includes("testing") && (targetAudience === "shortlisted_unbooked" || targetAudience === "booked_confirmed")) {
-                    setTargetAudience("all_role");
+                    setTargetAudience((prev) => (prev === "next_phase" ? "all_role" : prev));
                   }
                 }}
                 className="w-full text-xs rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 font-medium focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
@@ -856,6 +856,10 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
               </label>
               <div className="grid grid-cols-1 gap-1.5 text-xs">
                 {(() => {
+                  const rolePool = (includeBookingButton ? applications.filter(canReceiveTestInvitation) : applications).filter((a) => selectedRole === "all" || sameRole(a.role, selectedRole));
+                  const uncontactedCount = rolePool.filter((a) => a.status !== "archived" && !isTerminal(a) && !hasSentCommunication(a)).length;
+                  const unbookedCount = rolePool.filter((a) => !a.testSlot && !isTerminal(a)).length;
+                  const bookedCount = rolePool.filter((a) => Boolean(a.testSlot) && a.status !== "archived").length;
                   const list: { id: string; label: string }[] = [];
 
                   if (roleHasNextPhase) {
@@ -867,18 +871,18 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
 
                   list.push({
                     id: "all_role",
-                    label: t("All Applicants in this Role", "Todas as Candidaturas desta Vaga"),
+                    label: t(`All Applicants in this Role · Uncontacted (${uncontactedCount})`, `Todas as Candidaturas desta Vaga · Por Contactar (${uncontactedCount})`),
                   });
 
                   if (roleHasTesting) {
                     list.push(
                       {
                         id: "shortlisted_unbooked",
-                        label: t("Shortlisted (Awaiting Booking)", "Convocadas (Pendente Agendamento)"),
+                        label: t(`Shortlisted (Awaiting Booking) (${unbookedCount})`, `Convocadas (Pendente Agendamento) (${unbookedCount})`),
                       },
                       {
                         id: "booked_confirmed",
-                        label: t("Booked Test Sessions (Escala)", "Testes Agendados (Escala Confirmada)"),
+                        label: t(`Booked Test Sessions (Escala) (${bookedCount})`, `Testes Agendados (Escala Confirmada) (${bookedCount})`),
                       }
                     );
                   } else {
@@ -1140,7 +1144,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
             <p className="leading-relaxed text-slate-500">{t("Test slot shows the applicant's actual booking. Before booking, the email asks them to choose a time. The booking button opens their personal cycle schedule.", "O turno mostra o agendamento real. Antes de agendar, o email pede a escolha de um turno. O botão abre o horário pessoal do lote.")}</p>
             {includeBookingButton && <><p>{t("Drag the booking button between paragraphs in Preview, or move its {{booking_link}} token in the editor.", "Arraste o botão entre parágrafos na pré-visualização ou mova {{booking_link}} no editor.")}</p>
               <label className="flex items-center gap-2 font-semibold"><input type="checkbox" checked={followUpEnabled} onChange={event => setFollowUpEnabled(event.target.checked)}/>{t("Send an automatic follow-up after booking", "Enviar seguimento automático após agendamento")}</label>
-              {followUpEnabled && <div className="space-y-3 border-t border-slate-100 pt-3" onFocusCapture={() => { lastEditor.current = "followup"; }}><p className="text-slate-500">{t("When this applicant successfully books, send the message below in addition to the standard confirmation. It uses their chosen date and time and appears in Sent / Outbox.", "Quando o candidato agendar, envie a mensagem abaixo além da confirmação padrão. Usa a data e hora escolhidas e aparece em Enviados / Caixa de saída.")}</p><label className="block font-medium">{t("Follow-up subject", "Assunto do seguimento")}<input aria-label={t("Follow-up subject", "Assunto do seguimento")} value={followUpSubject} onChange={event => setFollowUpSubject(event.target.value)} className="mt-1 w-full rounded-lg border p-2"/></label><RichMessageEditor ariaLabel={t("Follow-up message", "Mensagem de seguimento")} ref={followUpHandle} value={followUpBody} onChange={setFollowUpBody} lang={lang} availableVariables={[{code:"{{candidate_name}}",label:t("Name","Nome")},{code:"{{test_slot}}",label:t("Booked test date & time","Data e hora agendadas")},{code:"{{role_title}}",label:t("Role","Vaga")}]} /></div>}
+              {followUpEnabled && <div className="space-y-3 border-t border-slate-100 pt-3" onFocusCapture={() => { lastEditor.current = "followup"; }}><p className="text-slate-500">{t("When this applicant successfully books, send the message below in addition to the standard confirmation. It uses their chosen date and time and appears in Sent / Outbox.", "Quando o candidato agendar, envie a mensagem abaixo além da confirmação padrão. Usa a data e hora escolhidas e aparece em Enviados / Caixa de saída.")}</p><div><label htmlFor="studio-followup-subject" className="block font-medium">{t("Follow-up subject", "Assunto do seguimento")}</label><input id="studio-followup-subject" name="followUpSubject" type="text" autoComplete="on" aria-label={t("Follow-up subject", "Assunto do seguimento")} value={followUpSubject} onChange={event => setFollowUpSubject(event.target.value)} className="mt-1 w-full rounded-lg border p-2"/></div><RichMessageEditor ariaLabel={t("Follow-up message", "Mensagem de seguimento")} ref={followUpHandle} value={followUpBody} onChange={setFollowUpBody} lang={lang} availableVariables={[{code:"{{candidate_name}}",label:t("Name","Nome")},{code:"{{test_slot}}",label:t("Booked test date & time","Data e hora agendadas")},{code:"{{role_title}}",label:t("Role","Vaga")}]} />{(!followUpSubject.trim() || !followUpBody.trim()) && <p className="rounded-lg bg-amber-50 p-2 text-[11px] font-medium text-amber-800">{t("Note: Please fill in both the follow-up subject and message above, or uncheck automatic follow-up before dispatching.", "Nota: Preencha o assunto e a mensagem de seguimento acima, ou desmarque o seguimento automático antes de enviar.")}</p>}</div>}
             </>}
           </div>
 
@@ -1303,7 +1307,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
               {/* Official Email Subject Bar */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
-                  <label className="font-bold text-slate-800">
+                  <label htmlFor="studio-email-subject" className="font-bold text-slate-800">
                     {t("Official Email Subject Line", "Assunto Oficial do Email")}
                   </label>
                   <span className="text-[10px] text-slate-400 font-mono">
@@ -1314,6 +1318,9 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                   type="text"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
+                  id="studio-email-subject"
+                  name="subject"
+                  autoComplete="on"
                   placeholder={t("Enter email subject...", "Assunto da comunicação oficial...")}
                   className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-xs sm:text-sm text-slate-900 font-medium focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none shadow-2xs"
                 />
@@ -1322,7 +1329,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
               {/* Standard Professional Rich Message Editor */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
-                  <label className="font-bold text-slate-800">
+                  <label htmlFor="studio-email-subject" className="font-bold text-slate-800">
                     {t("Official Message Content & Attachments", "Conteúdo Oficial da Mensagem & Anexos")}
                   </label>
                   <span className="text-[10px] text-slate-400 font-mono">
@@ -1528,6 +1535,9 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                   type="email"
                   value={testEmail}
                   onChange={(e) => setTestEmail(e.target.value)}
+                  id="studio-test-email"
+                  name="testEmail"
+                  autoComplete="email"
                   placeholder="admin@overwatchmoz.com"
                   className="w-full text-xs rounded-lg border border-slate-300 px-3 py-1.5 text-slate-900"
                 />

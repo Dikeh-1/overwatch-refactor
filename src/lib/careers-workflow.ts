@@ -100,6 +100,12 @@ export const canReceiveTestInvitation = (a: Application) =>
   (canonicalRole(a.role) !== "cctv_technical_manager" ||
     classifyCandidateLocation(a).isMaputoRegion);
 
+export const hasSentCommunication = (a: Application) =>
+  Boolean(a.invitedAt) ||
+  (a.communications || []).some(
+    (c) => c.status === "sent" || c.status === "delivered",
+  );
+
 /** A recovered display is explicit about its evidence; raw stored status is never rewritten on read. */
 export function resolveApplication(a: Application): Application {
   if (

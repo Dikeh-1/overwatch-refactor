@@ -126,5 +126,8 @@ export const useActiveRole = () => useContext(ActiveRoleContext);
 /** Give embedded open/closed cohort views the same role capabilities without changing the sidebar selection. */
 export function CohortRoleProvider({ role, children }: { role: CareerRoleDefinition; children: React.ReactNode }) {
   const parent = useActiveRole();
-  return <ActiveRoleContext.Provider value={{ ...parent, activeRoleId: role.id, activeRole: role, roles: [role], setActiveRoleId: () => {} }}>{children}</ActiveRoleContext.Provider>;
+  const rolesList = useMemo(() => [role], [role]);
+  const noopSetRole = useCallback(() => {}, []);
+  const value = useMemo(() => ({ ...parent, activeRoleId: role.id, activeRole: role, roles: rolesList, setActiveRoleId: noopSetRole }), [parent, role, rolesList, noopSetRole]);
+  return <ActiveRoleContext.Provider value={value}>{children}</ActiveRoleContext.Provider>;
 }

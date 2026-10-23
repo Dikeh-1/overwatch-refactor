@@ -136,7 +136,7 @@ export default function RecruitmentWorkspace({
     },
     [cohortId, roleId],
   );
-  useRecruitmentRefresh(load);
+  useRecruitmentRefresh(load, tab !== "communications");
   useEffect(() => {
     const controller = new AbortController();
     void Promise.resolve().then(() => load(controller.signal));

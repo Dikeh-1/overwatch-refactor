@@ -88,3 +88,21 @@ test('mailbox read reconciles completed campaign envelopes and does not invent c
  assert.equal(items.find(row=>row.id==='project-parent').data.status,'completed');assert.equal(items.find(row=>row.id==='missing-parent').data.status,'queued');
  assert.equal(rows.get('project-parent').data.status,'queued','GET reconciliation is read-only');
 });
+
+
+test('outbox retry supports both individual and bulk failed/skipped deliveries and reopens completed parent campaign',async()=>{
+ const scope='retry-bulk-scope';
+ rows.set('retry-parent',{id:'retry-parent',kind:'draft',scope,version:1,data:{status:'completed'}});
+ rows.set('fail-1',{id:'fail-1',kind:'outbox',scope,version:1,data:{status:'failed',error:'SMTP timeout',campaignId:'retry-parent'}});
+ rows.set('fail-2',{id:'fail-2',kind:'outbox',scope,version:1,data:{status:'skipped',error:'Temporarily skipped',campaignId:'retry-parent'}});
+ rows.set('already-sent',{id:'already-sent',kind:'outbox',scope,version:1,data:{status:'sent',campaignId:'retry-parent'}});
+ const res=await drafts.POST(request({action:'retry',scope,ids:['fail-1','fail-2','already-sent']}));
+ assert.equal(res.status,200);
+ const body=await res.json();
+ assert.deepEqual(body.retried,['fail-1','fail-2']);
+ assert.deepEqual(body.blocked,['already-sent']);
+ assert.equal(rows.get('fail-1').data.status,'queued');
+ assert.equal(rows.get('fail-2').data.status,'queued');
+ assert.equal(rows.get('already-sent').data.status,'sent');
+ assert.equal(rows.get('retry-parent').data.status,'queued');
+});
