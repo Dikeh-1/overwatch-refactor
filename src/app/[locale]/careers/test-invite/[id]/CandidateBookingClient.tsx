@@ -18,7 +18,6 @@ import {
   RotateCcw,
   MessageSquare,
   Mail,
-  Sparkles,
   X,
 } from "lucide-react";
 import { siteContact } from "@/lib/site-config";
@@ -65,36 +64,30 @@ function ChatbotSupportHeadsUp({
   supportEmail?: string;
 }) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-support-bottom-arrow="true">
       {/* Heads-up support card */}
-      <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-emerald-50/40 p-5 shadow-sm relative overflow-hidden">
+      <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div className="flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-[#07080f] text-emerald-400 flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+            <div className="w-10 h-10 rounded-xl bg-[#07080f] text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
               <MessageSquare size={18} />
             </div>
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-xs sm:text-sm font-bold text-gray-900">
-                  {isPt
-                    ? "Tem alguma dúvida, dificuldade ou questão?"
-                    : "Have any problems, questions, or enquiries?"}
-                </h3>
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  <Sparkles size={10} />
-                  <span>{isPt ? "Apoio ao Candidato" : "Candidate Support"}</span>
-                </span>
-              </div>
+              <h3 className="text-xs sm:text-sm font-bold text-gray-900">
+                {isPt
+                  ? "Tem alguma dúvida, dificuldade ou questão?"
+                  : "Have any problems, questions, or enquiries?"}
+              </h3>
               <p className="text-xs text-gray-600 leading-relaxed">
                 {isPt ? (
                   <>
                     Se tiver qualquer problema ou dúvida, contacte-nos através do{" "}
                     <strong className="text-gray-900">Chatbot no nosso website</strong> — escolha a opção{" "}
-                    <strong className="text-emerald-700">«Falar com um agente»</strong>{" "}
+                    <strong className="text-gray-900">«Falar com um agente»</strong>{" "}
                     <span className="text-gray-500">(&ldquo;Speak with an agent&rdquo;)</span> e a nossa equipa irá responder. Em alternativa, envie-nos um email para{" "}
                     <a
                       href={`mailto:${supportEmail}`}
-                      className="font-bold text-gray-900 underline decoration-emerald-500/60 underline-offset-2 hover:text-emerald-700"
+                      className="font-bold text-gray-900 underline decoration-gray-400 underline-offset-2 hover:text-gray-700"
                     >
                       {supportEmail}
                     </a>{" "}
@@ -104,11 +97,11 @@ function ChatbotSupportHeadsUp({
                   <>
                     If you have any problems or enquiries, please contact us via the{" "}
                     <strong className="text-gray-900">Chatbot on our website</strong> — choose{" "}
-                    <strong className="text-emerald-700">&ldquo;Speak with an agent&rdquo;</strong>{" "}
+                    <strong className="text-gray-900">&ldquo;Speak with an agent&rdquo;</strong>{" "}
                     and we will respond. Or send us an email at{" "}
                     <a
                       href={`mailto:${supportEmail}`}
-                      className="font-bold text-gray-900 underline decoration-emerald-500/60 underline-offset-2 hover:text-emerald-700"
+                      className="font-bold text-gray-900 underline decoration-gray-400 underline-offset-2 hover:text-gray-700"
                     >
                       {supportEmail}
                     </a>{" "}
@@ -120,9 +113,9 @@ function ChatbotSupportHeadsUp({
                 <button
                   type="button"
                   onClick={() => openOverwatchChatbot()}
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#07080f] hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2.5 transition-all shadow-sm cursor-pointer"
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#07080f] hover:bg-gray-800 text-white text-xs font-semibold px-4 py-2.5 transition-all shadow-sm cursor-pointer"
                 >
-                  <MessageSquare size={13} className="text-emerald-400" />
+                  <MessageSquare size={13} className="text-white" />
                   <span>
                     {isPt
                       ? "Abrir Chatbot · «Falar com um agente»"
@@ -135,7 +128,7 @@ function ChatbotSupportHeadsUp({
                   )}`}
                   className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-800 text-xs font-semibold px-4 py-2.5 transition-all shadow-xs"
                 >
-                  <Mail size={13} className="text-emerald-600" />
+                  <Mail size={13} className="text-gray-600" />
                   <span>{supportEmail}</span>
                 </a>
               </div>
@@ -156,11 +149,7 @@ function ChatbotSupportHeadsUp({
               : "Click to open the Chatbot in the bottom-right corner"
           }
         >
-          <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50/90 group-hover:bg-emerald-100/90 border border-emerald-200/80 px-3.5 py-1.5 text-[11px] font-semibold text-emerald-900 shadow-xs transition-all">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-            </span>
+          <div className="inline-flex items-center gap-2 rounded-full bg-white group-hover:bg-gray-50 border border-gray-200 px-3.5 py-1.5 text-[11px] font-medium text-gray-700 shadow-xs transition-all">
             <span>
               {isPt
                 ? "O ícone do Chatbot está no canto inferior direito — escolha «Falar com um agente»"
@@ -168,51 +157,31 @@ function ChatbotSupportHeadsUp({
             </span>
           </div>
 
-          {/* Smooth curved SVG arrow sweeping down-right toward the floating chatbot launcher */}
+          {/* Clean monochrome curved SVG arrow sweeping down-right toward the floating chatbot launcher */}
           <div className="pointer-events-none pr-3 -mt-0.5">
             <svg
               width="210"
-              height="62"
-              viewBox="0 0 210 62"
+              height="56"
+              viewBox="0 0 210 56"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
-              className="overflow-visible text-emerald-600 transition-transform duration-300 group-hover:translate-x-1 group-hover:translate-y-0.5"
+              className="overflow-visible text-gray-500 transition-transform duration-300 group-hover:translate-x-1 group-hover:translate-y-0.5"
               aria-hidden="true"
             >
-              <defs>
-                <linearGradient id="owChatCurveGrad" x1="12" y1="6" x2="194" y2="54" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
-                  <stop offset="55%" stopColor="#059669" stopOpacity="0.85" />
-                  <stop offset="100%" stopColor="#047857" stopOpacity="1" />
-                </linearGradient>
-              </defs>
-              {/* Soft glow underpath */}
               <path
-                d="M 18 8 C 72 8, 128 16, 188 49"
-                stroke="#10b981"
-                strokeOpacity="0.16"
-                strokeWidth="6"
-                strokeLinecap="round"
-              />
-              {/* Animated dashed guide curve */}
-              <path
-                d="M 18 8 C 72 8, 128 16, 188 49"
-                stroke="url(#owChatCurveGrad)"
-                strokeWidth="2.25"
+                d="M 18 8 C 72 8, 128 16, 188 47"
+                stroke="currentColor"
+                strokeWidth="1.8"
                 strokeLinecap="round"
                 strokeDasharray="5 4"
               />
-              {/* Arrowhead pointing toward bottom-right */}
               <path
-                d="M 176 52 L 191 51 L 185 37"
-                stroke="#047857"
-                strokeWidth="2.4"
+                d="M 176 50 L 191 49 L 185 35"
+                stroke="currentColor"
+                strokeWidth="1.9"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
-              {/* Subtle target ring at tip */}
-              <circle cx="195" cy="53" r="3.5" fill="#10b981" fillOpacity="0.3" />
-              <circle cx="195" cy="53" r="1.75" fill="#047857" />
             </svg>
           </div>
         </button>
@@ -240,7 +209,33 @@ export default function CandidateBookingClient({
   const [, setSuccessNotice] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [dismissFloatingArrow, setDismissFloatingArrow] = useState(false);
+  const [bottomArrowVisible, setBottomArrowVisible] = useState(false);
   const [liveSlotTakenNotice, setLiveSlotTakenNotice] = useState<string>("");
+
+  // Automatically hide the floating bottom-right arrow whenever the inline bottom support arrow is scrolled into view
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const checkBottomArrowVisibility = () => {
+      const nodes = document.querySelectorAll('[data-support-bottom-arrow="true"]');
+      let anyVisible = false;
+      nodes.forEach((node) => {
+        const rect = node.getBoundingClientRect();
+        if (rect.top < window.innerHeight - 40 && rect.bottom > 0) {
+          anyVisible = true;
+        }
+      });
+      setBottomArrowVisible(anyVisible);
+    };
+
+    checkBottomArrowVisibility();
+    window.addEventListener("scroll", checkBottomArrowVisibility, { passive: true });
+    window.addEventListener("resize", checkBottomArrowVisibility, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", checkBottomArrowVisibility);
+      window.removeEventListener("resize", checkBottomArrowVisibility);
+    };
+  }, [loading, candidate, isDeactivated, error]);
 
   useEffect(() => {
     if (candidate?.id && candidate.testSlot) {
@@ -906,8 +901,8 @@ export default function CandidateBookingClient({
                           : "In-person test sessions with limited capacity. Select an open slot below."}
                       </p>
                     </div>
-                    <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-gray-700 bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-full">
+                      <span className="h-1.5 w-1.5 rounded-full bg-gray-500" />
                       <span>{isPt ? "Vagas em tempo real" : "Live availability"}</span>
                     </span>
                   </div>
@@ -1096,26 +1091,26 @@ export default function CandidateBookingClient({
         ) : null}
       </div>
 
-      {/* Non-obstructive dynamic floating pointer above the bottom-right Chatbot icon */}
-      {!dismissFloatingArrow && (
+      {/* Non-obstructive dynamic floating pointer above the bottom-right Chatbot icon (auto-hides once bottom arrow is in view) */}
+      {!dismissFloatingArrow && !bottomArrowVisible && (
         <div className="fixed bottom-[86px] right-4 sm:right-6 z-40 pointer-events-none hidden sm:flex flex-col items-end">
           <div className="pointer-events-auto flex items-center gap-2 rounded-2xl bg-[#07080f]/95 text-white border border-white/15 px-3.5 py-2 shadow-xl backdrop-blur-md">
             <button
               type="button"
               onClick={() => openOverwatchChatbot()}
-              className="flex items-center gap-2 text-left text-[11px] font-medium leading-snug hover:text-emerald-300 transition-colors cursor-pointer"
+              className="flex items-center gap-2 text-left text-[11px] font-medium leading-snug hover:text-white/80 transition-colors cursor-pointer"
             >
-              <MessageSquare size={13} className="text-emerald-400 shrink-0" />
+              <MessageSquare size={13} className="text-white/80 shrink-0" />
               <span>
                 {isPt ? (
                   <>
-                    Dúvidas? Abra o <strong className="text-emerald-400">Chatbot</strong> e escolha{" "}
-                    <strong className="underline decoration-emerald-400/60">«Falar com um agente»</strong>
+                    Dúvidas? Abra o <strong>Chatbot</strong> e escolha{" "}
+                    <strong className="underline decoration-white/50">«Falar com um agente»</strong>
                   </>
                 ) : (
                   <>
-                    Need help? Open the <strong className="text-emerald-400">Chatbot</strong> &amp; choose{" "}
-                    <strong className="underline decoration-emerald-400/60">&ldquo;Speak with an agent&rdquo;</strong>
+                    Need help? Open the <strong>Chatbot</strong> &amp; choose{" "}
+                    <strong className="underline decoration-white/50">&ldquo;Speak with an agent&rdquo;</strong>
                   </>
                 )}
               </span>
@@ -1135,20 +1130,20 @@ export default function CandidateBookingClient({
             viewBox="0 0 54 36"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
-            className="mr-3 -mt-0.5 text-emerald-500 drop-shadow-sm"
+            className="mr-3 -mt-0.5 text-gray-500"
             aria-hidden="true"
           >
             <path
               d="M 8 2 C 24 6, 36 14, 40 31"
               stroke="currentColor"
-              strokeWidth="2.2"
+              strokeWidth="1.9"
               strokeLinecap="round"
               strokeDasharray="4 3"
             />
             <path
               d="M 33 26 L 41 33 L 45 23"
               stroke="currentColor"
-              strokeWidth="2.2"
+              strokeWidth="1.9"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
