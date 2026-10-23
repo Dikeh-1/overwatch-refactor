@@ -10,7 +10,7 @@ import { recordExportRequest } from "@/lib/admin-browser-activity";
 import { csvCell } from "@/lib/csv";
 import Link from "next/link";
 import { ArrowLeft, Download, RefreshCw, Mail } from "lucide-react";
-import type { Application } from "@/lib/careers";
+import { isPastDateSlot, type Application } from "@/lib/careers";
 import {
   ALL_PIPELINE_STAGES,
   type CareerCohort,
@@ -456,7 +456,7 @@ export default function RecruitmentWorkspace({
             </div>
           </section>
         )}
-        {!snapshotMode && metrics.booked > 0 && metrics.attended === 0 && (
+        {!snapshotMode && tab !== "communications" && metrics.booked > 0 && metrics.attended === 0 && apps.some((a) => a.testSlot && isPastDateSlot(a.testSlot)) && !apps.some((a) => a.testSlot && !isPastDateSlot(a.testSlot)) && !(cohort?.testSlots || []).some((s) => !isPastDateSlot(s)) && (
           <p
             role="status"
             className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900"
