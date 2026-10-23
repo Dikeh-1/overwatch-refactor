@@ -304,7 +304,7 @@ async function handlePOST(request: Request) {
 
         sentCount++;
         try {
-          await updateApplication(candidate.id, { ...(includeBookingButton ? { invitedAt: new Date().toISOString() } : {}), communications: [...(candidate.communications || []), { id: crypto.randomUUID(), type: "custom", subject: candSubj, bodySnippet: candMsg, recipient: candidate.email, sentAt: new Date().toISOString(), status: "sent" }] });
+          await updateApplication(candidate.id, { ...(includeBookingButton ? { invitedAt: new Date().toISOString(), ...(!candidate.testSlot && ["new", "shortlisted", "archived"].includes(candidate.status) ? { status: "test_invited" as const } : {}) } : {}), communications: [...(candidate.communications || []), { id: crypto.randomUUID(), type: "custom", subject: candSubj, bodySnippet: candMsg, recipient: candidate.email, sentAt: new Date().toISOString(), status: "sent" }] });
         } catch {
           // Delivery already succeeded. Reporting failure here invites duplicate emails.
           historyWarnings.push(candidate.id);

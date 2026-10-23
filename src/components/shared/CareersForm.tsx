@@ -307,6 +307,8 @@ export default function CareersForm({
   const [currentStep, setCurrentStep] = useState(1);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [emailCheckStatus, setEmailCheckStatus] = useState<"idle" | "checking" | "available" | "duplicate" | "error">("idle");
+  const [verifiedEmailKey, setVerifiedEmailKey] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [coverLetter, setCoverLetter] = useState("");
   const [lastProfession, setLastProfession] = useState("");
@@ -397,6 +399,8 @@ export default function CareersForm({
     setSelectedRoleId(roleItem.id);
     setCurrentStep(1);
     setDynamicAnswers({});
+    setEmailCheckStatus("idle");
+    setVerifiedEmailKey("");
     if (!roleItem.open) {
       setError(closedText);
     } else {
@@ -425,7 +429,69 @@ export default function CareersForm({
   }
 
   // Section-by-Section Validation and Navigation
-  function handleNextStep() {
+  const duplicateEmailText = t(
+    "An application with this email address has already been submitted for this open role.",
+    "Já existe uma candidatura submetida com este endereço de e-mail para esta vaga.",
+  );
+
+  async function verifyEmailAgainstDatabase(rawEmail: string, roleId: string): Promise<"available" | "duplicate" | "invalid" | "error"> {
+    const clean = rawEmail.trim().toLowerCase();
+    if (!clean || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean) || clean.length > 254) {
+      setEmailCheckStatus("idle");
+      setVerifiedEmailKey("");
+      return "invalid";
+    }
+    const key = `${roleId}:${clean}`;
+    if (verifiedEmailKey === key && (emailCheckStatus === "available" || emailCheckStatus === "duplicate")) {
+      return emailCheckStatus;
+    }
+    setEmailCheckStatus("checking");
+    try {
+      const res = await fetch(
+        `/api/careers/check-email?email=${encodeURIComponent(clean)}&role=${encodeURIComponent(roleId)}&t=${Date.now()}`,
+        { cache: "no-store" },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (data.duplicate || data.code === "DUPLICATE_EMAIL") {
+        setEmailCheckStatus("duplicate");
+        setVerifiedEmailKey(key);
+        setError(duplicateEmailText);
+        return "duplicate";
+      }
+      if (res.ok && data.available) {
+        setEmailCheckStatus("available");
+        setVerifiedEmailKey(key);
+        return "available";
+      }
+      setEmailCheckStatus("error");
+      setVerifiedEmailKey("");
+      return "error";
+    } catch {
+      setEmailCheckStatus("error");
+      setVerifiedEmailKey("");
+      return "error";
+    }
+  }
+
+  useEffect(() => {
+    const clean = email.trim().toLowerCase();
+    if (!clean || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) {
+      setEmailCheckStatus("idle");
+      setVerifiedEmailKey("");
+      return;
+    }
+    const key = `${selectedRoleId}:${clean}`;
+    if (verifiedEmailKey === key && (emailCheckStatus === "available" || emailCheckStatus === "duplicate")) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      void verifyEmailAgainstDatabase(clean, selectedRoleId);
+    }, 450);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [email, selectedRoleId]);
+
+  async function handleNextStep() {
     setError("");
 
     if (currentStep === 1) {
@@ -451,6 +517,24 @@ export default function CareersForm({
           setError(t("Please select your sex.", "Por favor selecione o seu sexo."));
           return;
         }
+      }
+      const verification = await verifyEmailAgainstDatabase(email, selectedRoleId);
+      if (verification === "invalid") {
+        setError(t("Please enter a valid email address.", "Por favor indique um endereço de e-mail válido."));
+        return;
+      }
+      if (verification === "duplicate") {
+        setError(duplicateEmailText);
+        return;
+      }
+      if (verification !== "available") {
+        setError(
+          t(
+            "Unable to verify your email address right now. Please check your connection and try again.",
+            "Não foi possível verificar o seu endereço de e-mail neste momento. Verifique a sua ligação e tente novamente.",
+          ),
+        );
+        return;
       }
     } else if (currentStep === 2) {
       if (isTechnicalManager) {
@@ -594,6 +678,10 @@ export default function CareersForm({
     } catch (e) {
       const code = (e as Error).message;
       if (code === "ROLE_CLOSED") {
+        setError(closedText);
+      } else if (code === "DUPLICATE_EMAIL") {
+        setError(duplicateEmailText);
+      } else if (false) {
         setError(closedText);
       } else if (code === "FILE_INVALID") {
         setError(
@@ -836,8 +924,12 @@ export default function CareersForm({
                         setExperience("");
                         setShifts("");
                         setDynamicAnswers({});
+    setEmailCheckStatus("idle");
+    setVerifiedEmailKey("");
                         setFile(null);
                         setError("");
+                        setEmailCheckStatus("idle");
+                        setVerifiedEmailKey("");
                       }}
                       className="inline-flex items-center gap-2 rounded-xl bg-foreground px-5 py-2.5 text-xs font-semibold text-background transition-transform hover:-translate-y-0.5 cursor-pointer"
                     >
@@ -1011,6 +1103,34 @@ export default function CareersForm({
                               maxLength={254}
                               autoComplete="email"
                               placeholder="exemplo@dominio.com"
+                              onBlur={() => {
+                                if (email.trim() && email.includes("@")) {
+                                  void verifyEmailAgainstDatabase(email, selectedRoleId);
+                                }
+                              }}
+                              className="min-h-12 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground placeholder:text-muted/60 focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 transition-colors"
+                            />
+                            {emailCheckStatus === "checking" && (
+                              <span className="block pt-1 text-[11px] font-medium text-muted">
+                                {t("Verifying email address in database…", "A verificar endereço de e-mail na base de dados…")}
+                              </span>
+                            )}
+                            {emailCheckStatus === "available" && (
+                              <span className="block pt-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                {t("✓ Email verified", "✓ E-mail verificado")}
+                              </span>
+                            )}
+                            {emailCheckStatus === "duplicate" && (
+                              <span className="block pt-1 text-[11px] font-semibold text-red-600 dark:text-red-400">
+                                {duplicateEmailText}
+                              </span>
+                            )}
+                            {emailCheckStatus === "error" && (
+                              <span className="block pt-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                                {t("Could not verify email right now. Please try again.", "Não foi possível verificar o e-mail. Tente novamente.")}
+                              </span>
+                            )}
+                            <span hidden
                               className="min-h-12 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground placeholder:text-muted/60 focus:border-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 transition-colors"
                             />
                           </label>
@@ -1099,10 +1219,15 @@ export default function CareersForm({
                         <div className="pt-4 flex items-center justify-end">
                           <button
                             type="button"
-                            onClick={handleNextStep}
+                            onClick={() => void handleNextStep()}
+                            disabled={Number(currentStep) === 1 && (emailCheckStatus === "checking" || emailCheckStatus === "duplicate")}
                             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-foreground px-6 text-xs font-bold text-background shadow-sm hover:bg-foreground/90 transition-all cursor-pointer"
                           >
-                            <span>{t("Continue to Section 2", "Continuar para a Secção 2")}</span>
+                            <span>
+                              {emailCheckStatus === "checking"
+                                ? t("Verifying email…", "A verificar e-mail…")
+                                : t("Continue to Section 2", "Continuar para a Secção 2")}
+                            </span>
                             <ArrowRight size={15} />
                           </button>
                         </div>
@@ -1355,7 +1480,8 @@ export default function CareersForm({
 
                           <button
                             type="button"
-                            onClick={handleNextStep}
+                            onClick={() => void handleNextStep()}
+                            disabled={Number(currentStep) === 1 && (emailCheckStatus === "checking" || emailCheckStatus === "duplicate")}
                             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-foreground px-6 text-xs font-bold text-background shadow-sm hover:bg-foreground/90 transition-all cursor-pointer"
                           >
                             <span>{t("Continue to Section 3", "Continuar para a Secção 3")}</span>
@@ -1501,7 +1627,8 @@ export default function CareersForm({
 
                               <button
                                 type="button"
-                                onClick={handleNextStep}
+                                onClick={() => void handleNextStep()}
+                            disabled={Number(currentStep) === 1 && (emailCheckStatus === "checking" || emailCheckStatus === "duplicate")}
                                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-foreground px-6 text-xs font-bold text-background shadow-sm hover:bg-foreground/90 transition-all cursor-pointer"
                               >
                                 <span>{t("Continue to Section 4", "Continuar para a Secção 4")}</span>
@@ -1696,7 +1823,8 @@ export default function CareersForm({
 
                           <button
                             type="button"
-                            onClick={handleNextStep}
+                            onClick={() => void handleNextStep()}
+                            disabled={Number(currentStep) === 1 && (emailCheckStatus === "checking" || emailCheckStatus === "duplicate")}
                             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-foreground px-6 text-xs font-bold text-background shadow-sm hover:bg-foreground/90 transition-all cursor-pointer"
                           >
                             <span>{t("Continue to Final Step (CV Upload)", "Continuar para o Passo Final (CV)")}</span>

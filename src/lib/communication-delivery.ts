@@ -56,7 +56,12 @@ export async function deliverQueuedItem(item: MailItem) {
     claimed = await putMail({ ...claimed, data: { ...claimed.data, subject: rendered.subject, messageBody: rendered.text, htmlContent: rendered.html, providerMessageId: receipt.messageId, status: "sent", sentAt: new Date().toISOString(), attachments: (item.data.attachments || []).map((a: MailAttachment) => ({ name: a.name, type: a.type, size: a.size })) } }, claimed.version);
     const current = await getApplication(candidate.id) || candidate;
     const commEntry = { id: item.data.deliveryId, type: "custom" as const, subject: rendered.subject, bodySnippet: rendered.text, recipient: candidate.email, sentAt: claimed.data.sentAt, status: "sent" as const };
-    const invitedPatch = item.data.includeBookingButton ? { invitedAt: claimed.data.sentAt || new Date().toISOString() } : {};
+    const invitedPatch = item.data.includeBookingButton
+      ? {
+          invitedAt: claimed.data.sentAt || new Date().toISOString(),
+          ...(!current.testSlot && ["new", "shortlisted", "archived"].includes(current.status) ? { status: "test_invited" as const } : {}),
+        }
+      : {};
     await updateApplication(candidate.id, { ...invitedPatch, communications: [...(current.communications || []), commEntry] });
     // Keep duplicate application rows for the same email & role in sync so uncontacted counts never desync
     const normEmail = candidate.email.trim().toLowerCase();

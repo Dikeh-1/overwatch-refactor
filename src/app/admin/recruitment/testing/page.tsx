@@ -9,7 +9,9 @@ import { Application, DEFAULT_TEST_SLOTS } from "@/lib/careers";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 
 export default function TestingPage() {
-  const workspaceRole = useSearchParams().get("role");
+  const params = useSearchParams();
+  const workspaceRole = params.get("role");
+  const cohortId = params.get("cohortId");
   const [applications, setApplications] = useState<Application[]>([]);
   const [broadcastSlots, setBroadcastSlots] = useState<string[]>([...DEFAULT_TEST_SLOTS]);
   const [slotQuota, setSlotQuota] = useState<number>(15);
@@ -113,7 +115,7 @@ export default function TestingPage() {
     }
   };
 
-  if (workspaceRole && workspaceRole !== "all") return <RecruitmentWorkspace key={workspaceRole} roleId={workspaceRole} initialTab="testing" />;
+  if (cohortId || (workspaceRole && workspaceRole !== "all")) return <RecruitmentWorkspace key={cohortId || workspaceRole || ""} cohortId={cohortId || undefined} roleId={workspaceRole || undefined} initialTab="testing" />;
 
   if (loading) {
     return (

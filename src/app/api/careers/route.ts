@@ -2,7 +2,8 @@ import { auditRequest } from "@/lib/admin-activity";
 import { notifyApplication } from "@/lib/careers-email";
 import { NextResponse } from "next/server";
 import { MAX_CV, type Application } from "@/lib/careers";
-import { getRoles, saveApplication } from "@/lib/careers-store";
+import { getApplications, getRoles, saveApplication } from "@/lib/careers-store";
+import { sameRole } from "@/lib/careers-workflow";
 import { evaluateTechnicalScreening, hasTechnicalScreening } from "@/lib/screening-engine";
 import { getRoleDefinitions } from "@/lib/careers-campaign-store";
 import { evaluateApplicationWithRules } from "@/lib/careers-evaluator";
@@ -46,6 +47,12 @@ async function handlePOST(request: Request) {
     );
     if (!matchedRole?.open) {
       return NextResponse.json({ code: "ROLE_CLOSED" }, { status: 409 });
+    }
+    const existingApplications = await getApplications(true);
+    if (existingApplications.some((app) => (app.email || "").trim().toLowerCase() === email.trim().toLowerCase() && sameRole(app.role, role))) {
+      return NextResponse.json({ code: "DUPLICATE_EMAIL" }, { status: 409 });
+    }
+    if (false) {
     }
 
     const cv = data.get("cv");

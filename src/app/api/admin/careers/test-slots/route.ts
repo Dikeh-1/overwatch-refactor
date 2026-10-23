@@ -4,7 +4,6 @@ import { saveCohort, invalidateCampaignStoreCache } from "@/lib/careers-campaign
 import { parseSlotComponents } from "@/lib/careers";
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
 import { getTestSlotConfig, saveTestSlotConfig, invalidateApplicationsCache } from "@/lib/careers-store";
-import { sameRole } from "@/lib/careers-workflow";
 
 export const dynamic = "force-dynamic";
 
@@ -18,9 +17,8 @@ export async function GET(request: Request) {
 
   try {
     const params = new URL(request.url).searchParams;
-    const workspace = await getRecruitmentWorkspaceData();
-
     if (params.has("catalog") || params.has("cohortId")) {
+      const workspace = await getRecruitmentWorkspaceData();
       const cohort = workspace.cohorts.find((c) => c.id === params.get("cohortId"));
       if (params.has("cohortId") && !cohort) {
         return Response.json({ error: "Cycle not found" }, { status: 404 });
@@ -43,23 +41,6 @@ export async function GET(request: Request) {
                   slotQuota: c.slotQuota || 15,
                 })),
             },
-        { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } },
-      );
-    }
-
-    // For general /api/admin/careers/test-slots requests, prefer active role cohort schedule if configured
-    const activeRole = workspace.roles.find((r) => r.open && r.activeCohortId);
-    const activeCohort =
-      (activeRole && workspace.cohorts.find((c) => c.id === activeRole.activeCohortId)) ||
-      workspace.cohorts.find((c) => !c.unassigned && Array.isArray(c.testSlots) && c.testSlots.length > 0);
-
-    if (activeCohort && Array.isArray(activeCohort.testSlots)) {
-      return Response.json(
-        {
-          slots: activeCohort.testSlots,
-          quota: activeCohort.slotQuota || 15,
-          cohortId: activeCohort.id,
-        },
         { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } },
       );
     }
@@ -115,34 +96,20 @@ async function handlePOST(request: Request) {
     }
 
     const uniqueSlots = [...new Set<string>(cleanSlots)];
-    const workspace = await getRecruitmentWorkspaceData();
 
     if (body.cohortId) {
+      const workspace = await getRecruitmentWorkspaceData();
       const cohort = workspace.cohorts.find((c) => c.id === body.cohortId);
       if (!cohort || cohort.unassigned) {
         return Response.json({ error: "Cohort not found or membership needs review" }, { status: 400 });
       }
       await saveCohort({ ...cohort, testSlots: uniqueSlots, slotQuota: quota });
-      // Also synchronize global test_slots config when updating an active or primary cohort
-      const parentRole = workspace.roles.find((r) => sameRole(r.id, cohort.roleId));
-      if (parentRole?.open || parentRole?.activeCohortId === cohort.id || cohort.status === "active") {
-        await saveTestSlotConfig({ slots: uniqueSlots, quota }).catch(() => {});
-      }
       invalidateCampaignStoreCache();
       invalidateApplicationsCache();
       return Response.json({ success: true, slots: uniqueSlots, quota, cohortId: cohort.id });
     }
 
-    // Saved from global Testing view without cohortId: update global config AND sync active cohort(s)
     const saved = await saveTestSlotConfig({ slots: uniqueSlots, quota });
-    const activeRole = workspace.roles.find((r) => r.open && r.activeCohortId);
-    const targetCohort =
-      (activeRole && workspace.cohorts.find((c) => c.id === activeRole.activeCohortId)) ||
-      workspace.cohorts.find((c) => !c.unassigned && Array.isArray(c.testSlots) && c.testSlots.length > 0);
-    if (targetCohort && !targetCohort.unassigned) {
-      await saveCohort({ ...targetCohort, testSlots: uniqueSlots, slotQuota: quota }).catch(() => {});
-    }
-    invalidateCampaignStoreCache();
     invalidateApplicationsCache();
     return Response.json({ success: true, slots: saved.slots, quota: saved.quota });
   } catch (error) {

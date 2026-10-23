@@ -103,8 +103,8 @@ export function RoleTestSlotSettings() {
       );
       setNotice(
         t(
-          "Schedule saved live. All applicant booking pages and testing rosters now reflect these slots immediately.",
-          "Horário guardado em tempo real. Todas as páginas de agendamento dos candidatos e listas de teste reflectem estes turnos imediatamente."
+          "Schedule saved live. Applicant booking pages and testing rosters for this selected recruitment cycle now reflect these slots immediately.",
+          "Horário guardado em tempo real. As páginas de agendamento dos candidatos e listas de teste deste lote seleccionado reflectem estes turnos imediatamente."
         )
       );
       window.dispatchEvent(new Event("admin:careers-updated"));
@@ -127,8 +127,8 @@ export function RoleTestSlotSettings() {
         </h2>
         <p className="mt-1 text-xs leading-relaxed text-slate-500">
           {t(
-            "Dates and times use Maputo time (UTC+2). Adding, changing, or removing a slot here immediately updates every applicant's booking page and the general testing schedule live.",
-            "Datas e horas de Maputo (UTC+2). Adicionar, alterar ou remover um turno aqui actualiza imediatamente a página de agendamento de cada candidato e a escala geral em tempo real."
+            "Dates and times use Maputo time (UTC+2). Adding, changing, or removing a slot here immediately updates applicant booking pages and testing schedules for the selected recruitment cycle.",
+            "Datas e horas de Maputo (UTC+2). Adicionar, alterar ou remover um turno aqui actualiza imediatamente as páginas de agendamento e a escala de testes apenas para o lote de recrutamento seleccionado."
           )}
         </p>
       </div>
