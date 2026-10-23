@@ -64,7 +64,7 @@ Vimos por este meio convocar-lhe formalmente para o início do Programa de Forma
 - Traje formal / executivo sóbrio (calça escura ou saia abaixo do joelho, blusa ou camisa social, calçado fechado e confortável).
 
 5. CANAL DE APOIO & ESCLARECIMENTO DE DÚVIDAS:
-- Para qualquer questão de logística ou confirmação prévia, favor contactar a equipa de RH via WhatsApp ou chamada para o número institucional Overwatch: +258 84 287 0793.
+- Para qualquer questão ou dúvida, entre em contacto através do Chatbot no nosso website (www.overwatchmoz.com — escolha «Falar com um agente») ou envie email para info@overwatchmoz.com.
 
 Reiteramos os nossos parabéns pela dedicação demonstrada nas provas de selecção e esperamos contar com o seu melhor desempenho nesta fase decisiva.
 
@@ -107,7 +107,7 @@ You are hereby invited to attend the commencement of the Initial Training and Op
 - Formal / sober executive business attire (dark trousers or below-the-knee skirt, collared shirt/blouse, closed comfortable shoes).
 
 5. SUPPORT & CONTACT CHANNEL:
-- For logistics inquiries or questions, contact the HR team via WhatsApp or call: +258 84 287 0793.
+- For any questions or enquiries, contact us via the Chatbot on our website (www.overwatchmoz.com — choose "Speak with an agent") or email info@overwatchmoz.com.
 
 Congratulations on your dedication during the selection trials. We look forward to your best performance in this decisive stage.
 

@@ -25,24 +25,43 @@ type ZohoWindow = Window & {
 const ZOHO_WIDGET_SRC =
   "https://salesiq.zohopublic.com/widget?wc=siq80b8b734cb6cc48334e01ab8c29da76f4ecfcbad2ed2ade5b18c142f9ec357da";
 
+export function openOverwatchChatbot() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("overwatch:open-chat"));
+}
+
 export default function ZohoChatbot() {
   useEffect(() => {
     let interactionTimer: number | undefined;
+    let pendingOpen = false;
     const isConstrained = isConstrainedDevice();
 
-    const loadZohoChat = () => {
-      if (document.getElementById("zsiqscript")) return;
-
+    const loadZohoChat = (openImmediately = false) => {
+      if (openImmediately) pendingOpen = true;
       const zohoWindow = window as ZohoWindow;
+
+      if (document.getElementById("zsiqscript")) {
+        if (pendingOpen && zohoWindow.$zoho?.salesiq?.floatwindow?.visible) {
+          zohoWindow.$zoho.salesiq.floatwindow.visible("show");
+          pendingOpen = false;
+        }
+        return;
+      }
+
       zohoWindow.$zoho = zohoWindow.$zoho || {};
       zohoWindow.$zoho.salesiq = zohoWindow.$zoho.salesiq || {};
 
       const salesiq = zohoWindow.$zoho.salesiq;
       salesiq.ready = () => {
-        // Keep the support button available without covering page content with
-        // an unsolicited welcome window or tooltip.
-        salesiq.floatwindow?.visible?.("hide");
-        salesiq.floatbutton?.coin?.hidetooltip?.();
+        if (pendingOpen) {
+          salesiq.floatwindow?.visible?.("show");
+          pendingOpen = false;
+        } else {
+          // Keep the support button available without covering page content with
+          // an unsolicited welcome window or tooltip.
+          salesiq.floatwindow?.visible?.("hide");
+          salesiq.floatbutton?.coin?.hidetooltip?.();
+        }
       };
 
       const widgetScript = document.createElement("script");
@@ -55,7 +74,15 @@ export default function ZohoChatbot() {
 
     const requestLoad = () => {
       if (interactionTimer || document.getElementById("zsiqscript")) return;
-      interactionTimer = window.setTimeout(loadZohoChat, 1200);
+      interactionTimer = window.setTimeout(() => loadZohoChat(false), 1200);
+    };
+
+    const handleOpenChat = () => {
+      if (interactionTimer) {
+        window.clearTimeout(interactionTimer);
+        interactionTimer = undefined;
+      }
+      loadZohoChat(true);
     };
 
     // Defer the third-party chat payload until there is user intent, with a
@@ -63,14 +90,22 @@ export default function ZohoChatbot() {
     window.addEventListener("pointerdown", requestLoad, { once: true, passive: true });
     window.addEventListener("touchstart", requestLoad, { once: true, passive: true });
     window.addEventListener("keydown", requestLoad, { once: true });
-    const fallbackTimer = isConstrained
-      ? undefined
-      : window.setTimeout(requestLoad, 15000);
+    window.addEventListener("overwatch:open-chat", handleOpenChat);
+
+    // On candidate test-invite pages, ensure the floating chatbot icon appears promptly
+    const isTestInvitePage =
+      typeof window !== "undefined" && window.location.pathname.includes("/careers/test-invite");
+    const fallbackTimer = isTestInvitePage
+      ? window.setTimeout(() => loadZohoChat(false), 400)
+      : isConstrained
+        ? undefined
+        : window.setTimeout(requestLoad, 15000);
 
     return () => {
       window.removeEventListener("pointerdown", requestLoad);
       window.removeEventListener("touchstart", requestLoad);
       window.removeEventListener("keydown", requestLoad);
+      window.removeEventListener("overwatch:open-chat", handleOpenChat);
       if (fallbackTimer) window.clearTimeout(fallbackTimer);
       if (interactionTimer) window.clearTimeout(interactionTimer);
     };

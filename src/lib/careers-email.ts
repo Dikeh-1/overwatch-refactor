@@ -947,7 +947,7 @@ export async function sendTestInvitation({
           <div style="background-color: #f8fafc; padding: 22px 32px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6;">
             <strong style="color: #090d16;">Overwatch Moçambique, Lda.</strong><br />
             ${siteContact.address.pt}<br />
-            Telefone / WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #0284c7; text-decoration: none; font-weight: 600;">+258 84 287 0793</a> · Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none;">${siteContact.email}</a> · Website: <a href="${origin}" style="color: #64748b; text-decoration: none;">www.overwatchmoz.com</a>
+            Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none; font-weight: 600;">${siteContact.email}</a> · Website / Chatbot («Falar com um agente»): <a href="${origin}" style="color: #0284c7; text-decoration: none;">www.overwatchmoz.com</a>
           </div>
 
         </div>
@@ -1027,7 +1027,9 @@ export async function sendGatePassEmail({
       ? `Lembrete: O seu teste presencial da Overwatch é amanhã — Traga o seu Passe QR`
       : `Passe Oficial de Acesso: Teste Presencial Overwatch — Apresentação Obrigatória na Portaria`);
 
-  const refBadge = isReminder ? "REF: CCO-2026/LEMBRETE" : "REF: CCO-2026/PASSE-PORTARIA";
+  const isTechManager = application.role === "cctv_technical_manager" || Boolean(application.cohortId && application.cohortId.includes("cctv_technical_manager"));
+  const roleLabelPt = isTechManager ? "Gestor Técnico e Instalação de CCTV" : "Operadora de CCO";
+  const refBadge = isReminder ? (isTechManager ? "REF: TM-2026/LEMBRETE" : "REF: CCO-2026/LEMBRETE") : (isTechManager ? "REF: TM-2026/PASSE-PORTARIA" : "REF: CCO-2026/PASSE-PORTARIA");
   const subHeading = isReminder
     ? "LEMBRETE OFICIAL · TESTE DE SELECÇÃO AMANHÃ"
     : "PASSE DIGITAL DE ENTRADA · CONTROLO DE ACESSO";
@@ -1091,8 +1093,8 @@ export async function sendGatePassEmail({
             <p style="font-size: 14px; color: #334155; margin: 0 0 16px 0; line-height: 1.6;">
               ${
                 isReminder
-                  ? `Lembramos que o seu <strong>Teste Presencial de Selecção</strong> para a vaga de <strong>Operadora de CCO</strong> da Overwatch Moçambique está agendado para <strong>amanhã</strong>.`
-                  : `Disponibilizamos abaixo o seu <strong>Passe Oficial de Acesso com Código QR</strong> para o Teste Presencial de Selecção Técnica para a vaga de <strong>Operadora de CCO</strong>.`
+                  ? `Lembramos que o seu <strong>Teste Presencial de Selecção</strong> para a vaga de <strong>${roleLabelPt}</strong> da Overwatch Moçambique está agendado para <strong>amanhã</strong>.`
+                  : `Disponibilizamos abaixo o seu <strong>Passe Oficial de Acesso com Código QR</strong> para o Teste Presencial de Selecção Técnica para a vaga de <strong>${roleLabelPt}</strong>.`
               }
             </p>
 
@@ -1119,7 +1121,7 @@ export async function sendGatePassEmail({
                 ${application.name}
               </div>
               <div style="font-size: 12px; color: #94a3b8; font-family: monospace; margin-bottom: 18px;">
-                Vaga: Operadora de CCO · ID: ${application.id.slice(0, 8).toUpperCase()}
+                Vaga: ${roleLabelPt} · ID: ${application.id.slice(0, 8).toUpperCase()}
               </div>
 
               <!-- White QR Box for 100% Reliable Scanner Contrast -->
@@ -1155,7 +1157,7 @@ export async function sendGatePassEmail({
                     Horário do Teste:
                   </td>
                   <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: #090d16;">
-                    10h00 às 11h30
+                    ${isTechManager ? "Duração aproximada: 90 minutos" : "10h00 às 11h30"}
                   </td>
                 </tr>
                 <tr>
@@ -1194,7 +1196,7 @@ export async function sendGatePassEmail({
               <div style="font-size: 13px; color: #334155; line-height: 1.6;">
                 • <strong>Passe de Entrada QR Code:</strong> No telemóvel ou cópia impressa.<br />
                 • <strong>Documento de Identificação Original e Válido:</strong> BI, Passaporte ou DIRE (cópias não autenticadas ou fotos não são aceites).<br />
-                • <strong>Caneta esferográfica:</strong> De tinta azul ou preta.<br />
+                • <strong>Caneta:</strong> De tinta azul ou preta.${isTechManager ? "<br />• <strong>Lápis e borracha:</strong> Se desejar.<br />• <strong>Calculadora simples:</strong> Opcional." : ""}<br />
                 • <strong>Pontualidade:</strong> A tolerância de chegada é estrita devido ao limite diário de candidatas por sessão.
               </div>
             </div>
@@ -1222,7 +1224,7 @@ export async function sendGatePassEmail({
           <div style="background-color: #f8fafc; padding: 22px 32px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6;">
             <strong style="color: #090d16;">Overwatch Moçambique, Lda.</strong><br />
             ${siteContact.address.pt}<br />
-            Telefone / WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #0284c7; text-decoration: none; font-weight: 600;">+258 84 287 0793</a> · Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none;">${siteContact.email}</a> · Website: <a href="${origin}" style="color: #64748b; text-decoration: none;">www.overwatchmoz.com</a>
+            Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none; font-weight: 600;">${siteContact.email}</a> · Website / Chatbot («Falar com um agente»): <a href="${origin}" style="color: #0284c7; text-decoration: none;">www.overwatchmoz.com</a>
           </div>
         </div>
       </div>
@@ -1447,7 +1449,7 @@ export async function sendDisqualificationEmail({
           <div style="background-color: #f8fafc; padding: 22px 32px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6;">
             <strong style="color: #090d16;">Overwatch Moçambique, Lda.</strong><br />
             ${siteContact.address.pt}<br />
-            Telefone / WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #0284c7; text-decoration: none; font-weight: 600;">+258 84 287 0793</a> · Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none;">${siteContact.email}</a> · Website: <a href="${origin}" style="color: #64748b; text-decoration: none;">www.overwatchmoz.com</a>
+            Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none; font-weight: 600;">${siteContact.email}</a> · Website / Chatbot («Falar com um agente»): <a href="${origin}" style="color: #0284c7; text-decoration: none;">www.overwatchmoz.com</a>
           </div>
         </div>
       </div>
@@ -1590,7 +1592,7 @@ export async function sendRetractionEmail({
           <div style="background-color: #f8fafc; padding: 22px 32px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6;">
             <strong style="color: #090d16;">Overwatch Moçambique, Lda.</strong><br />
             ${siteContact.address.pt}<br />
-            Telefone / WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #0284c7; text-decoration: none; font-weight: 600;">+258 84 287 0793</a> · Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none;">${siteContact.email}</a> · Website: <a href="${origin}" style="color: #64748b; text-decoration: none;">www.overwatchmoz.com</a>
+            Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none; font-weight: 600;">${siteContact.email}</a> · Website / Chatbot («Falar com um agente»): <a href="${origin}" style="color: #0284c7; text-decoration: none;">www.overwatchmoz.com</a>
           </div>
         </div>
       </div>
@@ -1798,7 +1800,7 @@ export async function sendRebookingGraceEmail({
           <div style="background-color: #f8fafc; padding: 22px 32px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6;">
             <strong style="color: #090d16;">Overwatch Moçambique, Lda.</strong><br />
             ${correctedAddress}<br />
-            Telefone / WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #0284c7; text-decoration: none; font-weight: 600;">+258 84 287 0793</a> · Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none;">${siteContact.email}</a> · Website: <a href="${origin}" style="color: #64748b; text-decoration: none;">www.overwatchmoz.com</a>
+            Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none; font-weight: 600;">${siteContact.email}</a> · Website / Chatbot («Falar com um agente»): <a href="${origin}" style="color: #0284c7; text-decoration: none;">www.overwatchmoz.com</a>
           </div>
         </div>
       </div>
@@ -2059,7 +2061,7 @@ export async function sendAddressCorrectionBroadcastEmail({
           <div style="background-color: #f8fafc; padding: 22px 32px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6;">
             <strong style="color: #090d16;">Overwatch Moçambique, Lda.</strong><br />
             ${correctedAddress}<br />
-            Telefone / WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #0284c7; text-decoration: none; font-weight: 600;">+258 84 287 0793</a> · Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none;">${siteContact.email}</a> · Website: <a href="${origin}" style="color: #64748b; text-decoration: none;">www.overwatchmoz.com</a>
+            Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none; font-weight: 600;">${siteContact.email}</a> · Website / Chatbot («Falar com um agente»): <a href="${origin}" style="color: #0284c7; text-decoration: none;">www.overwatchmoz.com</a>
           </div>
         </div>
       </div>
@@ -2323,7 +2325,7 @@ export async function sendHolidayRescheduleEmail({
           <div style="background-color: #f8fafc; padding: 22px 32px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6;">
             <strong style="color: #090d16;">Overwatch Moçambique, Lda.</strong><br />
             Av. Paulo Samuel Khankhomba nº 1948, Maputo, Moçambique<br />
-            Telefone / WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #0284c7; text-decoration: none; font-weight: 600;">+258 84 287 0793</a> · Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none;">${siteContact.email}</a> · Website: <a href="${origin}" style="color: #64748b; text-decoration: none;">www.overwatchmoz.com</a>
+            Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none; font-weight: 600;">${siteContact.email}</a> · Website / Chatbot («Falar com um agente»): <a href="${origin}" style="color: #0284c7; text-decoration: none;">www.overwatchmoz.com</a>
           </div>
         </div>
       </div>
@@ -2513,7 +2515,7 @@ export async function sendNextPhaseInvitationEmail(options: {
           <div style="background-color: #f8fafc; padding: 22px 32px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6;">
             <strong style="color: #090d16;">Overwatch Moçambique, Lda.</strong><br />
             ${siteContact.address.pt}<br />
-            Telefone / WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #0284c7; text-decoration: none; font-weight: 600;">+258 84 287 0793</a> · Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none;">${siteContact.email}</a> · Website: <a href="${origin}" style="color: #64748b; text-decoration: none;">www.overwatchmoz.com</a>
+            Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none; font-weight: 600;">${siteContact.email}</a> · Website / Chatbot («Falar com um agente»): <a href="${origin}" style="color: #0284c7; text-decoration: none;">www.overwatchmoz.com</a>
           </div>
         </div>
       </div>
@@ -2634,7 +2636,7 @@ export async function sendNextPhaseConfirmationEmail(candidate: { name: string; 
           <div style="background-color: #f8fafc; padding: 22px 32px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6;">
             <strong style="color: #090d16;">Overwatch Moçambique, Lda.</strong><br />
             ${siteContact.address.pt}<br />
-            Telefone / WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #0284c7; text-decoration: none; font-weight: 600;">+258 84 287 0793</a> · Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none;">${siteContact.email}</a> · Website: <a href="${origin}" style="color: #64748b; text-decoration: none;">www.overwatchmoz.com</a>
+            Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none; font-weight: 600;">${siteContact.email}</a> · Website / Chatbot («Falar com um agente»): <a href="${origin}" style="color: #0284c7; text-decoration: none;">www.overwatchmoz.com</a>
           </div>
         </div>
       </div>
@@ -2732,7 +2734,7 @@ export async function sendNextPhaseClosureEmail(candidate: { name: string; email
           <div style="background-color: #f8fafc; padding: 22px 32px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6;">
             <strong style="color: #090d16;">Overwatch Moçambique, Lda.</strong><br />
             ${siteContact.address.pt}<br />
-            Telefone / WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #0284c7; text-decoration: none; font-weight: 600;">+258 84 287 0793</a> · Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none;">${siteContact.email}</a> · Website: <a href="${origin}" style="color: #64748b; text-decoration: none;">www.overwatchmoz.com</a>
+            Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none; font-weight: 600;">${siteContact.email}</a> · Website / Chatbot («Falar com um agente»): <a href="${origin}" style="color: #0284c7; text-decoration: none;">www.overwatchmoz.com</a>
           </div>
         </div>
       </div>
@@ -2904,7 +2906,7 @@ export async function sendNextPhaseInstructionsEmail(options: {
             <div style="margin-top: 28px; padding-top: 18px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #64748b; line-height: 1.5;">
               <strong>Equipa de Recrutamento & Selecção</strong><br />
               Overwatch Moçambique<br />
-              Email: info@overwatchmoz.com · Tel: +258 84 287 0793
+              Email: info@overwatchmoz.com · Website / Chatbot («Falar com um agente»): www.overwatchmoz.com
             </div>
           </div>
         </div>
@@ -3043,7 +3045,7 @@ export async function sendTechnicalLocationDeclineEmail({
           <div style="background-color: #f8fafc; padding: 22px 32px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6;">
             <strong style="color: #090d16;">Overwatch Moçambique, Lda.</strong><br />
             ${siteContact.address.pt}<br />
-            Telefone / WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #0284c7; text-decoration: none; font-weight: 600;">+258 84 287 0793</a> · Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none;">${siteContact.email}</a> · Website: <a href="${origin}" style="color: #64748b; text-decoration: none;">www.overwatchmoz.com</a>
+            Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none; font-weight: 600;">${siteContact.email}</a> · Website / Chatbot («Falar com um agente»): <a href="${origin}" style="color: #0284c7; text-decoration: none;">www.overwatchmoz.com</a>
           </div>
         </div>
       </div>
@@ -3065,7 +3067,7 @@ Com os melhores cumprimentos,
 Equipa de Recrutamento
 Overwatch Moçambique
 Av. do Trabalho, N.º 1948, Maputo
-Telefone / WhatsApp: +258 84 287 0793
+Chatbot («Falar com um agente»): www.overwatchmoz.com
 Email: ${siteContact.email}
 Website: ${origin}
 `;
@@ -3185,7 +3187,7 @@ export async function sendTechnicalRegionDeclineEmail({
           <div style="background-color: #f8fafc; padding: 22px 32px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6;">
             <strong style="color: #090d16;">Overwatch Moçambique, Lda.</strong><br />
             ${siteContact.address.pt}<br />
-            Telefone / WhatsApp: <a href="https://wa.me/${siteContact.whatsappNumber}" style="color: #0284c7; text-decoration: none; font-weight: 600;">+258 84 287 0793</a> · Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none;">${siteContact.email}</a> · Website: <a href="${origin}" style="color: #64748b; text-decoration: none;">www.overwatchmoz.com</a>
+            Email: <a href="mailto:${siteContact.email}" style="color: #0284c7; text-decoration: none; font-weight: 600;">${siteContact.email}</a> · Website / Chatbot («Falar com um agente»): <a href="${origin}" style="color: #0284c7; text-decoration: none;">www.overwatchmoz.com</a>
           </div>
         </div>
       </div>
@@ -3209,7 +3211,7 @@ Com os melhores cumprimentos,
 Equipa de Recrutamento & Selecção
 Overwatch Moçambique
 Av. do Trabalho, N.º 1948, Maputo
-Telefone / WhatsApp: +258 84 287 0793
+Chatbot («Falar com um agente»): www.overwatchmoz.com
 Email: ${siteContact.email}
 Website: ${origin}
 `;

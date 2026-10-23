@@ -42,5 +42,5 @@ export function renderOfficialMail({ candidate, subject, message, roleTitle, loc
       </div>
 
 
-<div style="padding:28px;font-size:14px;line-height:1.7">${html}<div style="margin-top:28px;padding-top:16px;border-top:1px solid #e2e8f0;font-size:12px;color:#64748b">${en ? "Recruitment team" : "Equipa de Recrutamento"}<br>Overwatch Moçambique<br>Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo<br><a href="mailto:info@overwatchmoz.com">info@overwatchmoz.com</a> · +258 84 287 0793</div></div></div></body></html>` };
+<div style="padding:28px;font-size:14px;line-height:1.7">${html}<div style="margin-top:28px;padding-top:16px;border-top:1px solid #e2e8f0;font-size:12px;color:#64748b">${en ? "Recruitment team" : "Equipa de Recrutamento"}<br>Overwatch Moçambique<br>Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo<br><a href="mailto:info@overwatchmoz.com" style="color:#0284c7;text-decoration:none">info@overwatchmoz.com</a> · <a href="https://www.overwatchmoz.com" style="color:#0284c7;text-decoration:none">www.overwatchmoz.com</a> (${en ? 'Chatbot: "Speak with an agent"' : "Chatbot: «Falar com um agente»"})</div></div></div></body></html>` };
 }

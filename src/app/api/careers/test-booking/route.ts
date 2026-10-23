@@ -1,18 +1,184 @@
-import { bookingFollowUp } from "@/lib/communication-delivery";
+import { bookingFollowUp, deliveryId } from "@/lib/communication-delivery";
+import { getMail, listMail } from "@/lib/communication-mail-store";
 import { after } from "next/server";
 import { sameBookingScope, getQuotaForSlot } from "@/lib/careers-booking-rules";
 import { auditRequest } from "@/lib/admin-activity";
 import { resolveApplication, isTerminal } from "@/lib/careers-workflow";
 import { getCandidateSlotConfig, reserveTestSlot } from "@/lib/careers-booking";
-import { getApplication, updateApplication, getTestSlotConfig, getApplications } from "@/lib/careers-store";
-import { DEFAULT_TEST_SLOTS, normalizeSlot, isPastDateSlot } from "@/lib/careers";
+import { getApplication, updateApplication, getApplications } from "@/lib/careers-store";
+import { normalizeSlot, isPastDateSlot, type Application } from "@/lib/careers";
 import { sendBookingConfirmation } from "@/lib/careers-email";
 import { siteContact } from "@/lib/site-config";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-const DEACTIVATED_STATUSES = ["archived", "rejected"] as const;
+const KNOWN_REQUIREMENT_TRANSLATIONS: Array<{
+  match: RegExp;
+  pt: string;
+  en: string;
+}> = [
+  {
+    match: /^documento de identifica[cç][aã]o$/i,
+    pt: "Documento de identificação (BI / Passaporte)",
+    en: "Identification document (ID / Passport)",
+  },
+  {
+    match: /documento de identifica[cç][aã]o original/i,
+    pt: "Documento de identificação original (BI / Passaporte)",
+    en: "Original photo ID (BI / Passport)",
+  },
+  {
+    match: /^caneta$/i,
+    pt: "Caneta",
+    en: "Pen",
+  },
+  {
+    match: /caneta.*azul ou preta/i,
+    pt: "Caneta (azul ou preta)",
+    en: "A pen (blue or black)",
+  },
+  {
+    match: /l[aá]pis e borracha/i,
+    pt: "Lápis e borracha, se desejar",
+    en: "Pencil and eraser, if desired",
+  },
+  {
+    match: /calculadora simples/i,
+    pt: "Calculadora simples, opcional",
+    en: "Simple calculator, optional",
+  },
+  {
+    match: /chegar at[eé] [aà]s 09h30/i,
+    pt: "Chegar até às 09h30 (portão fecha às 09h50)",
+    en: "Arrive by 09:30 (gate closes at 09:50)",
+  },
+];
+
+function extractListItemsFromHtml(html?: string): string[] {
+  if (!html || typeof html !== "string") return [];
+  const matches = [...html.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)];
+  return matches
+    .map((m) =>
+      m[1]
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&nbsp;/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim(),
+    )
+    .filter(Boolean);
+}
+
+async function resolveCandidateRoleRequirements(candidate: Application) {
+  const isTechManager =
+    candidate.role === "cctv_technical_manager" ||
+    Boolean(candidate.cohortId && candidate.cohortId.includes("cctv_technical_manager"));
+
+  const defaultRoleTitle = isTechManager
+    ? {
+        pt: "Gestor Técnico e Instalação de CCTV",
+        en: "CCTV Installation & Technical Manager",
+      }
+    : {
+        pt: "Operadora de CCO",
+        en: "CCTV Operator",
+      };
+
+  const referenceCode = isTechManager ? "TM-2026/MZQ" : "CCO-2026/MZQ";
+
+  const durationText = isTechManager
+    ? {
+        pt: "Duração aproximada: 90 minutos · Chegada com 15 min de antecedência",
+        en: "Approximate duration: 90 minutes · Arrive 15 min early",
+      }
+    : {
+        pt: "10h00 às 11h30 · Chegada às 09h30",
+        en: "10:00 AM to 11:30 AM · Arrive at 09:30",
+      };
+
+  const venueLandmark = {
+    pt: "Casa cor-de-laranja com portão preto, antes do cruzamento com a Av. Filipe Samuel Magaia",
+    en: "Orange house with black gate, before the intersection with Av. Filipe Samuel Magaia",
+  };
+
+  let whatToBringPt = isTechManager
+    ? [
+        "Documento de identificação (BI / Passaporte)",
+        "Caneta",
+        "Lápis e borracha, se desejar",
+        "Calculadora simples, opcional",
+      ]
+    : [
+        "Documento de identificação original (BI / Passaporte)",
+        "Caneta (azul ou preta)",
+        "Chegar até às 09h30 (portão fecha às 09h50)",
+      ];
+
+  let whatToBringEn = isTechManager
+    ? [
+        "Identification document (ID / Passport)",
+        "Pen",
+        "Pencil and eraser, if desired",
+        "Simple calculator, optional",
+      ]
+    : [
+        "Original photo ID (BI / Passport)",
+        "A pen (blue or black)",
+        "Arrive by 09:30 (gate closes at 09:50)",
+      ];
+
+  try {
+    let rule = await getMail(deliveryId(`booking-follow-up:${candidate.id}`));
+    if (!rule && candidate.cohortId && candidate.role) {
+      const cohortRules = await listMail(`${candidate.cohortId}:${candidate.role}:bulk`, "automation");
+      rule = cohortRules[0] || null;
+    }
+
+    if (rule?.data?.message) {
+      const extracted = extractListItemsFromHtml(rule.data.message);
+      if (extracted.length > 0) {
+        const mappedPt: string[] = [];
+        const mappedEn: string[] = [];
+        for (const item of extracted) {
+          const known = KNOWN_REQUIREMENT_TRANSLATIONS.find((k) => k.match.test(item));
+          if (known) {
+            mappedPt.push(known.pt);
+            mappedEn.push(known.en);
+          } else {
+            mappedPt.push(item);
+            mappedEn.push(item);
+          }
+        }
+        whatToBringPt = mappedPt;
+        whatToBringEn = mappedEn;
+      }
+    }
+
+    if (
+      rule?.data?.roleTitle &&
+      typeof rule.data.roleTitle === "string" &&
+      !isTechManager &&
+      candidate.role !== "cctv" &&
+      candidate.role !== "cctv_operator"
+    ) {
+      defaultRoleTitle.pt = rule.data.roleTitle;
+      defaultRoleTitle.en = rule.data.roleTitle;
+    }
+  } catch {
+    // Fallback to role defaults if mail store lookup fails
+  }
+
+  return {
+    roleTitle: defaultRoleTitle,
+    referenceCode,
+    durationText,
+    venueLandmark,
+    whatToBring: {
+      pt: whatToBringPt,
+      en: whatToBringEn,
+    },
+  };
+}
 
 export async function GET(request: Request) {
   try {
@@ -50,13 +216,16 @@ export async function GET(request: Request) {
     if (!candidate.invitedAt && !candidate.testSlot && candidate.status !== "test_invited") return Response.json({ error: "This applicant has not received a test invitation.", code: "INVITATION_REQUIRED" }, { status: 403 });
     if (!candidate.bookingLinkOpenedAt) await updateApplication(candidate.id, { bookingLinkOpenedAt: new Date().toISOString() });
 
-    const allApps = await getApplications(true);
-    const { slots: activeSlots, quota = 15, slotQuotas = {} } = await getCandidateSlotConfig(candidate);
+    const [allApps, slotConfig, roleMeta] = await Promise.all([
+      getApplications(true),
+      getCandidateSlotConfig(candidate),
+      resolveCandidateRoleRequirements(candidate),
+    ]);
+    const { slots: activeSlots, quota = 15, slotQuotas = {} } = slotConfig;
     const hasActiveGrace = Boolean(candidate.rebookingGrace && !candidate.rebookingGrace.usedAt);
 
     // Filter available candidate booking slots:
     // If candidate has not booked yet or is using Grace OTL, only provide future open slots.
-    // If all configured slots are in the past, fallback to DEFAULT_TEST_SLOTS filtered for future.
     const candidateSlots = activeSlots.filter(s => !isPastDateSlot(s));
 
     const slotStats: Record<string, { booked: number; max: number; isFull: boolean; remaining: number; isPast: boolean }> = {};
@@ -82,6 +251,12 @@ export async function GET(request: Request) {
         id: candidate.id,
         name: candidate.name,
         role: candidate.role,
+        cohortId: candidate.cohortId || null,
+        roleTitle: roleMeta.roleTitle,
+        referenceCode: roleMeta.referenceCode,
+        durationText: roleMeta.durationText,
+        venueLandmark: roleMeta.venueLandmark,
+        whatToBring: roleMeta.whatToBring,
         testSlot: hasActiveGrace ? null : candidate.testSlot || null,
         previousTestSlot: candidate.rebookingGrace?.previousSlot || candidate.testSlot || null,
         rebookingGraceActive: hasActiveGrace,
@@ -94,7 +269,7 @@ export async function GET(request: Request) {
         attendedAt: candidate.attendedAt || null,
         attendanceStatus: candidate.attendanceStatus || null,
         address: siteContact.address.pt,
-        whatsapp: siteContact.whatsappNumber,
+        supportEmail: siteContact.email,
       },
       { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } },
     );
