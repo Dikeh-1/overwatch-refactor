@@ -3,9 +3,9 @@ import { notifyApplication } from "@/lib/careers-email";
 import { NextResponse } from "next/server";
 import { MAX_CV, type Application } from "@/lib/careers";
 import { getApplications, getRoles, saveApplication } from "@/lib/careers-store";
-import { sameRole } from "@/lib/careers-workflow";
+import { applicationsForCohort, buildCohortCatalog, sameRole } from "@/lib/careers-workflow";
 import { evaluateTechnicalScreening, hasTechnicalScreening } from "@/lib/screening-engine";
-import { getRoleDefinitions } from "@/lib/careers-campaign-store";
+import { getRoleDefinitions, getAllCohorts, closeAndArchiveRoleCohort } from "@/lib/careers-campaign-store";
 import { evaluateApplicationWithRules } from "@/lib/careers-evaluator";
 
 export const runtime = "nodejs";
@@ -48,12 +48,62 @@ async function handlePOST(request: Request) {
     if (!matchedRole?.open) {
       return NextResponse.json({ code: "ROLE_CLOSED" }, { status: 409 });
     }
-    const existingApplications = await getApplications(true);
-    if (existingApplications.some((app) => (app.email || "").trim().toLowerCase() === email.trim().toLowerCase() && sameRole(app.role, role))) {
+    const [existingApplications, roleDefs, cohorts] = await Promise.all([
+      getApplications(true),
+      getRoleDefinitions(true).catch(() => []),
+      getAllCohorts(true).catch(() => []),
+    ]);
+
+    const currentRoleDef = roleDefs.find((r) => sameRole(r.id, role));
+    const activeCohortId = currentRoleDef?.activeCohortId || undefined;
+    const catalog = buildCohortCatalog(cohorts, roleDefs, existingApplications);
+    const activeCohort =
+      (activeCohortId ? catalog.find((c) => c.id === activeCohortId) : undefined) ||
+      catalog.find((c) => sameRole(c.roleId, role) && c.status === "active");
+
+    const effectiveApplicationQuota =
+      activeCohort?.applicationQuota ?? currentRoleDef?.applicationQuota ?? null;
+    const currentCycleApplicationsCount = activeCohort
+      ? applicationsForCohort(existingApplications, activeCohort, catalog).length
+      : existingApplications.filter(
+          (a) => sameRole(a.role, role) && (!activeCohortId || a.cohortId === activeCohortId),
+        ).length;
+
+    // If this role cycle / cohort has already reached its application quota, auto-close & archive and block intake
+    if (
+      effectiveApplicationQuota &&
+      effectiveApplicationQuota > 0 &&
+      currentCycleApplicationsCount >= effectiveApplicationQuota
+    ) {
+      await closeAndArchiveRoleCohort(
+        currentRoleDef?.id || role,
+        `Auto-closed & archived: Application quota (${effectiveApplicationQuota}) reached.`,
+      ).catch(() => {});
+      return NextResponse.json({ code: "ROLE_CLOSED" }, { status: 409 });
+    }
+
+    if (
+      existingApplications.some(
+        (app) =>
+          (app.email || "").trim().toLowerCase() === email.trim().toLowerCase() &&
+          sameRole(app.role, role),
+      )
+    ) {
       return NextResponse.json({ code: "DUPLICATE_EMAIL" }, { status: 409 });
     }
-    if (false) {
-    }
+
+    const checkAndAutoCloseIfQuotaReached = async () => {
+      if (
+        effectiveApplicationQuota &&
+        effectiveApplicationQuota > 0 &&
+        currentCycleApplicationsCount + 1 >= effectiveApplicationQuota
+      ) {
+        await closeAndArchiveRoleCohort(
+          currentRoleDef?.id || role,
+          `Auto-closed & archived: Application quota (${effectiveApplicationQuota}) reached.`,
+        ).catch((err) => console.error("Auto-close on quota reached error:", err));
+      }
+    };
 
     const cv = data.get("cv");
     if (!(cv instanceof File) || cv.size === 0 || cv.size > MAX_CV) {
@@ -115,10 +165,6 @@ async function handlePOST(request: Request) {
         return NextResponse.json({ code: "INVALID" }, { status: 400 });
       }
 
-      const roleDefs = await getRoleDefinitions().catch(() => []);
-      const currentRoleDef = roleDefs.find((r) => r.id === role);
-      const activeCohortId = currentRoleDef?.activeCohortId || undefined;
-
       // Automatic screening evaluation (dynamic custom rules override default)
       let screening = evaluateTechnicalScreening(role, technicalData);
       if (currentRoleDef?.screeningRules && currentRoleDef.screeningRules.length > 0) {
@@ -149,6 +195,7 @@ async function handlePOST(request: Request) {
       };
 
       await saveApplication(application, buffer);
+      await checkAndAutoCloseIfQuotaReached();
       try {
         await notifyApplication(application, buffer);
       } catch (emailErr) {
@@ -161,15 +208,6 @@ async function handlePOST(request: Request) {
     // ─────────────────────────────────────────────────────────────────────────
     // Dynamic Role Screening Flow (Powered by Role Form Builder & Database)
     // ─────────────────────────────────────────────────────────────────────────
-    const roleDefs = await getRoleDefinitions().catch(() => []);
-    const currentRoleDef = roleDefs.find(
-      (r) =>
-        r.id === role ||
-        (role === "cctv" && r.id === "cctv_operator") ||
-        (role === "cctv_operator" && r.id === "cctv"),
-    );
-    const activeCohortId = currentRoleDef?.activeCohortId || undefined;
-
     // Collect all submitted fields from FormData
     const dynamicAnswers: Record<string, any> = {};
     for (const [key, val] of data.entries()) {
@@ -225,6 +263,7 @@ async function handlePOST(request: Request) {
       };
 
       await saveApplication(application, buffer);
+      await checkAndAutoCloseIfQuotaReached();
       try {
         await notifyApplication(application, buffer);
       } catch (emailErr) {
@@ -253,7 +292,7 @@ async function handlePOST(request: Request) {
     };
 
     // Auto criteria check for Operator: Female or Male with CCTV experience are auto-shortlisted
-    let meetsCriteria =
+    const meetsCriteria =
       values.sex === "female" ||
       (values.sex === "male" && values.experience === "yes");
 
@@ -269,6 +308,7 @@ async function handlePOST(request: Request) {
     };
 
     await saveApplication(application, buffer);
+    await checkAndAutoCloseIfQuotaReached();
     try {
       await notifyApplication(application, buffer);
     } catch (emailErr) {

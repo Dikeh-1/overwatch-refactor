@@ -41,6 +41,7 @@ export interface CareerRoleDefinition {
   descriptionPt?: string;
   open: boolean;
   activeCohortId?: string | null;
+  applicationQuota?: number | null;
   pipelineStages: PipelineStageKey[];
   screeningRules: ScreeningRule[];
   createdAt: string;
@@ -64,6 +65,7 @@ export interface CareerCohort {
   testSlots?: string[];
   slotQuota?: number;
   slotQuotas?: Record<string, number>;
+  applicationQuota?: number | null;
   historicalAttendance?: { applicationIds: string[]; confirmedAt: string; basis: "admin_confirmed_booked_attendees"; previousAbsenceIds?: string[] };
   historicalTestResults?: {
     sourceUrl: string; importedAt: string;

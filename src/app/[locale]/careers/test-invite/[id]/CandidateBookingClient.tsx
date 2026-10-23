@@ -240,6 +240,7 @@ export default function CandidateBookingClient({
   const [, setSuccessNotice] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [dismissFloatingArrow, setDismissFloatingArrow] = useState(false);
+  const [liveSlotTakenNotice, setLiveSlotTakenNotice] = useState<string>("");
 
   useEffect(() => {
     if (candidate?.id && candidate.testSlot) {
@@ -292,8 +293,17 @@ export default function CandidateBookingClient({
           setSelectedSlot((currentSelected) => {
             if (data.testSlot) return data.testSlot;
             if (data.slots && data.slots.length > 0) {
-              if (currentSelected && data.slots.includes(currentSelected) && !data.slotStats?.[currentSelected]?.isFull) {
-                return currentSelected;
+              if (currentSelected && data.slots.includes(currentSelected)) {
+                if (!data.slotStats?.[currentSelected]?.isFull) {
+                  return currentSelected;
+                }
+                if (silent) {
+                  setLiveSlotTakenNotice(
+                    isPt
+                      ? `Actualização em tempo real: A última vaga para «${formatSlotDisplay(currentSelected, true)}» acabou de ser preenchida por outro candidato. Seleccionámos automaticamente o próximo horário disponível.`
+                      : `Live update: The last spot for "${formatSlotDisplay(currentSelected, false)}" was just taken by another applicant. We have automatically selected the next open slot for you.`,
+                  );
+                }
               }
               const available = data.slots.find((s) => !data.slotStats?.[s]?.isFull);
               return available || "";
@@ -319,18 +329,41 @@ export default function CandidateBookingClient({
       setLoading(false);
     }
 
+    // Fast 2.5s live polling + visibility/focus + BroadcastChannel so slot capacity updates immediately across applicants
     const interval = setInterval(() => {
-      if (id && !cancelled) void fetchCandidate(true);
-    }, 8000);
+      if (id && !cancelled && (typeof document === "undefined" || !document.hidden)) {
+        void fetchCandidate(true);
+      }
+    }, 2500);
     const onFocus = () => {
       if (id && !cancelled) void fetchCandidate(true);
     };
+    const onVisibility = () => {
+      if (id && !cancelled && typeof document !== "undefined" && !document.hidden) {
+        void fetchCandidate(true);
+      }
+    };
     window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+
+    let channel: BroadcastChannel | null = null;
+    try {
+      if (typeof BroadcastChannel !== "undefined") {
+        channel = new BroadcastChannel("overwatch_test_booking_live");
+        channel.onmessage = () => {
+          if (id && !cancelled) void fetchCandidate(true);
+        };
+      }
+    } catch {}
 
     return () => {
       cancelled = true;
       clearInterval(interval);
       window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+      try {
+        channel?.close();
+      } catch {}
     };
   }, [id, isPt]);
 
@@ -369,10 +402,33 @@ export default function CandidateBookingClient({
           setError("");
           return;
         }
+        if (res.status === 409 && data.code === "SLOT_FULL") {
+          const refreshed = await fetch(
+            `/api/careers/test-booking?id=${encodeURIComponent(id)}&t=${Date.now()}`,
+            { cache: "no-store" },
+          )
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null);
+          if (refreshed) {
+            setCandidate(refreshed);
+            const nextOpen = (refreshed.slots || []).find(
+              (s: string) => !refreshed.slotStats?.[s]?.isFull,
+            );
+            setSelectedSlot(nextOpen || "");
+          }
+        }
         throw new Error(
           data.error || (isPt ? "Ocorreu um erro ao confirmar a data." : "Failed to confirm test slot."),
         );
       }
+
+      try {
+        if (typeof BroadcastChannel !== "undefined") {
+          const bc = new BroadcastChannel("overwatch_test_booking_live");
+          bc.postMessage({ slot: selectedSlot, ts: Date.now() });
+          bc.close();
+        }
+      } catch {}
 
       setCandidate((prev) =>
         prev
@@ -838,17 +894,39 @@ export default function CandidateBookingClient({
 
                 {/* Slot selection */}
                 <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
-                  <div className="px-5 py-4 border-b border-gray-100">
-                    <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                      <Calendar size={16} className="text-gray-400" />
-                      <span>{isPt ? "Seleccione a sua data" : "Select your date"}</span>
-                    </h2>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {isPt
-                        ? "Turnos presenciais com vagas limitadas. Seleccione um horário disponível abaixo."
-                        : "In-person test sessions with limited capacity. Select an open slot below."}
-                    </p>
+                  <div className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                        <Calendar size={16} className="text-gray-400" />
+                        <span>{isPt ? "Seleccione a sua data" : "Select your date"}</span>
+                      </h2>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {isPt
+                          ? "Turnos presenciais com vagas limitadas. Seleccione um horário disponível abaixo."
+                          : "In-person test sessions with limited capacity. Select an open slot below."}
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
+                      <span>{isPt ? "Vagas em tempo real" : "Live availability"}</span>
+                    </span>
                   </div>
+
+                  {liveSlotTakenNotice && (
+                    <div className="mx-4 mt-4 flex items-start justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-3 text-xs text-amber-900">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle size={14} className="shrink-0 mt-0.5 text-amber-600" />
+                        <span>{liveSlotTakenNotice}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setLiveSlotTakenNotice("")}
+                        className="text-amber-700 hover:text-amber-950 p-0.5"
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                  )}
 
                   <div className="p-4 space-y-2">
                     {slotsList.length === 0 && (

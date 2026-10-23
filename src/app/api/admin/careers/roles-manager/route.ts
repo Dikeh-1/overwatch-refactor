@@ -1,17 +1,19 @@
 import { auditRequest } from "@/lib/admin-activity";
-import { buildCohortCatalog } from "@/lib/careers-workflow";
+import { applicationsForCohort, buildCohortCatalog, sameRole } from "@/lib/careers-workflow";
 import { ALL_PIPELINE_STAGES } from "@/lib/careers-models";
 import { NextResponse } from "next/server";
 import { sameOrigin, checkAdminSession } from "@/lib/careers-auth";
 import {
   getRoleDefinitions,
   saveRoleDefinition,
+  persistRoleDefinition,
   deleteRoleDefinition,
   openRoleCohort,
   closeAndArchiveRoleCohort,
   getAllCohorts,
+  saveCohort,
 } from "@/lib/careers-campaign-store";
-import { setRole } from "@/lib/careers-store";
+import { getApplications, setRole } from "@/lib/careers-store";
 
 export async function GET() {
   const isAuth = await checkAdminSession();
@@ -20,15 +22,32 @@ export async function GET() {
   }
 
   try {
-    const [roles, cohorts] = await Promise.all([
-      getRoleDefinitions(),
-      getAllCohorts(),
+    const [roles, cohorts, rawApps] = await Promise.all([
+      getRoleDefinitions(true),
+      getAllCohorts(true),
+      getApplications(true).catch(() => []),
     ]);
+
+    const catalog = buildCohortCatalog(cohorts, roles, rawApps);
+    const applicationCounts: Record<string, number> = {};
+    for (const c of catalog) {
+      applicationCounts[c.id] = applicationsForCohort(rawApps, c, catalog).length;
+    }
+    for (const r of roles) {
+      const activeCohort =
+        catalog.find((c) => r.activeCohortId && c.id === r.activeCohortId) ||
+        catalog.find((c) => sameRole(c.roleId, r.id) && c.status === "active") ||
+        catalog.find((c) => sameRole(c.roleId, r.id) && !c.unassigned);
+      applicationCounts[`role:${r.id}`] = activeCohort
+        ? applicationCounts[activeCohort.id] ?? 0
+        : rawApps.filter((a) => sameRole(a.role, r.id)).length;
+    }
 
     return NextResponse.json({
       success: true,
       roles,
-      cohorts: buildCohortCatalog(cohorts, roles, []),
+      cohorts: catalog,
+      applicationCounts,
     });
   } catch (error: any) {
     return NextResponse.json(
@@ -48,6 +67,86 @@ async function handlePOST(request: Request) {
     const body = await request.json();
     const { action } = body;
     if (body.roleId && (typeof body.roleId !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(body.roleId))) return NextResponse.json({ error: "Invalid role ID" }, { status: 400 });
+
+    if (action === "set_application_quota") {
+      const { roleId, cohortId, applicationQuota } = body;
+      if (!roleId || typeof roleId !== "string") {
+        return NextResponse.json({ error: "Missing roleId" }, { status: 400 });
+      }
+      const normalizedQuota =
+        applicationQuota === null || applicationQuota === "" || applicationQuota === 0 || applicationQuota === "0"
+          ? null
+          : Number(applicationQuota);
+      if (normalizedQuota !== null && (!Number.isInteger(normalizedQuota) || normalizedQuota < 1 || normalizedQuota > 50000)) {
+        return NextResponse.json({ error: "Enter a valid application quota between 1 and 50,000 (or 0 for unlimited)." }, { status: 400 });
+      }
+
+      const [roles, cohorts, rawApps] = await Promise.all([
+        getRoleDefinitions(true),
+        getAllCohorts(true),
+        getApplications(true).catch(() => []),
+      ]);
+      const role = roles.find((r) => sameRole(r.id, roleId));
+      if (!role) {
+        return NextResponse.json({ error: "Role not found" }, { status: 404 });
+      }
+
+      const catalog = buildCohortCatalog(cohorts, roles, rawApps);
+      const targetCohort =
+        (cohortId ? catalog.find((c) => c.id === cohortId) : undefined) ||
+        catalog.find((c) => role.activeCohortId && c.id === role.activeCohortId) ||
+        catalog.find((c) => sameRole(c.roleId, role.id) && c.status === "active");
+
+      const isCurrentActiveCycle =
+        !targetCohort ||
+        targetCohort.status === "active" ||
+        (role.activeCohortId && targetCohort.id === role.activeCohortId);
+
+      let updatedRole = role;
+      if (isCurrentActiveCycle) {
+        updatedRole = await persistRoleDefinition({
+          ...role,
+          applicationQuota: normalizedQuota,
+        });
+      }
+
+      let updatedCohort = targetCohort;
+      if (targetCohort && !targetCohort.unassigned) {
+        updatedCohort = await saveCohort({
+          ...targetCohort,
+          applicationQuota: normalizedQuota,
+        });
+      }
+
+      const receivedCount = targetCohort
+        ? applicationsForCohort(rawApps, targetCohort, catalog).length
+        : rawApps.filter((a) => sameRole(a.role, role.id)).length;
+
+      let autoClosed = false;
+      if (
+        isCurrentActiveCycle &&
+        updatedRole.open &&
+        normalizedQuota !== null &&
+        receivedCount >= normalizedQuota
+      ) {
+        const closedRes = await closeAndArchiveRoleCohort(
+          updatedRole.id,
+          `Auto-closed & archived: Application quota (${normalizedQuota}) reached (${receivedCount} applications received).`,
+        );
+        updatedRole = closedRes.role;
+        updatedCohort = closedRes.archivedCohort;
+        autoClosed = true;
+      }
+
+      return NextResponse.json({
+        success: true,
+        role: updatedRole,
+        cohort: updatedCohort,
+        applicationQuota: normalizedQuota,
+        receivedCount,
+        autoClosed,
+      });
+    }
 
     if (action === "create_or_update_role") {
       const { role } = body;

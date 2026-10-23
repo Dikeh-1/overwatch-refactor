@@ -96,6 +96,7 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
     [loadingIds, setLoadingIds] = useState<string[]>([]);
   const [translations, setTranslations] = useState<Record<string, TranslationResult>>({});
   const [translatingIds, setTranslatingIds] = useState<string[]>([]);
+  const [openItemId, setOpenItemId] = useState<string | null>(null);
 
   useEffect(() => {
     mounted.current = true;
@@ -773,8 +774,18 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
               includeBookingButton: false,
             }).html;
           return (
-            <details key={item.id} className="rounded-xl border border-indigo-200/80 bg-white p-4 select-none">
-              <summary className="cursor-pointer">
+            <details
+              key={item.id}
+              open={openItemId === item.id}
+              className="rounded-xl border border-indigo-200/80 bg-white p-4 select-none"
+            >
+              <summary
+                className="cursor-pointer"
+                onClick={(event) => {
+                  event.preventDefault();
+                  setOpenItemId((prev) => (prev === item.id ? null : item.id));
+                }}
+              >
                 <div className="inline-flex flex-wrap items-center justify-between gap-2 w-[calc(100%-1.5rem)] align-middle">
                   <div>
                     <div className="inline-flex flex-wrap items-center gap-2 font-semibold text-sm text-slate-900">
@@ -792,23 +803,25 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
                   </div>
                 </div>
               </summary>
-              <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-3 text-xs text-slate-700 space-y-3">
-                <p className="text-[11px] font-semibold text-indigo-800">
-                  {t(
-                    "Trigger: Automatically dispatches immediately when candidate confirms a test slot.",
-                    "Gatilho: Envia automaticamente assim que o candidato confirmar uma vaga de teste."
-                  )}
-                </p>
-                <iframe
-                  title={item.data.subject || "Follow-up Email"}
-                  sandbox="allow-popups allow-popups-to-escape-sandbox"
-                  referrerPolicy="no-referrer"
-                  className="h-[620px] w-full rounded-lg border bg-white"
-                  srcDoc={`<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src https://www.overwatchmoz.com data:;"><style>body{margin:0;background:#f1f5f9;font-family:Arial,sans-serif;color:#1e293b;}</style>${safeEmailDocument(
-                    scheduledHtml
-                  )}`}
-                />
-              </div>
+              {openItemId === item.id && (
+                <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-3 text-xs text-slate-700 space-y-3">
+                  <p className="text-[11px] font-semibold text-indigo-800">
+                    {t(
+                      "Trigger: Automatically dispatches immediately when candidate confirms a test slot.",
+                      "Gatilho: Envia automaticamente assim que o candidato confirmar uma vaga de teste."
+                    )}
+                  </p>
+                  <iframe
+                    title={item.data.subject || "Follow-up Email"}
+                    sandbox="allow-popups allow-popups-to-escape-sandbox"
+                    referrerPolicy="no-referrer"
+                    className="h-[620px] w-full rounded-lg border bg-white"
+                    srcDoc={`<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src https://www.overwatchmoz.com data:;"><style>body{margin:0;background:#f1f5f9;font-family:Arial,sans-serif;color:#1e293b;}</style>${safeEmailDocument(
+                      scheduledHtml
+                    )}`}
+                  />
+                </div>
+              )}
             </details>
           );
         })}
@@ -816,22 +829,24 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
       {primaryRows.map((item) => {
         const translation = translations[item.id];
         const isTranslating = translatingIds.includes(item.id);
+        const isOpen = openItemId === item.id;
         return (
           <details
             key={item.id}
-            onToggle={(event) => {
-              if (event.currentTarget.open && !item.data.fullContent) {
-                if (
-                  folder === "incoming" ||
-                  (folder === "sent" && !item.data.htmlContent && !item.data.messageBody && !item.data.message)
-                ) {
-                  void readWithFeedback(item);
-                }
-              }
-            }}
+            open={isOpen}
             className="rounded-xl border border-slate-200 p-4"
           >
-            <summary className="cursor-pointer">
+            <summary
+              className="cursor-pointer"
+              onClick={(event) => {
+                event.preventDefault();
+                const nextOpen = !isOpen;
+                setOpenItemId(nextOpen ? item.id : null);
+                if (nextOpen && !item.data.fullContent && (folder === "incoming" || folder === "sent")) {
+                  void readWithFeedback(item);
+                }
+              }}
+            >
               <div className="inline-flex flex-wrap items-center justify-between gap-2 w-[calc(100%-1.5rem)] align-middle">
                 <div>
                   {folder === "outbox" &&
@@ -926,6 +941,7 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
                 </div>
               </div>
             </summary>
+            {isOpen && (
             <div className="mt-4 space-y-3">
               {loadingIds.includes(item.id) && (
                 <p role="status" className="text-sm text-sky-700">
@@ -1109,6 +1125,7 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
                 </button>
               )}
             </div>
+            )}
           </details>
         );
       })}

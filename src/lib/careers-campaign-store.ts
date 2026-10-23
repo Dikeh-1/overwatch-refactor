@@ -276,7 +276,7 @@ export async function getRoleDefinitions(forceFresh = false): Promise<CareerRole
   return defaults;
 }
 
-async function persistRoleDefinition(
+export async function persistRoleDefinition(
   role: CareerRoleDefinition,
 ): Promise<CareerRoleDefinition> {
   invalidateCampaignStoreCache();
@@ -479,7 +479,7 @@ function planLifecycle(role: CareerRoleDefinition, cohorts: CareerCohort[], appl
   const now = new Date().toISOString();
   const existing = cohorts.find(c => c.id === role.activeCohortId && sameRole(c.roleId, role.id)) ||
     cohorts.find(c => sameRole(c.roleId, role.id) && c.status === "active");
-  if (open && role.open && existing?.status === "active") return { role, cohort: { ...existing, stages: [...role.pipelineStages], screeningRules: structuredClone(role.screeningRules), roleSnapshot: structuredClone(role) } };
+  if (open && role.open && existing?.status === "active") return { role, cohort: { ...existing, applicationQuota: role.applicationQuota ?? existing.applicationQuota ?? null, stages: [...role.pipelineStages], screeningRules: structuredClone(role.screeningRules), roleSnapshot: structuredClone(role) } };
   // A repeated closure is idempotent, including roles closed by the old implementation.
   const lastClosed = !open && !role.open ? cohorts.filter(c => sameRole(c.roleId, role.id) && c.status !== "active").sort((a,b) => (b.closedAt || "").localeCompare(a.closedAt || ""))[0] : undefined;
   const old = existing || lastClosed;
@@ -487,11 +487,11 @@ function planLifecycle(role: CareerRoleDefinition, cohorts: CareerCohort[], appl
   const cohort: CareerCohort = open ? {
     id: `${role.id}_${crypto.randomUUID()}`, roleId: role.id,
     name: name?.trim() || `${role.pt} — ${new Date().toLocaleDateString("pt-MZ", { month: "long", year: "numeric", timeZone: "Africa/Maputo" })}`,
-    openedAt: now, status: "active", stages: [...role.pipelineStages], screeningRules: structuredClone(role.screeningRules), roleSnapshot: structuredClone(role),
+    openedAt: now, status: "active", applicationQuota: role.applicationQuota ?? null, stages: [...role.pipelineStages], screeningRules: structuredClone(role.screeningRules), roleSnapshot: structuredClone(role),
   } : {
     ...(old || { id: role.activeCohortId || `${role.id}_${crypto.randomUUID()}`, roleId: role.id, name: role.pt, openedAt: role.createdAt }),
     name: cycleLabel({ name: "", openedAt: role.createdAt, closedAt: now }, role, "pt"),
-    status: "closed", closedAt: now, notes: name ?? old?.notes,
+    status: "closed", closedAt: now, notes: name ?? old?.notes, applicationQuota: old?.applicationQuota ?? role.applicationQuota ?? null,
     stages: [...role.pipelineStages], screeningRules: structuredClone(role.screeningRules), roleSnapshot: structuredClone(role),
   };
   if (!open) {

@@ -38,7 +38,8 @@ export default function Navbar() {
   const tNavSections = useTranslations("navSections");
   const tMobile = useTranslations("mobileMenu");
   const pathname = usePathname();
-  const hasDarkHero = !pathname.startsWith("/privacy") && !pathname.startsWith("/terms");
+  const isLightPortalPage = pathname.includes("/careers/test-invite") || pathname.includes("/careers/next-phase") || pathname.startsWith("/gate");
+  const hasDarkHero = !pathname.startsWith("/privacy") && !pathname.startsWith("/terms") && !isLightPortalPage;
   const [scrolled, setScrolled] = useState(false);
   const [currentHash, setCurrentHash] = useState(
     typeof window === "undefined" ? "" : window.location.hash,
@@ -184,11 +185,11 @@ export default function Navbar() {
         suppressHydrationWarning
         className={cn(
           "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
-          scrolled
+          isLightPortalPage ? "bg-[#0f1117]/95 dark backdrop-blur-md border-b border-[#2e3a4e] shadow-lg" : scrolled
             ? "bg-primary-dark/95 backdrop-blur-md border-b border-border shadow-lg"
             : hasDarkHero
               ? "bg-transparent dark"
-              : "bg-primary-dark/95 backdrop-blur-md border-b border-border",
+              : "bg-[#0f1117]/95 dark backdrop-blur-md border-b border-[#2e3a4e] shadow-lg",
         )}
       >
         <nav
