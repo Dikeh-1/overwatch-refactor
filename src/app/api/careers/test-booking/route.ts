@@ -192,7 +192,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const raw = await getApplication(id);
+    const raw = await getApplication(id, true);
     const candidate = raw ? resolveApplication(raw) : null;
     if (!candidate) {
       return Response.json(
@@ -301,7 +301,7 @@ async function handlePOST(request: Request) {
       );
     }
 
-    const raw = await getApplication(id);
+    const raw = await getApplication(id, true);
     const candidate = raw ? resolveApplication(raw) : null;
     if (!candidate) {
       return Response.json(

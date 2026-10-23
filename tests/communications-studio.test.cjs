@@ -11,6 +11,8 @@ test('preview and mail safely preserve lists, quotes, formatting and the positio
  assert.match(html,/\/en\/careers\/test-invite\/fixture-one/);assert.match(html,/A &lt;script&gt;bad&lt;\/script&gt; \$&/);assert.doesNotMatch(html,/<script|javascript:/);
  assert.doesNotMatch(content.renderStudioMessage('{{booking_link}}',candidate,'Operator','en',false),/href=/);
  assert.match(content.candidateVariables('{{test_slot}}',candidate,'Operator','en'),/09:30/);
+ assert.match(content.candidateVariables('{{slot}} {{booked_slot}} {{turno}} {{data_teste}}',candidate,'Operator','pt'),/09:30/);
+ assert.match(content.candidateVariables('{{slot}}',{...candidate,testSlot:undefined},'Operator','pt'),/Ainda não agendado/);
  assert.match(content.candidateVariables('{{test_slot}}',{...candidate,testSlot:undefined},'Operator','en'),/Not booked yet/);
 });
 
