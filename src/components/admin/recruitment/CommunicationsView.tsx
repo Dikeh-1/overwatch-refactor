@@ -147,6 +147,8 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
   const followUpHandle = useRef<RichMessageEditorHandle>(null);
   const lastEditor = useRef<"main" | "followup">("main");
   const [folder, setFolder] = useState<StudioFolder>("compose");
+  const [openingDraft, setOpeningDraft] = useState(false);
+  const newDraftLock = useRef(false);
   const [followUpEnabled, setFollowUpEnabled] = useState(false);
   const [followUpSubject, setFollowUpSubject] = useState("");
   const [followUpBody, setFollowUpBody] = useState("");
@@ -795,7 +797,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
         <nav aria-label={t("Mailbox folders", "Pastas de correio")} className="flex flex-wrap gap-1">{([
           ["compose", t("Compose", "Escrever")], ["drafts", t("Drafts", "Rascunhos")], ["incoming", t("Incoming", "Recebidos")], ["sent", t("Sent", "Enviados")], ["outbox", t("Outbox", "Caixa de saída")]
         ] as const).map(([key,label]) => <button key={key} type="button" aria-pressed={folder === key} onClick={() => setFolder(key)} className={`rounded-lg px-3 py-2 text-xs font-medium ${folder === key ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"}`}>{label}</button>)}</nav>
-        <div className="flex items-center gap-3"><span role="status" className="max-w-sm text-xs text-slate-500">{draft.status}</span><button type="button" disabled={!draft.ready || isDispatching} onClick={() => { void draft.newDraft().then(() => setFolder("compose")).catch(error => setDeliveryNotice(error.message)); }} className="rounded-lg border px-3 py-2 text-xs font-medium">{t("New draft", "Novo rascunho")}</button></div>
+        <div className="flex items-center gap-3"><span role="status" className="max-w-sm text-xs text-slate-500">{draft.status}</span><button type="button" disabled={!draft.ready || isDispatching || openingDraft} onClick={() => { if (newDraftLock.current) return; newDraftLock.current = true; setOpeningDraft(true); void draft.newDraft().then(() => setFolder("compose")).catch(error => setDeliveryNotice(error.message)).finally(() => { newDraftLock.current = false; setOpeningDraft(false); }); }} className="rounded-lg border px-3 py-2 text-xs font-medium">{openingDraft ? t("Creating draft…", "A criar rascunho…") : t("New draft", "Novo rascunho")}</button></div>
       </div>
       {folder !== "compose" && <StudioMailbox scope={scope} folder={folder} applications={applications} onOpenDraft={async id => { await draft.open(id); setFolder("compose"); }}/ >}
       {/* MAIN 2-COLUMN STUDIO LAYOUT */}

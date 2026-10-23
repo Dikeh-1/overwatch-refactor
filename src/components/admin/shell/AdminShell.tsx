@@ -370,7 +370,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
         </aside>
       )}
 
-      <div className="min-h-screen bg-[#F7F8FA] text-slate-900 flex">
+      <div data-admin-ui className="min-h-screen bg-[#F7F8FA] text-slate-900 flex">
         {/* Sidebar */}
         <AdminSidebar
           lang={lang}

@@ -63,6 +63,11 @@ export function safeEmailDocument(html: string): string {
     allowedSchemes: ["http", "https", "mailto", "tel"],
     allowedSchemesByTag: { img: ["https", "data"] },
     allowProtocolRelative: false,
-    transformTags: { a: sanitizeHtml.simpleTransform("a", { target: "_blank", rel: "noopener noreferrer" }) },
+    transformTags: {
+      a: sanitizeHtml.simpleTransform("a", { target: "_blank", rel: "noopener noreferrer" }),
+      // Brevo rewrites image URLs. Restore only our identified logo instead of
+      // enabling all remote images (which would trigger an applicant's open pixel).
+      img: (tagName, attributes) => ({ tagName, attribs: { ...attributes, ...(attributes.alt?.toLowerCase() === "overwatch" ? { src: "https://www.overwatchmoz.com/logo-white.png" } : {}) } }),
+    },
   });
 }

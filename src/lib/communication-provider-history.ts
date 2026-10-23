@@ -33,7 +33,14 @@ export async function readProviderMessage(record: { recipient: string; subject: 
         if (!events.some(row => row.name === event.event && row.time === event.date)) events.push({ name: String(event.event), time: String(event.date), ...(event.link ? { link: String(event.link) } : {}) });
       }
     }
-    return { htmlContent: typeof content.body === "string" ? content.body : undefined, events };
+    const unique = new Map<string, MailEvent>();
+    for (const event of events) {
+      const name = event.name === "requests" ? "sent" : event.name === "clicks" ? "click" : event.name;
+      const at = Date.parse(event.time), key = `${name}:${Number.isFinite(at) ? Math.floor(at / 1000) : event.time}`;
+      const previous = unique.get(key);
+      unique.set(key, { ...event, name, link: event.link || previous?.link });
+    }
+    return { htmlContent: typeof content.body === "string" ? content.body : undefined, events: [...unique.values()].sort((a, b) => Date.parse(a.time) - Date.parse(b.time)) };
   }
   return { events: [] as MailEvent[] };
 }

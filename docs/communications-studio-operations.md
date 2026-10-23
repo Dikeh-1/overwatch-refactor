@@ -46,3 +46,13 @@ Sent messages retain the exact rendered HTML and provider message ID. Opening a 
 The live manager cycle had capacity 8 separately from the default capacity 10. Its cycle capacity was changed to 10 and verified after a fresh production reload. Cycle and booking configuration reads now bypass the old per-instance 60-second cache, and a rejected remote storage write cannot report a successful save. Existing reservations and candidate outcomes were not changed.
 
 Booking commits before email delivery. The configured follow-up and standard booking receipt start independently immediately after confirmation, so a slow receipt no longer delays the follow-up. The automation is claimed before delivery, preventing duplicate triggers or a cancelled waiting automation from racing into a send.
+
+
+## Folder and action feedback correction (23 October 2026)
+
+Mailbox folder sessions remount by scope and folder, abort obsolete list/detail reads, ignore stale response generations and accept only received Zoho records in Incoming. Deleted Outbox rows cannot render beneath another folder's heading. Deleting requires an accessible native modal confirming the exact frozen selection; Escape/Cancel makes no request. Mutating controls lock synchronously, display processing text and report success/failure. Background Outbox polling pauses during a confirmation or mutation. Mail reads show loading status, repeated reads are coalesced per message, manual Refresh has a visible loading/result state, and network requests have bounded timeouts. New draft creation also rejects repeated clicks. Admin controls have hover, press and keyboard-focus feedback, and language helpers remain stable across unrelated renders.
+
+Provider events reported through both content and statistics endpoints are deduplicated by event and second. Provider-rewritten company logos are restored to the known Overwatch logo while tracking pixels remain blocked in the mail viewer. The completed-campaign retry regression preserves immutable original content. The full suite currently contains 89 passing tests.
+
+
+Local browser verification used one marked, disposable failed Outbox record addressed to qa@example.invalid. Cancel retained it; Confirm displayed Deleting/disabled controls, then removed it and displayed the success result. Rapid Outbox/Sent/Incoming switching exposed no old Outbox rows or controls in Incoming. The fixture was removed afterwards. No applicant messages were sent or deleted in QA. TypeScript and focused ESLint checks passed; the production build completed successfully.

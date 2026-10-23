@@ -553,3 +553,10 @@ textarea {
 /* Make interactive controls discoverable, while preserving disabled feedback. */
 button:not(:disabled), a[href], [role="button"]:not([aria-disabled="true"]), summary, select { cursor: pointer; }
 button:disabled, [aria-disabled="true"] { cursor: not-allowed; }
+
+[data-admin-ui] button:not(:disabled):hover, [data-admin-ui] a[href]:hover { filter: brightness(0.96); }
+[data-admin-ui] button:not(:disabled):active, [data-admin-ui] a[href]:active { transform: translateY(1px); }
+[data-admin-ui] button:focus-visible, [data-admin-ui] a[href]:focus-visible, [data-admin-ui] summary:focus-visible { outline: 2px solid #0284c7; outline-offset: 3px; }
+@media (prefers-reduced-motion: no-preference) {
+  [data-admin-ui] button, [data-admin-ui] a[href] { transition: background-color 120ms, box-shadow 120ms, transform 120ms; }
+}

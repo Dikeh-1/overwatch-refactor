@@ -82,6 +82,7 @@ test('Portuguese mail retains the original letterhead without repeating its subj
  const mail=renderOfficialMail({candidate,subject:'Only in subject',message:'<p>Olá {{candidate_name}}</p>{{booking_link}}',roleTitle:'Operadora de CCTV',includeBookingButton:true});
  assert.equal(mail.subject,'Only in subject');assert.doesNotMatch(mail.html,/Only in subject|Recruitment team|Choose your test/);
  for(const label of ['COMUNICAÇÃO OFICIAL · PROCESSO DE RECRUTAMENTO','Departamento de Recursos Humanos','Equipa de Recrutamento','Escolher data e hora do teste','REF: COM-'])assert.ok(mail.html.includes(label),label);
+ const original=content.safeEmailDocument('<table><tr><td><img alt="Overwatch" src="https://tracking.example.invalid/logo"></td></tr></table><script>bad</script>');assert.match(original,/<table>/);assert.match(original,/src="https:\/\/www.overwatchmoz.com\/logo-white.png"/);assert.doesNotMatch(original,/<script/);
  assert.match(mail.html,/logo-white.png/);assert.match(mail.text,/\/pt\/careers\/test-invite\/fixture/);
 });
 
