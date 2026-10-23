@@ -26,7 +26,12 @@ export async function GET(request: Request) {
       }
       return Response.json(
         cohort
-          ? { slots: cohort.testSlots || [], quota: cohort.slotQuota || 15, cohortId: cohort.id }
+          ? {
+              slots: cohort.testSlots || [],
+              quota: cohort.slotQuota || 15,
+              slotQuotas: cohort.slotQuotas || {},
+              cohortId: cohort.id,
+            }
           : {
               roles: workspace.roles.map((r) => ({ id: r.id, en: r.en, pt: r.pt, open: r.open, activeCohortId: r.activeCohortId })),
               cohorts: workspace.cohorts
@@ -40,6 +45,7 @@ export async function GET(request: Request) {
                   status: c.status,
                   testSlots: c.testSlots || [],
                   slotQuota: c.slotQuota || 15,
+                  slotQuotas: c.slotQuotas || {},
                 })),
             },
         { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } },
@@ -97,6 +103,15 @@ async function handlePOST(request: Request) {
     }
 
     const uniqueSlots = [...new Set<string>(cleanSlots)];
+    const cleanSlotQuotas: Record<string, number> = {};
+    if (body.slotQuotas && typeof body.slotQuotas === "object") {
+      for (const [rawSlot, rawQ] of Object.entries(body.slotQuotas)) {
+        const qVal = Number(rawQ);
+        if (typeof rawSlot === "string" && rawSlot.trim() && Number.isInteger(qVal) && qVal >= 1 && qVal <= 200) {
+          cleanSlotQuotas[normalizeSlot(rawSlot)] = qVal;
+        }
+      }
+    }
 
     if (body.cohortId) {
       const workspace = await getRecruitmentWorkspaceData();
@@ -104,7 +119,33 @@ async function handlePOST(request: Request) {
       if (!cohort || cohort.unassigned) {
         return Response.json({ error: "Cohort not found or membership needs review" }, { status: 400 });
       }
-      await saveCohort({ ...cohort, testSlots: uniqueSlots, slotQuota: quota });
+      const nextSlotQuotas: Record<string, number> = {
+        ...(cohort.slotQuotas || {}),
+        ...cleanSlotQuotas,
+      };
+      if (
+        body.renamedSlot &&
+        typeof body.renamedSlot.from === "string" &&
+        typeof body.renamedSlot.to === "string" &&
+        body.renamedSlot.from.trim() &&
+        body.renamedSlot.to.trim()
+      ) {
+        const fromNorm = normalizeSlot(body.renamedSlot.from);
+        const toNorm = normalizeSlot(body.renamedSlot.to);
+        if (fromNorm !== toNorm) {
+          if (nextSlotQuotas[toNorm] === undefined && nextSlotQuotas[fromNorm] !== undefined) {
+            nextSlotQuotas[toNorm] = nextSlotQuotas[fromNorm];
+          }
+          delete nextSlotQuotas[fromNorm];
+        }
+      }
+      const activeNormSet = new Set(uniqueSlots.map((s) => normalizeSlot(s)));
+      for (const k of Object.keys(nextSlotQuotas)) {
+        if (!activeNormSet.has(normalizeSlot(k))) {
+          delete nextSlotQuotas[k];
+        }
+      }
+      await saveCohort({ ...cohort, testSlots: uniqueSlots, slotQuota: quota, slotQuotas: nextSlotQuotas });
       if (
         body.renamedSlot &&
         typeof body.renamedSlot.from === "string" &&
@@ -123,7 +164,13 @@ async function handlePOST(request: Request) {
       }
       invalidateCampaignStoreCache();
       invalidateApplicationsCache();
-      return Response.json({ success: true, slots: uniqueSlots, quota, cohortId: cohort.id });
+      return Response.json({
+        success: true,
+        slots: uniqueSlots,
+        quota,
+        slotQuotas: nextSlotQuotas,
+        cohortId: cohort.id,
+      });
     }
 
     const saved = await saveTestSlotConfig({ slots: uniqueSlots, quota });

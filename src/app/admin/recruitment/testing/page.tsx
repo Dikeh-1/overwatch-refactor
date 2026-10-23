@@ -15,6 +15,7 @@ export default function TestingPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [broadcastSlots, setBroadcastSlots] = useState<string[]>([...DEFAULT_TEST_SLOTS]);
   const [slotQuota, setSlotQuota] = useState<number>(15);
+  const [slotQuotas, setSlotQuotas] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [scannerOpen, setScannerOpen] = useState(false);
 
@@ -34,6 +35,7 @@ export default function TestingPage() {
         const data = await slotsRes.json();
         if (Array.isArray(data.slots)) setBroadcastSlots(data.slots);
         if (typeof data.quota === "number" && data.quota > 0) setSlotQuota(data.quota);
+        if (data.slotQuotas && typeof data.slotQuotas === "object") setSlotQuotas(data.slotQuotas);
       }
     } catch (err) {
       console.error("Failed to load testing data:", err);
@@ -130,6 +132,7 @@ export default function TestingPage() {
       <TestingAttendanceView
         applications={applications}
         slotQuota={slotQuota}
+        slotQuotas={slotQuotas}
         broadcastSlots={broadcastSlots}
         onToggleAttendance={handleToggleAttendance}
         onOpenGateScanner={() => setScannerOpen(true)}

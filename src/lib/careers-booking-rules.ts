@@ -2,10 +2,25 @@ import type { Application } from "./careers";
 import { isPastDateSlot, normalizeSlot } from "./careers";
 import { isTerminal, resolveApplication, sameRole } from "./careers-workflow";
 
+export function getQuotaForSlot(
+  slot: string,
+  defaultQuota = 15,
+  slotQuotas?: Record<string, number>,
+): number {
+  if (slotQuotas && typeof slotQuotas === "object") {
+    const norm = normalizeSlot(slot);
+    const custom = slotQuotas[norm] ?? slotQuotas[slot];
+    if (typeof custom === "number" && Number.isInteger(custom) && custom >= 1 && custom <= 200) {
+      return custom;
+    }
+  }
+  return typeof defaultQuota === "number" && defaultQuota >= 1 ? defaultQuota : 15;
+}
+
 export function validateReservation(
   candidate: Application,
   slot: string,
-  config: { slots: string[]; quota: number },
+  config: { slots: string[]; quota: number; slotQuotas?: Record<string, number> },
   applications: Application[],
   now = new Date(),
 ): Partial<Application> {
@@ -37,7 +52,8 @@ export function validateReservation(
       normalizeSlot(a.testSlot) === slot &&
       !isTerminal(resolveApplication(a)),
   ).length;
-  if (occupancy >= config.quota) throw new Error("SLOT_FULL");
+  const effectiveQuota = getQuotaForSlot(slot, config.quota, config.slotQuotas);
+  if (occupancy >= effectiveQuota) throw new Error("SLOT_FULL");
   const at = now.toISOString();
   return {
     testSlot: slot,

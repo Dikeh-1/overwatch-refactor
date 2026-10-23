@@ -25,6 +25,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { hasAttended, isTerminal } from "@/lib/careers-workflow";
+import { getQuotaForSlot } from "@/lib/careers-booking-rules";
 import { Application, normalizeSlot, formatSlotDisplay, formatPhoneDisplay } from "@/lib/careers";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import { useActiveRole } from "../shell/ActiveRoleContext";
@@ -35,6 +36,7 @@ interface TestingAttendanceViewProps {
   applications: Application[];
   lang?: "pt" | "en";
   slotQuota: number;
+  slotQuotas?: Record<string, number>;
   broadcastSlots: string[];
   onToggleAttendance: (candidateId: string, attended: boolean) => Promise<void>;
   onOpenGateScanner: () => void;
@@ -46,6 +48,7 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
   applications,
   lang: propLang,
   slotQuota,
+  slotQuotas,
   broadcastSlots,
   onToggleAttendance,
   onOpenGateScanner,
@@ -135,8 +138,9 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
 
   const attendedCount = slotCandidates.filter(hasAttended).length;
   const currentSlotOccupancy = slotCandidates.length;
-  const isOverCapacity = selectedSlot !== "all" && currentSlotOccupancy > slotQuota;
-  const overCount = selectedSlot !== "all" ? Math.max(0, currentSlotOccupancy - slotQuota) : 0;
+  const selectedSlotQuota = selectedSlot !== "all" ? getQuotaForSlot(selectedSlot, slotQuota, slotQuotas) : slotQuota;
+  const isOverCapacity = selectedSlot !== "all" && currentSlotOccupancy > selectedSlotQuota;
+  const overCount = selectedSlot !== "all" ? Math.max(0, currentSlotOccupancy - selectedSlotQuota) : 0;
 
   // Export CSV
   const handleExportAttendanceCSV = async () => {
@@ -236,7 +240,8 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
 
         {allSlots.map((slot, idx) => {
           const count = bookedCandidates.filter((c) => normalizeSlot(c.testSlot) === normalizeSlot(slot)).length;
-          const isOver = count > slotQuota;
+          const thisSlotQuota = getQuotaForSlot(slot, slotQuota, slotQuotas);
+          const isOver = count > thisSlotQuota;
 
           return (
             <button
@@ -257,7 +262,7 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
                     : "bg-slate-100 text-slate-600"
                 }`}
               >
-                {count}/{slotQuota}
+                {count}/{thisSlotQuota}
               </span>
             </button>
           );
@@ -272,8 +277,8 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
             <span>
               <strong>{t("Over capacity:", "Capacidade excedida:")}</strong>{" "}
               {t(
-                `This session has ${currentSlotOccupancy} confirmed candidates against a target quota of ${slotQuota} (+${overCount} over limit).`,
-                `Esta sessão conta com ${currentSlotOccupancy} candidatas confirmadas face ao limite de ${slotQuota} (+${overCount} acima da quota).`
+                `This session has ${currentSlotOccupancy} confirmed candidates against a target quota of ${selectedSlotQuota} (+${overCount} over limit).`,
+                `Esta sessão conta com ${currentSlotOccupancy} candidatas confirmadas face ao limite de ${selectedSlotQuota} (+${overCount} acima da quota).`
               )}
             </span>
           </div>

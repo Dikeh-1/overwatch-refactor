@@ -804,7 +804,7 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
                   sandbox="allow-popups allow-popups-to-escape-sandbox"
                   referrerPolicy="no-referrer"
                   className="h-[620px] w-full rounded-lg border bg-white"
-                  srcDoc={`<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src https://www.overwatchmoz.com data:;">${safeEmailDocument(
+                  srcDoc={`<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src https://www.overwatchmoz.com data:;"><style>body{margin:0;background:#f1f5f9;font-family:Arial,sans-serif;color:#1e293b;}</style>${safeEmailDocument(
                     scheduledHtml
                   )}`}
                 />
@@ -973,7 +973,7 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
                   sandbox="allow-popups allow-popups-to-escape-sandbox"
                   referrerPolicy="no-referrer"
                   className="h-[620px] w-full rounded-lg border bg-white"
-                  srcDoc={`<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src https://www.overwatchmoz.com data:;">${safeEmailDocument(
+                  srcDoc={`<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src https://www.overwatchmoz.com data:;"><style>body{margin:0;background:#f1f5f9;font-family:Arial,sans-serif;color:#1e293b;}</style>${safeEmailDocument(
                     item.data.htmlContent ||
                       (folder === "incoming"
                         ? item.data.body || ""

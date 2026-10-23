@@ -5,7 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import { cycleLabel } from "@/lib/careers-cycle-label";
 import type { CareerCohort } from "@/lib/careers-models";
-import { formatSlotDisplay, parseSlotComponents } from "@/lib/careers";
+import { formatSlotDisplay, normalizeSlot, parseSlotComponents } from "@/lib/careers";
+import { getQuotaForSlot } from "@/lib/careers-booking-rules";
 
 type CatalogRole = { id: string; en: string; pt: string; open?: boolean; activeCohortId?: string | null };
 type Catalog = { roles: CatalogRole[]; cohorts: CareerCohort[] };
@@ -29,11 +30,13 @@ export function RoleTestSlotSettings() {
   const [slots, setSlots] = useState<string[]>([]);
   const [quota, setQuota] = useState(15);
   const [quotaInput, setQuotaInput] = useState("15");
+  const [slotQuotas, setSlotQuotas] = useState<Record<string, number>>({});
   const [date, setDate] = useState("");
   const [time, setTime] = useState("10:00");
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [editDate, setEditDate] = useState("");
   const [editTime, setEditTime] = useState("10:00");
+  const [editSlotQuota, setEditSlotQuota] = useState("15");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -61,6 +64,7 @@ export function RoleTestSlotSettings() {
           const targetCohort = data.cohorts.find((c) => c.id === targetId);
           if (targetCohort) {
             setSlots(targetCohort.testSlots || []);
+            setSlotQuotas(targetCohort.slotQuotas || {});
             if (!isEditingQuotaRef.current) {
               const nextQ = targetCohort.slotQuota || 15;
               setQuota(nextQ);
@@ -94,6 +98,7 @@ export function RoleTestSlotSettings() {
     const nextQ = cohort?.slotQuota || 15;
     setCycleId(id);
     setSlots(cohort?.testSlots || []);
+    setSlotQuotas(cohort?.slotQuotas || {});
     setQuota(nextQ);
     setQuotaInput(String(nextQ));
     setEditingSlot(null);
@@ -104,10 +109,12 @@ export function RoleTestSlotSettings() {
   const persistSchedule = async (
     nextSlots: string[],
     nextQuota: number,
-    renamedSlot?: { from: string; to: string }
+    renamedSlot?: { from: string; to: string },
+    nextSlotQuotas?: Record<string, number>
   ) => {
     if (!cycleId) return;
     const validQuota = Number.isInteger(nextQuota) && nextQuota >= 1 && nextQuota <= 200 ? nextQuota : quota;
+    const effectiveSlotQuotas = nextSlotQuotas ?? slotQuotas;
     setBusy(true);
     setError("");
     setNotice("");
@@ -119,6 +126,7 @@ export function RoleTestSlotSettings() {
           cohortId: cycleId,
           slots: nextSlots,
           quota: validQuota,
+          slotQuotas: effectiveSlotQuotas,
           ...(renamedSlot ? { renamedSlot } : {}),
         }),
       });
@@ -126,15 +134,20 @@ export function RoleTestSlotSettings() {
       if (!response.ok) throw Error(data.error);
       const savedSlots = data.slots || nextSlots;
       const savedQuota = typeof data.quota === "number" ? data.quota : validQuota;
+      const savedSlotQuotas =
+        data.slotQuotas && typeof data.slotQuotas === "object" ? data.slotQuotas : effectiveSlotQuotas;
       setSlots(savedSlots);
       setQuota(savedQuota);
       setQuotaInput(String(savedQuota));
+      setSlotQuotas(savedSlotQuotas);
       setCatalog(
         (current) =>
           current && {
             ...current,
             cohorts: current.cohorts.map((c) =>
-              c.id === cycleId ? { ...c, testSlots: savedSlots, slotQuota: savedQuota } : c
+              c.id === cycleId
+                ? { ...c, testSlots: savedSlots, slotQuota: savedQuota, slotQuotas: savedSlotQuotas }
+                : c
             ),
           }
       );
@@ -280,6 +293,7 @@ export function RoleTestSlotSettings() {
           <ul className="divide-y divide-slate-100">
             {slots.map((slot) => {
               const isEditingThis = editingSlot === slot;
+              const currentSlotCapacity = getQuotaForSlot(slot, quota, slotQuotas);
               return (
                 <li key={slot} className="flex flex-wrap items-center justify-between gap-3 py-2.5 text-sm">
                   {isEditingThis ? (
@@ -298,19 +312,44 @@ export function RoleTestSlotSettings() {
                         aria-label={t("Edit slot time", "Editar hora do turno")}
                         className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs"
                       />
+                      <label className="inline-flex items-center gap-1.5 text-xs text-slate-600 font-medium">
+                        <span>{t("Capacity:", "Capacidade:")}</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={200}
+                          value={editSlotQuota}
+                          onChange={(e) => setEditSlotQuota(e.target.value)}
+                          aria-label={t("Edit slot capacity", "Editar capacidade do turno")}
+                          className="w-20 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-900"
+                        />
+                      </label>
                       <button
                         type="button"
                         disabled={!editDate || !editTime || busy}
                         onClick={() => {
                           const updatedSlot = `${editDate} - ${editTime}`;
+                          const parsedSlotQ = parseInt(editSlotQuota, 10);
+                          const validSlotQ =
+                            Number.isFinite(parsedSlotQ) && parsedSlotQ >= 1 && parsedSlotQ <= 200
+                              ? parsedSlotQ
+                              : currentSlotCapacity;
                           const next = slots.map((s) => (s === slot ? updatedSlot : s));
                           const uniqueNext = [...new Set(next)];
+                          const nextMap: Record<string, number> = { ...slotQuotas };
+                          if (updatedSlot !== slot) {
+                            delete nextMap[normalizeSlot(slot)];
+                            delete nextMap[slot];
+                          }
+                          nextMap[normalizeSlot(updatedSlot)] = validSlotQ;
                           setEditingSlot(null);
                           setSlots(uniqueNext);
+                          setSlotQuotas(nextMap);
                           void persistSchedule(
                             uniqueNext,
                             quota,
-                            updatedSlot !== slot ? { from: slot, to: updatedSlot } : undefined
+                            updatedSlot !== slot ? { from: slot, to: updatedSlot } : undefined,
+                            nextMap
                           );
                         }}
                         className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-700 disabled:opacity-40"
@@ -327,7 +366,12 @@ export function RoleTestSlotSettings() {
                       </button>
                     </div>
                   ) : (
-                    <span>{formatSlotDisplay(slot, lang)}</span>
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <span>{formatSlotDisplay(slot, lang)}</span>
+                      <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                        {t(`Capacity: ${currentSlotCapacity}`, `Capacidade: ${currentSlotCapacity}`)}
+                      </span>
+                    </div>
                   )}
                   <div className="flex items-center gap-3">
                     {!isEditingThis && (
@@ -338,6 +382,7 @@ export function RoleTestSlotSettings() {
                           const initial = slotToDateTimeInputs(slot);
                           setEditDate(initial.date);
                           setEditTime(initial.time);
+                          setEditSlotQuota(String(currentSlotCapacity));
                           setEditingSlot(slot);
                         }}
                         className="text-xs font-medium text-sky-700 hover:underline disabled:opacity-40"
@@ -350,9 +395,13 @@ export function RoleTestSlotSettings() {
                       disabled={busy}
                       onClick={() => {
                         const next = slots.filter((s) => s !== slot);
+                        const nextMap: Record<string, number> = { ...slotQuotas };
+                        delete nextMap[normalizeSlot(slot)];
+                        delete nextMap[slot];
                         setSlots(next);
+                        setSlotQuotas(nextMap);
                         if (editingSlot === slot) setEditingSlot(null);
-                        void persistSchedule(next, quota);
+                        void persistSchedule(next, quota, undefined, nextMap);
                       }}
                       className="text-xs font-medium text-rose-700 hover:underline disabled:opacity-40"
                     >

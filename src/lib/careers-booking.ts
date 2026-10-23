@@ -6,31 +6,32 @@ import { getAllCohorts } from "./careers-campaign-store";
 import { updateApplication } from "./careers-store";
 import { getCareersPool } from "./careers-db";
 import { sameRole, canonicalRole } from "./careers-workflow";
-import { validateReservation, sameBookingScope } from "./careers-booking-rules";
+import { validateReservation, sameBookingScope, getQuotaForSlot } from "./careers-booking-rules";
 
 export async function getCandidateSlotConfig(candidate: Application) {
-  if (!candidate.cohortId) return { slots: [], quota: 15 };
+  if (!candidate.cohortId) return { slots: [], quota: 15, slotQuotas: {} as Record<string, number> };
   const cohort = (await getAllCohorts(true)).find(
     (c) => c.id === candidate.cohortId,
   );
   if (cohort?.testSlots && sameRole(cohort.roleId, candidate.role))
-    return { slots: cohort.testSlots, quota: cohort.slotQuota || 15 };
+    return { slots: cohort.testSlots, quota: cohort.slotQuota || 15, slotQuotas: cohort.slotQuotas || ({} as Record<string, number>) };
   // A closed legacy cycle must have its own schedule, not another intake's current slots.
-  return { slots: [], quota: 15 };
+  return { slots: [], quota: 15, slotQuotas: {} as Record<string, number> };
 }
 
 export async function reserveTestSlot(
   candidate: Application,
   slot: string,
-  config: { slots: string[]; quota: number },
+  config: { slots: string[]; quota: number; slotQuotas?: Record<string, number> },
   applications: Application[],
 ) {
+  const effectiveQuota = getQuotaForSlot(slot, config.quota, config.slotQuotas);
   const pool = getCareersPool();
   if (!pool && hasActivityRest()) {
     validateReservation(candidate, slot, config, applications);
     const base = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/+$/, "");
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "";
-    const response = await fetch(`${base}/rest/v1/rpc/reserve_career_test_slot`, { method: "POST", headers: { apikey: key, ...(key.startsWith("eyJ") ? { Authorization: `Bearer ${key}` } : {}), "Content-Type": "application/json" }, body: JSON.stringify({ p_id: candidate.id, p_slot: slot, p_quota: config.quota }), cache: "no-store", signal: AbortSignal.timeout(15000) });
+    const response = await fetch(`${base}/rest/v1/rpc/reserve_career_test_slot`, { method: "POST", headers: { apikey: key, ...(key.startsWith("eyJ") ? { Authorization: `Bearer ${key}` } : {}), "Content-Type": "application/json" }, body: JSON.stringify({ p_id: candidate.id, p_slot: slot, p_quota: effectiveQuota }), cache: "no-store", signal: AbortSignal.timeout(15000) });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) {
       const code = ["SLOT_FULL","ALREADY_BOOKED","INVALID_SLOT","CANDIDATE_INACTIVE","INVITATION_REQUIRED","BOOKING_CHANGED"].find(code => String(result?.message || "").includes(code));

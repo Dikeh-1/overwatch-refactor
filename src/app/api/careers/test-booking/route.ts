@@ -1,6 +1,6 @@
 import { bookingFollowUp } from "@/lib/communication-delivery";
 import { after } from "next/server";
-import { sameBookingScope } from "@/lib/careers-booking-rules";
+import { sameBookingScope, getQuotaForSlot } from "@/lib/careers-booking-rules";
 import { auditRequest } from "@/lib/admin-activity";
 import { resolveApplication, isTerminal } from "@/lib/careers-workflow";
 import { getCandidateSlotConfig, reserveTestSlot } from "@/lib/careers-booking";
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     if (!candidate.bookingLinkOpenedAt) await updateApplication(candidate.id, { bookingLinkOpenedAt: new Date().toISOString() });
 
     const allApps = await getApplications(true);
-    const { slots: activeSlots, quota = 15 } = await getCandidateSlotConfig(candidate);
+    const { slots: activeSlots, quota = 15, slotQuotas = {} } = await getCandidateSlotConfig(candidate);
     const hasActiveGrace = Boolean(candidate.rebookingGrace && !candidate.rebookingGrace.usedAt);
 
     // Filter available candidate booking slots:
@@ -59,10 +59,10 @@ export async function GET(request: Request) {
     // If all configured slots are in the past, fallback to DEFAULT_TEST_SLOTS filtered for future.
     const candidateSlots = activeSlots.filter(s => !isPastDateSlot(s));
 
-    const maxPerDay = quota;
     const slotStats: Record<string, { booked: number; max: number; isFull: boolean; remaining: number; isPast: boolean }> = {};
     for (const s of candidateSlots) {
       const normS = normalizeSlot(s);
+      const maxPerDay = getQuotaForSlot(s, quota, slotQuotas);
       const isPast = isPastDateSlot(s);
       const booked = allApps.filter(
         (a) => sameBookingScope(a, candidate) && normalizeSlot(a.testSlot) === normS && !isTerminal(resolveApplication(a)) && a.id !== candidate.id

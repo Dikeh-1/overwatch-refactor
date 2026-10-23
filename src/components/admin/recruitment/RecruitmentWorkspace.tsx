@@ -570,6 +570,7 @@ export default function RecruitmentWorkspace({
             <TestingAttendanceView
               applications={apps}
               slotQuota={cohort?.slotQuota || 15}
+              slotQuotas={cohort?.slotQuotas}
               broadcastSlots={cohort?.testSlots || []}
               onOpenGateScanner={() => setScanner(true)}
               onToggleAttendance={async (id, attended) => {
