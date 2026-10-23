@@ -29,7 +29,7 @@ export async function POST(request: Request) {
           try { await cancelCampaign(item); deleted.push(id); } catch { blocked.push(id); }
           continue;
         }
-        if (!item || item.scope !== body.scope || !["outbox", "automation"].includes(item.kind) || !["queued", "failed", "skipped", "waiting_for_booking", "needs_attention", "deleted"].includes(item.data.status)) { blocked.push(id); continue; }
+        if (!item || item.scope !== body.scope || item.kind !== "outbox" || !["queued", "failed", "skipped", "deleted"].includes(item.data.status)) { blocked.push(id); continue; }
         try {
           await putMail({ ...item, data: { ...item.data, status: "deleted", deletedAt: new Date().toISOString() } }, item.version);
           deleted.push(id);

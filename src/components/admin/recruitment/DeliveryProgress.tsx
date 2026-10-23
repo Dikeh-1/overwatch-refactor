@@ -109,7 +109,7 @@ export function DeliveryProgress({
       }
     };
     void update();
-    const timer = setInterval(() => void update(), 1200);
+    const timer = setInterval(() => void update(), 2000);
     return () => {
       controller.abort();
       clearInterval(timer);

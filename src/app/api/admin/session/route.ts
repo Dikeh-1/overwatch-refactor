@@ -2,6 +2,7 @@ import { auditRequest } from "@/lib/admin-activity";
 import {
   authenticated,
   adminSessionExpiry,
+  extendAdminSession,
   equal,
   login,
   logout,
@@ -26,6 +27,15 @@ async function handlePOST(request: Request) {
     return Response.json({ error: "Invalid origin" }, { status: 403 });
 
   if (!ADMIN_PASSWORD) return Response.json({ error: "Administrator access is not configured." }, { status: 503 });
+  const data = await request.json().catch(() => ({}));
+  if (data.action === "extend") {
+    const expiresAt = await extendAdminSession();
+    if (!expiresAt) {
+      return Response.json({ error: "Session expired." }, { status: 401 });
+    }
+    return Response.json({ success: true, authenticated: true, expiresAt });
+  }
+
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "local";
   const previous = attempts.get(ip);
   const attempt =
@@ -37,7 +47,6 @@ async function handlePOST(request: Request) {
       { error: "Too many attempts. Try again in 15 minutes." },
       { status: 429 },
     );
-  const data = await request.json().catch(() => ({}));
   if (
     typeof data.password !== "string" ||
     !equal(data.password, ADMIN_PASSWORD)
@@ -48,7 +57,8 @@ async function handlePOST(request: Request) {
   }
   attempts.delete(ip);
   await login();
-  return Response.json({ success: true });
+  const expiresAt = await adminSessionExpiry();
+  return Response.json({ success: true, authenticated: true, expiresAt });
 }
 async function handleDELETE(request: Request) {
   if (!sameOrigin(request)) return new Response(null, { status: 403 });

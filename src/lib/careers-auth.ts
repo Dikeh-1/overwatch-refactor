@@ -45,6 +45,16 @@ export async function login() {
 export async function logout() {
   (await cookies()).delete(cookie);
 }
+export async function extendAdminSession(): Promise<number | null> {
+  if (!ADMIN_PASSWORD) return null;
+  const token = (await cookies()).get(cookie)?.value || "";
+  const [expiry, signature] = token.split(".");
+  if (!signature || !equal(signature, sign(expiry)) || Number(expiry) + 5 * 60 * 1000 < Date.now()) {
+    return null;
+  }
+  await login();
+  return Date.now() + 8 * 60 * 60 * 1000;
+}
 export function sameOrigin(request: Request) {
   return request.headers.get("origin") === new URL(request.url).origin;
 }

@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AdminSidebar } from "./AdminSidebar";
-import { LockKeyhole, AlertCircle, RefreshCw, Menu, ShieldCheck, ArrowRight, ExternalLink, X } from "lucide-react";
+import { LockKeyhole, AlertCircle, RefreshCw, Menu, ShieldCheck, ArrowRight, ExternalLink, X, Clock } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 import LazyVideo from "@/components/ui/LazyVideo";
 import TechGrid from "@/components/ui/TechGrid";
@@ -35,6 +35,12 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
   const [sessionExpiry, setSessionExpiry] = useState<number | null>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
+  // Session Timeout Warning Modal (5-second countdown before automatic logout)
+  const [sessionWarningOpen, setSessionWarningOpen] = useState(false);
+  const [sessionCountdown, setSessionCountdown] = useState(5);
+  const [extendingSession, setExtendingSession] = useState(false);
+  const warningActiveRef = useRef(false);
+
   // App metrics for sidebar badges
   const [applications, setApplications] = useState<Application[]>([]);
   const [deletedNextPhase, setDeletedNextPhase] = useState<string[]>([]);
@@ -42,7 +48,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
 
   // Live real-time radar sync & instant new applicant notification
   const { liveAlert, dismissAlert } = useLiveRecruitmentFeed({
-    enabled: Boolean(auth),
+    enabled: Boolean(auth) && !sessionWarningOpen,
     onRefreshData: () => loadSummaryData(),
   });
 
@@ -50,41 +56,87 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
     toggleLang();
   };
 
+  const triggerSessionWarning = useCallback(() => {
+    if (warningActiveRef.current) return;
+    warningActiveRef.current = true;
+    setSessionCountdown(5);
+    setSessionWarningOpen(true);
+  }, []);
+
   // Auth check
-  const checkSession = useCallback(async () => {
+  const checkSession = useCallback(async (isInitial = false) => {
     try {
       const res = await fetch("/api/admin/session", { cache: "no-store", signal: AbortSignal.timeout(15000) });
       if (!res.ok) throw new Error("Session check unavailable");
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) throw new Error("Session check unavailable");
       const data = await res.json();
       setAuthError("");
-      setAuth(Boolean(data.authenticated));
-      setSessionExpiry(data.expiresAt || null);
+      if (data.authenticated) {
+        warningActiveRef.current = false;
+        setSessionWarningOpen(false);
+        setAuth(true);
+        setSessionExpiry(data.expiresAt || null);
+      } else {
+        setAuth((prev) => {
+          if (prev === true && !isInitial) {
+            triggerSessionWarning();
+            return true;
+          }
+          return false;
+        });
+        if (isInitial) setSessionExpiry(null);
+      }
     } catch {
       // A temporary connection failure is not evidence that a session expired.
       setAuthError("Unable to check your session. Please retry.");
     }
-  }, []);
+  }, [triggerSessionWarning]);
 
   useEffect(() => {
-    checkSession();
+    void checkSession(true);
   }, [checkSession]);
 
   useEffect(() => {
     if (!auth) return;
-    const expire = () => { setAuth(false); setSessionExpiry(null); setApplications([]); setDeletedNextPhase([]); };
     const originalFetch = window.fetch;
     const guardedFetch: typeof window.fetch = async (input, init) => {
       const response = await originalFetch(input, init);
       const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, window.location.href);
-      if (url.origin === window.location.origin && url.pathname.startsWith("/api/admin/") && url.pathname !== "/api/admin/session" && response.status === 401) expire();
-      if (url.origin === window.location.origin && url.pathname.startsWith("/api/admin/") && response.status === 403) {
-        void originalFetch("/api/admin/session", { cache: "no-store" }).then(async r => { if (r.ok && (await r.json()).authenticated === false) expire(); }).catch(() => {});
+      if (url.origin === window.location.origin && url.pathname.startsWith("/api/admin/")) {
+        const contentType = response.headers.get("content-type") || "";
+        // Protect JSON consumers if Vercel Security Checkpoint or gateway returns an HTML page
+        if (contentType.includes("text/html") && !url.pathname.startsWith("/api/admin/cv")) {
+          return new Response(
+            JSON.stringify({
+              error:
+                lang === "en"
+                  ? "Browser security verification or connection update in progress. Please wait a moment or click Refresh."
+                  : "Verificação de segurança do navegador ou atualização de ligação em curso. Aguarde um instante ou clique em Actualizar.",
+            }),
+            { status: 503, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        if (url.pathname !== "/api/admin/session" && response.status === 401) {
+          triggerSessionWarning();
+        }
+        if (response.status === 403 && !contentType.includes("text/html")) {
+          void originalFetch("/api/admin/session", { cache: "no-store" })
+            .then(async (r) => {
+              if (r.ok && r.headers.get("content-type")?.includes("application/json") && (await r.json()).authenticated === false) {
+                triggerSessionWarning();
+              }
+            })
+            .catch(() => {});
+        }
       }
       return response;
     };
     window.fetch = guardedFetch;
-    const timer = sessionExpiry ? window.setTimeout(expire, Math.max(0, sessionExpiry - Date.now())) : undefined;
-    const check = () => { if (!document.hidden) void checkSession(); };
+    // Prompt 5 seconds before sessionExpiry (or immediately if reached)
+    const delayMs = sessionExpiry ? Math.max(0, sessionExpiry - Date.now() - 5000) : undefined;
+    const timer = delayMs !== undefined ? window.setTimeout(triggerSessionWarning, delayMs) : undefined;
+    const check = () => { if (!document.hidden && !warningActiveRef.current) void checkSession(false); };
     const interval = window.setInterval(check, 60000);
     window.addEventListener("focus", check);
     document.addEventListener("visibilitychange", check);
@@ -93,7 +145,55 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
       window.clearTimeout(timer); window.clearInterval(interval);
       window.removeEventListener("focus", check); document.removeEventListener("visibilitychange", check);
     };
-  }, [auth, sessionExpiry, checkSession]);
+  }, [auth, sessionExpiry, checkSession, triggerSessionWarning, lang]);
+
+  // 5-second countdown effect when Session Timeout Warning modal is open
+  useEffect(() => {
+    if (!sessionWarningOpen || extendingSession) return;
+    if (sessionCountdown <= 0) {
+      warningActiveRef.current = false;
+      setSessionWarningOpen(false);
+      void fetch("/api/admin/session", { method: "DELETE" }).catch(() => {});
+      setAuth(false);
+      setSessionExpiry(null);
+      setApplications([]);
+      setDeletedNextPhase([]);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setSessionCountdown((c) => c - 1);
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [sessionWarningOpen, sessionCountdown, extendingSession]);
+
+  const handleExtendSession = async () => {
+    if (extendingSession) return;
+    setExtendingSession(true);
+    try {
+      const res = await fetch("/api/admin/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "extend" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.authenticated) {
+        warningActiveRef.current = false;
+        setSessionWarningOpen(false);
+        setSessionCountdown(5);
+        setSessionExpiry(data.expiresAt || Date.now() + 8 * 60 * 60 * 1000);
+      } else {
+        warningActiveRef.current = false;
+        setSessionWarningOpen(false);
+        setAuth(false);
+        setSessionExpiry(null);
+      }
+    } catch {
+      warningActiveRef.current = false;
+      setSessionWarningOpen(false);
+    } finally {
+      setExtendingSession(false);
+    }
+  };
 
   // Load summary data for badges
   const loadSummaryData = useCallback(async () => {
@@ -170,8 +270,11 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Password incorrect");
+      warningActiveRef.current = false;
+      setSessionWarningOpen(false);
       setAuth(true);
-      void checkSession();
+      if (data.expiresAt) setSessionExpiry(data.expiresAt);
+      void checkSession(false);
       loadSummaryData();
     } catch (err: any) {
       setAuthError(err.message || "Authentication failed");
@@ -181,8 +284,11 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
   };
 
   const handleLogout = async () => {
+    warningActiveRef.current = false;
+    setSessionWarningOpen(false);
     await fetch("/api/admin/session", { method: "DELETE" }).catch(() => {});
     setAuth(false);
+    setSessionExpiry(null);
   };
 
   // Compute breadcrumbs
@@ -356,6 +462,73 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
 
   return (
     <ActiveRoleProvider applications={applications}>
+      {/* Session Timeout Warning Modal with 5-Second Countdown */}
+      {sessionWarningOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="session-timeout-title"
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 border border-amber-200">
+                  <Clock size={22} />
+                </div>
+                <div>
+                  <h2 id="session-timeout-title" className="text-base font-bold text-slate-900">
+                    {t("Session About to Expire", "Sessão Prestes a Expirar")}
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    {t("Security timeout protection", "Proteção de tempo limite de segurança")}
+                  </p>
+                </div>
+              </div>
+              <span className="px-3 py-1.5 rounded-full bg-amber-100 border border-amber-300 text-amber-900 font-mono text-sm font-bold">
+                {sessionCountdown}s
+              </span>
+            </div>
+
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              {t(
+                `Your admin session is timing out. Click "Extend Session" below to stay logged in, or you will be automatically logged out in ${sessionCountdown} second(s).`,
+                `A sua sessão de administrador está a terminar. Clique em "Prolongar Sessão" abaixo para continuar ligado, ou a sessão será encerrada automaticamente em ${sessionCountdown} segundo(s).`
+              )}
+            </p>
+
+            <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+              <div
+                className="h-full bg-amber-500 transition-all duration-1000"
+                style={{ width: `${Math.max(0, (sessionCountdown / 5) * 100)}%` }}
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                disabled={extendingSession}
+                onClick={() => void handleLogout()}
+                className="rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-4 py-2.5 text-xs font-semibold text-slate-700 cursor-pointer disabled:opacity-50"
+              >
+                {t("Log Out Now", "Terminar Sessão")}
+              </button>
+              <button
+                type="button"
+                autoFocus
+                disabled={extendingSession}
+                onClick={() => void handleExtendSession()}
+                className="rounded-xl bg-sky-600 hover:bg-sky-700 px-5 py-2.5 text-xs font-bold text-white shadow-sm cursor-pointer disabled:opacity-50"
+              >
+                {extendingSession
+                  ? t("Extending…", "A prolongar…")
+                  : t(`Extend Session (${sessionCountdown}s)`, `Prolongar Sessão (${sessionCountdown}s)`)}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Instant Route Navigation Floating Heads-Up Pill */}
       {isNavigating && (
         <aside
@@ -509,4 +682,3 @@ export const AdminShell: React.FC<AdminShellProps> = ({ children }) => {
     </AdminLanguageProvider>
   );
 };
-

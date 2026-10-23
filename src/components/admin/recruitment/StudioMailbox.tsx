@@ -109,7 +109,18 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
       cache: "no-store",
     })
       .then(async (response) => {
-        const data = await response.json();
+        const text = await response.text();
+        let data: any;
+        try {
+          data = JSON.parse(text);
+        } catch {
+          throw Error(
+            t(
+              "Connection is temporarily refreshing. Please wait a moment or click Refresh.",
+              "A ligação está a actualizar temporariamente. Aguarde um instante ou clique em Actualizar."
+            )
+          );
+        }
         if (controller.signal.aborted || number !== requestNumber.current) return;
         if (!response.ok) throw Error(data.error);
         setItems(data.items || []);
@@ -135,7 +146,7 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
 
   useEffect(() => {
     if (folder !== "outbox" || action || confirmIds) return;
-    const timer = setInterval(() => setRetry((n) => n + 1), 3000);
+    const timer = setInterval(() => setRetry((n) => n + 1), 6000);
     return () => clearInterval(timer);
   }, [folder, action, confirmIds]);
 
@@ -348,8 +359,7 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
   const removableIds = all
     .filter(
       (item) =>
-        (["outbox", "automation"].includes(item.kind || "") &&
-          ["queued", "failed", "skipped", "waiting_for_booking", "needs_attention"].includes(item.data.status)) ||
+        (item.kind === "outbox" && ["queued", "failed", "skipped"].includes(item.data.status)) ||
         (item.kind === "draft" && item.data.status === "queued")
     )
     .map((item) => item.id);
@@ -451,7 +461,7 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
           </div>
         )}
 
-      {folder === "outbox" && (
+      {folder === "outbox" && removableIds.length > 0 && (
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <label>
             <input
@@ -608,8 +618,7 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
             <div className="inline-flex flex-wrap items-center justify-between gap-2 w-[calc(100%-1.5rem)] align-middle">
               <div>
                 {folder === "outbox" &&
-                  ((["outbox", "automation"].includes(item.kind || "") &&
-                    ["queued", "failed", "skipped", "waiting_for_booking", "needs_attention"].includes(item.data.status)) ||
+                  ((item.kind === "outbox" && ["queued", "failed", "skipped"].includes(item.data.status)) ||
                     (item.kind === "draft" && item.data.status === "queued")) && (
                     <input
                       aria-label={t("Select message", "Seleccionar mensagem")}
@@ -773,39 +782,28 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
               )}
             </span>
             <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-bold text-indigo-800">
-              {t("Triggers automatically on booking", "Envia automaticamente após agendamento")}
+              {t("Automated · Read-Only", "Automático · Apenas Leitura")}
             </span>
           </summary>
           <p className="mt-2 text-xs text-indigo-900/80">
             {t(
-              "These are NOT unsent Outbox emails. Your main invitation emails were already delivered (see Sent folder). Each item below is an automatic follow-up rule that will send only when that candidate books their test appointment.",
-              "Estes NÃO são emails pendentes por enviar. Os convites principais já foram entregues (ver pasta Enviados). Cada item abaixo é uma regra automática que será enviada apenas quando o respectivo candidato confirmar o agendamento."
+              "These are NOT unsent Outbox emails. Your main invitation emails were already delivered (see Sent folder). Each item below is a locked, automated follow-up rule that triggers automatically when that candidate books their test appointment.",
+              "Estes NÃO são emails pendentes por enviar. Os convites principais já foram entregues (ver pasta Enviados). Cada item abaixo é uma regra automática bloqueada (apenas leitura) que envia automaticamente quando o candidato confirmar o agendamento."
             )}
           </p>
           <div className="mt-3 space-y-2">
             {standbyFollowUps.map((item) => (
               <div
                 key={item.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-indigo-200/80 bg-white p-3 text-xs"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-indigo-200/80 bg-white p-3 text-xs select-none"
               >
                 <div>
-                  <label className="inline-flex items-center gap-2 font-semibold text-slate-900">
-                    <input
-                      aria-label={t("Select message", "Seleccionar mensagem")}
-                      type="checkbox"
-                      disabled={Boolean(action)}
-                      checked={selected.includes(item.id)}
-                      onChange={(event) =>
-                        setSelected((current) =>
-                          event.target.checked ? [...current, item.id] : current.filter((id) => id !== item.id)
-                        )
-                      }
-                    />
+                  <div className="inline-flex items-center gap-2 font-semibold text-slate-900">
                     <span className="rounded bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-800">
-                      {t("Auto Follow-Up", "Seguimento Automático")}
+                      {t("Auto Follow-Up · Read-Only", "Seguimento Automático · Bloqueado")}
                     </span>
                     <span>{item.data.subject || t("Follow-up message", "Mensagem de seguimento")}</span>
-                  </label>
+                  </div>
                   <span className="mt-1 block text-slate-500">
                     {item.data.recipient} · {t("Armed at", "Activado às")} {new Date(item.updated_at).toLocaleString()} ·{" "}
                     {statusLabel(item.data.status)}
