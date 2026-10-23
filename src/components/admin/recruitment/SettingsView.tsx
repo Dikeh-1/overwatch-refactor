@@ -2,7 +2,7 @@
 
 import { RoleTestSlotSettings } from "./RoleTestSlotSettings";
 import React, { useState, useEffect, useCallback } from "react";
-import { Save, CheckCircle2, Mail, SlidersHorizontal, Users, Archive, Activity } from "lucide-react";
+import { Save, CheckCircle2, Mail, SlidersHorizontal, Users, Archive } from "lucide-react";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import type { CareerCohort, CareerRoleDefinition } from "@/lib/careers-models";
 import { cycleLabel } from "@/lib/careers-cycle-label";
@@ -281,10 +281,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ lang: propLang }) =>
               )}
             </span>
           </h2>
-          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-            <Activity size={12} className="animate-pulse" />
-            <span>{t("Live Auto-Close & Archive Tracker", "Rastreador em Tempo Real · Fecho e Arquivo Automático")}</span>
-          </span>
         </div>
 
         {/* Role Cycle / Cohort Selector + Quota Input + Live Countdown Tracker */}
@@ -363,85 +359,79 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ lang: propLang }) =>
           </div>
 
           {/* Right: Live Application Tracker & Countdown */}
-          <div className="lg:col-span-5 rounded-xl border border-slate-200 bg-gradient-to-br from-slate-900 to-[#0b1329] text-white p-4 flex flex-col justify-between shadow-sm">
+          <div className="lg:col-span-5 rounded-xl border border-slate-200 bg-white p-4 flex flex-col justify-between shadow-2xs">
             <div>
-              <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-2.5 mb-3">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-slate-300 font-bold flex items-center gap-1.5">
-                  <Users size={12} className="text-emerald-400" />
-                  {t("Live Intake Tracker", "Contador de Candidaturas ao Vivo")}
+              <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2.5 mb-3">
+                <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <Users size={13} className="text-slate-500" />
+                  {t("Intake & Quota Status", "Estado do Ciclo e Quota")}
                 </span>
                 {activeCycle?.isOpen ? (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                     {t("Role Open", "Vaga Aberta")}
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/30">
-                    <Archive size={10} />
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
+                    <Archive size={11} />
                     {t("Closed & Archived", "Fechada e Arquivada")}
                   </span>
                 )}
               </div>
 
               <div className="grid grid-cols-2 gap-3 my-2">
-                <div className="rounded-lg bg-white/5 border border-white/10 p-3">
-                  <div className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
+                <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
+                  <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
                     {t("Received", "Recebidas")}
                   </div>
-                  <div className="text-2xl font-extrabold text-white mt-0.5 tabular-nums">
+                  <div className="text-xl font-bold text-slate-900 mt-0.5 tabular-nums">
                     {receivedCount}
                   </div>
-                  <div className="text-[10px] text-slate-400 mt-0.5">
+                  <div className="text-[11px] text-slate-500 mt-0.5">
                     {effectiveQuota
                       ? t(`of ${effectiveQuota} quota`, `de ${effectiveQuota} da quota`)
                       : t("total in cycle", "total no ciclo")}
                   </div>
                 </div>
 
-                <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/25 p-3">
-                  <div className="text-[10px] uppercase tracking-wider text-emerald-300 font-semibold">
-                    {t("Countdown Left", "Faltam p/ Fecho")}
+                <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
+                  <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
+                    {t("Remaining", "Faltam p/ Fecho")}
                   </div>
-                  <div className="text-2xl font-extrabold text-emerald-400 mt-0.5 tabular-nums">
+                  <div className="text-xl font-bold text-slate-900 mt-0.5 tabular-nums">
                     {remainingApplications !== null ? remainingApplications : "∞"}
                   </div>
-                  <div className="text-[10px] text-emerald-200/80 mt-0.5">
+                  <div className="text-[11px] text-slate-500 mt-0.5">
                     {remainingApplications === 0 && effectiveQuota
-                      ? t("Quota reached!", "Quota atingida!")
+                      ? t("Quota reached", "Quota atingida")
                       : remainingApplications !== null
-                        ? t("spots remaining", "vagas restantes")
-                        : t("No limit set", "Sem limite definido")}
+                        ? t("spots left", "vagas restantes")
+                        : t("No limit set", "Sem limite")}
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="mt-3 pt-2.5 border-t border-white/10 space-y-1.5">
+            <div className="mt-3 pt-2.5 border-t border-slate-100 space-y-1.5">
               {effectiveQuota ? (
                 <>
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-slate-300 font-medium">
-                      {t("Quota Progress", "Progresso da Quota")}
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-600 font-medium">
+                      {t("Intake Progress", "Progresso da Quota")}
                     </span>
-                    <span className="font-mono font-bold text-emerald-400">{progressPct}%</span>
+                    <span className="font-mono font-bold text-slate-900">{progressPct}%</span>
                   </div>
-                  <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                  <div className="w-full h-2 rounded-full bg-slate-100 border border-slate-200 overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        progressPct >= 100
-                          ? "bg-amber-400"
-                          : progressPct >= 85
-                            ? "bg-amber-500"
-                            : "bg-emerald-500"
-                      }`}
+                      className="h-full rounded-full bg-slate-800 transition-all duration-300"
                       style={{ width: `${progressPct}%` }}
                     />
                   </div>
-                  <p className="text-[10px] text-slate-400 leading-snug pt-0.5">
+                  <p className="text-[11px] text-slate-500 leading-snug pt-0.5">
                     {remainingApplications === 0
                       ? t(
-                          "✓ Quota reached — this cycle automatically closes & archives.",
-                          "✓ Quota atingida — este ciclo fecha e arquiva automaticamente.",
+                          "✓ Quota reached — this cycle is closed & archived.",
+                          "✓ Quota atingida — este ciclo está fechado e arquivado.",
                         )
                       : t(
                           `Auto-closes & archives after ${remainingApplications} more application${remainingApplications === 1 ? "" : "s"}.`,
@@ -450,10 +440,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ lang: propLang }) =>
                   </p>
                 </>
               ) : (
-                <p className="text-[11px] text-slate-400">
+                <p className="text-xs text-slate-500">
                   {t(
-                    "Set an application quota on the left to enable live countdown and automatic role closure & archiving.",
-                    "Defina uma quota à esquerda para activar a contagem decrescente e o fecho/arquivo automático da vaga.",
+                    "Set an application quota on the left to enable automatic cycle closure & archiving.",
+                    "Defina uma quota à esquerda para activar o fecho e arquivo automático deste ciclo.",
                   )}
                 </p>
               )}

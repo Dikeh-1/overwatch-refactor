@@ -64,127 +64,74 @@ function ChatbotSupportHeadsUp({
   supportEmail?: string;
 }) {
   return (
-    <div className="space-y-2" data-support-bottom-arrow="true">
-      {/* Heads-up support card */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-          <div className="flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-[#07080f] text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-              <MessageSquare size={18} />
-            </div>
-            <div className="space-y-1.5">
-              <h3 className="text-xs sm:text-sm font-bold text-gray-900">
-                {isPt
-                  ? "Tem alguma dúvida, dificuldade ou questão?"
-                  : "Have any problems, questions, or enquiries?"}
-              </h3>
-              <p className="text-xs text-gray-600 leading-relaxed">
-                {isPt ? (
-                  <>
-                    Se tiver qualquer problema ou dúvida, contacte-nos através do{" "}
-                    <strong className="text-gray-900">Chatbot no nosso website</strong> — escolha a opção{" "}
-                    <strong className="text-gray-900">«Falar com um agente»</strong>{" "}
-                    <span className="text-gray-500">(&ldquo;Speak with an agent&rdquo;)</span> e a nossa equipa irá responder. Em alternativa, envie-nos um email para{" "}
-                    <a
-                      href={`mailto:${supportEmail}`}
-                      className="font-bold text-gray-900 underline decoration-gray-400 underline-offset-2 hover:text-gray-700"
-                    >
-                      {supportEmail}
-                    </a>{" "}
-                    — respondemos mais rapidamente.
-                  </>
-                ) : (
-                  <>
-                    If you have any problems or enquiries, please contact us via the{" "}
-                    <strong className="text-gray-900">Chatbot on our website</strong> — choose{" "}
-                    <strong className="text-gray-900">&ldquo;Speak with an agent&rdquo;</strong>{" "}
-                    and we will respond. Or send us an email at{" "}
-                    <a
-                      href={`mailto:${supportEmail}`}
-                      className="font-bold text-gray-900 underline decoration-gray-400 underline-offset-2 hover:text-gray-700"
-                    >
-                      {supportEmail}
-                    </a>{" "}
-                    — we respond faster.
-                  </>
-                )}
-              </p>
-              <div className="pt-2 flex flex-wrap items-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => openOverwatchChatbot()}
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#07080f] hover:bg-gray-800 text-white text-xs font-semibold px-4 py-2.5 transition-all shadow-sm cursor-pointer"
-                >
-                  <MessageSquare size={13} className="text-white" />
-                  <span>
-                    {isPt
-                      ? "Abrir Chatbot · «Falar com um agente»"
-                      : 'Open Chatbot · "Speak with an agent"'}
-                  </span>
-                </button>
-                <a
-                  href={`mailto:${supportEmail}?subject=${encodeURIComponent(
-                    isPt ? "Questão sobre Teste Presencial — Overwatch" : "Test Booking Enquiry — Overwatch",
-                  )}`}
-                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-800 text-xs font-semibold px-4 py-2.5 transition-all shadow-xs"
-                >
-                  <Mail size={13} className="text-gray-600" />
-                  <span>{supportEmail}</span>
-                </a>
-              </div>
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+        <div className="flex items-start gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-[#07080f] text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+            <MessageSquare size={18} />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-xs sm:text-sm font-bold text-gray-900">
+              {isPt
+                ? "Tem alguma dúvida, dificuldade ou questão?"
+                : "Have any problems, questions, or enquiries?"}
+            </h3>
+            <p className="text-xs text-gray-600 leading-relaxed">
+              {isPt ? (
+                <>
+                  Se tiver qualquer problema ou dúvida, contacte-nos através do{" "}
+                  <strong className="text-gray-900">Chatbot no nosso website</strong> — escolha a opção{" "}
+                  <strong className="text-gray-900">«Falar com um agente»</strong>{" "}
+                  <span className="text-gray-500">(&ldquo;Speak with an agent&rdquo;)</span> e a nossa equipa irá responder. Em alternativa, envie-nos um email para{" "}
+                  <a
+                    href={`mailto:${supportEmail}`}
+                    className="font-bold text-gray-900 underline decoration-gray-400 underline-offset-2 hover:text-gray-700"
+                  >
+                    {supportEmail}
+                  </a>{" "}
+                  — respondemos mais rapidamente.
+                </>
+              ) : (
+                <>
+                  If you have any problems or enquiries, please contact us via the{" "}
+                  <strong className="text-gray-900">Chatbot on our website</strong> — choose{" "}
+                  <strong className="text-gray-900">&ldquo;Speak with an agent&rdquo;</strong>{" "}
+                  and we will respond. Or send us an email at{" "}
+                  <a
+                    href={`mailto:${supportEmail}`}
+                    className="font-bold text-gray-900 underline decoration-gray-400 underline-offset-2 hover:text-gray-700"
+                  >
+                    {supportEmail}
+                  </a>{" "}
+                  — we respond faster.
+                </>
+              )}
+            </p>
+            <div className="pt-2 flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => openOverwatchChatbot()}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#07080f] hover:bg-gray-800 text-white text-xs font-semibold px-4 py-2.5 transition-all shadow-sm cursor-pointer"
+              >
+                <MessageSquare size={13} className="text-white" />
+                <span>
+                  {isPt
+                    ? "Abrir Chatbot · «Falar com um agente»"
+                    : 'Open Chatbot · "Speak with an agent"'}
+                </span>
+              </button>
+              <a
+                href={`mailto:${supportEmail}?subject=${encodeURIComponent(
+                  isPt ? "Questão sobre Teste Presencial — Overwatch" : "Test Booking Enquiry — Overwatch",
+                )}`}
+                className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-800 text-xs font-semibold px-4 py-2.5 transition-all shadow-xs"
+              >
+                <Mail size={13} className="text-gray-600" />
+                <span>{supportEmail}</span>
+              </a>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Dynamic, non-obstructive interactive curved arrow pointing toward the Chatbot icon */}
-      <div className="flex justify-end pr-2 sm:pr-4 select-none">
-        <button
-          type="button"
-          onClick={() => openOverwatchChatbot()}
-          className="group inline-flex flex-col items-end text-right focus:outline-none cursor-pointer"
-          title={
-            isPt
-              ? "Clique para abrir o Chatbot no canto inferior direito"
-              : "Click to open the Chatbot in the bottom-right corner"
-          }
-        >
-          <div className="inline-flex items-center gap-2 rounded-full bg-white group-hover:bg-gray-50 border border-gray-200 px-3.5 py-1.5 text-[11px] font-medium text-gray-700 shadow-xs transition-all">
-            <span>
-              {isPt
-                ? "O ícone do Chatbot está no canto inferior direito — escolha «Falar com um agente»"
-                : 'The Chatbot icon is in the bottom-right corner — choose "Speak with an agent"'}
-            </span>
-          </div>
-
-          {/* Clean monochrome curved SVG arrow sweeping down-right toward the floating chatbot launcher */}
-          <div className="pointer-events-none pr-3 -mt-0.5">
-            <svg
-              width="210"
-              height="56"
-              viewBox="0 0 210 56"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="overflow-visible text-gray-500 transition-transform duration-300 group-hover:translate-x-1 group-hover:translate-y-0.5"
-              aria-hidden="true"
-            >
-              <path
-                d="M 18 8 C 72 8, 128 16, 188 47"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeDasharray="5 4"
-              />
-              <path
-                d="M 176 50 L 191 49 L 185 35"
-                stroke="currentColor"
-                strokeWidth="1.9"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-        </button>
       </div>
     </div>
   );
@@ -208,34 +155,7 @@ export default function CandidateBookingClient({
   const [isDeactivated, setIsDeactivated] = useState(false);
   const [, setSuccessNotice] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
-  const [dismissFloatingArrow, setDismissFloatingArrow] = useState(false);
-  const [bottomArrowVisible, setBottomArrowVisible] = useState(false);
   const [liveSlotTakenNotice, setLiveSlotTakenNotice] = useState<string>("");
-
-  // Automatically hide the floating bottom-right arrow whenever the inline bottom support arrow is scrolled into view
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const checkBottomArrowVisibility = () => {
-      const nodes = document.querySelectorAll('[data-support-bottom-arrow="true"]');
-      let anyVisible = false;
-      nodes.forEach((node) => {
-        const rect = node.getBoundingClientRect();
-        if (rect.top < window.innerHeight - 40 && rect.bottom > 0) {
-          anyVisible = true;
-        }
-      });
-      setBottomArrowVisible(anyVisible);
-    };
-
-    checkBottomArrowVisibility();
-    window.addEventListener("scroll", checkBottomArrowVisibility, { passive: true });
-    window.addEventListener("resize", checkBottomArrowVisibility, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", checkBottomArrowVisibility);
-      window.removeEventListener("resize", checkBottomArrowVisibility);
-    };
-  }, [loading, candidate, isDeactivated, error]);
 
   useEffect(() => {
     if (candidate?.id && candidate.testSlot) {
@@ -901,10 +821,6 @@ export default function CandidateBookingClient({
                           : "In-person test sessions with limited capacity. Select an open slot below."}
                       </p>
                     </div>
-                    <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-gray-700 bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-full">
-                      <span className="h-1.5 w-1.5 rounded-full bg-gray-500" />
-                      <span>{isPt ? "Vagas em tempo real" : "Live availability"}</span>
-                    </span>
                   </div>
 
                   {liveSlotTakenNotice && (
@@ -1090,66 +1006,6 @@ export default function CandidateBookingClient({
           </div>
         ) : null}
       </div>
-
-      {/* Non-obstructive dynamic floating pointer above the bottom-right Chatbot icon (auto-hides once bottom arrow is in view) */}
-      {!dismissFloatingArrow && !bottomArrowVisible && (
-        <div className="fixed bottom-[86px] right-4 sm:right-6 z-40 pointer-events-none hidden sm:flex flex-col items-end">
-          <div className="pointer-events-auto flex items-center gap-2 rounded-2xl bg-[#07080f]/95 text-white border border-white/15 px-3.5 py-2 shadow-xl backdrop-blur-md">
-            <button
-              type="button"
-              onClick={() => openOverwatchChatbot()}
-              className="flex items-center gap-2 text-left text-[11px] font-medium leading-snug hover:text-white/80 transition-colors cursor-pointer"
-            >
-              <MessageSquare size={13} className="text-white/80 shrink-0" />
-              <span>
-                {isPt ? (
-                  <>
-                    Dúvidas? Abra o <strong>Chatbot</strong> e escolha{" "}
-                    <strong className="underline decoration-white/50">«Falar com um agente»</strong>
-                  </>
-                ) : (
-                  <>
-                    Need help? Open the <strong>Chatbot</strong> &amp; choose{" "}
-                    <strong className="underline decoration-white/50">&ldquo;Speak with an agent&rdquo;</strong>
-                  </>
-                )}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setDismissFloatingArrow(true)}
-              aria-label={isPt ? "Fechar dica" : "Dismiss hint"}
-              className="ml-1 rounded-full p-0.5 text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-            >
-              <X size={12} />
-            </button>
-          </div>
-          <svg
-            width="54"
-            height="36"
-            viewBox="0 0 54 36"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className="mr-3 -mt-0.5 text-gray-500"
-            aria-hidden="true"
-          >
-            <path
-              d="M 8 2 C 24 6, 36 14, 40 31"
-              stroke="currentColor"
-              strokeWidth="1.9"
-              strokeLinecap="round"
-              strokeDasharray="4 3"
-            />
-            <path
-              d="M 33 26 L 41 33 L 45 23"
-              stroke="currentColor"
-              strokeWidth="1.9"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </div>
-      )}
     </div>
   );
 }
