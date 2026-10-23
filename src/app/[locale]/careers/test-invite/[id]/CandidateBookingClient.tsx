@@ -23,7 +23,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { siteContact } from "@/lib/site-config";
-import { DEFAULT_TEST_SLOTS, normalizeSlot, isPastDateSlot } from "@/lib/careers";
+import { formatSlotDisplay, isPastDateSlot } from "@/lib/careers";
 
 type SlotStat = {
   booked: number;
@@ -50,38 +50,6 @@ type CandidateData = {
   address: string;
   whatsapp: string;
 };
-
-function formatSlotDisplay(slot: string, isPt: boolean) {
-  if (!slot) return "";
-  const normalized = normalizeSlot(slot);
-  if (isPt) return normalized;
-  return normalized
-    .replace("Segunda-feira", "Monday")
-    .replace("Terça-feira", "Tuesday")
-    .replace("Quarta-feira", "Wednesday")
-    .replace("Quinta-feira", "Thursday")
-    .replace("Sexta-feira", "Friday")
-    .replace("Sábado", "Saturday")
-    .replace("Domingo", "Sunday")
-    .replace("de Setembro", "September")
-    .replace("de Outubro", "October")
-    .replace("de Novembro", "November")
-    .replace("de Dezembro", "December")
-    .replace("de Janeiro", "January")
-    .replace("de Fevereiro", "February")
-    .replace("de Março", "March")
-    .replace("de Abril", "April")
-    .replace("de Maio", "May")
-    .replace("de Junho", "June")
-    .replace("de Julho", "July")
-    .replace("de Agosto", "August")
-    .replace(/(\d{1,2})h(\d{2})/, (_, h, m) => {
-      const hour = parseInt(h, 10);
-      const ampm = hour >= 12 ? "PM" : "AM";
-      const h12 = hour % 12 || 12;
-      return `${h12}:${m} ${ampm}`;
-    });
-}
 
 export default function CandidateBookingClient({
   id,
@@ -122,11 +90,16 @@ export default function CandidateBookingClient({
   useEffect(() => {
     let cancelled = false;
 
-    async function fetchCandidate() {
+    async function fetchCandidate(silent = false) {
       try {
-        setLoading(true);
-        setError("");
-        const res = await fetch(`/api/careers/test-booking?id=${encodeURIComponent(id)}`);
+        if (!silent) {
+          setLoading(true);
+          setError("");
+        }
+        const res = await fetch(
+          `/api/careers/test-booking?id=${encodeURIComponent(id)}&t=${Date.now()}`,
+          { cache: "no-store" },
+        );
 
         if (res.status === 410) {
           if (!cancelled) setIsDeactivated(true);
@@ -145,35 +118,48 @@ export default function CandidateBookingClient({
         const data: CandidateData = await res.json();
         if (!cancelled) {
           setCandidate(data);
-          if (data.testSlot) {
-            setSelectedSlot(data.testSlot);
-          } else if (data.slots && data.slots.length > 0) {
-            const available = data.slots.find((s) => !data.slotStats?.[s]?.isFull);
-            setSelectedSlot(available || "");
-          } else {
-            setSelectedSlot("");
-          }
+          setSelectedSlot((currentSelected) => {
+            if (data.testSlot) return data.testSlot;
+            if (data.slots && data.slots.length > 0) {
+              if (currentSelected && data.slots.includes(currentSelected) && !data.slotStats?.[currentSelected]?.isFull) {
+                return currentSelected;
+              }
+              const available = data.slots.find((s) => !data.slotStats?.[s]?.isFull);
+              return available || "";
+            }
+            return "";
+          });
         }
       } catch (err) {
-        if (!cancelled) {
+        if (!cancelled && !silent) {
           setError((err as Error).message);
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && !silent) {
           setLoading(false);
         }
       }
     }
 
     if (id) {
-      fetchCandidate();
+      void fetchCandidate(false);
     } else {
       setError(isPt ? "Link de convocatória inválido." : "Invalid invitation link.");
       setLoading(false);
     }
 
+    const interval = setInterval(() => {
+      if (id && !cancelled) void fetchCandidate(true);
+    }, 8000);
+    const onFocus = () => {
+      if (id && !cancelled) void fetchCandidate(true);
+    };
+    window.addEventListener("focus", onFocus);
+
     return () => {
       cancelled = true;
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
     };
   }, [id, isPt]);
 
@@ -230,8 +216,7 @@ export default function CandidateBookingClient({
     }
   }
 
-  const slotsList =
-    candidate?.slots && candidate.slots.length > 0 ? candidate.slots : DEFAULT_TEST_SLOTS;
+  const slotsList = candidate?.slots || [];
   const isAlreadyBooked = Boolean(candidate?.testSlot);
 
   return (
@@ -645,6 +630,13 @@ export default function CandidateBookingClient({
                   </div>
 
                   <div className="p-4 space-y-2">
+                    {slotsList.length === 0 && (
+                      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-center text-xs text-gray-500">
+                        {isPt
+                          ? "Nenhum turno disponível de momento. Por favor aguarde pela actualização de horários."
+                          : "No test slots are currently open. Please check back shortly."}
+                      </div>
+                    )}
                     {slotsList.map((slot) => {
                       const isSelected = selectedSlot === slot;
                       const stat = candidate?.slotStats?.[slot];

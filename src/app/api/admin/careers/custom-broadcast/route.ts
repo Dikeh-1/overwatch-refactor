@@ -178,11 +178,18 @@ async function handlePOST(request: Request) {
       if (roleId && roleId !== "all" && targetPool.some(a => !sameRole(a.role, roleId))) return Response.json({ error: "Candidate outside the selected role" }, { status: 400 });
     } else {
       // Filter by role if specified
-      targetPool = roleId && roleId !== "all" ? allApps.filter((a) => sameRole(a.role, roleId)) : allApps;
+      const roleApps = roleId && roleId !== "all" ? allApps.filter((a) => sameRole(a.role, roleId)) : allApps;
+      const contactedEmails = new Set(
+        roleApps.filter(hasSentCommunication).map((a) => a.email.trim().toLowerCase()),
+      );
+      const bookedEmails = new Set(
+        roleApps.filter((a) => Boolean(a.testSlot) && a.status !== "archived").map((a) => a.email.trim().toLowerCase()),
+      );
+      targetPool = roleApps;
 
       // Filter by audience cohort
       if (audienceFilter === "invited_unconfirmed" || audienceFilter === "shortlisted_unbooked") {
-        targetPool = targetPool.filter(a => !a.testSlot && !["archived", "rejected", "not_advancing", "withdrawn", "disqualified"].includes(a.status));
+        targetPool = targetPool.filter(a => !a.testSlot && !bookedEmails.has(a.email.trim().toLowerCase()) && !["archived", "rejected", "not_advancing", "withdrawn", "disqualified"].includes(a.status));
       } else if (audienceFilter === "booked_confirmed") {
         targetPool = targetPool.filter(
           (a) => Boolean(a.testSlot) && a.status !== "archived",
@@ -202,7 +209,7 @@ async function handlePOST(request: Request) {
       } else if (audienceFilter === "disqualified") {
         targetPool = targetPool.filter((a) => a.status === "archived");
       } else if (audienceFilter === "all_applied" || audienceFilter === "all_role") {
-        targetPool = targetPool.filter((a) => a.status !== "archived" && !hasSentCommunication(a));
+        targetPool = targetPool.filter((a) => a.status !== "archived" && !hasSentCommunication(a) && !contactedEmails.has(a.email.trim().toLowerCase()));
       }
 
       // Filter by gender

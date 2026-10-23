@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { Languages, Lock } from "lucide-react";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import { safeEmailDocument } from "@/lib/communication-content";
 import type { Application } from "@/lib/careers";
@@ -15,6 +16,7 @@ type MessageRow = {
     candidateName?: string;
     from?: string;
     messageBody?: string;
+     message?: string;
     body?: string;
     htmlContent?: string;
     messageId?: string;
@@ -28,7 +30,14 @@ type MessageRow = {
   };
 };
 
-export type StudioFolder = "compose" | "drafts" | "incoming" | "sent" | "outbox";
+type TranslationResult = {
+  subject: string;
+  body: string;
+  detectedLang: string;
+  showOriginal?: boolean;
+};
+
+export type StudioFolder = "compose" | "drafts" | "incoming" | "sent" | "outbox" | "scheduled";
 type MailboxProps = {
   scope: string;
   folder: StudioFolder;
@@ -36,6 +45,23 @@ type MailboxProps = {
   onOpenDraft: (id: string) => Promise<void>;
   onOpenProgress?: (campaignId: string) => void;
 };
+
+function htmlToPlainText(raw: string): string {
+  return String(raw || "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<br\s*\/?\s*>/gi, "\n")
+    .replace(/<\/(p|div|li|tr|h[1-6]|blockquote)>/gi, "\n\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 
 export function StudioMailbox(props: MailboxProps) {
   // A folder is a separate session: old rows, selections and late message reads
@@ -63,6 +89,8 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
     confirmation = useRef<HTMLDialogElement>(null);
   const reading = useRef(new Set<string>()),
     [loadingIds, setLoadingIds] = useState<string[]>([]);
+  const [translations, setTranslations] = useState<Record<string, TranslationResult>>({});
+  const [translatingIds, setTranslatingIds] = useState<string[]>([]);
 
   useEffect(() => {
     mounted.current = true;
@@ -145,7 +173,7 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
   }, [scope, folder, retry, t]);
 
   useEffect(() => {
-    if (folder !== "outbox" || action || confirmIds) return;
+    if ((folder !== "outbox" && folder !== "scheduled") || action || confirmIds) return;
     const timer = setInterval(() => setRetry((n) => n + 1), 6000);
     return () => clearInterval(timer);
   }, [folder, action, confirmIds]);
@@ -259,7 +287,7 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
     }
   };
 
-  const readIncoming = async (item: MessageRow) => {
+  const readIncoming = async (item: MessageRow): Promise<string> => {
     try {
       if (!item.data.messageId || !item.data.folderId) throw Error("Message details are unavailable");
       const response = await fetch(
@@ -268,12 +296,15 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
       );
       const data = await response.json();
       if (!response.ok) throw Error(data.error);
-      if (!mounted.current || detailsAbort.current.signal.aborted) return;
+      if (!mounted.current || detailsAbort.current.signal.aborted) return item.data.body || "";
+      const bodyText = data.body || item.data.body || "";
       setItems((current) =>
-        current.map((row) => (row.id === item.id ? { ...row, data: { ...row.data, body: data.body, fullContent: true } } : row))
+        current.map((row) => (row.id === item.id ? { ...row, data: { ...row.data, body: bodyText, fullContent: true } } : row))
       );
+      return bodyText;
     } catch (error) {
       if (mounted.current && !detailsAbort.current.signal.aborted) setError((error as Error).message);
+      return item.data.body || "";
     }
   };
 
@@ -290,6 +321,47 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
     }
   };
 
+  const translateIncomingItem = async (item: MessageRow) => {
+    if (translatingIds.includes(item.id)) return;
+    setTranslatingIds((prev) => [...prev, item.id]);
+    setError("");
+    try {
+      let rawBody = item.data.body || item.data.messageBody || "";
+      if (folder === "incoming" && !item.data.fullContent && item.data.messageId && item.data.folderId) {
+        rawBody = await readIncoming(item);
+      }
+      const plainBody = htmlToPlainText(rawBody);
+      const response = await fetch("/api/admin/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subject: item.data.subject || "",
+          text: plainBody,
+          from: "auto",
+          to: "en",
+        }),
+        signal: AbortSignal.timeout(20000),
+      });
+      const data = await response.json();
+      if (!response.ok) throw Error(data.error || "Translation failed");
+      if (mounted.current) {
+        setTranslations((prev) => ({
+          ...prev,
+          [item.id]: {
+            subject: data.translatedSubject || item.data.subject || "",
+            body: data.translated || plainBody,
+            detectedLang: (data.detectedLang || "pt").toUpperCase(),
+            showOriginal: false,
+          },
+        }));
+      }
+    } catch (err) {
+      if (mounted.current) setError((err as Error).message);
+    } finally {
+      if (mounted.current) setTranslatingIds((prev) => prev.filter((id) => id !== item.id));
+    }
+  };
+
   const records =
     folder === "incoming"
       ? items.filter(
@@ -301,11 +373,14 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
           .filter((item) =>
             folder === "drafts"
               ? item.kind === "draft" && item.data.status === "draft"
-              : (item.kind === "outbox" &&
-                  (folder === "sent" ? item.data.status === "sent" : item.data.status !== "sent")) ||
-                (folder === "outbox" &&
-                  ((item.kind === "automation" && item.data.status !== "completed") ||
-                    (item.kind === "draft" && item.data.status === "queued")))
+              : folder === "scheduled"
+                ? item.kind === "automation"
+                : folder === "sent"
+                  ? item.kind === "outbox" && item.data.status === "sent"
+                  : folder === "outbox"
+                    ? (item.kind === "outbox" && item.data.status !== "sent") ||
+                      (item.kind === "draft" && item.data.status === "queued")
+                    : false
           );
 
   const historical =
@@ -341,9 +416,9 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
       failed: t("Delivery failed", "Falha no envio"),
       skipped: t("Skipped · not sent", "Ignorado · não enviado"),
       needs_verification: t("Delivery outcome unconfirmed", "Resultado do envio por confirmar"),
-      waiting_for_booking: t("Waiting for booking", "A aguardar agendamento"),
+      waiting_for_booking: t("Waiting for booking (0 booked yet)", "A aguardar agendamento"),
       needs_attention: t("Follow-up needs attention", "Seguimento requer atenção"),
-      completed: t("Completed", "Concluído"),
+      completed: t("Completed · Sent after booking", "Concluído · Enviado após agendamento"),
       incoming: t("Received", "Recebido"),
       received: t("Received", "Recebido"),
     })[value] || value;
@@ -372,14 +447,8 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
   const activeCampaignId = items.find(
     (item) => item.kind === "outbox" && ["queued", "sending", "failed"].includes(item.data.status) && item.data.campaignId
   )?.data.campaignId;
-  const primaryRows =
-    folder === "outbox"
-      ? all.filter((item) => !(item.kind === "automation" && item.data.status === "waiting_for_booking"))
-      : all;
-  const standbyFollowUps =
-    folder === "outbox"
-      ? all.filter((item) => item.kind === "automation" && item.data.status === "waiting_for_booking")
-      : [];
+  const primaryRows = folder === "scheduled" ? [] : all;
+  const scheduledRows = folder === "scheduled" ? all : [];
 
   return (
     <section aria-busy={busy || Boolean(action)} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
@@ -390,12 +459,36 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
               drafts: t("Drafts", "Rascunhos"),
               incoming: t("Incoming · info@overwatchmoz.com", "Recebidos · info@overwatchmoz.com"),
               sent: t("Sent mail", "Enviados"),
-              outbox: t("Outbox & follow-ups", "Caixa de saída e seguimentos"),
+              outbox: t("Outbox", "Caixa de saída"),
+              scheduled: t("Scheduled Post-Booking Auto Follow-Ups", "Seguimentos Automáticos Pós-Agendamento"),
               compose: "",
             })[folder]
           }
         </h2>
         <div className="flex flex-wrap items-center gap-2">
+          {folder === "incoming" && primaryRows.length > 0 && (
+            <button
+              type="button"
+              disabled={busy || translatingIds.length > 0}
+              onClick={() => {
+                void (async () => {
+                  for (const row of primaryRows) {
+                    if (!translations[row.id]) {
+                      await translateIncomingItem(row);
+                    }
+                  }
+                })();
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-800 hover:bg-indigo-100 disabled:opacity-50"
+            >
+              <Languages size={14} />
+              <span>
+                {translatingIds.length > 0
+                  ? t("Translating to English…", "A traduzir para Inglês…")
+                  : t("Translate All to English (PT → EN)", "Traduzir Tudo para Inglês (PT → EN)")}
+              </span>
+            </button>
+          )}
           {folder === "outbox" && activeCampaignId && onOpenProgress && (
             <button
               type="button"
@@ -505,6 +598,29 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
         </div>
       )}
 
+      {folder === "scheduled" && (
+        <div role="status" className="rounded-xl border border-indigo-200 bg-indigo-50/70 p-4 text-xs text-indigo-950 space-y-1.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="font-bold text-sm flex items-center gap-1.5">
+              <Lock size={14} className="text-indigo-700" />
+              {t(
+                `${scheduledRows.filter((i) => i.data.status === "waiting_for_booking").length} waiting for candidate to book · ${scheduledRows.filter((i) => i.data.status === "completed").length} triggered & sent`,
+                `${scheduledRows.filter((i) => i.data.status === "waiting_for_booking").length} a aguardar agendamento · ${scheduledRows.filter((i) => i.data.status === "completed").length} enviados após agendamento`
+              )}
+            </span>
+            <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-[11px] font-bold text-indigo-800">
+              {t("Automated · Strictly Read-Only", "Automático · Apenas Leitura")}
+            </span>
+          </div>
+          <p className="text-indigo-900/85 leading-relaxed">
+            {t(
+              "Each scheduled rule below was armed when a candidate's test invitation was delivered. As soon as a candidate selects and confirms their test date on their booking link, the system automatically dispatches their personalized follow-up email. These automated rules are locked and cannot be deleted or modified.",
+              "Cada regra abaixo foi activada no envio do convite para teste. Assim que o candidato escolher e confirmar a data no link de agendamento, o sistema envia automaticamente o email de seguimento. Estas regras automáticas estão bloqueadas (apenas leitura)."
+            )}
+          </p>
+        </div>
+      )}
+
       <dialog
         ref={confirmation}
         aria-labelledby="delete-mail-title"
@@ -593,227 +709,337 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
           </p>
         </div>
       )}
-      {!busy && !primaryRows.length && !error && !loadError && (folder !== "incoming" || connected) && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 text-center text-sm text-emerald-900">
-          {folder === "outbox"
-            ? t(
-                "Outbox is clear — no pending or failed emails. All dispatched emails are in your Sent folder.",
-                "A caixa de saída está limpa — sem emails pendentes ou com falha. Todos os emails enviados encontram-se na pasta Enviados."
-              )
-            : t("No messages in this folder.", "Sem mensagens nesta pasta.")}
+      {!busy &&
+        folder !== "scheduled" &&
+        !primaryRows.length &&
+        !error &&
+        !loadError &&
+        (folder !== "incoming" || connected) && (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 text-center text-sm text-emerald-900">
+            {folder === "outbox"
+              ? t(
+                  "Outbox is clear — no pending or failed emails. All dispatched emails are in your Sent folder.",
+                  "A caixa de saída está limpa — sem emails pendentes ou com falha. Todos os emails enviados encontram-se na pasta Enviados."
+                )
+              : t("No messages in this folder.", "Sem mensagens nesta pasta.")}
+          </div>
+        )}
+
+      {!busy && folder === "scheduled" && !scheduledRows.length && !error && !loadError && (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center text-sm text-slate-600">
+          {t(
+            "No scheduled post-booking auto follow-ups in this cycle.",
+            "Sem seguimentos automáticos agendados neste lote."
+          )}
         </div>
       )}
 
-      {primaryRows.map((item) => (
-        <details
-          key={item.id}
-          onToggle={(event) => {
-            if (event.currentTarget.open && !item.data.fullContent) {
-              if (folder === "sent" || folder === "incoming") void readWithFeedback(item);
-            }
-          }}
-          className="rounded-xl border border-slate-200 p-4"
-        >
-          <summary className="cursor-pointer">
-            <div className="inline-flex flex-wrap items-center justify-between gap-2 w-[calc(100%-1.5rem)] align-middle">
-              <div>
-                {folder === "outbox" &&
-                  ((item.kind === "outbox" && ["queued", "failed", "skipped"].includes(item.data.status)) ||
-                    (item.kind === "draft" && item.data.status === "queued")) && (
-                    <input
-                      aria-label={t("Select message", "Seleccionar mensagem")}
-                      type="checkbox"
-                      disabled={Boolean(action)}
-                      className="mr-3"
-                      checked={selected.includes(item.id)}
-                      onClick={(event) => event.stopPropagation()}
-                      onChange={(event) =>
-                        setSelected((current) =>
-                          event.target.checked ? [...current, item.id] : current.filter((id) => id !== item.id)
-                        )
-                      }
-                    />
-                  )}
-                <span className="text-sm font-semibold">
-                  {item.kind === "draft" && folder === "outbox" && (
-                    <span className="mr-2 rounded bg-sky-50 px-2 py-1 text-xs text-sky-800">
-                      {t("Campaign queue", "Fila da campanha")}
+      {folder === "scheduled" &&
+        scheduledRows.map((item) => {
+          const matchedCandidate = applications.find(
+            (a) =>
+              a.id === item.data.candidateId ||
+              (item.data.recipient && a.email.trim().toLowerCase() === item.data.recipient.trim().toLowerCase())
+          );
+          return (
+            <details key={item.id} className="rounded-xl border border-indigo-200/80 bg-white p-4 select-none">
+              <summary className="cursor-pointer">
+                <div className="inline-flex flex-wrap items-center justify-between gap-2 w-[calc(100%-1.5rem)] align-middle">
+                  <div>
+                    <div className="inline-flex flex-wrap items-center gap-2 font-semibold text-sm text-slate-900">
+                      <span className="inline-flex items-center gap-1 rounded bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-800">
+                        <Lock size={10} />
+                        {t("Auto Follow-Up · Read-Only", "Seguimento Automático · Bloqueado")}
+                      </span>
+                      <span>{item.data.subject || t("Follow-up message", "Mensagem de seguimento")}</span>
+                    </div>
+                    <span className="mt-1 block text-xs text-slate-500">
+                      {matchedCandidate ? `${matchedCandidate.name} (${item.data.recipient})` : item.data.recipient} ·{" "}
+                      {t("Armed at", "Activado às")} {new Date(item.updated_at).toLocaleString()} ·{" "}
+                      <strong className="text-indigo-800">{statusLabel(item.data.status)}</strong>
                     </span>
+                  </div>
+                </div>
+              </summary>
+              <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-3 text-xs text-slate-700 space-y-2">
+                <p className="text-[11px] font-semibold text-indigo-800">
+                  {t(
+                    "Trigger: Automatically dispatches immediately when candidate confirms a test slot.",
+                    "Gatilho: Envia automaticamente assim que o candidato confirmar uma vaga de teste."
                   )}
-                  {item.data.subject ||
-                    (folder === "drafts" ? t("Untitled draft", "Rascunho sem assunto") : t("No subject", "Sem assunto"))}
-                </span>
-                <span className="mt-1 block text-xs text-slate-500">
-                  {item.data.candidateName ? `${item.data.candidateName} (${item.data.recipient || ""})` : item.data.recipient || item.data.from || ""} ·{" "}
-                  {new Date(item.updated_at).toLocaleString()} · {statusLabel(item.data.status)}
-                </span>
+                </p>
+                <pre className="whitespace-pre-wrap break-words font-sans text-xs text-slate-700">
+                  {item.data.message || item.data.messageBody || ""}
+                </pre>
               </div>
+            </details>
+          );
+        })}
+
+      {primaryRows.map((item) => {
+        const translation = translations[item.id];
+        const isTranslating = translatingIds.includes(item.id);
+        return (
+          <details
+            key={item.id}
+            onToggle={(event) => {
+              if (event.currentTarget.open && !item.data.fullContent) {
+                if (folder === "sent" || folder === "incoming") void readWithFeedback(item);
+              }
+            }}
+            className="rounded-xl border border-slate-200 p-4"
+          >
+            <summary className="cursor-pointer">
+              <div className="inline-flex flex-wrap items-center justify-between gap-2 w-[calc(100%-1.5rem)] align-middle">
+                <div>
+                  {folder === "outbox" &&
+                    ((item.kind === "outbox" && ["queued", "failed", "skipped"].includes(item.data.status)) ||
+                      (item.kind === "draft" && item.data.status === "queued")) && (
+                      <input
+                        aria-label={t("Select message", "Seleccionar mensagem")}
+                        type="checkbox"
+                        disabled={Boolean(action)}
+                        className="mr-3"
+                        checked={selected.includes(item.id)}
+                        onClick={(event) => event.stopPropagation()}
+                        onChange={(event) =>
+                          setSelected((current) =>
+                            event.target.checked ? [...current, item.id] : current.filter((id) => id !== item.id)
+                          )
+                        }
+                      />
+                    )}
+                  <span className="text-sm font-semibold">
+                    {item.kind === "draft" && folder === "outbox" && (
+                      <span className="mr-2 rounded bg-sky-50 px-2 py-1 text-xs text-sky-800">
+                        {t("Campaign queue", "Fila da campanha")}
+                      </span>
+                    )}
+                    {translation && !translation.showOriginal
+                      ? translation.subject || item.data.subject
+                      : item.data.subject ||
+                        (folder === "drafts"
+                          ? t("Untitled draft", "Rascunho sem assunto")
+                          : t("No subject", "Sem assunto"))}
+                    {translation && (
+                      <span className="ml-2 rounded bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
+                        {t(`Translated (${translation.detectedLang} → EN)`, `Traduzido (${translation.detectedLang} → EN)`)}
+                      </span>
+                    )}
+                  </span>
+                  <span className="mt-1 block text-xs text-slate-500">
+                    {item.data.candidateName
+                      ? `${item.data.candidateName} (${item.data.recipient || ""})`
+                      : item.data.recipient || item.data.from || ""}{" "}
+                    · {new Date(item.updated_at).toLocaleString()} · {statusLabel(item.data.status)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {folder === "incoming" && (
+                    <button
+                      type="button"
+                      disabled={isTranslating}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        if (translation) {
+                          setTranslations((prev) => ({
+                            ...prev,
+                            [item.id]: { ...translation, showOriginal: !translation.showOriginal },
+                          }));
+                        } else {
+                          void translateIncomingItem(item);
+                        }
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-semibold text-indigo-800 hover:bg-indigo-100 disabled:opacity-50"
+                    >
+                      <Languages size={13} />
+                      <span>
+                        {isTranslating
+                          ? t("Translating…", "A traduzir…")
+                          : translation
+                            ? translation.showOriginal
+                              ? t("Show English Translation", "Ver Tradução em Inglês")
+                              : t("Show Original (PT)", "Ver Original (PT)")
+                            : t("Translate to English", "Traduzir para Inglês")}
+                      </span>
+                    </button>
+                  )}
+                  {folder === "outbox" && item.kind === "outbox" && ["failed", "skipped"].includes(item.data.status) && (
+                    <button
+                      type="button"
+                      disabled={Boolean(action)}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        void runAction(`retry:${item.id}`, () => retryRejected(item.id));
+                      }}
+                      className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700 hover:bg-sky-100 disabled:opacity-50"
+                    >
+                      {action === `retry:${item.id}`
+                        ? t("Retrying…", "A repetir…")
+                        : t("Retry", "Repetir envio")}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </summary>
+            <div className="mt-4 space-y-3">
+              {loadingIds.includes(item.id) && (
+                <p role="status" className="text-sm text-sky-700">
+                  {t("Loading original message…", "A carregar mensagem original…")}
+                </p>
+              )}
+              {folder === "incoming" && translation && !translation.showOriginal && (
+                <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-4 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-indigo-200/70 pb-2">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-900">
+                      <Languages size={14} className="text-indigo-700" />
+                      {t(
+                        `English Translation (Detected: ${translation.detectedLang})`,
+                        `Tradução para Inglês (Detectado: ${translation.detectedLang})`
+                      )}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setTranslations((prev) => ({
+                          ...prev,
+                          [item.id]: { ...translation, showOriginal: true },
+                        }))
+                      }
+                      className="text-xs font-semibold text-indigo-700 underline"
+                    >
+                      {t("View original message", "Ver mensagem original")}
+                    </button>
+                  </div>
+                  {translation.subject && (
+                    <p className="text-xs font-semibold text-slate-900">
+                      {t("Subject:", "Assunto:")} {translation.subject}
+                    </p>
+                  )}
+                  <pre className="whitespace-pre-wrap break-words font-sans text-sm text-slate-800 leading-relaxed">
+                    {translation.body}
+                  </pre>
+                </div>
+              )}
+              {item.data.htmlContent || (folder === "incoming" && item.data.fullContent && item.data.body) ? (
+                <iframe
+                  title={item.data.subject || "Email"}
+                  sandbox="allow-popups allow-popups-to-escape-sandbox"
+                  referrerPolicy="no-referrer"
+                  className="h-[620px] w-full rounded-lg border bg-white"
+                  srcDoc={`<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src https://www.overwatchmoz.com data:;">${safeEmailDocument(
+                    item.data.htmlContent || item.data.body || ""
+                  )}`}
+                />
+              ) : (
+                <pre className="whitespace-pre-wrap break-words font-sans text-sm text-slate-700">
+                  {String(
+                    item.data.messageBody ||
+                      item.data.body ||
+                      t(
+                        "Original content was not saved for this historical email.",
+                        "O conteúdo original deste email histórico não foi guardado."
+                      )
+                  )
+                    .replace(/<br\s*\/?\s*>|<\/p>|<\/div>|<\/li>/gi, "\n")
+                    .replace(/<[^>]*>/g, "")}
+                </pre>
+              )}
+              {folder === "incoming" && (
+                <div className="flex flex-wrap items-center gap-3">
+                  {!item.data.fullContent && (
+                    <button
+                      className="text-xs font-semibold text-sky-700 underline"
+                      disabled={loadingIds.includes(item.id)}
+                      onClick={() => void readWithFeedback(item)}
+                    >
+                      {loadingIds.includes(item.id)
+                        ? t("Loading…", "A carregar…")
+                        : t("Read full message", "Ler mensagem completa")}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-700 underline"
+                    disabled={isTranslating}
+                    onClick={() => void translateIncomingItem(item)}
+                  >
+                    <Languages size={13} />
+                    {isTranslating
+                      ? t("Translating to English…", "A traduzir para Inglês…")
+                      : translation
+                        ? t("Re-translate to English", "Traduzir novamente para Inglês")
+                        : t("Translate message to English", "Traduzir mensagem para Inglês")}
+                  </button>
+                </div>
+              )}
+              {folder === "sent" && (
+                <button
+                  className="text-xs font-semibold text-sky-700 underline"
+                  disabled={loadingIds.includes(item.id)}
+                  onClick={() => void readWithFeedback(item)}
+                >
+                  {loadingIds.includes(item.id)
+                    ? t("Loading…", "A carregar…")
+                    : t("Load original email & delivery tracking", "Carregar email original e rastreio")}
+                </button>
+              )}
+              {item.data.events && (
+                <div className="space-y-2 rounded-lg bg-slate-50 p-3 text-xs">
+                  <p className="font-semibold">{t("Provider delivery history", "Histórico do fornecedor")}</p>
+                  {!item.data.events.length && (
+                    <p>
+                      {t(
+                        "No provider events are available for this message. Opens may be blocked or reported by privacy proxies.",
+                        "Sem eventos disponíveis. Aberturas podem ser bloqueadas ou registadas por proxies de privacidade."
+                      )}
+                    </p>
+                  )}
+                  {item.data.events.map((event, index) => (
+                    <p key={index}>
+                      {event.name} · {new Date(event.time).toLocaleString()}
+                      {event.link && <span className="block break-all">{event.link}</span>}
+                    </p>
+                  ))}
+                </div>
+              )}
               {folder === "outbox" && item.kind === "outbox" && ["failed", "skipped"].includes(item.data.status) && (
                 <button
-                  type="button"
+                  className="rounded-lg border px-3 py-2 text-xs font-semibold text-sky-700"
                   disabled={Boolean(action)}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    void runAction(`retry:${item.id}`, () => retryRejected(item.id));
-                  }}
-                  className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700 hover:bg-sky-100 disabled:opacity-50"
+                  onClick={() => void runAction(`retry:${item.id}`, () => retryRejected(item.id))}
                 >
                   {action === `retry:${item.id}`
-                    ? t("Retrying…", "A repetir…")
-                    : t("Retry", "Repetir envio")}
+                    ? t("Checking & queuing…", "A verificar e enfileirar…")
+                    : t("Retry delivery", "Repetir envio")}
+                </button>
+              )}
+              {item.data.error && <p className="text-xs text-red-700">{item.data.error}</p>}
+              {["sending", "needs_verification"].includes(item.data.status) && (
+                <p className="text-xs text-amber-800">
+                  {t(
+                    "Delivery is in progress or awaiting verification. Do not resend until the delivery outcome is confirmed.",
+                    "O envio está em curso ou aguarda verificação. Não repita sem confirmar o resultado."
+                  )}
+                </p>
+              )}
+              {folder === "drafts" && (
+                <button
+                  className="rounded-lg bg-sky-600 px-3 py-2 text-xs font-semibold text-white"
+                  disabled={Boolean(action)}
+                  onClick={() => void runAction(`draft:${item.id}`, () => onOpenDraft(item.id))}
+                >
+                  {action === `draft:${item.id}`
+                    ? t("Opening draft…", "A abrir rascunho…")
+                    : t("Continue editing", "Continuar a editar")}
                 </button>
               )}
             </div>
-          </summary>
-          <div className="mt-4 space-y-3">
-            {loadingIds.includes(item.id) && (
-              <p role="status" className="text-sm text-sky-700">
-                {t("Loading original message…", "A carregar mensagem original…")}
-              </p>
-            )}
-            {item.data.htmlContent || (folder === "incoming" && item.data.fullContent && item.data.body) ? (
-              <iframe
-                title={item.data.subject || "Email"}
-                sandbox="allow-popups allow-popups-to-escape-sandbox"
-                referrerPolicy="no-referrer"
-                className="h-[620px] w-full rounded-lg border bg-white"
-                srcDoc={`<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src https://www.overwatchmoz.com data:;">${safeEmailDocument(
-                  item.data.htmlContent || item.data.body || ""
-                )}`}
-              />
-            ) : (
-              <pre className="whitespace-pre-wrap break-words font-sans text-sm text-slate-700">
-                {String(
-                  item.data.messageBody ||
-                    item.data.body ||
-                    t(
-                      "Original content was not saved for this historical email.",
-                      "O conteúdo original deste email histórico não foi guardado."
-                    )
-                )
-                  .replace(/<br\s*\/?\s*>|<\/p>|<\/div>|<\/li>/gi, "\n")
-                  .replace(/<[^>]*>/g, "")}
-              </pre>
-            )}
-            {folder === "incoming" && !item.data.fullContent && (
-              <button
-                className="text-xs font-semibold text-sky-700 underline"
-                disabled={loadingIds.includes(item.id)}
-                onClick={() => void readWithFeedback(item)}
-              >
-                {loadingIds.includes(item.id)
-                  ? t("Loading…", "A carregar…")
-                  : t("Read full message", "Ler mensagem completa")}
-              </button>
-            )}
-            {folder === "sent" && (
-              <button
-                className="text-xs font-semibold text-sky-700 underline"
-                disabled={loadingIds.includes(item.id)}
-                onClick={() => void readWithFeedback(item)}
-              >
-                {loadingIds.includes(item.id)
-                  ? t("Loading…", "A carregar…")
-                  : t("Load original email & delivery tracking", "Carregar email original e rastreio")}
-              </button>
-            )}
-            {item.data.events && (
-              <div className="space-y-2 rounded-lg bg-slate-50 p-3 text-xs">
-                <p className="font-semibold">{t("Provider delivery history", "Histórico do fornecedor")}</p>
-                {!item.data.events.length && (
-                  <p>
-                    {t(
-                      "No provider events are available for this message. Opens may be blocked or reported by privacy proxies.",
-                      "Sem eventos disponíveis. Aberturas podem ser bloqueadas ou registadas por proxies de privacidade."
-                    )}
-                  </p>
-                )}
-                {item.data.events.map((event, index) => (
-                  <p key={index}>
-                    {event.name} · {new Date(event.time).toLocaleString()}
-                    {event.link && <span className="block break-all">{event.link}</span>}
-                  </p>
-                ))}
-              </div>
-            )}
-            {folder === "outbox" && item.kind === "outbox" && ["failed", "skipped"].includes(item.data.status) && (
-              <button
-                className="rounded-lg border px-3 py-2 text-xs font-semibold text-sky-700"
-                disabled={Boolean(action)}
-                onClick={() => void runAction(`retry:${item.id}`, () => retryRejected(item.id))}
-              >
-                {action === `retry:${item.id}`
-                  ? t("Checking & queuing…", "A verificar e enfileirar…")
-                  : t("Retry delivery", "Repetir envio")}
-              </button>
-            )}
-            {item.data.error && <p className="text-xs text-red-700">{item.data.error}</p>}
-            {["sending", "needs_verification"].includes(item.data.status) && (
-              <p className="text-xs text-amber-800">
-                {t(
-                  "Delivery is in progress or awaiting verification. Do not resend until the delivery outcome is confirmed.",
-                  "O envio está em curso ou aguarda verificação. Não repita sem confirmar o resultado."
-                )}
-              </p>
-            )}
-            {folder === "drafts" && (
-              <button
-                className="rounded-lg bg-sky-600 px-3 py-2 text-xs font-semibold text-white"
-                disabled={Boolean(action)}
-                onClick={() => void runAction(`draft:${item.id}`, () => onOpenDraft(item.id))}
-              >
-                {action === `draft:${item.id}`
-                  ? t("Opening draft…", "A abrir rascunho…")
-                  : t("Continue editing", "Continuar a editar")}
-              </button>
-            )}
-          </div>
-        </details>
-      ))}
-
-      {folder === "outbox" && standbyFollowUps.length > 0 && (
-        <details className="rounded-xl border border-indigo-200 bg-indigo-50/40 p-4">
-          <summary className="cursor-pointer text-sm font-semibold text-indigo-950 flex flex-wrap items-center justify-between gap-2">
-            <span>
-              {t(
-                `Scheduled Post-Booking Auto Follow-Ups (${standbyFollowUps.length} waiting for candidate to book a test slot)`,
-                `Seguimentos Automáticos Pós-Agendamento (${standbyFollowUps.length} a aguardar que o candidato escolha vaga)`
-              )}
-            </span>
-            <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-bold text-indigo-800">
-              {t("Automated · Read-Only", "Automático · Apenas Leitura")}
-            </span>
-          </summary>
-          <p className="mt-2 text-xs text-indigo-900/80">
-            {t(
-              "These are NOT unsent Outbox emails. Your main invitation emails were already delivered (see Sent folder). Each item below is a locked, automated follow-up rule that triggers automatically when that candidate books their test appointment.",
-              "Estes NÃO são emails pendentes por enviar. Os convites principais já foram entregues (ver pasta Enviados). Cada item abaixo é uma regra automática bloqueada (apenas leitura) que envia automaticamente quando o candidato confirmar o agendamento."
-            )}
-          </p>
-          <div className="mt-3 space-y-2">
-            {standbyFollowUps.map((item) => (
-              <div
-                key={item.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-indigo-200/80 bg-white p-3 text-xs select-none"
-              >
-                <div>
-                  <div className="inline-flex items-center gap-2 font-semibold text-slate-900">
-                    <span className="rounded bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-800">
-                      {t("Auto Follow-Up · Read-Only", "Seguimento Automático · Bloqueado")}
-                    </span>
-                    <span>{item.data.subject || t("Follow-up message", "Mensagem de seguimento")}</span>
-                  </div>
-                  <span className="mt-1 block text-slate-500">
-                    {item.data.recipient} · {t("Armed at", "Activado às")} {new Date(item.updated_at).toLocaleString()} ·{" "}
-                    {statusLabel(item.data.status)}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </details>
-      )}
+          </details>
+        );
+      })}
     </section>
   );
 }

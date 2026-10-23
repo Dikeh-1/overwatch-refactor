@@ -2,7 +2,7 @@
 
 import { recordExportRequest } from "@/lib/admin-browser-activity";
 import { csvCell } from "@/lib/csv";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { candidateProfileTarget } from "@/lib/admin-navigation";
@@ -62,9 +62,19 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [editingSlots, setEditingSlots] = useState<string[]>(broadcastSlots);
   const [editingQuota, setEditingQuota] = useState<number>(slotQuota || 15);
+  const [newSlotDate, setNewSlotDate] = useState("");
+  const [newSlotTime, setNewSlotTime] = useState("10:00");
   const [newSlotText, setNewSlotText] = useState("");
   const [savingConfig, setSavingConfig] = useState(false);
   const [togglingAttendanceId, setTogglingAttendanceId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setEditingSlots(broadcastSlots);
+  }, [broadcastSlots]);
+
+  useEffect(() => {
+    setEditingQuota(slotQuota || 15);
+  }, [slotQuota]);
 
   const handleToggleAttendanceWithFeedback = async (candidateId: string, attended: boolean) => {
     setTogglingAttendanceId(candidateId);
@@ -237,7 +247,7 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
                   : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
               }`}
             >
-              <span>{formatSlotDisplay(slot)}</span>
+              <span>{formatSlotDisplay(slot, lang)}</span>
               <span
                 className={`px-1.5 py-0.2 rounded text-[0.65rem] font-bold ${
                   isOver
@@ -368,7 +378,7 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
                     </td>
 
                     <td className="px-4 py-3 text-slate-600 whitespace-nowrap font-medium">
-                      {formatSlotDisplay(candidate.testSlot || "")}
+                      {formatSlotDisplay(candidate.testSlot || "", lang)}
                     </td>
 
                     <td className="px-4 py-3 whitespace-nowrap">
@@ -462,7 +472,7 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
               <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 admin-scrollbar">
                 {editingSlots.map((s, idx) => (
                   <div key={idx} className="flex items-center justify-between p-2 rounded bg-slate-50 border border-slate-200 text-xs">
-                    <span className="font-medium text-slate-800 truncate">{formatSlotDisplay(s)}</span>
+                    <span className="font-medium text-slate-800 truncate">{formatSlotDisplay(s, lang)}</span>
                     <button
                       type="button"
                       onClick={() => setEditingSlots(editingSlots.filter((_, i) => i !== idx))}
@@ -474,10 +484,45 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
                 ))}
               </div>
 
-              <div className="flex gap-2 pt-2">
+              <div className="flex flex-wrap items-end gap-2 pt-2">
+                <label className="text-[11px] font-medium text-slate-600">
+                  {t("Date", "Data")}
+                  <input
+                    type="date"
+                    value={newSlotDate}
+                    onChange={(e) => setNewSlotDate(e.target.value)}
+                    className="mt-0.5 block px-2.5 py-1.5 text-xs rounded border border-slate-300"
+                  />
+                </label>
+                <label className="text-[11px] font-medium text-slate-600">
+                  {t("Time (Maputo)", "Hora (Maputo)")}
+                  <input
+                    type="time"
+                    value={newSlotTime}
+                    onChange={(e) => setNewSlotTime(e.target.value)}
+                    className="mt-0.5 block px-2.5 py-1.5 text-xs rounded border border-slate-300"
+                  />
+                </label>
+                <button
+                  type="button"
+                  disabled={!newSlotDate || !newSlotTime}
+                  onClick={() => {
+                    if (newSlotDate && newSlotTime) {
+                      const slot = `${newSlotDate} - ${newSlotTime}`;
+                      setEditingSlots((prev) => [...new Set([...prev, slot])]);
+                      setNewSlotDate("");
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-800 text-xs font-semibold transition-colors disabled:opacity-50"
+                >
+                  {t("+ Add Date", "+ Adicionar Data")}
+                </button>
+              </div>
+
+              <div className="flex gap-2 pt-1">
                 <input
                   type="text"
-                  placeholder="e.g. Quarta-feira, 25 de Setembro - 10h00"
+                  placeholder="e.g. 2026-10-31 - 10:00"
                   value={newSlotText}
                   onChange={(e) => setNewSlotText(e.target.value)}
                   className="flex-1 px-3 py-1.5 text-xs rounded border border-slate-300 placeholder-slate-400"
@@ -487,7 +532,7 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
                   disabled={!newSlotText.trim()}
                   onClick={() => {
                     if (newSlotText.trim()) {
-                      setEditingSlots([...editingSlots, newSlotText.trim()]);
+                      setEditingSlots([...new Set([...editingSlots, newSlotText.trim()])]);
                       setNewSlotText("");
                     }
                   }}

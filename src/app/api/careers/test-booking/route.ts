@@ -77,24 +77,27 @@ export async function GET(request: Request) {
       };
     }
 
-    return Response.json({
-      id: candidate.id,
-      name: candidate.name,
-      role: candidate.role,
-      testSlot: hasActiveGrace ? null : candidate.testSlot || null,
-      previousTestSlot: candidate.rebookingGrace?.previousSlot || candidate.testSlot || null,
-      rebookingGraceActive: hasActiveGrace,
-      rebookingGrace: candidate.rebookingGrace || null,
-      testBookedAt: candidate.testBookedAt || null,
-      invitedAt: candidate.invitedAt || null,
-      slots: candidateSlots,
-      slotStats,
-      windowFilledNotice: !candidate.testSlot,
-      attendedAt: candidate.attendedAt || null,
-      attendanceStatus: candidate.attendanceStatus || null,
-      address: siteContact.address.pt,
-      whatsapp: siteContact.whatsappNumber,
-    });
+    return Response.json(
+      {
+        id: candidate.id,
+        name: candidate.name,
+        role: candidate.role,
+        testSlot: hasActiveGrace ? null : candidate.testSlot || null,
+        previousTestSlot: candidate.rebookingGrace?.previousSlot || candidate.testSlot || null,
+        rebookingGraceActive: hasActiveGrace,
+        rebookingGrace: candidate.rebookingGrace || null,
+        testBookedAt: candidate.testBookedAt || null,
+        invitedAt: candidate.invitedAt || null,
+        slots: candidateSlots,
+        slotStats,
+        windowFilledNotice: !candidate.testSlot,
+        attendedAt: candidate.attendedAt || null,
+        attendanceStatus: candidate.attendanceStatus || null,
+        address: siteContact.address.pt,
+        whatsapp: siteContact.whatsappNumber,
+      },
+      { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } },
+    );
   } catch (error) {
     console.error("Test booking GET error:", error);
     return Response.json(

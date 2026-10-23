@@ -443,7 +443,26 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
     setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Calculate Target Recipients
+  // Calculate Target Recipients (deduplicated by email address to match dispatch engine)
+  const deduplicateByEmail = (list: Application[]) => {
+    const seen = new Set<string>();
+    const out: Application[] = [];
+    // Prefer rows that have already been booked or contacted so primary identity is preserved
+    const sorted = [...list].sort(
+      (a, b) =>
+        Number(Boolean(b.testSlot)) - Number(Boolean(a.testSlot)) ||
+        Number(hasSentCommunication(b)) - Number(hasSentCommunication(a)),
+    );
+    for (const app of sorted) {
+      const key = app.email.trim().toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        out.push(app);
+      }
+    }
+    return out;
+  };
+
   const targetCandidates = useMemo(() => {
     if (fixedRecipient) return applications.filter(a => a.id === fixedRecipient.id && (!includeBookingButton || canReceiveTestInvitation(a)));
     if (targetAudience === "individual") {
@@ -451,10 +470,12 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       return applications.filter(a => a.id === selectedIndividualId && (!includeBookingButton || canReceiveTestInvitation(a)));
     }
 
-    let pool = includeBookingButton ? applications.filter(canReceiveTestInvitation) : applications;
-    if (selectedRole && selectedRole !== "all") {
-      pool = pool.filter(a => sameRole(a.role, selectedRole));
-    }
+    const roleApps = applications.filter(a => !selectedRole || selectedRole === "all" || sameRole(a.role, selectedRole));
+    const contactedEmails = new Set(roleApps.filter(hasSentCommunication).map(a => a.email.trim().toLowerCase()));
+    const bookedEmails = new Set(roleApps.filter(a => Boolean(a.testSlot) && a.status !== "archived").map(a => a.email.trim().toLowerCase()));
+
+    let pool = includeBookingButton ? roleApps.filter(canReceiveTestInvitation) : roleApps;
+    pool = deduplicateByEmail(pool);
 
     if (targetAudience === "next_phase") return pool.filter(isNextPhase);
     if (targetAudience === "screened") return pool.filter(isQualified);
@@ -464,7 +485,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
     }
 
     if (targetAudience === "shortlisted_unbooked") {
-      return pool.filter((a) => !a.testSlot && !isTerminal(a));
+      return pool.filter((a) => !a.testSlot && !bookedEmails.has(a.email.trim().toLowerCase()) && !isTerminal(a));
     }
 
     if (targetAudience === "booked_confirmed") {
@@ -474,7 +495,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       return pool.filter((a) => Boolean(a.testSlot) && a.status !== "archived");
     }
 
-    return pool.filter((a) => a.status !== "archived" && !isTerminal(a) && !hasSentCommunication(a));
+    return pool.filter((a) => a.status !== "archived" && !isTerminal(a) && !hasSentCommunication(a) && !contactedEmails.has(a.email.trim().toLowerCase()));
   }, [applications, fixedRecipient, targetAudience, selectedRole, selectedIndividualId, selectedSlot, includeBookingButton]);
 
   // Distinct test slots for slot filter
@@ -795,7 +816,12 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3"><label className="text-xs font-semibold">{t("Email language", "Idioma do email")}<select aria-label={t("Email language", "Idioma do email")} value={emailLang} onChange={event => setEmailLang(event.target.value as "pt" | "en")} className="ml-3 rounded-lg border px-3 py-2"><option value="pt">Português</option><option value="en">English</option></select></label><span className="text-xs text-slate-500">{t("Controls templates, role names, booking buttons and the letterhead. The admin interface can stay in English.", "Controla os modelos, nomes de vagas, botões de agendamento e o timbre.")}</span></div>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3">
         <nav aria-label={t("Mailbox folders", "Pastas de correio")} className="flex flex-wrap gap-1">{([
-          ["compose", t("Compose", "Escrever")], ["drafts", t("Drafts", "Rascunhos")], ["incoming", t("Incoming", "Recebidos")], ["sent", t("Sent", "Enviados")], ["outbox", t("Outbox", "Caixa de saída")]
+          ["compose", t("Compose", "Escrever")],
+          ["drafts", t("Drafts", "Rascunhos")],
+          ["incoming", t("Incoming", "Recebidos")],
+          ["sent", t("Sent", "Enviados")],
+          ["outbox", t("Outbox", "Caixa de saída")],
+          ["scheduled", t("Scheduled Auto Follow-Ups", "Seguimentos Automáticos")],
         ] as const).map(([key,label]) => <button key={key} type="button" aria-pressed={folder === key} onClick={() => setFolder(key)} className={`rounded-lg px-3 py-2 text-xs font-medium ${folder === key ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"}`}>{label}</button>)}</nav>
         <div className="flex items-center gap-3"><span role="status" className="max-w-sm text-xs text-slate-500">{draft.status}</span><button type="button" disabled={!draft.ready || isDispatching || openingDraft} onClick={() => { if (newDraftLock.current) return; newDraftLock.current = true; setOpeningDraft(true); void draft.newDraft().then(() => setFolder("compose")).catch(error => setDeliveryNotice(error.message)).finally(() => { newDraftLock.current = false; setOpeningDraft(false); }); }} className="rounded-lg border px-3 py-2 text-xs font-medium">{openingDraft ? t("Creating draft…", "A criar rascunho…") : t("New draft", "Novo rascunho")}</button></div>
       </div>
@@ -856,9 +882,14 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
               </label>
               <div className="grid grid-cols-1 gap-1.5 text-xs">
                 {(() => {
-                  const rolePool = (includeBookingButton ? applications.filter(canReceiveTestInvitation) : applications).filter((a) => selectedRole === "all" || sameRole(a.role, selectedRole));
-                  const uncontactedCount = rolePool.filter((a) => a.status !== "archived" && !isTerminal(a) && !hasSentCommunication(a)).length;
-                  const unbookedCount = rolePool.filter((a) => !a.testSlot && !isTerminal(a)).length;
+                  const rawRolePool = applications.filter((a) => selectedRole === "all" || sameRole(a.role, selectedRole));
+                  const contactedEmails = new Set(rawRolePool.filter(hasSentCommunication).map((a) => a.email.trim().toLowerCase()));
+                  const bookedEmails = new Set(rawRolePool.filter((a) => Boolean(a.testSlot) && a.status !== "archived").map((a) => a.email.trim().toLowerCase()));
+                  const rolePool = deduplicateByEmail(
+                    (includeBookingButton ? applications.filter(canReceiveTestInvitation) : applications).filter((a) => selectedRole === "all" || sameRole(a.role, selectedRole))
+                  );
+                  const uncontactedCount = rolePool.filter((a) => a.status !== "archived" && !isTerminal(a) && !hasSentCommunication(a) && !contactedEmails.has(a.email.trim().toLowerCase())).length;
+                  const unbookedCount = rolePool.filter((a) => !a.testSlot && !bookedEmails.has(a.email.trim().toLowerCase()) && !isTerminal(a)).length;
                   const bookedCount = rolePool.filter((a) => Boolean(a.testSlot) && a.status !== "archived").length;
                   const list: { id: string; label: string }[] = [];
 

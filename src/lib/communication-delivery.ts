@@ -55,7 +55,14 @@ export async function deliverQueuedItem(item: MailItem) {
     // Commit delivery first. History/automation failures must never make this message eligible for a duplicate send.
     claimed = await putMail({ ...claimed, data: { ...claimed.data, subject: rendered.subject, messageBody: rendered.text, htmlContent: rendered.html, providerMessageId: receipt.messageId, status: "sent", sentAt: new Date().toISOString(), attachments: (item.data.attachments || []).map((a: MailAttachment) => ({ name: a.name, type: a.type, size: a.size })) } }, claimed.version);
     const current = await getApplication(candidate.id) || candidate;
-    await updateApplication(candidate.id, { ...(item.data.includeBookingButton ? { invitedAt: new Date().toISOString() } : {}), communications: [...(current.communications || []), { id: item.data.deliveryId, type: "custom", subject: rendered.subject, bodySnippet: rendered.text, recipient: candidate.email, sentAt: claimed.data.sentAt, status: "sent" }] });
+    const commEntry = { id: item.data.deliveryId, type: "custom" as const, subject: rendered.subject, bodySnippet: rendered.text, recipient: candidate.email, sentAt: claimed.data.sentAt, status: "sent" as const };
+    const invitedPatch = item.data.includeBookingButton ? { invitedAt: claimed.data.sentAt || new Date().toISOString() } : {};
+    await updateApplication(candidate.id, { ...invitedPatch, communications: [...(current.communications || []), commEntry] });
+    // Keep duplicate application rows for the same email & role in sync so uncontacted counts never desync
+    const normEmail = candidate.email.trim().toLowerCase();
+    for (const dup of workspaceApps.filter(a => a.id !== candidate.id && sameRole(a.role, candidate.role) && a.email.trim().toLowerCase() === normEmail)) {
+      await updateApplication(dup.id, { ...invitedPatch, communications: [...(dup.communications || []), commEntry] }).catch(() => {});
+    }
     if (item.data.followUp) {
       const ruleId = deliveryId(`booking-follow-up:${candidate.id}`), previous = await getMail(ruleId);
       await putMail({ id: ruleId, scope: item.scope, kind: "automation", data: { ...item.data.followUp, candidateId: candidate.id, roleId: candidate.role, cohortId: candidate.cohortId, recipient: candidate.email, locale: item.data.locale, roleTitle: item.data.roleTitle, status: "waiting_for_booking", campaignId: item.data.campaignId } }, previous?.version || 0);

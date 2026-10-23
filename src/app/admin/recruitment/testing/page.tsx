@@ -20,7 +20,7 @@ export default function TestingPage() {
     try {
       const [appsRes, slotsRes] = await Promise.all([
         fetch(`/api/admin/careers?t=${Date.now()}`, { cache: "no-store" }),
-        fetch("/api/admin/careers/test-slots"),
+        fetch(`/api/admin/careers/test-slots?t=${Date.now()}`, { cache: "no-store" }),
       ]);
 
       if (appsRes.ok) {
@@ -30,7 +30,7 @@ export default function TestingPage() {
 
       if (slotsRes.ok) {
         const data = await slotsRes.json();
-        if (Array.isArray(data.slots) && data.slots.length > 0) setBroadcastSlots(data.slots);
+        if (Array.isArray(data.slots)) setBroadcastSlots(data.slots);
         if (typeof data.quota === "number" && data.quota > 0) setSlotQuota(data.quota);
       }
     } catch (err) {
@@ -42,6 +42,11 @@ export default function TestingPage() {
 
   useEffect(() => {
     loadData();
+    const onUpdated = () => {
+      void loadData();
+    };
+    window.addEventListener("admin:careers-updated", onUpdated);
+    return () => window.removeEventListener("admin:careers-updated", onUpdated);
   }, [loadData]);
 
   const handleToggleAttendance = async (candidateId: string, attended: boolean) => {
@@ -99,6 +104,7 @@ export default function TestingPage() {
         if (Array.isArray(data.slots)) setBroadcastSlots(data.slots);
         if (typeof data.quota === "number") setSlotQuota(data.quota);
         await loadData();
+        window.dispatchEvent(new Event("admin:careers-updated"));
         return true;
       }
       return false;
