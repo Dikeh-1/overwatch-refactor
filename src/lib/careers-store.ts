@@ -392,8 +392,8 @@ export async function getCV(id: string): Promise<Buffer> {
   return buf;
 }
 
-export async function getApplication(id: string): Promise<Application | null> {
-  if (cachedApplications && cachedApplications.length > 0) {
+export async function getApplication(id: string, forceFresh = false): Promise<Application | null> {
+  if (!forceFresh && cachedApplications && cachedApplications.length > 0) {
     const found = cachedApplications.find((a) => a.id === id);
     if (found && Date.now() - cachedApplicationsAt < APPLICATIONS_CACHE_TTL_MS) return found;
   }

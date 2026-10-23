@@ -18,7 +18,7 @@ export function validFollowUp(value: unknown): value is FollowUp {
 export async function enqueueStudioMail(candidate: Application, data: MailItem["data"], scope: string, campaignId: string): Promise<MailItem> {
   const id = deliveryId(`${campaignId}:${candidate.id}`), existing = await getMail(id);
   if (existing) return existing;
-  try { return await putMail({ id, kind: "outbox", scope, data: { ...data, candidateId: candidate.id, roleId: candidate.role, cohortId: candidate.cohortId, recipient: candidate.email, campaignId, status: "queued", deliveryId: randomUUID() } }, 0); }
+  try { return await putMail({ id, kind: "outbox", scope, data: { ...data, candidateId: candidate.id, roleId: candidate.role, cohortId: candidate.cohortId, recipient: candidate.email, testSlot: candidate.testSlot || (data as any)?.testSlot, campaignId, status: "queued", deliveryId: randomUUID() } }, 0); }
   catch (error) { if ((error as Error).message === "MAIL_CONFLICT") { const winner = await getMail(id); if (winner) return winner; } throw error; }
 }
 export async function deliverQueuedItem(item: MailItem) {
@@ -37,10 +37,11 @@ export async function deliverQueuedItem(item: MailItem) {
       if (!content || content.kind !== "draft" || content.scope !== item.scope || !["draft", "queued", "sent", "completed"].includes(content.data.status)) throw Error("The saved message is unavailable. Review this draft before sending.");
       item = { ...item, data: { ...item.data, subject: content.data.subject, messageBody: content.data.messageBody, attachments: await hydrateMailAttachments(content.data.attachments, item.scope), followUp: content.data.followUpEnabled ? { trigger: "booking_confirmed", subject: content.data.followUpSubject, message: content.data.followUpBody } : undefined } };
     }
-    const rawCandidate = await getApplication(item.data.candidateId);
+    const rawCandidate = await getApplication(item.data.candidateId, true);
     const workspaceApps = item.data.includeBookingButton ? ((await getRecruitmentWorkspaceData().catch(() => ({ applications: [] as Application[] }))).applications || []) : [];
     const workspaceCandidate = workspaceApps.find(a => a.id === item.data.candidateId);
-    const candidate = rawCandidate || workspaceCandidate;
+    let candidate = rawCandidate || workspaceCandidate;
+    if (candidate && item.data.testSlot && !candidate.testSlot) { candidate = { ...candidate, testSlot: item.data.testSlot }; }
     if (!candidate || !sameRole(candidate.role, item.data.roleId) || candidate.cohortId !== item.data.cohortId || candidate.email !== item.data.recipient) throw Error("Candidate identity or cycle changed. Review before sending.");
     // Queue creation uses recovered stages and cycle-specific screening. Use the
     // same evaluation here instead of rejecting against stale stored scores.
@@ -114,7 +115,7 @@ export async function bookingFollowUp(candidate: Application) {
   try { rule = await putMail({ ...rule, data: { ...rule.data, status: "sending" } }, rule.version); }
   catch (error) { if ((error as Error).message === "MAIL_CONFLICT") return; throw error; }
   try {
-  const item = await enqueueStudioMail(candidate, { subject: rule.data.subject, messageBody: rule.data.message, roleTitle: rule.data.roleTitle, locale: rule.data.locale, includeBookingButton: false }, rule.scope, `${rule.id}:${candidate.testBookedAt}`);
+  const item = await enqueueStudioMail(candidate, { subject: rule.data.subject, messageBody: rule.data.message, roleTitle: rule.data.roleTitle, locale: rule.data.locale, includeBookingButton: false, testSlot: candidate.testSlot }, rule.scope, `${rule.id}:${candidate.testBookedAt}`);
   await deliverQueuedItem(item);
   const outcome = await getMail(item.id);
   await putMail({ ...rule, data: { ...rule.data, status: outcome?.data.status === "sent" ? "completed" : "needs_attention", outboxId: item.id } }, rule.version).catch(error => { if ((error as Error).message !== "MAIL_CONFLICT") throw error; });

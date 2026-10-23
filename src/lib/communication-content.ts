@@ -21,9 +21,37 @@ export function safeMailHtml(html: string): string {
 }
 type Candidate = { id: string; name: string; role: string; testSlot?: string };
 export function candidateVariables(text: string, candidate: Candidate, roleTitle: string, lang: "en" | "pt", html = false): string {
-  const slot = (candidate.testSlot ? formatSlotDisplay(candidate.testSlot,lang) : "") || (lang === "en" ? "Not booked yet — choose a time using your booking link" : "Ainda não agendado — escolha um turno no seu link");
-  const values: Record<string,string> = { name: candidate.name, candidate_name: candidate.name, role: roleTitle, role_title: roleTitle, slot, test_slot: slot, company: "Overwatch Moçambique", company_name: "Overwatch Moçambique", location: "Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo", date: new Date().toLocaleDateString(lang === "en" ? "en-GB" : "pt-MZ", { day: "numeric", month: "long", year: "numeric", timeZone: "Africa/Maputo" }) };
-  return text.replace(/\{\{?\s*(candidate_name|name|role_title|role|test_slot|slot|company_name|company|location|date)\s*\}\}?/gi, (token, key: string) => { const value = values[key.toLowerCase()]; return html ? escapeMailText(value) : value; });
+  const slot = (candidate.testSlot ? formatSlotDisplay(candidate.testSlot, lang) : "") || (lang === "en" ? "Not booked yet — choose a time using your booking link" : "Ainda não agendado — escolha um turno no seu link");
+  const values: Record<string, string> = {
+    name: candidate.name,
+    candidate_name: candidate.name,
+    role: roleTitle,
+    role_title: roleTitle,
+    slot,
+    test_slot: slot,
+    booked_slot: slot,
+    booked_test_slot: slot,
+    booked_slot_data: slot,
+    test_slot_date: slot,
+    slot_date: slot,
+    data_teste: slot,
+    data_do_teste: slot,
+    data_agendada: slot,
+    turno: slot,
+    turno_teste: slot,
+    turno_agendado: slot,
+    test_session: slot,
+    session: slot,
+    company: "Overwatch Moçambique",
+    company_name: "Overwatch Moçambique",
+    location: "Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo",
+    date: new Date().toLocaleDateString(lang === "en" ? "en-GB" : "pt-MZ", { day: "numeric", month: "long", year: "numeric", timeZone: "Africa/Maputo" }),
+  };
+  return text.replace(/\{\{?\s*([a-zA-Z0-9_]+)\s*\}\}?/gi, (token, key) => {
+    const value = values[key.toLowerCase()];
+    if (value === undefined) return token;
+    return html ? escapeMailText(value) : value;
+  });
 }
 export function bookingButton(candidate: Candidate, lang: "en" | "pt", preview = false): string {
   const href = `https://www.overwatchmoz.com/${lang}/careers/test-invite/${encodeURIComponent(candidate.id)}`;
