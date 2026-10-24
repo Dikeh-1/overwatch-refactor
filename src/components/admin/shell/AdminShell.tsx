@@ -35,9 +35,9 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
   const [sessionExpiry, setSessionExpiry] = useState<number | null>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  // Session Timeout Warning Modal (10-second countdown before automatic logout)
+  // Session Timeout Warning Modal (60-second graceful countdown before automatic logout)
   const [sessionWarningOpen, setSessionWarningOpen] = useState(false);
-  const [sessionCountdown, setSessionCountdown] = useState(10);
+  const [sessionCountdown, setSessionCountdown] = useState(60);
   const [extendingSession, setExtendingSession] = useState(false);
   const warningActiveRef = useRef(false);
 
@@ -59,7 +59,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
   const triggerSessionWarning = useCallback(() => {
     if (warningActiveRef.current) return;
     warningActiveRef.current = true;
-    setSessionCountdown(10);
+    setSessionCountdown(60);
     setSessionWarningOpen(true);
   }, []);
 
@@ -73,8 +73,9 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
       const data = await res.json();
       setAuthError("");
       if (data.authenticated) {
-        warningActiveRef.current = false;
-        setSessionWarningOpen(false);
+        if (!warningActiveRef.current) {
+          setSessionWarningOpen(false);
+        }
         setAuth(true);
         setSessionExpiry(data.expiresAt || null);
       } else {
@@ -100,6 +101,28 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
   useEffect(() => {
     if (!auth) return;
     const originalFetch = window.fetch;
+    let lastSilentExtendAt = Date.now();
+
+    // Silently extend session in background if administrator is actively making API calls
+    const pingExtendSession = () => {
+      if (Date.now() - lastSilentExtendAt < 15 * 60 * 1000) return; // at most once every 15 minutes of activity
+      lastSilentExtendAt = Date.now();
+      void originalFetch("/api/admin/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "extend" }),
+      })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d?.expiresAt) {
+            setSessionExpiry(d.expiresAt);
+            warningActiveRef.current = false;
+            setSessionWarningOpen(false);
+          }
+        })
+        .catch(() => {});
+    };
+
     const guardedFetch: typeof window.fetch = async (input, init) => {
       let response = await originalFetch(input, init);
       const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, window.location.href);
@@ -123,8 +146,13 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
             { status: 503, headers: { "Content-Type": "application/json" } },
           );
         }
-        if (url.pathname !== "/api/admin/session" && response.status === 401) {
-          triggerSessionWarning();
+        if (url.pathname !== "/api/admin/session") {
+          if (response.status === 401) {
+            triggerSessionWarning();
+          } else if (response.ok) {
+            // Activity occurred; silently extend session if needed
+            pingExtendSession();
+          }
         }
         if (response.status === 403 && !contentType.includes("text/html")) {
           void originalFetch("/api/admin/session", { cache: "no-store" })
@@ -139,17 +167,17 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
       return response;
     };
     window.fetch = guardedFetch;
-    // Prompt 10 seconds before sessionExpiry (or immediately if reached)
-    const delayMs = sessionExpiry ? Math.max(0, sessionExpiry - Date.now() - 10000) : undefined;
+    // Prompt 60 seconds before sessionExpiry (or immediately if reached)
+    const delayMs = sessionExpiry ? Math.max(0, sessionExpiry - Date.now() - 60000) : undefined;
     const timer = delayMs !== undefined ? window.setTimeout(triggerSessionWarning, delayMs) : undefined;
     let lastCheckAt = Date.now();
     const check = () => {
       if (document.hidden || warningActiveRef.current) return;
-      if (Date.now() - lastCheckAt < 25000) return;
+      if (Date.now() - lastCheckAt < 45000) return;
       lastCheckAt = Date.now();
       void checkSession(false);
     };
-    const interval = window.setInterval(check, 60000);
+    const interval = window.setInterval(check, 90000);
     window.addEventListener("focus", check);
     document.addEventListener("visibilitychange", check);
     return () => {
@@ -159,7 +187,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
     };
   }, [auth, sessionExpiry, checkSession, triggerSessionWarning, lang]);
 
-  // 10-second countdown effect when Session Timeout Warning modal is open
+  // 60-second countdown effect when Session Timeout Warning modal is open
   useEffect(() => {
     if (!sessionWarningOpen || extendingSession) return;
     if (sessionCountdown <= 0) {
@@ -191,8 +219,8 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
       if (res.ok && data.authenticated) {
         warningActiveRef.current = false;
         setSessionWarningOpen(false);
-        setSessionCountdown(10);
-        setSessionExpiry(data.expiresAt || Date.now() + 60 * 60 * 1000);
+        setSessionCountdown(60);
+        setSessionExpiry(data.expiresAt || Date.now() + 8 * 60 * 60 * 1000);
       } else {
         warningActiveRef.current = false;
         setSessionWarningOpen(false);
@@ -480,7 +508,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
 
   return (
     <ActiveRoleProvider applications={applications}>
-      {/* Session Timeout Warning Modal with 10-Second Countdown */}
+      {/* Session Timeout Warning Modal with 60-Second Countdown */}
       {sessionWarningOpen && (
         <div
           role="dialog"
@@ -518,7 +546,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
             <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
               <div
                 className="h-full bg-amber-500 transition-all duration-1000"
-                style={{ width: `${Math.max(0, (sessionCountdown / 10) * 100)}%` }}
+                style={{ width: `${Math.max(0, (sessionCountdown / 60) * 100)}%` }}
               />
             </div>
 

@@ -10,11 +10,11 @@ import {
 } from "./careers-workflow";
 import { evaluateApplicationWithRules } from "./careers-evaluator";
 
-export async function getRecruitmentWorkspaceData() {
+export async function getRecruitmentWorkspaceData(forceFresh = false) {
   const [raw, roles, savedCohorts] = await Promise.all([
-    getApplications(true),
-    getRoleDefinitions(true),
-    getAllCohorts(true),
+    getApplications(forceFresh),
+    getRoleDefinitions(forceFresh),
+    getAllCohorts(forceFresh),
   ]);
   const cohorts = buildCohortCatalog(savedCohorts, roles, raw);
   const applications = raw.map((a) => {

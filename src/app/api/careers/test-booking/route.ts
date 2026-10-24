@@ -6,7 +6,7 @@ import { auditRequest } from "@/lib/admin-activity";
 import { resolveApplication, isTerminal, isNextPhase } from "@/lib/careers-workflow";
 import { getCandidateSlotConfig, reserveTestSlot } from "@/lib/careers-booking";
 import { getApplication, updateApplication, getApplications } from "@/lib/careers-store";
-import { normalizeSlot, isPastDateSlot, type Application } from "@/lib/careers";
+import { normalizeSlot, isPastDateSlot, isSlotBookingExpired, type Application } from "@/lib/careers";
 import { sendBookingConfirmation } from "@/lib/careers-email";
 import { siteContact } from "@/lib/site-config";
 
@@ -217,7 +217,7 @@ export async function GET(request: Request) {
     if (!candidate.bookingLinkOpenedAt) await updateApplication(candidate.id, { bookingLinkOpenedAt: new Date().toISOString() });
 
     const [allApps, slotConfig, roleMeta] = await Promise.all([
-      getApplications(true),
+      getApplications(), // Use in-memory cache to eliminate massive Supabase egress
       getCandidateSlotConfig(candidate),
       resolveCandidateRoleRequirements(candidate),
     ]);
@@ -225,14 +225,14 @@ export async function GET(request: Request) {
     const hasActiveGrace = Boolean(candidate.rebookingGrace && !candidate.rebookingGrace.usedAt);
 
     // Filter available candidate booking slots:
-    // If candidate has not booked yet or is using Grace OTL, only provide future open slots.
-    const candidateSlots = activeSlots.filter(s => !isPastDateSlot(s));
+    // If candidate has not booked yet or is using Grace OTL, only provide future open slots (excluding slots expired 1 day prior).
+    const candidateSlots = activeSlots.filter(s => !isPastDateSlot(s) && !isSlotBookingExpired(s));
 
     const slotStats: Record<string, { booked: number; max: number; isFull: boolean; remaining: number; isPast: boolean }> = {};
     for (const s of candidateSlots) {
       const normS = normalizeSlot(s);
       const maxPerDay = getQuotaForSlot(s, quota, slotQuotas);
-      const isPast = isPastDateSlot(s);
+      const isPast = isPastDateSlot(s) || isSlotBookingExpired(s);
       const booked = allApps.filter(
         (a) => sameBookingScope(a, candidate) && normalizeSlot(a.testSlot) === normS && !isTerminal(resolveApplication(a)) && a.id !== candidate.id
       ).length;
@@ -340,12 +340,12 @@ async function handlePOST(request: Request) {
 
     const normalizedSlot = normalizeSlot(slot);
 
-    // Past slot safeguard: block booking for dates/times that have already concluded
-    if (isPastDateSlot(normalizedSlot)) {
+    // Past or expired slot safeguard: block booking for dates/times that have concluded or expired 1 day prior (11:59 PM day before)
+    if (isPastDateSlot(normalizedSlot) || isSlotBookingExpired(normalizedSlot)) {
       return Response.json(
         {
           error:
-            "A data seleccionada já passou. Por favor escolha um turno disponível futuro.",
+            "As inscrições para este turno encerraram às 23h59 do dia anterior. Por favor escolha um turno disponível futuro.",
           slotExpired: true,
         },
         { status: 400 },
@@ -353,7 +353,7 @@ async function handlePOST(request: Request) {
     }
 
     const config = await getCandidateSlotConfig(candidate);
-    const updated = await reserveTestSlot(candidate, normalizedSlot, config, await getApplications(true));
+    const updated = await reserveTestSlot(candidate, normalizedSlot, config, await getApplications());
 
     const origin =
       request.headers.get("origin") ||

@@ -1,5 +1,5 @@
 import type { Application } from "./careers";
-import { isPastDateSlot, normalizeSlot } from "./careers";
+import { isPastDateSlot, isSlotBookingExpired, normalizeSlot } from "./careers";
 import { isTerminal, resolveApplication, sameRole } from "./careers-workflow";
 
 export function getQuotaForSlot(
@@ -42,7 +42,8 @@ export function validateReservation(
   if (candidate.testSlot && !hasGrace) throw new Error("ALREADY_BOOKED");
   if (
     !config.slots.some((s) => normalizeSlot(s) === slot) ||
-    isPastDateSlot(slot, now)
+    isPastDateSlot(slot, now) ||
+    isSlotBookingExpired(slot, now)
   )
     throw new Error("INVALID_SLOT");
   const occupancy = applications.filter(

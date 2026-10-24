@@ -21,7 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { siteContact } from "@/lib/site-config";
-import { formatSlotDisplay, isPastDateSlot } from "@/lib/careers";
+import { formatSlotDisplay, isPastDateSlot, isSlotBookingExpired } from "@/lib/careers";
 import { openOverwatchChatbot } from "@/components/layout/ZohoChatbot";
 
 type SlotStat = {
@@ -246,17 +246,23 @@ export default function CandidateBookingClient({
       setLoading(false);
     }
 
-    // Fast 2.5s live polling + visibility/focus + BroadcastChannel so slot capacity updates immediately across applicants
+    // 45s live polling with activity throttling to prevent Supabase egress quota exhaustion
+    let lastFetchedTime = Date.now();
     const interval = setInterval(() => {
       if (id && !cancelled && (typeof document === "undefined" || !document.hidden)) {
+        lastFetchedTime = Date.now();
         void fetchCandidate(true);
       }
-    }, 2500);
+    }, 45000);
     const onFocus = () => {
-      if (id && !cancelled) void fetchCandidate(true);
+      if (id && !cancelled && Date.now() - lastFetchedTime > 20000) {
+        lastFetchedTime = Date.now();
+        void fetchCandidate(true);
+      }
     };
     const onVisibility = () => {
-      if (id && !cancelled && typeof document !== "undefined" && !document.hidden) {
+      if (id && !cancelled && typeof document !== "undefined" && !document.hidden && Date.now() - lastFetchedTime > 20000) {
+        lastFetchedTime = Date.now();
         void fetchCandidate(true);
       }
     };
@@ -880,7 +886,8 @@ export default function CandidateBookingClient({
                     {slotsList.map((slot) => {
                       const isSelected = selectedSlot === slot;
                       const stat = candidate?.slotStats?.[slot];
-                      const isPast = Boolean(stat?.isPast) || isPastDateSlot(slot);
+                      const isBookingExpired = isSlotBookingExpired(slot);
+                      const isPast = Boolean(stat?.isPast) || isPastDateSlot(slot) || isBookingExpired;
                       const isFull = Boolean(stat?.isFull) || isPast;
                       const remaining = stat ? Math.max(0, stat.remaining) : undefined;
 
@@ -901,20 +908,26 @@ export default function CandidateBookingClient({
                                   {formatSlotDisplay(slot, isPt)}
                                 </p>
                                 <p className="text-xs mt-0.5 text-gray-400">
-                                  {isPast
-                                    ? (isPt ? "Sessão encerrada · Data passada" : "Session concluded · Past date")
-                                    : (isPt ? "Vagas esgotadas · Não disponível" : "No spots available · Full")}
+                                  {isBookingExpired
+                                    ? (isPt ? "Inscrições encerradas · Prazo limite atingido (23h59 da véspera)" : "Bookings closed · Expired at 11:59 PM day prior")
+                                    : isPast
+                                      ? (isPt ? "Sessão encerrada · Data passada" : "Session concluded · Past date")
+                                      : (isPt ? "Vagas esgotadas · Não disponível" : "No spots available · Full")}
                                 </p>
                               </div>
                             </div>
 
                             <span className={`flex items-center gap-1 text-[0.65rem] font-semibold px-2 py-0.5 rounded-full shrink-0 ${
-                              isPast
+                              isBookingExpired || isPast
                                 ? "text-gray-600 bg-gray-200/80 border border-gray-300"
                                 : "text-red-600 bg-red-100/90 border border-red-200"
                             }`}>
                               <Lock size={9} />
-                              <span>{isPast ? (isPt ? "Encerrado" : "Concluded") : (isPt ? "Esgotado" : "Full")}</span>
+                              {isBookingExpired
+                                ? (isPt ? "Encerrado" : "Closed")
+                                : isPast
+                                  ? (isPt ? "Passado" : "Concluded")
+                                  : (isPt ? "Esgotado" : "Full")}
                             </span>
                           </div>
                         );

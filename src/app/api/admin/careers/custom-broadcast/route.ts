@@ -4,7 +4,7 @@ import { getMail, putMail, insertMailBatch } from "@/lib/communication-mail-stor
 import { candidateVariables, studioScope } from "@/lib/communication-content";
 import { renderOfficialMail } from "@/lib/communication-renderer";
 import { getCandidateSlotConfig } from "@/lib/careers-booking";
-import { isPastDateSlot } from "@/lib/careers";
+import { isPastDateSlot, isSlotBookingExpired } from "@/lib/careers";
 import { auditRequest } from "@/lib/admin-activity";
 import crypto from "node:crypto";
 import { getRecruitmentWorkspaceData } from "@/lib/careers-workspace-store";
@@ -244,7 +244,7 @@ async function handlePOST(request: Request) {
       for (const candidate of deduplicatedCandidates) {
         const key = `${candidate.role}:${candidate.cohortId}`;
         const config = configs.get(key) || await getCandidateSlotConfig(candidate); configs.set(key, config);
-        if (!config.slots.some(slot => !isPastDateSlot(slot))) return Response.json({ error: "No future test slots are configured for this applicant's recruitment cycle. Configure its schedule in Settings before inviting." }, { status: 400 });
+        if (!config.slots.some(slot => !isPastDateSlot(slot) && !isSlotBookingExpired(slot))) return Response.json({ error: "No future test slots are configured for this applicant's recruitment cycle. Configure its schedule in Settings before inviting." }, { status: 400 });
       }
     }
     if (body.draftId) {

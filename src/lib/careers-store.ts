@@ -182,7 +182,7 @@ let hasPurgedLegacy = false;
 // ─────────────────────────────────────────────────────────────────────────────
 let cachedApplications: Application[] | null = null;
 let cachedApplicationsAt = 0;
-const APPLICATIONS_CACHE_TTL_MS = 25000; // 25 seconds TTL
+const APPLICATIONS_CACHE_TTL_MS = 60000; // 60 seconds TTL (aggressive egress protection)
 
 export function invalidateApplicationsCache(): void {
   cachedApplications = null;
@@ -216,6 +216,14 @@ export async function getApplications(forceFresh = false): Promise<Application[]
       }).catch(() => {});
       return filtered;
     } catch (pgErr) {
+      console.warn("Postgres query error, falling back to local disk replica:", pgErr);
+      const list = await read("applications.json", []);
+      const filtered = (list || []).filter((a: any) => a && a.role !== "__system_config__" && !SYSTEM_UUIDS.has(a.id));
+      if (filtered.length > 0) {
+        cachedApplications = filtered;
+        cachedApplicationsAt = Date.now();
+        return filtered;
+      }
       throw new Error("Candidate storage unavailable", { cause: pgErr });
     }
   }
@@ -234,6 +242,14 @@ export async function getApplications(forceFresh = false): Promise<Application[]
       cachedApplicationsAt = Date.now();
       return filtered;
     } catch (apiErr) {
+      console.warn("Supabase REST error, falling back to local disk replica:", apiErr);
+      const list = await read("applications.json", []);
+      const filtered = (list || []).filter((a: any) => a && a.role !== "__system_config__" && !SYSTEM_UUIDS.has(a.id));
+      if (filtered.length > 0) {
+        cachedApplications = filtered;
+        cachedApplicationsAt = Date.now();
+        return filtered;
+      }
       throw new Error("Candidate storage unavailable", { cause: apiErr });
     }
   }

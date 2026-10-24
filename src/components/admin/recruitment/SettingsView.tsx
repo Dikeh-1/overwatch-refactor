@@ -2,7 +2,7 @@
 
 import { RoleTestSlotSettings } from "./RoleTestSlotSettings";
 import React, { useState, useEffect, useCallback } from "react";
-import { Save, CheckCircle2, Mail, SlidersHorizontal, Users, Archive } from "lucide-react";
+import { Save, CheckCircle2, Mail, SlidersHorizontal, Users, Archive, ShieldCheck, Clock, RefreshCw } from "lucide-react";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import type { CareerCohort, CareerRoleDefinition } from "@/lib/careers-models";
 import { cycleLabel } from "@/lib/careers-cycle-label";
@@ -43,6 +43,42 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ lang: propLang }) =>
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
   const [loaded, setLoaded] = useState(false);
+
+  // Admin Session Security & Inactivity Timeout Controls
+  const [sessionRenewing, setSessionRenewing] = useState(false);
+  const [sessionRenewNotice, setSessionRenewNotice] = useState<string>("");
+
+  const handleExtendAdminSession = async () => {
+    setSessionRenewing(true);
+    setSessionRenewNotice("");
+    try {
+      const res = await fetch("/api/admin/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "extend" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.authenticated) {
+        setSessionRenewNotice(
+          t(
+            "✓ Admin session successfully extended for 8 hours (active sliding renewal active).",
+            "✓ Sessão de administrador prolongada com sucesso por 8 horas (renovação contínua activa).",
+          ),
+        );
+      } else {
+        setSessionRenewNotice(
+          t("Failed to extend session.", "Não foi possível prolongar a sessão."),
+        );
+      }
+    } catch {
+      setSessionRenewNotice(
+        t("Connection error extending session.", "Erro de ligação ao prolongar sessão."),
+      );
+    } finally {
+      setSessionRenewing(false);
+      setTimeout(() => setSessionRenewNotice(""), 6000);
+    }
+  };
 
   const fetchCycleTracker = useCallback(
     async (preserveInput = false) => {
@@ -451,11 +487,62 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ lang: propLang }) =>
           </div>
         </div>
 
-        {/* Default Session Capacity (for Test Sessions) */}
+        {/* Admin Session Security & Inactivity Timeout Controls */}
+        <div className="pt-4 border-t border-slate-100">
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 text-sky-700 border border-sky-200">
+                  <ShieldCheck size={16} />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                    <span>{t("Admin Session Security & Inactivity Timeout", "Segurança da Sessão de Administrador e Tempo Limite")}</span>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200">
+                      {t("8h Sliding Session", "Sessão Deslizante 8h")}
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    {t(
+                      "Continuous background renewal while you work. If idle, a single 60-second graceful warning appears before timeout.",
+                      "Renovação automática contínua em segundo plano enquanto trabalha. Em inactividade, surge um aviso de 60 segundos.",
+                    )}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={sessionRenewing}
+                onClick={() => void handleExtendAdminSession()}
+                className="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs disabled:opacity-50"
+              >
+                <RefreshCw size={12} className={sessionRenewing ? "animate-spin text-sky-600" : "text-slate-500"} />
+                <span>
+                  {sessionRenewing
+                    ? t("Extending…", "A prolongar…")
+                    : t("Refresh Session (+8 Hours)", "Prolongar Sessão (+8 Horas)")}
+                </span>
+              </button>
+            </div>
+            {sessionRenewNotice && (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 flex items-center gap-1.5 animate-in fade-in duration-150">
+                <CheckCircle2 size={13} className="shrink-0 text-emerald-600" />
+                <span>{sessionRenewNotice}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Default Session Capacity (for Candidate Exam Test Sessions) */}
         <div className="pt-3 border-t border-slate-100">
-          <label className="block text-xs font-semibold text-slate-700 mb-1">
-            {t("Default Test Session Capacity (Per Slot Fallback)", "Capacidade Padrão por Turno de Teste")}
-          </label>
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <label className="block text-xs font-semibold text-slate-700">
+              {t("Default Test Session Capacity (Per Slot Fallback)", "Capacidade Padrão por Turno de Teste Presencial")}
+            </label>
+            <span className="text-[10px] text-slate-400 font-medium">
+              {t("Candidate Exam Seats · Not Login Timeout", "Vagas de Exame · Não é o Tempo de Login")}
+            </span>
+          </div>
           <div className="flex items-center gap-3">
             <input
               type="number"
@@ -472,6 +559,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ lang: propLang }) =>
               {t("candidates per test session", "candidatos por turno de teste")}
             </span>
           </div>
+          <p className="text-[11px] text-slate-400 mt-1">
+            {t(
+              "Configures classroom seats for applicant bookings. Booking for any test slot automatically closes 1 day prior at 11:59 PM.",
+              "Define o número de lugares por turno presencial. As inscrições encerram automaticamente 1 dia antes às 23h59.",
+            )}
+          </p>
         </div>
 
         <div className="pt-4 border-t border-slate-100">

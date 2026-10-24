@@ -424,6 +424,30 @@ export function isPastDateSlot(slot?: string | null, customRefDate?: Date): bool
 }
 
 /**
+ * Automatically invalidates or closes booking for any test slot 1 day prior to the scheduled date.
+ * (e.g. A slot on Monday 26th expires by 11:59:59 PM Sunday 25th in Maputo time Africa/Maputo).
+ * From 00:00:00 on the day of the slot onwards, applicants can no longer book that slot.
+ */
+export function isSlotBookingExpired(slot?: string | null, customRefDate?: Date): boolean {
+  if (!slot) return true;
+  const parsed = parseSlotComponents(slot);
+  if (!parsed) return true;
+
+  const now = getMaputoToday(customRefDate || new Date());
+
+  if (now.year > parsed.year) return true;
+  if (now.year < parsed.year) return false;
+
+  if (now.month > parsed.month) return true;
+  if (now.month < parsed.month) return false;
+
+  // On the day of the slot or any day after, the slot booking has expired (cut-off: 11:59:59 PM day prior)
+  if (now.day >= parsed.day) return true;
+
+  return false;
+}
+
+/**
  * Checks if slot is scheduled for today (Maputo time).
  */
 export function isSlotToday(slot?: string | null, customRefDate?: Date): boolean {

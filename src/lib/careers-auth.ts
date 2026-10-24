@@ -33,13 +33,13 @@ export async function adminSessionExpiry(): Promise<number | null> {
 }
 export async function login() {
   if (!ADMIN_PASSWORD) throw new Error("Configure CAREERS_ADMIN_PASSWORD before signing in");
-  const expiry = String(Date.now() + 60 * 60 * 1000);
+  const expiry = String(Date.now() + 8 * 60 * 60 * 1000);
   (await cookies()).set(cookie, `${expiry}.${sign(expiry)}`, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
     path: "/",
-    maxAge: 3600,
+    maxAge: 28800,
   });
 }
 export async function logout() {
@@ -49,11 +49,11 @@ export async function extendAdminSession(): Promise<number | null> {
   if (!ADMIN_PASSWORD) return null;
   const token = (await cookies()).get(cookie)?.value || "";
   const [expiry, signature] = token.split(".");
-  if (!signature || !equal(signature, sign(expiry)) || Number(expiry) + 5 * 60 * 1000 < Date.now()) {
+  if (!signature || !equal(signature, sign(expiry)) || Number(expiry) + 15 * 60 * 1000 < Date.now()) {
     return null;
   }
   await login();
-  return Date.now() + 60 * 60 * 1000;
+  return Date.now() + 8 * 60 * 60 * 1000;
 }
 export function sameOrigin(request: Request) {
   return request.headers.get("origin") === new URL(request.url).origin;

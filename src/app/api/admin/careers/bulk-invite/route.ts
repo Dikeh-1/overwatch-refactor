@@ -1,7 +1,7 @@
 import { auditRequest } from "@/lib/admin-activity";
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
 import { getApplication, updateApplication } from "@/lib/careers-store";
-import { isPastDateSlot, parseSlotComponents } from "@/lib/careers";
+import { isPastDateSlot, isSlotBookingExpired, parseSlotComponents } from "@/lib/careers";
 import { getRecruitmentWorkspaceData } from "@/lib/careers-workspace-store";
 import { getCandidateSlotConfig } from "@/lib/careers-booking";
 import { canReceiveTestInvitation } from "@/lib/careers-workflow";
@@ -86,7 +86,7 @@ Overwatch Moçambique`;
         const resolved = workspace.applications.find(a => a.id === candidate.id);
         if (!resolved || !canReceiveTestInvitation(resolved)) throw new Error("Candidate is not eligible for a test invitation");
         const config = await getCandidateSlotConfig(candidate);
-        const slots = (requestedSlots.length ? requestedSlots.filter(s => config.slots.includes(s)) : config.slots).filter(s => typeof s === "string" && parseSlotComponents(s) && !isPastDateSlot(s));
+        const slots = (requestedSlots.length ? requestedSlots.filter(s => config.slots.includes(s)) : config.slots).filter(s => typeof s === "string" && parseSlotComponents(s) && !isPastDateSlot(s) && !isSlotBookingExpired(s));
         if (!slots.length) throw new Error("No configured future test slots");
         // Send email invitation
         await sendTestInvitation({

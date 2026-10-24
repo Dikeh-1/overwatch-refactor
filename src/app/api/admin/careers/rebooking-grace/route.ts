@@ -2,7 +2,7 @@ import { auditRequest } from "@/lib/admin-activity";
 import { resolveApplication, isTerminal, hasAttended, hasTested } from "@/lib/careers-workflow";
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
 import { getApplications, getApplication, updateApplication, getTestSlotConfig } from "@/lib/careers-store";
-import { type Application, isPastDateSlot } from "@/lib/careers";
+import { type Application, isPastDateSlot, isSlotBookingExpired } from "@/lib/careers";
 import { sendRebookingGraceEmail } from "@/lib/careers-email";
 
 export const dynamic = "force-dynamic";
@@ -19,8 +19,8 @@ export async function GET() {
     const allApps = (await getApplications()).map(resolveApplication);
     const { slots: activeSlots, quota = 15 } = await getTestSlotConfig();
 
-    // Only future open slots (Sept 21-25)
-    const openFutureSlots = activeSlots.filter((s) => !isPastDateSlot(s));
+    // Only future open slots (excluding slots expired 1 day prior)
+    const openFutureSlots = activeSlots.filter((s) => !isPastDateSlot(s) && !isSlotBookingExpired(s));
     const effectiveSlots = openFutureSlots;
 
     // Compute slot stats for future dates using dynamic quota

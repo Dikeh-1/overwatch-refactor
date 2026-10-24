@@ -216,8 +216,10 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang, co
       loadData();
     };
 
+    let lastVisLoad = Date.now();
     const handleVisibility = () => {
-      if (typeof document !== "undefined" && !document.hidden) {
+      if (typeof document !== "undefined" && !document.hidden && Date.now() - lastVisLoad > 30000) {
+        lastVisLoad = Date.now();
         loadData();
       }
     };
