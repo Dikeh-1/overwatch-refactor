@@ -28,7 +28,9 @@ import {
   ExternalLink,
   Globe,
   MapPin,
+  Upload,
 } from "lucide-react";
+import { UploadTestResultsModal } from "./UploadTestResultsModal";
 import { Application, Role, stages, formatPhoneDisplay, formatSlotDisplay } from "@/lib/careers";
 import {
   hasTested,
@@ -154,6 +156,8 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
   const [archiveModalOpen, setArchiveModalOpen] = useState(false);
   const [archiveReason, setArchiveReason] = useState<string>("Not Selected for Next Phase");
   const [declineLocationModalOpen, setDeclineLocationModalOpen] = useState(false);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [singleAdvanceBusy, setSingleAdvanceBusy] = useState<string | null>(null);
   const [previewEmail, setPreviewEmail] = useState("");
   const [isPreviewSending, setIsPreviewSending] = useState(false);
   const [previewResult, setPreviewResult] = useState<string | null>(null);
@@ -168,6 +172,39 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
     show: boolean;
     count: number;
   } | null>(null);
+
+  const handleSingleAdvance = async (cand: Application) => {
+    setSingleAdvanceBusy(cand.id);
+    try {
+      if (onBulkStatusChange) {
+        await onBulkStatusChange([cand.id], "next_phase_selected");
+      } else {
+        const res = await fetch("/api/admin/careers", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ kind: "status", id: cand.id, status: "next_phase_selected" }),
+        });
+        if (!res.ok) throw new Error("Failed to advance candidate");
+      }
+      setCelebrationState({
+        show: true,
+        variant: "next_phase",
+        title: t(
+          `${cand.name} Advanced to Next Phase!`,
+          `${cand.name} Avançado para a Próxima Fase!`
+        ),
+        subtitle: t(
+          "Candidate is now approved for next phase assessment and training.",
+          "O candidato foi aprovado para a etapa da próxima fase e formação."
+        ),
+      });
+      if (onRefresh) await onRefresh();
+    } catch (err: any) {
+      alert(err.message || "Error advancing candidate");
+    } finally {
+      setSingleAdvanceBusy(null);
+    }
+  };
 
   // Keep URL search params in sync
   const updateUrlParams = (updates: Record<string, string | number | null>) => {
@@ -566,6 +603,18 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Upload Test Scores Button */}
+          {hasTesting && (
+            <button
+              type="button"
+              onClick={() => setUploadModalOpen(true)}
+              className="px-3 py-1.5 rounded-md border border-sky-300 bg-sky-50/90 hover:bg-sky-100 text-sky-800 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            >
+              <Upload size={13} className="text-sky-600" />
+              <span>{t("Upload Test Scores", "Carregar Notas")}</span>
+            </button>
+          )}
+
           {/* Export CSV */}
           <button
             type="button"
@@ -1193,7 +1242,34 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
               {paginatedCandidates.length === 0 ? (
                 <tr>
                   <td colSpan={hasTesting ? 9 : 8} className="text-center py-12 text-slate-400 text-xs">
-                    {t("No candidates match the specified criteria.", "Nenhum candidato encontrado com estes critérios.")}
+                    {activeView === "tested" ? (
+                      <div className="max-w-md mx-auto py-4 space-y-3">
+                        <div className="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-200 text-sky-600 flex items-center justify-center mx-auto shadow-2xs">
+                          <Upload size={22} />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-800">
+                            {t("No test scores recorded yet", "Nenhuma nota de teste registada")}
+                          </h4>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {t(
+                              "Upload an Excel (.xlsx/.xls), CSV, or PDF results sheet to match candidates and record their physical exam scores.",
+                              "Carregue a folha de notas em Excel, CSV ou PDF para validar os candidatos e lançar os resultados."
+                            )}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setUploadModalOpen(true)}
+                          className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition-all shadow-sm inline-flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Upload size={13} />
+                          <span>{t("Upload Results Sheet", "Carregar Ficheiro de Notas")}</span>
+                        </button>
+                      </div>
+                    ) : (
+                      t("No candidates match the specified criteria.", "Nenhum candidato encontrado com estes critérios.")
+                    )}
                   </td>
                 </tr>
               ) : (
@@ -1304,6 +1380,23 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
 
                       <td className="px-4 py-3 text-right whitespace-nowrap">
                         <div className="inline-flex items-center gap-1.5 justify-end">
+                          {isNextPhase(candidate) ? (
+                            <span className="px-2 py-0.5 rounded text-[0.68rem] font-bold bg-sky-100 text-sky-800 border border-sky-300 inline-flex items-center gap-1">
+                              ✓ {t("Next Phase", "Próx. Fase")}
+                            </span>
+                          ) : !isTerminal(candidate) && hasNextPhase ? (
+                            <button
+                              type="button"
+                              disabled={singleAdvanceBusy === candidate.id}
+                              onClick={() => handleSingleAdvance(candidate)}
+                              className="px-2.5 py-1 rounded bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition-colors inline-flex items-center gap-1 shadow-2xs cursor-pointer disabled:opacity-50"
+                              title={t("Advance candidate to Next Phase", "Avançar candidato para a Próxima Fase")}
+                            >
+                              <Award size={11} />
+                              <span>{singleAdvanceBusy === candidate.id ? "…" : t("Advance", "Avançar")}</span>
+                            </button>
+                          ) : null}
+
                           {candidate.nextPhaseToken && (
                             <a
                               href={`/pt/careers/next-phase/${candidate.nextPhaseToken}`}
@@ -1781,6 +1874,18 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Upload & Ingest Test Scores Modal */}
+      <UploadTestResultsModal
+        isOpen={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        roleId={roleFilter !== "all" ? roleFilter : scopedRoleId}
+        lang={lang}
+        onSuccess={async () => {
+          if (onRefresh) await onRefresh();
+          handleViewChange("tested");
+        }}
+      />
 
       {/* Celebration Confetti Pop Overlay (Used ONLY for Shortlisting, Next Phase, or Hired) */}
       <CelebrationOverlay
