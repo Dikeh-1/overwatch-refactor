@@ -59,11 +59,13 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scoreBenchmark, setScoreBenchmark] = useState<number>(80);
 
   // Preview state
   const [previewData, setPreviewData] = useState<{
     fileName: string;
     totalRecords: number;
+    scoreBenchmark?: number;
     matched: CandidatePreview[];
     unmatched: UnmatchedRow[];
   } | null>(null);
@@ -75,6 +77,20 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
     advancedCount: number;
     absentCount?: number;
   } | null>(null);
+
+  const applyBenchmark = (benchmark: number, list: CandidatePreview[]) => {
+    const advance = new Set<string>();
+    for (const m of list) {
+      if (
+        m.documentNextPhase ||
+        m.currentStatus === "next_phase_selected" ||
+        (typeof m.newScore === "number" && m.newScore >= benchmark)
+      ) {
+        advance.add(m.candidateId);
+      }
+    }
+    setSelectedToAdvance(advance);
+  };
 
   if (!isOpen) return null;
 
@@ -96,6 +112,7 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
       const formData = new FormData();
       formData.append("file", file);
       formData.append("lang", lang);
+      formData.append("scoreBenchmark", String(scoreBenchmark));
       if (roleId) formData.append("roleId", roleId);
       if (cohortId) formData.append("cohortId", cohortId);
       formData.append("commit", "false"); // dry-run preview
@@ -111,21 +128,16 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
       }
 
       const matchedList: CandidatePreview[] = data.matched || [];
+      const effectiveBenchmark = data.scoreBenchmark ?? scoreBenchmark;
       setPreviewData({
         fileName: data.fileName || file.name,
         totalRecords: data.totalRecords || 0,
+        scoreBenchmark: effectiveBenchmark,
         matched: matchedList,
         unmatched: data.unmatched || [],
       });
 
-      // Automatically pre-select candidates who are marked as selected/Next Phase in the document
-      const initialAdvance = new Set<string>();
-      for (const m of matchedList) {
-        if (m.documentNextPhase || m.currentStatus === "next_phase_selected") {
-          initialAdvance.add(m.candidateId);
-        }
-      }
-      setSelectedToAdvance(initialAdvance);
+      applyBenchmark(effectiveBenchmark, matchedList);
     } catch (err: any) {
       setError(err.message || t("Error uploading file", "Erro ao carregar ficheiro"));
     } finally {
@@ -142,6 +154,7 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
       const formData = new FormData();
       formData.append("file", selectedFile);
       formData.append("lang", lang);
+      formData.append("scoreBenchmark", String(scoreBenchmark));
       if (roleId) formData.append("roleId", roleId);
       if (cohortId) formData.append("cohortId", cohortId);
       formData.append("commit", "true");
@@ -289,6 +302,34 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
           {/* STEP 1: DROPZONE */}
           {!committedSuccess && !previewData && (
             <div className="space-y-4">
+              {/* Configurable Benchmark Cutoff */}
+              <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-white shadow-2xs">
+                <div>
+                  <label htmlFor="score-benchmark-input" className="text-xs font-semibold text-slate-900 block">
+                    {t("Next Phase Cutoff Benchmark (%)", "Nota de Corte para Próxima Fase (%)")}
+                  </label>
+                  <p className="text-[11px] text-slate-500">
+                    {t(
+                      "Applicants scoring at or above this percentage qualify to be advanced.",
+                      "Candidatos com nota igual ou superior avançam para a próxima fase."
+                    )}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <input
+                    id="score-benchmark-input"
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={scoreBenchmark}
+                    onChange={(e) => setScoreBenchmark(Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
+                    className="w-16 px-2.5 py-1 text-xs text-center font-bold text-slate-900 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-slate-900"
+                  />
+                  <span className="text-xs font-bold text-slate-600">%</span>
+                </div>
+              </div>
+
               <div
                 onDragOver={(e) => {
                   e.preventDefault();
@@ -394,10 +435,35 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
 
               {/* Matched candidates table */}
               <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs">
-                <div className="px-4 py-2 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between">
-                  <span className="font-semibold text-xs text-slate-800">
-                    {t("Matched Candidates", "Candidatos Correspondidos")}
-                  </span>
+                <div className="px-4 py-2.5 bg-slate-50/80 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold text-xs text-slate-800">
+                      {t("Matched Candidates", "Candidatos Correspondidos")}
+                    </span>
+
+                    {/* On-the-fly Benchmark Cutoff changer */}
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-xs">
+                      <span className="text-[11px] text-slate-500 font-medium">
+                        {t("Benchmark Cutoff:", "Nota de Corte:")}
+                      </span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={scoreBenchmark}
+                        onChange={(e) => {
+                          const val = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+                          setScoreBenchmark(val);
+                          if (previewData) {
+                            applyBenchmark(val, previewData.matched);
+                          }
+                        }}
+                        className="w-12 px-1 text-center font-bold text-slate-900 border border-slate-300 rounded bg-slate-50 focus:bg-white focus:outline-none"
+                      />
+                      <span className="text-[11px] font-bold text-slate-600">%</span>
+                    </div>
+                  </div>
 
                   {/* Bulk advance toggle */}
                   <label className="flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer font-medium">

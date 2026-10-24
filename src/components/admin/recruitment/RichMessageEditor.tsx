@@ -56,12 +56,18 @@ interface RichMessageEditorProps {
 }
 
 const DEFAULT_VARIABLES = [
-  { code: "{{name}}", label: "Candidate Name / Nome Candidato" },
-  { code: "{{role}}", label: "Job Role Title / Vaga" },
-  { code: "{{slot}}", label: "Assigned Test Slot / Turno Agendado" },
+  { code: "{{candidate_name}}", label: "Candidate Name / Nome Candidato" },
+  { code: "{{role_title}}", label: "Job Role Title / Vaga" },
+  { code: "{{confirm_button}}", label: "Confirm Button (Single RSVP) / Botão Confirmar Presença" },
+  { code: "{{response_buttons}}", label: "Dual Response Buttons (Yes/No) / Botões Sim e Não" },
+  { code: "{{yes_button}}", label: "Yes Button / Botão Sim (Aceitar)" },
+  { code: "{{no_button}}", label: "No Button / Botão Não (Recusar)" },
+  { code: "{{next_phase_link}}", label: "Next Phase Link / Link do Portal" },
+  { code: "{{score}}", label: "Test Score % / Nota do Teste %" },
+  { code: "{{test_slot}}", label: "Assigned Test Slot / Turno Agendado" },
   { code: "{{date}}", label: "Current Date / Data Atual" },
   { code: "{{location}}", label: "HQ Address / Localização Overwatch" },
-  { code: "{{company}}", label: "Company Name / Overwatch Moçambique" },
+  { code: "{{company_name}}", label: "Company Name / Overwatch Moçambique" },
 ];
 
 const TEXT_COLORS = [

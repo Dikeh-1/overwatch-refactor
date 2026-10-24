@@ -366,6 +366,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
           if (!isAwaitingBooking) return false;
         } else if (activeView === "test_booked") {
           if (!cand.testSlot || cand.status === "archived") return false;
+          if (hasTested(cand)) return false;
         } else if (activeView === "tested") {
           if (!hasTested(cand)) return false;
         } else if (activeView === "next_phase") {
@@ -548,10 +549,17 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
         </span>
       );
     }
-    if (cand.nextPhaseInvitedAt || cand.nextPhaseStatus === "invited") {
+    if (cand.nextPhaseInvitedAt || cand.nextPhaseStatus === "invited" || cand.status === "next_phase_invited") {
       return (
         <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
           {t("Next Phase Invited", "Convocada Próx. Fase")}
+        </span>
+      );
+    }
+    if (cand.status === "next_phase_selected" || cand.nextPhaseStatus === "selected") {
+      return (
+        <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-sky-50 text-sky-800 border border-sky-200">
+          {t("Selected for Next Phase", "Selecionado Próx. Fase")}
         </span>
       );
     }

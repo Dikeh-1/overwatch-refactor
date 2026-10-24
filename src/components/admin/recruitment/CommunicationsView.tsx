@@ -34,7 +34,7 @@ import {
   FolderPlus,
   RefreshCw,
 } from "lucide-react";
-import { isNextPhase, isQualified, isTerminal, sameRole, canReceiveTestInvitation, hasSentCommunication } from "@/lib/careers-workflow";
+import { isNextPhase, isQualified, isTerminal, sameRole, canReceiveTestInvitation, hasSentCommunication, hasTested } from "@/lib/careers-workflow";
 import { Application, formatSlotDisplay, normalizeSlot } from "@/lib/careers";
 import Logo from "@/components/ui/Logo";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
@@ -479,10 +479,9 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
 
     if (targetAudience === "next_phase") return pool.filter(isNextPhase);
     if (targetAudience === "screened") return pool.filter(isQualified);
-
-    if (targetAudience === "interview") {
-      return pool.filter((a) => a.status === "interview");
-    }
+    if (targetAudience === "tested") return pool.filter((a) => hasTested(a) && !isTerminal(a));
+    if (targetAudience === "interview") return pool.filter((a) => a.status === "interview");
+    if (targetAudience === "hired") return pool.filter((a) => a.status === "hired");
 
     if (targetAudience === "shortlisted_unbooked") {
       return pool.filter((a) => !a.testSlot && !bookedEmails.has(a.email.trim().toLowerCase()) && !isTerminal(a));
@@ -655,6 +654,15 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
     }
     if (targetAudience === "next_phase") {
       return `${targetCandidates.length} ${t("Candidates Selected for Next Phase", "Candidatas Seleccionadas para a Próxima Fase")}`;
+    }
+    if (targetAudience === "tested") {
+      return `${targetCandidates.length} ${t("Candidates who Completed Physical Test", "Candidatos que Realizaram o Teste Físico")}`;
+    }
+    if (targetAudience === "interview") {
+      return `${targetCandidates.length} ${t("Candidates in Interview Stage", "Candidatos em Fase de Entrevista")}`;
+    }
+    if (targetAudience === "hired") {
+      return `${targetCandidates.length} ${t("Hired Candidates", "Candidatos Contratados")}`;
     }
     if (targetAudience === "booked_confirmed") {
       return `${targetCandidates.length} ${t("Candidates with Confirmed Test Booking", "Candidatos com Presença Confirmada")}`;
@@ -891,43 +899,43 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                   const uncontactedCount = rolePool.filter((a) => a.status !== "archived" && !isTerminal(a) && !hasSentCommunication(a) && !contactedEmails.has(a.email.trim().toLowerCase())).length;
                   const unbookedCount = rolePool.filter((a) => !a.testSlot && !bookedEmails.has(a.email.trim().toLowerCase()) && !isTerminal(a)).length;
                   const bookedCount = rolePool.filter((a) => Boolean(a.testSlot) && a.status !== "archived").length;
+                  const testedCount = rolePool.filter((a) => hasTested(a) && !isTerminal(a)).length;
+                  const nextPhaseCount = applications.filter((a) => isNextPhase(a) && (selectedRole === "all" || sameRole(a.role, selectedRole))).length;
+                  const interviewCount = rolePool.filter((a) => a.status === "interview").length;
+                  const hiredCount = rolePool.filter((a) => a.status === "hired").length;
                   const list: { id: string; label: string }[] = [];
-
-                  if (roleHasNextPhase) {
-                    list.push({
-                      id: "next_phase",
-                      label: t(`Next Phase Finalists (${applications.filter(a => isNextPhase(a) && (selectedRole === "all" || sameRole(a.role, selectedRole))).length})`, `Turma Próxima Fase (${applications.filter(a => isNextPhase(a) && (selectedRole === "all" || sameRole(a.role, selectedRole))).length})`),
-                    });
-                  }
 
                   list.push({
                     id: "all_role",
                     label: t(`All Applicants in this Role · Uncontacted (${uncontactedCount})`, `Todas as Candidaturas desta Vaga · Por Contactar (${uncontactedCount})`),
                   });
 
-                  if (roleHasTesting) {
-                    list.push(
-                      {
-                        id: "shortlisted_unbooked",
-                        label: t(`Shortlisted (Awaiting Booking) (${unbookedCount})`, `Convocadas (Pendente Agendamento) (${unbookedCount})`),
-                      },
-                      {
-                        id: "booked_confirmed",
-                        label: t(`Booked Test Sessions (Escala) (${bookedCount})`, `Testes Agendados (Escala Confirmada) (${bookedCount})`),
-                      }
-                    );
-                  } else {
-                    list.push(
-                      {
-                        id: "screened",
-                        label: t("Qualified / Screened Applicants", "Candidatos Qualificados na Triagem"),
-                      },
-                      {
-                        id: "interview",
-                        label: t("In Interview Stage", "Candidatos em Entrevista"),
-                      }
-                    );
-                  }
+                  list.push(
+                    {
+                      id: "shortlisted_unbooked",
+                      label: t(`Shortlisted (Awaiting Booking) (${unbookedCount})`, `Convocadas (Pendente Agendamento) (${unbookedCount})`),
+                    },
+                    {
+                      id: "booked_confirmed",
+                      label: t(`Booked Test Sessions (Escala) (${bookedCount})`, `Testes Agendados (Escala Confirmada) (${bookedCount})`),
+                    },
+                    {
+                      id: "tested",
+                      label: t(`Tested / Test Completed (${testedCount})`, `Testes Concluídos (${testedCount})`),
+                    },
+                    {
+                      id: "next_phase",
+                      label: t(`Selected for Next Phase (${nextPhaseCount})`, `Selecionados Próxima Fase (${nextPhaseCount})`),
+                    },
+                    {
+                      id: "interview",
+                      label: t(`In Interview Stage (${interviewCount})`, `Em Fase de Entrevista (${interviewCount})`),
+                    },
+                    {
+                      id: "hired",
+                      label: t(`Hired & Admitted (${hiredCount})`, `Contratados & Admitidos (${hiredCount})`),
+                    }
+                  );
 
                   list.push({
                     id: "individual",
@@ -1382,6 +1390,12 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                     { code: "{{candidate_name}}", label: t("Candidate Full Name", "Nome Completo") },
                     { code: "{{name}}", label: t("Candidate Name (Short)", "Nome Candidato") },
                     { code: "{{role_title}}", label: t("Job Role Title", "Cargo / Função") },
+                    { code: "{{confirm_button}}", label: t("Confirm Button (Single RSVP)", "Botão Confirmar Presença") },
+                    { code: "{{response_buttons}}", label: t("Dual Response Buttons (Yes / No)", "Botões Sim / Não") },
+                    { code: "{{yes_button}}", label: t("Acceptance Button", "Botão Sim (Aceitar)") },
+                    { code: "{{no_button}}", label: t("Decline Button", "Botão Não (Recusar)") },
+                    { code: "{{next_phase_link}}", label: t("Confirmation Portal Link", "Link do Portal de Confirmação") },
+                    { code: "{{score}}", label: t("Test Score %", "Nota do Teste %") },
                     { code: "{{test_slot}}", label: t("Assigned Test Slot", "Turno Agendado") },
                     { code: "{{date}}", label: t("Current Official Date", "Data Oficial") },
                     { code: "{{location}}", label: t("HQ Facility Address", "Endereço das Instalações") },

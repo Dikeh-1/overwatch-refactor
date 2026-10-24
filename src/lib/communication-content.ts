@@ -6,7 +6,7 @@ export const escapeMailText = (value: string) => value.replace(/&/g,"&amp;").rep
 export function safeMailHtml(html: string): string {
   return sanitizeHtml(html, {
     allowedTags: ["p","div","br","strong","b","em","i","u","s","strike","span","font","a","ul","ol","li","blockquote","hr","h1","h2","h3"],
-    allowedAttributes: { "*": ["style"], a: ["href","target","rel","data-booking-button","draggable"], font: ["face","size","color"] },
+    allowedAttributes: { "*": ["style"], a: ["href","target","rel","data-booking-button","data-action-button","draggable"], font: ["face","size","color"] },
     allowedSchemes: ["http","https","mailto","tel"], allowProtocolRelative: false,
     allowedStyles: { "*": {
       color: [/^#[0-9a-f]{3,8}$/i,/^rgba?\([\d\s.,%]+\)$/i,/^[a-z]+$/i],
@@ -19,14 +19,46 @@ export function safeMailHtml(html: string): string {
     transformTags: { a: (_tag, attributes) => ({ tagName: "a", attribs: { ...attributes, rel: "noopener noreferrer" } }) }
   });
 }
-type Candidate = { id: string; name: string; role: string; testSlot?: string };
+type Candidate = {
+  id: string;
+  name: string;
+  role: string;
+  testSlot?: string;
+  testScore?: number | null;
+  score?: number | null;
+  nextPhaseToken?: string;
+};
+
 export function candidateVariables(text: string, candidate: Candidate, roleTitle: string, lang: "en" | "pt", html = false): string {
   const slot = (candidate.testSlot ? formatSlotDisplay(candidate.testSlot, lang) : "") || (lang === "en" ? "Not booked yet — choose a time using your booking link" : "Ainda não agendado — escolha um turno no seu link");
+  const token = candidate.nextPhaseToken || candidate.id || "preview";
+  const nextPhaseUrl = `https://www.overwatchmoz.com/${lang}/careers/next-phase/${encodeURIComponent(token)}`;
+  const confirmAttendanceUrl = `${nextPhaseUrl}?choice=yes&mode=confirm`;
+  const yesChoiceUrl = `${nextPhaseUrl}?choice=yes`;
+  const noChoiceUrl = `${nextPhaseUrl}?choice=no`;
+
+  const scoreVal = typeof candidate.testScore === "number" ? candidate.testScore : typeof candidate.score === "number" ? candidate.score : null;
+  const scoreDisplay = scoreVal !== null ? `${scoreVal}%` : "";
+
+  // HTML Buttons (bulletproof inline styled for email clients)
+  const confirmButtonHtml = `<a data-action-button="true" href="${confirmAttendanceUrl}" target="_blank" style="display:inline-block;background-color:#0b1329;color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;">${lang === "en" ? "Confirm Attendance" : "Confirmar Presença"} →</a>`;
+  const yesButtonHtml = `<a data-action-button="true" href="${yesChoiceUrl}" target="_blank" style="display:inline-block;background-color:#0b1329;color:#ffffff;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:700;">${lang === "en" ? "Yes, I am interested" : "Sim, tenho interesse"}</a>`;
+  const noButtonHtml = `<a data-action-button="true" href="${noChoiceUrl}" target="_blank" style="display:inline-block;color:#64748b;padding:8px 14px;text-decoration:underline;font-size:13px;">${lang === "en" ? "Decline / No interest" : "Não tenho interesse"}</a>`;
+  const responseButtonsHtml = `<span style="display:inline-block;margin:14px 0;">${yesButtonHtml}&nbsp;&nbsp;${noButtonHtml}</span>`;
+
   const values: Record<string, string> = {
     name: candidate.name,
     candidate_name: candidate.name,
     role: roleTitle,
     role_title: roleTitle,
+    score: scoreDisplay,
+    test_score: scoreDisplay,
+    next_phase_link: nextPhaseUrl,
+    portal_link: nextPhaseUrl,
+    confirm_button: html ? confirmButtonHtml : confirmAttendanceUrl,
+    response_buttons: html ? responseButtonsHtml : `${yesChoiceUrl} | ${noChoiceUrl}`,
+    yes_button: html ? yesButtonHtml : yesChoiceUrl,
+    no_button: html ? noButtonHtml : noChoiceUrl,
     slot,
     test_slot: slot,
     booked_slot: slot,
@@ -47,9 +79,14 @@ export function candidateVariables(text: string, candidate: Candidate, roleTitle
     location: "Avenida Paulo Samuel Kankhomba, N.º 1948, Maputo",
     date: new Date().toLocaleDateString(lang === "en" ? "en-GB" : "pt-MZ", { day: "numeric", month: "long", year: "numeric", timeZone: "Africa/Maputo" }),
   };
-  return text.replace(/\{\{?\s*([a-zA-Z0-9_]+)\s*\}\}?/gi, (token, key) => {
+
+  return text.replace(/\{\{?\s*([a-zA-Z0-9_]+)\s*\}\}?/gi, (tokenMatch, key) => {
     const value = values[key.toLowerCase()];
-    if (value === undefined) return token;
+    if (value === undefined) return tokenMatch;
+    // Don't escape pre-built HTML button fragments
+    if (html && (key.toLowerCase().endsWith("_button") || key.toLowerCase().endsWith("_buttons"))) {
+      return value;
+    }
     return html ? escapeMailText(value) : value;
   });
 }

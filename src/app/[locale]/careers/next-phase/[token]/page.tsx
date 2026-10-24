@@ -23,6 +23,10 @@ export default function NextPhaseCandidatePage() {
   const [candidateInfo, setCandidateInfo] = useState<{
     name: string;
     email: string;
+    role?: string;
+    roleTitle?: string;
+    isTechManager?: boolean;
+    testScore?: number | null;
     respondedAt?: string | null;
     response?: string | null;
   } | null>(null);
@@ -151,13 +155,20 @@ export default function NextPhaseCandidatePage() {
               {/* Card header */}
               <div className="px-6 sm:px-8 pt-6 sm:pt-8 pb-5 border-b border-[#EAECF0]">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400 mb-1">
-                  Overwatch • Recrutamento CCO 2026
+                  Overwatch • Recrutamento {candidateInfo.roleTitle ? candidateInfo.roleTitle.toUpperCase() : "2026"}
                 </p>
                 <h1 className="text-lg sm:text-xl font-bold text-[#0b1329] leading-snug">
-                  Confirmação – Processo de Selecção
+                  {candidateInfo.isTechManager || searchParams.get("mode") === "confirm"
+                    ? "Convocatória & Confirmação de Presença"
+                    : "Confirmação – Processo de Selecção"}
                 </h1>
-                <p className="text-sm text-slate-600 mt-2">
-                  Candidata: <strong className="text-slate-900">{candidateInfo.name}</strong>
+                <p className="text-sm text-slate-600 mt-2 flex flex-wrap items-center gap-2">
+                  <span>Candidato(a): <strong className="text-slate-900">{candidateInfo.name}</strong></span>
+                  {typeof candidateInfo.testScore === "number" && (
+                    <span className="font-mono text-xs px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-700">
+                      Nota: {candidateInfo.testScore}%
+                    </span>
+                  )}
                 </p>
               </div>
 
@@ -217,32 +228,60 @@ export default function NextPhaseCandidatePage() {
                     </p>
 
                     {/* ---- Conditions box ---- */}
-                    <div className="bg-[#F9FAFB] border border-[#EAECF0] rounded-md p-5">
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
-                        Condições
-                      </p>
-                      <ul className="space-y-2.5 text-sm text-slate-700 leading-relaxed">
-                        <li className="flex gap-2">
-                          <span className="text-slate-400 mt-0.5 shrink-0">•</span>
-                          <span>
-                            <strong>10 dias de formação inicial</strong>, sem remuneração
-                          </span>
-                        </li>
-                        <li className="flex gap-2">
-                          <span className="text-slate-400 mt-0.5 shrink-0">•</span>
-                          <span>
-                            <strong>3 meses de formação prática</strong> com remuneração mensal
-                            de <strong>9.000 MZN</strong>
-                          </span>
-                        </li>
-                        <li className="flex gap-2">
-                          <span className="text-slate-400 mt-0.5 shrink-0">•</span>
-                          <span>
-                            Regime de trabalho: <strong>2D / 2N / 2F</strong> (12 horas por turno)
-                          </span>
-                        </li>
-                      </ul>
-                    </div>
+                    {candidateInfo.isTechManager ? (
+                      <div className="bg-[#F9FAFB] border border-[#EAECF0] rounded-md p-5">
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+                          Directrizes & Condições da Próxima Fase
+                        </p>
+                        <ul className="space-y-2.5 text-sm text-slate-700 leading-relaxed">
+                          <li className="flex gap-2">
+                            <span className="text-slate-400 mt-0.5 shrink-0">•</span>
+                            <span>
+                              <strong>Entrevista Técnica Presencial & Sessão de Avaliação</strong> nas instalações da Overwatch em Maputo.
+                            </span>
+                          </li>
+                          <li className="flex gap-2">
+                            <span className="text-slate-400 mt-0.5 shrink-0">•</span>
+                            <span>
+                              <strong>Apresentação de Documentação:</strong> CV impresso actualizado, Bilhete de Identidade (BI/DIRE) e Certificados de Habilitações e Formações Técnicas.
+                            </span>
+                          </li>
+                          <li className="flex gap-2">
+                            <span className="text-slate-400 mt-0.5 shrink-0">•</span>
+                            <span>
+                              <strong>Enquadramento e Pacote Contratual:</strong> Acordo alinhado com a experiência e competências demonstradas na função técnica.
+                            </span>
+                          </li>
+                        </ul>
+                      </div>
+                    ) : (
+                      <div className="bg-[#F9FAFB] border border-[#EAECF0] rounded-md p-5">
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+                          Condições
+                        </p>
+                        <ul className="space-y-2.5 text-sm text-slate-700 leading-relaxed">
+                          <li className="flex gap-2">
+                            <span className="text-slate-400 mt-0.5 shrink-0">•</span>
+                            <span>
+                              <strong>10 dias de formação inicial</strong>, sem remuneração
+                            </span>
+                          </li>
+                          <li className="flex gap-2">
+                            <span className="text-slate-400 mt-0.5 shrink-0">•</span>
+                            <span>
+                              <strong>3 meses de formação prática</strong> com remuneração mensal
+                              de <strong>9.000 MZN</strong>
+                            </span>
+                          </li>
+                          <li className="flex gap-2">
+                            <span className="text-slate-400 mt-0.5 shrink-0">•</span>
+                            <span>
+                              Regime de trabalho: <strong>2D / 2N / 2F</strong> (12 horas por turno)
+                            </span>
+                          </li>
+                        </ul>
+                      </div>
+                    )}
 
                     {/* ---- YES / NO selection rows ---- */}
                     <div className="space-y-2">
@@ -263,7 +302,9 @@ export default function NextPhaseCandidatePage() {
                           className="w-4 h-4 text-[#0b1329] border-slate-300 focus:ring-[#0b1329] focus:ring-offset-0 cursor-pointer shrink-0"
                         />
                         <span className="text-sm text-slate-800 leading-snug">
-                          Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas.
+                          {candidateInfo.isTechManager || searchParams.get("mode") === "confirm"
+                            ? "Sim, confirmo a minha presença e disponibilidade para a próxima etapa."
+                            : "Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas."}
                         </span>
                       </label>
 

@@ -33,11 +33,26 @@ export async function GET(request: Request) {
 
   if (!isNextPhase(resolveApplication(candidate))) return Response.json({ error: "This invitation is no longer active" }, { status: 410 });
 
+  const isTechManager =
+    candidate.role === "cctv_technical_manager" ||
+    candidate.role === "technical" ||
+    Boolean(candidate.cohortId && candidate.cohortId.includes("cctv_technical_manager"));
+
+  const roleTitle = isTechManager
+    ? "Gestor Técnico e Instalação de CCTV"
+    : candidate.role === "cctv"
+    ? "Operadora de CCO"
+    : candidate.role || "Candidato";
+
   return Response.json({
     valid: true,
     candidate: {
       name: candidate.name,
       email: candidate.email,
+      role: candidate.role,
+      roleTitle,
+      isTechManager,
+      testScore: candidate.testScore ?? null,
       respondedAt: candidate.nextPhaseRespondedAt || null,
       response: candidate.nextPhaseResponse || null,
     },

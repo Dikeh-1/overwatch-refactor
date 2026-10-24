@@ -24,6 +24,8 @@ async function handlePOST(request: Request): Promise<Response> {
     const lang = (formData.get("lang") as string | null) === "pt" ? "pt" : "en";
     const commit = formData.get("commit") === "true";
     const advanceIdsJson = formData.get("advanceIds") as string | null;
+    const scoreBenchmarkRaw = formData.get("scoreBenchmark") as string | null;
+    const scoreBenchmark = scoreBenchmarkRaw !== null && !isNaN(Number(scoreBenchmarkRaw)) ? Number(scoreBenchmarkRaw) : 80;
 
     let advanceIds: string[] = [];
     if (advanceIdsJson) {
@@ -79,6 +81,7 @@ async function handlePOST(request: Request): Promise<Response> {
       return Response.json({
         preview: true,
         fileName,
+        scoreBenchmark,
         totalRecords: records.length,
         matchedCount: matched.length,
         unmatchedCount: unmatched.length,
@@ -91,6 +94,7 @@ async function handlePOST(request: Request): Promise<Response> {
           currentStatus: m.candidate.status,
           newScore: m.score,
           documentNextPhase: m.nextPhaseSelected,
+          meetsBenchmark: typeof m.score === "number" && m.score >= scoreBenchmark,
           decisionRaw: m.record.decisionRaw,
           matchType: m.matchType,
           hasCorrection: m.hasCorrection,
@@ -120,7 +124,8 @@ async function handlePOST(request: Request): Promise<Response> {
       const candidate = m.candidate;
       const documentSelected = Boolean(m.nextPhaseSelected);
       const userSelected = advanceIds.includes(candidate.id);
-      const shouldAdvance = (documentSelected || userSelected) && !isTerminal(candidate);
+      const meetsBenchmark = advanceIdsJson === null && typeof m.score === "number" && m.score >= scoreBenchmark;
+      const shouldAdvance = (documentSelected || userSelected || meetsBenchmark) && !isTerminal(candidate);
 
       const updates: Partial<Application> = {
         testScore: m.score,
