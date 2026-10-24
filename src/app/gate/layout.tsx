@@ -5,6 +5,7 @@ import "../admin/admin.css";
 export const metadata: Metadata = {
   title: "Portaria de Segurança | Overwatch",
   robots: { index: false, follow: false },
+  other: { google: "notranslate" },
 };
 
 export default function GateLayout({
@@ -13,8 +14,8 @@ export default function GateLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pt" className="dark h-full bg-[#07080f] text-white antialiased">
-      <body className="min-h-full flex flex-col bg-[#07080f] text-white antialiased selection:bg-sky-500/20 selection:text-sky-200">
+    <html lang="pt" translate="no" className="dark h-full bg-[#07080f] text-white antialiased notranslate">
+      <body translate="no" className="min-h-full flex flex-col bg-[#07080f] text-white antialiased selection:bg-sky-500/20 selection:text-sky-200 notranslate">
         {children}
       </body>
     </html>

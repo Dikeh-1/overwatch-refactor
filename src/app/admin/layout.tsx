@@ -10,6 +10,7 @@ import "./admin.css";
 export const metadata: Metadata = {
   title: "Overwatch Admin",
   robots: { index: false, follow: false },
+  other: { google: "notranslate" },
 };
 
 export default function AdminRootLayout({
@@ -18,8 +19,8 @@ export default function AdminRootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col admin-body antialiased bg-[#F7F8FA]">
+    <html lang="en" translate="no" className="h-full antialiased notranslate">
+      <body translate="no" className="min-h-full flex flex-col admin-body antialiased bg-[#F7F8FA] notranslate">
         <AdminLaunchExperience />
         <NavigationProgressBar />
         <Suspense fallback={<div role="status" className="flex min-h-screen items-center justify-center"><OverwatchOrbitLoader label="Loading admin workspace…" /></div>}>

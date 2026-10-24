@@ -206,6 +206,12 @@ function GateSecurityContent() {
     }
   }, [urlLang]);
 
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = lang;
+    }
+  }, [lang]);
+
   const switchLanguage = (newLang: "pt" | "en") => {
     setLang(newLang);
     try {
@@ -656,7 +662,7 @@ function GateSecurityContent() {
   // ── LOCK SCREEN WITH BACKGROUND VIDEO (IDENTICAL TO ADMIN PORTAL) ──
   if (!authed) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-[#07080f] text-white relative isolate overflow-hidden px-4 py-12">
+      <main translate="no" className="min-h-screen flex items-center justify-center bg-[#07080f] text-white relative isolate overflow-hidden px-4 py-12 notranslate">
         {/* Background Video */}
         <div className="absolute inset-0 z-0 opacity-30 pointer-events-none">
           <LazyVideo
@@ -768,7 +774,7 @@ function GateSecurityContent() {
 
   // ── MAIN GATE SECURITY DASHBOARD ──
   return (
-    <div className="min-h-screen bg-[#07080f] text-white flex flex-col relative isolate">
+    <div translate="no" className="min-h-screen bg-[#07080f] text-white flex flex-col relative isolate notranslate">
       <TechGrid className="fixed inset-0 opacity-15 pointer-events-none -z-10" />
 
       {/* Top Header Bar */}
