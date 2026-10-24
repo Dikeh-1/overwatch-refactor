@@ -500,7 +500,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
       {/* =========================================================================
           TOP STUDIO HEADER (Patterned after Communications Studio)
          ========================================================================= */}
-      <div className="sticky top-[48px] z-20 bg-white/95 backdrop-blur-md rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
+      <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
@@ -976,7 +976,7 @@ export const FormBuilderStudioView: React.FC<FormBuilderStudioViewProps> = ({
         {/* =======================================================================
             RIGHT COLUMN (5 cols): LIVE PUBLIC CAREERS APPLICATION PREVIEW
            ======================================================================= */}
-        <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-4">
+        <div className="lg:col-span-5 space-y-4">
           <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-3">
             {/* Header: Device view & Preview Language Toggle */}
             <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3 flex-wrap">

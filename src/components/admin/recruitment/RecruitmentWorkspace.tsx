@@ -310,7 +310,7 @@ export default function RecruitmentWorkspace({
   ];
   return (
     <CohortRoleProvider role={workspaceRole}>
-      <div className="space-y-5 [--workspace-sticky-top:102px]">
+      <div className="space-y-5">
         <header className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 space-y-4">
           <a
             href={
@@ -399,7 +399,7 @@ export default function RecruitmentWorkspace({
         <nav
           style={snapshotMode ? { display: "none" } : undefined}
           aria-label={t("Recruitment stages", "Etapas de recrutamento")}
-          className="sticky top-[46px] z-25 flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2 shadow-sm admin-scrollbar"
+          className="flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2 shadow-sm admin-scrollbar"
         >
           {[
             { id: "overview", label: t("Overview", "Visão geral") },

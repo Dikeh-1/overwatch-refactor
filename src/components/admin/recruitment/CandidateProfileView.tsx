@@ -237,7 +237,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
   const backTarget = adminParent(`/admin/recruitment/candidates/${candidate.id}`, new URLSearchParams(searchParams));
 
   return (
-    <div className="space-y-6 [--workspace-sticky-top:100px]">
+    <div className="space-y-6">
       {/* Back Navigation Bar */}
       <div className="flex items-center justify-between gap-4">
         <Link
@@ -379,7 +379,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
       </div>
 
       {/* Sticky Tab Navigation Strip */}
-      <div className="sticky top-[48px] z-20 flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm overflow-x-auto admin-scrollbar">
+      <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm overflow-x-auto admin-scrollbar">
         {tabs.map((tab) => (
           <button
             key={tab.id}

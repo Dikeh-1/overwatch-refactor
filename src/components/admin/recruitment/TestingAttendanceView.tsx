@@ -237,7 +237,7 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
       </div>
 
       {/* Sticky Session Navigation & Search Toolbar */}
-      <div className="sticky top-[var(--workspace-sticky-top,48px)] z-20 bg-[#F7F8FA] pt-2 pb-2 space-y-3">
+      <div className="space-y-3">
       {/* Session Navigation Tabs */}
       <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto pb-1 admin-scrollbar">
         <button

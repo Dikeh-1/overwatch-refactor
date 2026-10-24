@@ -68,7 +68,7 @@ export function RecruitmentOverviewView({ applications, roleDefs = [], cohorts =
       <div><p className="font-semibold">{t("No roles are open for applications", "Não existem vagas abertas para candidaturas")}</p><p className="mt-1 text-xs">{t("Closed cycles and their candidates remain available in Archive Vault. The totals below include those records when All cycles is selected.", "Os lotes encerrados e os seus candidatos continuam disponíveis no Arquivo. As contagens abaixo incluem esses registos ao seleccionar Todos os lotes.")}</p></div>
       <Link href="/admin/recruitment/archive" className="shrink-0 text-xs font-semibold underline">{t("View closed cycles", "Ver lotes encerrados")}</Link>
     </div>}
-    <section aria-label={t("Dashboard scope", "Âmbito do painel")} className="sticky top-[48px] z-20 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <section aria-label={t("Dashboard scope", "Âmbito do painel")} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
           {(["all", "open"] as const).map(value => <button key={value} aria-pressed={scope === value} onClick={() => setScope(value)} className={`rounded-lg border px-3 py-2 text-xs font-semibold ${scope === value ? "border-sky-300 bg-sky-50 text-sky-800" : "border-slate-200 text-slate-600"}`}>{value === "all" ? t("All cycles", "Todos os lotes") : t("Open cycles only", "Apenas lotes abertos")}</button>)}

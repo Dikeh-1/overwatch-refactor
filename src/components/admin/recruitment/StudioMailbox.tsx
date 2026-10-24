@@ -461,7 +461,7 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
 
   return (
     <section aria-busy={busy || Boolean(action)} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
-      <div className="sticky top-[calc(var(--workspace-sticky-top,48px)+60px)] z-10 -mx-5 -mt-5 rounded-t-2xl border-b border-slate-100 bg-white/95 backdrop-blur-md px-5 py-3.5 flex flex-wrap items-center justify-between gap-3">
+      <div className="-mx-5 -mt-5 rounded-t-2xl border-b border-slate-200 bg-white px-5 py-3.5 flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-semibold">
           {
             ({

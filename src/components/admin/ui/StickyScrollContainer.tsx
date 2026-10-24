@@ -158,7 +158,7 @@ export default function StickyScrollContainer({
             height: 14,
             zIndex: 35,
           }}
-          className="overflow-x-auto floating-horizontal-scrollbar bg-slate-100/95 backdrop-blur-xs border-t border-slate-300 shadow-md transition-opacity duration-150"
+          className="overflow-x-auto floating-horizontal-scrollbar bg-slate-100 border-t border-slate-300 shadow-md transition-opacity duration-150"
           title="Scroll horizontally"
           aria-hidden="true"
         >

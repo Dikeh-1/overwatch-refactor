@@ -778,7 +778,7 @@ function GateSecurityContent() {
       <TechGrid className="fixed inset-0 opacity-15 pointer-events-none -z-10" />
 
       {/* Top Header Bar */}
-      <header className="sticky top-0 z-30 bg-[#0d1121]/95 backdrop-blur-md border-b border-white/10 px-3 sm:px-4 py-2.5 sm:py-3">
+      <header className="sticky top-0 z-30 bg-[#0d1121] border-b border-white/10 px-3 sm:px-4 py-2.5 sm:py-3">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-2 sm:gap-3">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <Logo size="sm" variant="light" />
