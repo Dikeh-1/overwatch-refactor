@@ -287,21 +287,19 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
       );
     }
 
-    if (hasNextPhase) {
-      list.push(
-        { id: "next_phase", label: t("Next Phase Cohort", "Turma Próxima Fase") },
-        { id: "confirmed", label: t("Confirmed (YES)", "Confirmados (SIM)") },
-        { id: "declined", label: t("Declined (NO)", "Recusados (NÃO)") }
-      );
-    } else {
-      list.push(
-        { id: "hired", label: t("Hired & Admitted", "Contratados") }
-      );
+    // Next Phase Cohort, Confirmed (YES), Declined (NO) are available across all pipelines
+    list.push(
+      { id: "next_phase", label: t("Next Phase Cohort", "Turma Próxima Fase") },
+      { id: "confirmed", label: t("Confirmed (YES)", "Confirmados (SIM)") },
+      { id: "declined", label: t("Declined (NO)", "Recusados (NÃO)") }
+    );
+    if (hasTesting) {
+      list.push({ id: "interview", label: t("Interview Stage", "Em Entrevista") });
     }
-
+    list.push({ id: "hired", label: t("Hired & Admitted", "Contratados") });
     list.push({ id: "archived", label: t("Archived", "Arquivados") });
     return list;
-  }, [hasTesting, hasNextPhase, lang]);
+  }, [hasTesting, lang]);
 
   const METRIC_PREDICATES: Record<string, (a: Application) => boolean> = useMemo(
     () => ({
@@ -392,7 +390,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
             cand.status === "interest_declined";
           if (!isDecl) return false;
         } else if (activeView === "archived") {
-          if (cand.status !== "archived") return false;
+          if (!isTerminal(cand) && cand.status !== "archived") return false;
         } else if (activeView === "all") {
           // All means all records, including unresolved historical and archived records.
         }
@@ -805,238 +803,234 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={bulkActionBusy}
-              onClick={async () => {
-                if (onBulkStatusChange) {
-                  setBulkActionBusy(true);
-                  try {
-                    await onBulkStatusChange(Array.from(selectedIds), "shortlisted");
-                    setCelebrationState({
-                      show: true,
-                      variant: "shortlisted",
-                      title: t(
-                        `${selectedIds.size} Candidates Shortlisted!`,
-                        `${selectedIds.size} Candidatos Pré-selecionados!`,
-                      ),
-                      subtitle: t(
-                        "Candidates are placed in the shortlisted queue for test scheduling and assessment.",
-                        "Os candidatos foram colocados na lista de convocatória para agendamento de provas.",
-                      ),
-                    });
-                    setSelectedIds(new Set());
-                  } finally {
-                    setBulkActionBusy(false);
-                  }
-                }
-              }}
-              className="px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 text-xs font-medium transition-colors inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-            >
-              {bulkActionBusy ? (
-                <>
-                  <OverwatchOrbitLoader size="xs" theme="dark" className="shrink-0" />
-                  <span>{t("Processing...", "A processar...")}</span>
-                </>
-              ) : (
-                <span>{t("Set Shortlisted", "Marcar Pré-selecionado")}</span>
-              )}
-            </button>
+          {/* Action buttons inside the bar - Smart, Context-Aware & Clean */}
+          {(() => {
+            const selectedList = applications.filter((a) => selectedIds.has(a.id));
+            const hasConfirmedCandidate = selectedList.some(
+              (c) => c.nextPhaseResponse === "yes" || c.nextPhaseStatus === "confirmed" || c.status === "interest_confirmed"
+            );
+            const hasNextPhaseCandidate = selectedList.some(
+              (c) => c.status === "next_phase_selected" || c.nextPhaseStatus === "selected" || c.status === "next_phase_invited"
+            );
+            const hasTestedCandidate = selectedList.some((c) => hasTested(c));
+            const hasOutsideLocation = selectedList.some((c) => {
+              const loc = classifyCandidateLocation(c);
+              return loc.group === "outside_mozambique" || loc.group === "mozambique_other";
+            });
+            const isAllInitialStage = selectedList.every(
+              (c) => !hasTested(c) && !isNextPhase(c) && c.status !== "interview" && c.status !== "hired" && c.status !== "test_booked"
+            );
 
-            {hasNextPhase ? (
-              <button
-                type="button"
-                disabled={bulkActionBusy}
-                onClick={async () => {
-                  if (onBulkStatusChange) {
-                    setBulkActionBusy(true);
-                    try {
-                      await onBulkStatusChange(Array.from(selectedIds), "next_phase_selected");
-                      setCelebrationState({
-                        show: true,
-                        variant: "next_phase",
-                        title: t(
-                          `${selectedIds.size} Candidates Advanced to Next Phase!`,
-                          `${selectedIds.size} Candidatos Avançados para a Próxima Fase!`,
-                        ),
-                        subtitle: t(
-                          "Candidates are now selected and approved for next-phase training and assessment.",
-                          "Os candidatos foram selecionados e aprovados para a convocatória da próxima fase.",
-                        ),
-                      });
-                      setSelectedIds(new Set());
-                    } finally {
-                      setBulkActionBusy(false);
+            return (
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* 1. If early stage, allow shortlisting */}
+                {isAllInitialStage && (
+                  <button
+                    type="button"
+                    disabled={bulkActionBusy}
+                    onClick={async () => {
+                      if (onBulkStatusChange) {
+                        setBulkActionBusy(true);
+                        try {
+                          await onBulkStatusChange(Array.from(selectedIds), "shortlisted");
+                          setCelebrationState({
+                            show: true,
+                            variant: "shortlisted",
+                            title: t(
+                              `${selectedIds.size} Candidates Shortlisted!`,
+                              `${selectedIds.size} Candidatos Pré-selecionados!`,
+                            ),
+                            subtitle: t(
+                              "Candidates are placed in the shortlisted queue for test scheduling and assessment.",
+                              "Os candidatos foram colocados na lista de convocatória para agendamento de provas.",
+                            ),
+                          });
+                          setSelectedIds(new Set());
+                        } finally {
+                          setBulkActionBusy(false);
+                        }
+                      }
+                    }}
+                    className="px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 text-xs font-medium transition-colors inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {bulkActionBusy ? (
+                      <>
+                        <OverwatchOrbitLoader size="xs" theme="dark" className="shrink-0" />
+                        <span>{t("Processing...", "A processar...")}</span>
+                      </>
+                    ) : (
+                      <span>{t("Set Shortlisted", "Marcar Pré-selecionado")}</span>
+                    )}
+                  </button>
+                )}
+
+                {/* 2. Advance to Next Phase (for tested candidates not yet in next phase) */}
+                {hasTestedCandidate && !hasNextPhaseCandidate && !hasConfirmedCandidate && (
+                  <button
+                    type="button"
+                    disabled={bulkActionBusy}
+                    onClick={async () => {
+                      if (onBulkStatusChange) {
+                        setBulkActionBusy(true);
+                        try {
+                          await onBulkStatusChange(Array.from(selectedIds), "next_phase_selected");
+                          setCelebrationState({
+                            show: true,
+                            variant: "next_phase",
+                            title: t(
+                              `${selectedIds.size} Candidates Advanced to Next Phase!`,
+                              `${selectedIds.size} Candidatos Avançados para a Próxima Fase!`,
+                            ),
+                            subtitle: t(
+                              "Candidates are now selected and approved for next-phase training and assessment.",
+                              "Os candidatos foram selecionados e aprovados para a convocatória da próxima fase.",
+                            ),
+                          });
+                          setSelectedIds(new Set());
+                        } finally {
+                          setBulkActionBusy(false);
+                        }
+                      }
+                    }}
+                    className="px-2.5 py-1 rounded bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-semibold transition-colors inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
+                  >
+                    <Award size={13} />
+                    <span>{t("Advance to Next Phase", "Avançar p/ Próx. Fase")}</span>
+                  </button>
+                )}
+
+                {/* 3. Advance to Interview (logical next action for Confirmed or Next Phase candidates) */}
+                {(hasConfirmedCandidate || hasNextPhaseCandidate || (!hasTesting && !isAllInitialStage)) && (
+                  <button
+                    type="button"
+                    disabled={bulkActionBusy}
+                    onClick={async () => {
+                      if (onBulkStatusChange) {
+                        setBulkActionBusy(true);
+                        try {
+                          await onBulkStatusChange(Array.from(selectedIds), "interview");
+                          setCelebrationState({
+                            show: true,
+                            variant: "next_phase",
+                            title: t(
+                              `${selectedIds.size} Candidates Advanced to Interview!`,
+                              `${selectedIds.size} Candidatos Convocados para Entrevista!`,
+                            ),
+                            subtitle: t(
+                              "Candidates are now placed in the interview pipeline for evaluation.",
+                              "Os candidatos estão agora na etapa de entrevistas presenciais para avaliação.",
+                            ),
+                          });
+                          setSelectedIds(new Set());
+                        } finally {
+                          setBulkActionBusy(false);
+                        }
+                      }
+                    }}
+                    className="px-2.5 py-1 rounded bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-semibold transition-colors inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
+                  >
+                    <CalendarCheck size={13} />
+                    <span>{t("Advance to Interview", "Convocar para Entrevista")}</span>
+                  </button>
+                )}
+
+                {/* 4. Mark as Hired */}
+                <button
+                  type="button"
+                  disabled={bulkActionBusy}
+                  onClick={async () => {
+                    if (onBulkStatusChange) {
+                      setBulkActionBusy(true);
+                      try {
+                        await onBulkStatusChange(Array.from(selectedIds), "hired");
+                        setCelebrationState({
+                          show: true,
+                          variant: "hired",
+                          title: t(
+                            `${selectedIds.size} Candidates Successfully Hired!`,
+                            `${selectedIds.size} Candidatos Contratados com Sucesso!`,
+                          ),
+                          subtitle: t(
+                            "Candidates are officially confirmed as hired and ready for onboarding.",
+                            "Os candidatos foram oficializados como admitidos e prontos para integração.",
+                          ),
+                        });
+                        setSelectedIds(new Set());
+                      } finally {
+                        setBulkActionBusy(false);
+                      }
                     }
-                  }
-                }}
-                className="px-2.5 py-1 rounded bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-semibold transition-colors inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
-              >
-                <Award size={13} />
-                <span>{t("Advance to Next Phase", "Avançar p/ Próx. Fase")}</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                disabled={bulkActionBusy}
-                onClick={async () => {
-                  if (onBulkStatusChange) {
-                    setBulkActionBusy(true);
-                    try {
-                      await onBulkStatusChange(Array.from(selectedIds), "interview");
-                      setCelebrationState({
-                        show: true,
-                        variant: "next_phase",
-                        title: t(
-                          `${selectedIds.size} Candidates Advanced to Interview!`,
-                          `${selectedIds.size} Candidatos Convocados para Entrevista!`,
-                        ),
-                        subtitle: t(
-                          "Candidates are now placed in the interview pipeline for technical evaluation.",
-                          "Os candidatos estão agora na etapa de entrevistas presenciais para avaliação técnica.",
-                        ),
-                      });
-                      setSelectedIds(new Set());
-                    } finally {
-                      setBulkActionBusy(false);
-                    }
-                  }
-                }}
-                className="px-2.5 py-1 rounded bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-semibold transition-colors inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
-              >
-                <CalendarCheck size={13} />
-                <span>{t("Advance to Interview", "Convocar para Entrevista")}</span>
-              </button>
-            )}
+                  }}
+                  className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
+                >
+                  <CheckCircle2 size={13} />
+                  <span>{t("Mark Hired", "Admitir / Contratar")}</span>
+                </button>
 
-            {/* Mark as Hired */}
-            <button
-              type="button"
-              disabled={bulkActionBusy}
-              onClick={async () => {
-                if (onBulkStatusChange) {
-                  setBulkActionBusy(true);
-                  try {
-                    await onBulkStatusChange(Array.from(selectedIds), "hired");
-                    setCelebrationState({
-                      show: true,
-                      variant: "hired",
-                      title: t(
-                        `${selectedIds.size} Candidates Successfully Hired!`,
-                        `${selectedIds.size} Candidatos Contratados com Sucesso!`
-                      ),
-                      subtitle: t(
-                        "Candidates are officially confirmed as hired and ready for onboarding.",
-                        "Os candidatos foram oficializados como admitidos e prontos para integração."
-                      ),
-                    });
-                    setSelectedIds(new Set());
-                  } finally {
-                    setBulkActionBusy(false);
-                  }
-                }
-              }}
-              className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
-            >
-              <CheckCircle2 size={13} />
-              <span>{t("Mark Hired", "Admitir / Contratar")}</span>
-            </button>
+                {/* 5. Direct Stage Selector Dropdown */}
+                <div className="flex items-center gap-1 border-l border-slate-700 pl-2">
+                  <select
+                    disabled={bulkActionBusy}
+                    defaultValue=""
+                    onChange={async (e) => {
+                      const targetStatus = e.target.value;
+                      if (!targetStatus || !onBulkStatusChange) return;
+                      setBulkActionBusy(true);
+                      try {
+                        await onBulkStatusChange(Array.from(selectedIds), targetStatus);
+                        setSelectedIds(new Set());
+                      } finally {
+                        setBulkActionBusy(false);
+                        e.target.value = "";
+                      }
+                    }}
+                    className="px-2 py-1 text-xs rounded bg-slate-800 text-slate-200 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer"
+                  >
+                    <option value="" disabled>{t("Move to Stage...", "Mover para Etapa...")}</option>
+                    {stages.map((st) => (
+                      <option key={st} value={st}>
+                        {st}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            {/* Direct Stage Selector Dropdown */}
-            <div className="flex items-center gap-1 border-l border-slate-700 pl-2">
-              <select
-                disabled={bulkActionBusy}
-                defaultValue=""
-                onChange={async (e) => {
-                  const targetStatus = e.target.value;
-                  if (!targetStatus || !onBulkStatusChange) return;
-                  setBulkActionBusy(true);
-                  try {
-                    await onBulkStatusChange(Array.from(selectedIds), targetStatus);
-                    if (targetStatus === "next_phase_selected" || targetStatus === "next_phase_invited") {
-                      setCelebrationState({
-                        show: true,
-                        variant: "next_phase",
-                        title: t(
-                          `${selectedIds.size} Candidates Advanced to Next Phase!`,
-                          `${selectedIds.size} Candidatos Avançados para a Próxima Fase!`
-                        ),
-                        subtitle: t(
-                          "Candidates are now selected and approved for next-phase training and assessment.",
-                          "Os candidatos foram selecionados e aprovados para a convocatória da próxima fase."
-                        ),
-                      });
-                    } else if (targetStatus === "hired") {
-                      setCelebrationState({
-                        show: true,
-                        variant: "hired",
-                        title: t(
-                          `${selectedIds.size} Candidates Successfully Hired!`,
-                          `${selectedIds.size} Candidatos Contratados com Sucesso!`
-                        ),
-                        subtitle: t(
-                          "Candidates are officially confirmed as hired and ready for onboarding.",
-                          "Os candidatos foram oficializados como admitidos e prontos para integração."
-                        ),
-                      });
-                    }
-                    setSelectedIds(new Set());
-                  } finally {
-                    setBulkActionBusy(false);
-                    e.target.value = "";
-                  }
-                }}
-                className="px-2 py-1 text-xs rounded bg-slate-800 text-slate-200 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer"
-              >
-                <option value="" disabled>{t("Move to Stage...", "Mover para Etapa...")}</option>
-                {stages.map((st) => (
-                  <option key={st} value={st}>
-                    {st}
-                  </option>
-                ))}
-              </select>
-            </div>
+                {/* 6. Decline Candidates Outside Mozambique - only visible if any selected candidate is outside MZ */}
+                {hasOutsideLocation && (
+                  <button
+                    type="button"
+                    disabled={bulkActionBusy}
+                    onClick={() => setDeclineLocationModalOpen(true)}
+                    className="px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    title={t("Decline selected candidates based outside Mozambique or deployment zone", "Recusar candidatos com base fora da área")}
+                  >
+                    <Globe size={13} />
+                    <span>{t("Decline Outside MZ", "Recusar Fora de Moçambique")}</span>
+                  </button>
+                )}
 
-            {/* Decline Candidates Outside Mozambique / Outside Maputo */}
-            {/* Decline Candidates Outside Mozambique / Other Provinces */}
-            <button
-              type="button"
-              disabled={bulkActionBusy}
-              onClick={() => setDeclineLocationModalOpen(true)}
-              className="px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-              title={
-                locationFilter === "mozambique_other"
-                  ? t("Decline selected candidates outside operational deployment area", "Recusar candidatos selecionados fora da área operacional")
-                  : t("Decline selected candidates based outside Mozambique", "Recusar candidatos selecionados com base fora de Moçambique")
-              }
-            >
-              {locationFilter === "mozambique_other" ? <MapPin size={13} /> : <Globe size={13} />}
-              <span>
-                {locationFilter === "mozambique_other"
-                  ? t("Decline (Other Provinces)", "Recusar (Outras Províncias)")
-                  : t("Decline Outside MZ", "Recusar Fora de Moçambique")}
-              </span>
-            </button>
+                {/* 7. Archive with Reason */}
+                <button
+                  type="button"
+                  onClick={() => setArchiveModalOpen(true)}
+                  className="px-2.5 py-1 rounded bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer"
+                >
+                  <Archive size={13} />
+                  <span>{t("Archive with Reason", "Arquivar")}</span>
+                </button>
 
-            <button
-              type="button"
-              onClick={() => setArchiveModalOpen(true)}
-              className="px-2.5 py-1 rounded bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer"
-            >
-              <Archive size={13} />
-              <span>{t("Archive with Reason", "Arquivar")}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSelectedIds(new Set())}
-              className="p-1 text-slate-400 hover:text-white cursor-pointer"
-              title={t("Clear selection", "Limpar seleção")}
-            >
-              <X size={14} />
-            </button>
-          </div>
+                {/* 8. Clear Selection */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedIds(new Set())}
+                  className="p-1 text-slate-400 hover:text-white cursor-pointer"
+                  title={t("Clear selection", "Limpar seleção")}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            );
+          })()}
         </div>
       )}
       </div>

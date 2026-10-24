@@ -110,7 +110,22 @@ export default function RichMessageEditor({
 
   const editorRef = useRef<HTMLDivElement>(null);
   const rawRef = useRef<HTMLTextAreaElement>(null);
+  const variablePickerRef = useRef<HTMLDivElement>(null);
   const savedRange = useRef<Range | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (variablePickerRef.current && !variablePickerRef.current.contains(event.target as Node)) {
+        setShowVariablePicker(false);
+      }
+    };
+    if (showVariablePicker) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showVariablePicker]);
   const [activeCommands, setActiveCommands] = useState<Record<string, boolean>>({});
   const rememberSelection = useCallback(() => {
     const selection = window.getSelection();

@@ -573,8 +573,8 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       return;
     }
 
-    if (followUpEnabled && (!includeBookingButton || !followUpSubject.trim() || !followUpBody.trim())) {
-      alert(t("A booking follow-up needs an invitation, subject and message.", "O seguimento precisa de convite, assunto e mensagem.")); return;
+    if (followUpEnabled && (!followUpSubject.trim() || !followUpBody.trim())) {
+      alert(t("A follow-up email requires both a subject and message.", "O seguimento precisa de assunto e mensagem.")); return;
     }
     setIsDispatching(true);
     setConfirmDispatchOpen(false);
@@ -583,7 +583,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       const draftId = await draft.flush();
       let payload: any = {
         draftId,
-        followUp: followUpEnabled ? { trigger: "booking_confirmed", subject: followUpSubject, message: followUpBody } : undefined,
+        followUp: followUpEnabled ? { trigger: includeBookingButton ? "booking_confirmed" : "response_confirmed", subject: followUpSubject, message: followUpBody } : undefined,
         locale: emailLang,
         subject,
         message: messageBody,
@@ -1149,7 +1149,14 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
               {[
                 { tag: "{{candidate_name}}", label: t("Applicant Name", "Nome Candidato") },
                 { tag: "{{role_title}}", label: t("Job Role Title", "Título da Vaga") },
+                { tag: "{{confirm_button}}", label: t("Confirm Button (Single-Click)", "Botão Confirmar") },
+                { tag: "{{response_buttons}}", label: t("Accept / Decline Buttons", "Botões Aceitar / Recusar") },
+                { tag: "{{yes_button}}", label: t("Accept Button", "Botão Aceitar") },
+                { tag: "{{no_button}}", label: t("Decline Button", "Botão Recusar") },
+                { tag: "{{next_phase_link}}", label: t("Next Phase Portal Link", "Link Próxima Fase") },
+                { tag: "{{score}}", label: t("Test Score %", "Nota do Teste %") },
                 { tag: "{{test_slot}}", label: t("Scheduled Test Slot", "Turno Agendado") },
+                { tag: "{{location}}", label: t("Candidate Location", "Localização") },
                 { tag: "{{company_name}}", label: t("Company Name", "Overwatch") },
                 { tag: "{{date}}", label: t("Current Date", "Data Atual") },
               ].map((v) => (
@@ -1181,10 +1188,67 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
           <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 text-xs">
             <Link href={`/admin/settings?roleId=${encodeURIComponent(selectedRole)}${cohortId ? `&cohortId=${encodeURIComponent(cohortId)}` : ""}#test-slots`} className="font-semibold text-sky-700">{t("Configure this role's test dates, times & capacity →", "Configurar datas, horas e capacidade desta vaga →")}</Link>
             <p className="leading-relaxed text-slate-500">{t("Test slot shows the applicant's actual booking. Before booking, the email asks them to choose a time. The booking button opens their personal cycle schedule.", "O turno mostra o agendamento real. Antes de agendar, o email pede a escolha de um turno. O botão abre o horário pessoal do lote.")}</p>
-            {includeBookingButton && <><p>{t("Drag the booking button between paragraphs in Preview, or move its {{booking_link}} token in the editor.", "Arraste o botão entre parágrafos na pré-visualização ou mova {{booking_link}} no editor.")}</p>
-              <label className="flex items-center gap-2 font-semibold"><input type="checkbox" checked={followUpEnabled} onChange={event => setFollowUpEnabled(event.target.checked)}/>{t("Send an automatic follow-up after booking", "Enviar seguimento automático após agendamento")}</label>
-              {followUpEnabled && <div className="space-y-3 border-t border-slate-100 pt-3" onFocusCapture={() => { lastEditor.current = "followup"; }}><p className="text-slate-500">{t("When this applicant successfully books, send the message below in addition to the standard confirmation. It uses their chosen date and time and appears in Sent / Outbox.", "Quando o candidato agendar, envie a mensagem abaixo além da confirmação padrão. Usa a data e hora escolhidas e aparece em Enviados / Caixa de saída.")}</p><div><label htmlFor="studio-followup-subject" className="block font-medium">{t("Follow-up subject", "Assunto do seguimento")}</label><input id="studio-followup-subject" name="followUpSubject" type="text" autoComplete="on" aria-label={t("Follow-up subject", "Assunto do seguimento")} value={followUpSubject} onChange={event => setFollowUpSubject(event.target.value)} className="mt-1 w-full rounded-lg border p-2"/></div><RichMessageEditor ariaLabel={t("Follow-up message", "Mensagem de seguimento")} ref={followUpHandle} value={followUpBody} onChange={setFollowUpBody} lang={lang} availableVariables={[{code:"{{candidate_name}}",label:t("Name","Nome")},{code:"{{test_slot}}",label:t("Booked test date & time","Data e hora agendadas")},{code:"{{role_title}}",label:t("Role","Vaga")}]} />{(!followUpSubject.trim() || !followUpBody.trim()) && <p className="rounded-lg bg-amber-50 p-2 text-[11px] font-medium text-amber-800">{t("Note: Please fill in both the follow-up subject and message above, or uncheck automatic follow-up before dispatching.", "Nota: Preencha o assunto e a mensagem de seguimento acima, ou desmarque o seguimento automático antes de enviar.")}</p>}</div>}
-            </>}
+            {includeBookingButton && (
+              <p className="text-slate-500">{t("Drag the booking button between paragraphs in Preview, or move its {{booking_link}} token in the editor.", "Arraste o botão entre parágrafos na pré-visualização ou mova {{booking_link}} no editor.")}</p>
+            )}
+          </div>
+
+          {/* Automated Follow-Up Email (Decoupled & Available for Any Broadcast) */}
+          <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 text-xs">
+            <label className="flex items-center gap-2 font-semibold cursor-pointer">
+              <input
+                type="checkbox"
+                checked={followUpEnabled}
+                onChange={event => setFollowUpEnabled(event.target.checked)}
+              />
+              <span>{t("Send an automatic follow-up message", "Enviar seguimento automático")}</span>
+            </label>
+            {followUpEnabled && (
+              <div className="space-y-3 border-t border-slate-100 pt-3" onFocusCapture={() => { lastEditor.current = "followup"; }}>
+                <p className="text-slate-500">
+                  {t(
+                    "When candidates confirm, book, or advance, send this message automatically. It appears in Sent / Outbox.",
+                    "Quando os candidatos confirmarem ou agendarem, envie esta mensagem automaticamente. Fica registada em Enviados."
+                  )}
+                </p>
+                <div>
+                  <label htmlFor="studio-followup-subject" className="block font-medium">
+                    {t("Follow-up subject", "Assunto do seguimento")}
+                  </label>
+                  <input
+                    id="studio-followup-subject"
+                    name="followUpSubject"
+                    type="text"
+                    autoComplete="on"
+                    aria-label={t("Follow-up subject", "Assunto do seguimento")}
+                    value={followUpSubject}
+                    onChange={event => setFollowUpSubject(event.target.value)}
+                    className="mt-1 w-full rounded-lg border p-2"
+                  />
+                </div>
+                <RichMessageEditor
+                  ariaLabel={t("Follow-up message", "Mensagem de seguimento")}
+                  ref={followUpHandle}
+                  value={followUpBody}
+                  onChange={setFollowUpBody}
+                  lang={lang}
+                  availableVariables={[
+                    { code: "{{candidate_name}}", label: t("Name", "Nome") },
+                    { code: "{{role_title}}", label: t("Role", "Vaga") },
+                    { code: "{{test_slot}}", label: t("Booked test date & time", "Data e hora agendadas") },
+                    { code: "{{company_name}}", label: t("Company Name", "Overwatch") },
+                  ]}
+                />
+                {(!followUpSubject.trim() || !followUpBody.trim()) && (
+                  <p className="rounded-lg bg-amber-50 p-2 text-[11px] font-medium text-amber-800">
+                    {t(
+                      "Note: Please fill in both the follow-up subject and message above, or uncheck automatic follow-up before dispatching.",
+                      "Nota: Preencha o assunto e a mensagem de seguimento acima, ou desmarque o seguimento automático antes de enviar."
+                    )}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* CARD 4: FILE ATTACHMENTS (PDF / IMAGE) */}
