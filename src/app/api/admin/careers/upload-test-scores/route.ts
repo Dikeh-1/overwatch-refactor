@@ -55,17 +55,22 @@ async function handlePOST(request: Request): Promise<Response> {
       );
     }
 
-    // 2. Fetch fresh candidates
+    // 2. Fetch fresh candidates strictly scoped by cohort and role
     const allApps = await getApplications(true);
     let targetCandidates = allApps;
 
-    if (cohortId) {
-      targetCandidates = allApps.filter((a) => a.cohortId === cohortId);
+    if (cohortId && cohortId !== "all") {
+      targetCandidates = allApps.filter(
+        (a) => a.cohortId === cohortId || a.workspaceCohortId === cohortId
+      );
+      if (roleId && roleId !== "all") {
+        targetCandidates = targetCandidates.filter((a) => sameRole(a.role, roleId));
+      }
     } else if (roleId && roleId !== "all") {
       targetCandidates = allApps.filter((a) => sameRole(a.role, roleId));
     }
 
-    // Prioritize active & booked/invited candidates, but fallback to all non-terminal in role
+    // Prioritize active & booked/invited candidates within the scoped cycle/cohort/role
     const { matched, unmatched } = matchScoresToCandidates(records, targetCandidates);
 
     // 3. Dry-run preview mode
@@ -84,6 +89,8 @@ async function handlePOST(request: Request): Promise<Response> {
           currentScore: m.candidate.testScore ?? null,
           currentStatus: m.candidate.status,
           newScore: m.score,
+          documentNextPhase: m.nextPhaseSelected,
+          decisionRaw: m.record.decisionRaw,
           matchType: m.matchType,
         })),
         unmatched: unmatched.map((u) => ({
@@ -101,11 +108,14 @@ async function handlePOST(request: Request): Promise<Response> {
       name: string;
       score: number;
       advanced: boolean;
+      alreadyAdvanced: boolean;
     }> = [];
 
     for (const m of matched) {
       const candidate = m.candidate;
-      const shouldAdvance = advanceIds.includes(candidate.id);
+      const documentSelected = Boolean(m.nextPhaseSelected);
+      const userSelected = advanceIds.includes(candidate.id);
+      const shouldAdvance = (documentSelected || userSelected) && !isTerminal(candidate);
 
       const updates: Partial<Application> = {
         testScore: m.score,
@@ -113,29 +123,43 @@ async function handlePOST(request: Request): Promise<Response> {
         attendedAt: candidate.attendedAt || new Date().toISOString(),
       };
 
-      // If candidate was in test_booked or test_invited, transition them to tested
-      if (candidate.status === "test_booked" || candidate.status === "test_invited") {
-        updates.status = "tested";
-      }
+      // Safeguard against demotion: Preserve higher-order statuses
+      const alreadyAdvanced =
+        candidate.status === "next_phase_selected" ||
+        candidate.status === "training" ||
+        candidate.status === "interview" ||
+        candidate.status === "hired";
 
-      // If requested to advance to Next Phase
-      if (shouldAdvance && !isTerminal(candidate)) {
+      if (shouldAdvance && !alreadyAdvanced) {
         updates.status = "next_phase_selected";
         updates.nextPhaseStatus = "selected";
         if (!candidate.nextPhaseToken) {
           updates.nextPhaseToken = crypto.randomBytes(16).toString("hex");
         }
+      } else if (!alreadyAdvanced) {
+        // If candidate was in test_booked or test_invited, transition them to tested
+        if (candidate.status === "test_booked" || candidate.status === "test_invited") {
+          updates.status = "tested";
+        }
       }
 
-      // Activity log
+      // Activity log audit trail
       const log = candidate.activityLog || [];
+      const reasonDetail = documentSelected
+        ? "Marcado como selecionado no documento"
+        : userSelected
+        ? "Selecionado manualmente para avanço"
+        : "";
+
       updates.activityLog = [
         ...log,
         {
           id: crypto.randomUUID(),
           action: "Test Result Recorded",
           details: `Nota de teste ${m.score}% registada via importação de ficheiro (${fileName})${
-            shouldAdvance ? " · Candidato avançado para a Próxima Fase" : ""
+            shouldAdvance || alreadyAdvanced
+              ? ` · Candidato na Próxima Fase${reasonDetail ? ` (${reasonDetail})` : ""}`
+              : ""
           }`,
           actor: "Admin Recruiter",
           timestamp: new Date().toISOString(),
@@ -148,7 +172,8 @@ async function handlePOST(request: Request): Promise<Response> {
         id: candidate.id,
         name: candidate.name,
         score: m.score,
-        advanced: shouldAdvance,
+        advanced: shouldAdvance || alreadyAdvanced,
+        alreadyAdvanced,
       });
     }
 

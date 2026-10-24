@@ -1880,6 +1880,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
         isOpen={uploadModalOpen}
         onClose={() => setUploadModalOpen(false)}
         roleId={roleFilter !== "all" ? roleFilter : scopedRoleId}
+        cohortId={currentRoleDef?.activeCohortId || undefined}
         lang={lang}
         onSuccess={async () => {
           if (onRefresh) await onRefresh();

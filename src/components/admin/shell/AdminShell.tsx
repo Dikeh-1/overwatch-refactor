@@ -35,9 +35,9 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
   const [sessionExpiry, setSessionExpiry] = useState<number | null>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  // Session Timeout Warning Modal (5-second countdown before automatic logout)
+  // Session Timeout Warning Modal (10-second countdown before automatic logout)
   const [sessionWarningOpen, setSessionWarningOpen] = useState(false);
-  const [sessionCountdown, setSessionCountdown] = useState(5);
+  const [sessionCountdown, setSessionCountdown] = useState(10);
   const [extendingSession, setExtendingSession] = useState(false);
   const warningActiveRef = useRef(false);
 
@@ -59,7 +59,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
   const triggerSessionWarning = useCallback(() => {
     if (warningActiveRef.current) return;
     warningActiveRef.current = true;
-    setSessionCountdown(5);
+    setSessionCountdown(10);
     setSessionWarningOpen(true);
   }, []);
 
@@ -139,8 +139,8 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
       return response;
     };
     window.fetch = guardedFetch;
-    // Prompt 5 seconds before sessionExpiry (or immediately if reached)
-    const delayMs = sessionExpiry ? Math.max(0, sessionExpiry - Date.now() - 5000) : undefined;
+    // Prompt 10 seconds before sessionExpiry (or immediately if reached)
+    const delayMs = sessionExpiry ? Math.max(0, sessionExpiry - Date.now() - 10000) : undefined;
     const timer = delayMs !== undefined ? window.setTimeout(triggerSessionWarning, delayMs) : undefined;
     let lastCheckAt = Date.now();
     const check = () => {
@@ -159,7 +159,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
     };
   }, [auth, sessionExpiry, checkSession, triggerSessionWarning, lang]);
 
-  // 5-second countdown effect when Session Timeout Warning modal is open
+  // 10-second countdown effect when Session Timeout Warning modal is open
   useEffect(() => {
     if (!sessionWarningOpen || extendingSession) return;
     if (sessionCountdown <= 0) {
@@ -191,7 +191,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
       if (res.ok && data.authenticated) {
         warningActiveRef.current = false;
         setSessionWarningOpen(false);
-        setSessionCountdown(5);
+        setSessionCountdown(10);
         setSessionExpiry(data.expiresAt || Date.now() + 60 * 60 * 1000);
       } else {
         warningActiveRef.current = false;
@@ -480,7 +480,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
 
   return (
     <ActiveRoleProvider applications={applications}>
-      {/* Session Timeout Warning Modal with 5-Second Countdown */}
+      {/* Session Timeout Warning Modal with 10-Second Countdown */}
       {sessionWarningOpen && (
         <div
           role="dialog"
@@ -518,7 +518,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
             <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
               <div
                 className="h-full bg-amber-500 transition-all duration-1000"
-                style={{ width: `${Math.max(0, (sessionCountdown / 5) * 100)}%` }}
+                style={{ width: `${Math.max(0, (sessionCountdown / 10) * 100)}%` }}
               />
             </div>
 

@@ -13,6 +13,7 @@ import {
   ArrowRight,
   Check,
   RefreshCw,
+  CopyX,
 } from "lucide-react";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 
@@ -24,6 +25,8 @@ interface CandidatePreview {
   currentScore?: number | null;
   currentStatus: string;
   newScore: number;
+  documentNextPhase?: boolean;
+  decisionRaw?: string;
   matchType: "email" | "phone" | "name_exact" | "name_fuzzy";
 }
 
@@ -107,15 +110,22 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
         throw new Error(data.error || t("Failed to parse file", "Falha ao analisar ficheiro"));
       }
 
+      const matchedList: CandidatePreview[] = data.matched || [];
       setPreviewData({
         fileName: data.fileName || file.name,
         totalRecords: data.totalRecords || 0,
-        matched: data.matched || [],
+        matched: matchedList,
         unmatched: data.unmatched || [],
       });
 
-      // Default: don't force advance, let user choose
-      setSelectedToAdvance(new Set());
+      // Automatically pre-select candidates who are marked as selected/Next Phase in the document
+      const initialAdvance = new Set<string>();
+      for (const m of matchedList) {
+        if (m.documentNextPhase || m.currentStatus === "next_phase_selected") {
+          initialAdvance.add(m.candidateId);
+        }
+      }
+      setSelectedToAdvance(initialAdvance);
     } catch (err: any) {
       setError(err.message || t("Error uploading file", "Erro ao carregar ficheiro"));
     } finally {
@@ -143,56 +153,70 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || t("Failed to save test scores", "Falha ao guardar notas"));
+        throw new Error(data.error || t("Failed to save scores", "Falha ao gravar notas"));
       }
 
-      const advancedCount = data.candidates ? data.candidates.filter((c: any) => c.advanced).length : 0;
       setCommittedSuccess({
-        count: data.updatedCount || previewData.matched.length,
-        advancedCount,
+        count: data.updatedCount || 0,
+        advancedCount: (data.candidates || []).filter((c: any) => c.advanced).length,
       });
 
-      await onSuccess();
+      if (onSuccess) {
+        await onSuccess();
+      }
     } catch (err: any) {
-      setError(err.message || t("Error saving test scores", "Erro ao gravar notas"));
+      setError(err.message || t("Error saving scores", "Erro ao gravar notas"));
     } finally {
       setBusy(false);
     }
   };
 
   const toggleAdvanceCandidate = (id: string) => {
-    const next = new Set(selectedToAdvance);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedToAdvance(next);
+    setSelectedToAdvance((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const toggleSelectAllAdvance = () => {
     if (!previewData) return;
     if (selectedToAdvance.size === previewData.matched.length) {
-      setSelectedToAdvance(new Set());
+      // Uncheck all except those already next phase
+      const onlyExisting = new Set<string>();
+      for (const m of previewData.matched) {
+        if (m.currentStatus === "next_phase_selected" || m.documentNextPhase) {
+          onlyExisting.add(m.candidateId);
+        }
+      }
+      setSelectedToAdvance(onlyExisting);
     } else {
       setSelectedToAdvance(new Set(previewData.matched.map((m) => m.candidateId)));
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/60 shrink-0">
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 overflow-y-auto"
+    >
+      <div className="relative w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden my-8 max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/80 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-sky-100 border border-sky-200 flex items-center justify-center text-sky-700 shadow-2xs">
-              <Upload size={18} />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 border border-sky-200">
+              <Upload size={20} />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900">
-                {t("Upload & Ingest Test Scores", "Carregar Notas dos Testes")}
-              </h2>
+              <h3 className="text-base font-bold text-slate-900">
+                {t("Upload Physical Test Scores", "Carregar Notas de Testes Físicos")}
+              </h3>
               <p className="text-xs text-slate-500">
                 {t(
-                  "Upload PDF, Excel (.xlsx/.xls), or CSV to match candidates and record physical test scores",
-                  "Carregue ficheiro PDF, Excel ou CSV para validar candidatos e lançar notas"
+                  "Import results from Excel, CSV, or PDF with automated candidate matching and Next Phase advancement",
+                  "Importe notas de Excel, CSV ou PDF com correspondência automática e avanço para a Próxima Fase"
                 )}
               </p>
             </div>
@@ -200,43 +224,44 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200/60 transition-colors cursor-pointer"
+            className="rounded-lg p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+            title={t("Close", "Fechar")}
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto flex-1 space-y-5 admin-scrollbar">
+        <div className="p-6 overflow-y-auto flex-1 space-y-4">
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-xs text-red-800">
-              <AlertTriangle size={15} className="text-red-600 shrink-0 mt-0.5" />
-              <span>{error}</span>
+            <div className="p-3.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-xs flex items-center gap-2.5">
+              <AlertTriangle size={16} className="shrink-0 text-rose-600" />
+              <div className="flex-1">{error}</div>
             </div>
           )}
 
-          {/* SUCCESS STATE */}
+          {/* STEP 3: SUCCESS CONFIRMATION */}
           {committedSuccess && (
             <div className="py-8 text-center space-y-4">
-              <div className="w-16 h-16 rounded-full bg-emerald-100 border-2 border-emerald-300 text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-100 border border-emerald-300 text-emerald-700 flex items-center justify-center mx-auto shadow-xs">
                 <CheckCircle2 size={32} />
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">
-                  {t("Test Scores Saved Successfully!", "Notas Registadas com Sucesso!")}
-                </h3>
-                <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+              <div className="space-y-1">
+                <h4 className="text-lg font-bold text-slate-900">
+                  {t("Scores Successfully Applied!", "Notas Registadas com Sucesso!")}
+                </h4>
+                <p className="text-xs text-slate-600 max-w-md mx-auto">
                   {t(
-                    `Updated test scores for ${committedSuccess.count} candidates.`,
-                    `Notas actualizadas com sucesso para ${committedSuccess.count} candidatos.`
-                  )}
-                  {committedSuccess.advancedCount > 0 && (
-                    <span className="block font-medium text-sky-700 mt-1">
-                      {t(
-                        `${committedSuccess.advancedCount} candidates advanced to the Next Phase!`,
-                        `${committedSuccess.advancedCount} candidatos avançados para a Próxima Fase!`
-                      )}
-                    </span>
+                    `Updated test scores for ${committedSuccess.count} candidates. ${
+                      committedSuccess.advancedCount > 0
+                        ? `${committedSuccess.advancedCount} candidates were pushed to the Next Phase.`
+                        : ""
+                    }`,
+                    `Foram atualizadas as notas de ${committedSuccess.count} candidatos. ${
+                      committedSuccess.advancedCount > 0
+                        ? `${committedSuccess.advancedCount} candidatos foram avançados para a Próxima Fase.`
+                        : ""
+                    }`
                   )}
                 </p>
               </div>
@@ -290,7 +315,7 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
                   <div className="py-6 flex flex-col items-center justify-center gap-3">
                     <OverwatchOrbitLoader size="md" theme="dark" label={t("Parsing document…", "A analisar documento…")} />
                     <p className="text-xs text-slate-500">
-                      {t("Matching candidate names and scores…", "A verificar candidatos e notas…")}
+                      {t("Matching candidate names, scores, and decisions…", "A verificar candidatos, notas e decisões…")}
                     </p>
                   </div>
                 ) : (
@@ -315,35 +340,42 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
                     </div>
 
                     <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-slate-200 text-[11px] font-medium text-slate-600 shadow-2xs">
-                      <span>{t("Expected columns:", "Colunas esperadas:")}</span>
-                      <strong className="text-slate-900">Nome / Email / WhatsApp</strong> & <strong className="text-slate-900">Nota / Score</strong>
+                      <span>{t("Recognized columns (EN & PT):", "Colunas reconhecidas (PT & EN):")}</span>
+                      <strong className="text-slate-900">Nome / Email / WhatsApp</strong> · <strong className="text-slate-900">Nota / Score</strong> · <strong className="text-slate-900">Decisão / Próxima Fase</strong>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Format guidance box */}
-              <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 text-xs text-slate-600 space-y-1.5">
-                <p className="font-semibold text-slate-800">
-                  {t("How candidate matching works:", "Como funciona a correspondência:")}
+              {/* Safeguards & Format guidance box */}
+              <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 text-xs text-slate-600 space-y-2">
+                <p className="font-semibold text-slate-800 flex items-center gap-1.5">
+                  <CheckCircle2 size={14} className="text-emerald-600" />
+                  <span>{t("Strict Anti-Error & Anti-Collision Safeguards:", "Proteções Estritas Contra Erros e Mistura de Notas:")}</span>
                 </p>
                 <ul className="list-disc list-inside space-y-1 text-slate-600">
                   <li>
                     {t(
-                      "Matches by candidate Email (exact) or Phone/WhatsApp (last 8–9 digits).",
-                      "Correspondência por Email ou WhatsApp/Telefone."
+                      "Multi-Tier Identity Matching: Email exact match first, followed by WhatsApp/Phone, then exact and tokenized Name.",
+                      "Correspondência por Níveis: Primeiro por Email exato, depois WhatsApp/Contacto, e por fim Nome completo."
                     )}
                   </li>
                   <li>
                     {t(
-                      "Falls back to candidate Full Name matching if email is omitted.",
-                      "Caso não haja email, procura correspondência pelo Nome do candidato."
+                      "Anti-Mixing Protection: If multiple candidates share an ambiguous name, the row is flagged so scores are never mixed up.",
+                      "Proteção contra Mistura: Se houver candidatos com nomes semelhantes no ciclo, o sistema bloqueia e exige email/telefone para não trocar notas."
                     )}
                   </li>
                   <li>
                     {t(
-                      "Recognizes percentages (85%), fractions (17/20), or raw numbers (0–100).",
-                      "Reconhece percentagens (85%), fracções (17/20) ou números inteiros (0–100)."
+                      "Duplicate Detection: Prevents duplicate rows or duplicate scores from overwriting candidates in the same document.",
+                      "Deteção de Duplicados: Impede que linhas duplicadas no mesmo ficheiro sobrescrevam notas indevidamente."
+                    )}
+                  </li>
+                  <li>
+                    {t(
+                      "Document-Driven Selection: Recognizes 'Próxima Fase', 'Aprovado', 'Pass', or 'Selected' columns in PT & EN to auto-advance candidates.",
+                      "Seleção pelo Documento: Reconhece colunas de 'Próxima Fase', 'Aprovado' ou 'Selected' em PT e EN para avançar automaticamente."
                     )}
                   </li>
                 </ul>
@@ -363,24 +395,24 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
                       {previewData.fileName}
                     </span>
                     <span className="text-slate-500 text-[11px]">
-                      {previewData.totalRecords} {t("records found in file", "registos lidos no ficheiro")}
+                      {previewData.totalRecords} {t("records read in document", "registos lidos no ficheiro")}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <span className="px-2.5 py-1 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300 font-semibold">
                     ✓ {previewData.matched.length} {t("Matched", "Correspondidos")}
                   </span>
                   {previewData.unmatched.length > 0 && (
                     <span className="px-2.5 py-1 rounded-md bg-amber-100 text-amber-800 border border-amber-300 font-semibold">
-                      ⚠ {previewData.unmatched.length} {t("Unmatched", "Não encontrados")}
+                      ⚠ {previewData.unmatched.length} {t("Warnings / Unmatched", "Avisos / Não associados")}
                     </span>
                   )}
                   <button
                     type="button"
                     onClick={handleReset}
-                    className="text-slate-600 hover:text-slate-900 text-xs underline cursor-pointer"
+                    className="text-slate-600 hover:text-slate-900 text-xs underline cursor-pointer ml-1"
                   >
                     {t("Change file", "Mudar ficheiro")}
                   </button>
@@ -417,15 +449,33 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
                   ) : (
                     previewData.matched.map((item) => {
                       const willAdvance = selectedToAdvance.has(item.candidateId);
+                      const isAlreadyAdvanced =
+                        item.currentStatus === "next_phase_selected" ||
+                        item.currentStatus === "training" ||
+                        item.currentStatus === "interview" ||
+                        item.currentStatus === "hired";
+
                       return (
                         <div
                           key={item.candidateId}
                           className="px-4 py-2.5 flex items-center justify-between gap-3 hover:bg-slate-50/80 transition-colors"
                         >
                           <div className="min-w-0 flex-1">
-                            <span className="font-semibold text-slate-900 block truncate">
-                              {item.candidateName}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-slate-900 truncate">
+                                {item.candidateName}
+                              </span>
+                              {item.documentNextPhase && (
+                                <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold">
+                                  ✓ {t("Selected in Doc", "Selecionado no Doc")}
+                                </span>
+                              )}
+                              {isAlreadyAdvanced && (
+                                <span className="px-1.5 py-0.2 rounded bg-sky-100 text-sky-800 border border-sky-300 text-[10px] font-bold">
+                                  {t("In Next Phase", "Na Próx. Fase")}
+                                </span>
+                              )}
+                            </div>
                             <span className="text-[11px] text-slate-500 truncate block">
                               {item.candidateEmail} {item.candidatePhone ? `· ${item.candidatePhone}` : ""}
                             </span>
@@ -447,13 +497,17 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
                               type="button"
                               onClick={() => toggleAdvanceCandidate(item.candidateId)}
                               className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all inline-flex items-center gap-1 cursor-pointer border ${
-                                willAdvance
+                                willAdvance || isAlreadyAdvanced
                                   ? "bg-sky-600 text-white border-sky-600 shadow-2xs"
                                   : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
                               }`}
                             >
                               <Award size={12} />
-                              <span>{willAdvance ? t("Selected for Next Phase", "Selecionado p/ Próx. Fase") : t("Advance", "Avançar")}</span>
+                              <span>
+                                {willAdvance || isAlreadyAdvanced
+                                  ? t("Selected for Next Phase", "Selecionado p/ Próx. Fase")
+                                  : t("Advance", "Avançar")}
+                              </span>
                             </button>
                           </div>
                         </div>
@@ -463,16 +517,29 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
                 </div>
               </div>
 
-              {/* Unmatched warning accordion */}
+              {/* Unmatched / Safeguard warning accordion */}
               {previewData.unmatched.length > 0 && (
-                <details className="border border-amber-200 rounded-xl bg-amber-50/50 p-3 text-xs text-amber-900">
-                  <summary className="font-semibold cursor-pointer">
-                    ⚠ {previewData.unmatched.length} {t("records from file could not be matched", "registos do ficheiro não foram encontrados")}
+                <details className="border border-amber-200 rounded-xl bg-amber-50/60 p-3 text-xs text-amber-900" open>
+                  <summary className="font-semibold cursor-pointer flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <AlertTriangle size={14} className="text-amber-600" />
+                      <span>
+                        {previewData.unmatched.length}{" "}
+                        {t(
+                          "records require attention (duplicates, ambiguities, or not in this cycle)",
+                          "registos requerem atenção (duplicados, ambiguidades ou fora deste ciclo)"
+                        )}
+                      </span>
+                    </span>
+                    <span className="text-[11px] text-amber-700 underline font-normal">
+                      {t("View details", "Ver detalhes")}
+                    </span>
                   </summary>
-                  <div className="mt-2.5 space-y-1.5 pl-2 max-h-32 overflow-y-auto">
+                  <div className="mt-2.5 space-y-1.5 pl-2 max-h-36 overflow-y-auto">
                     {previewData.unmatched.map((u, i) => (
-                      <div key={i} className="text-[11px] text-amber-800">
-                        • {u.name || u.email || "Item"} ({u.score}%) — {u.reason}
+                      <div key={i} className="text-[11px] text-amber-900 bg-amber-100/60 p-2 rounded-lg border border-amber-200/80">
+                        <strong className="font-bold">{u.name || u.email || "Item"}</strong>
+                        {u.score !== undefined && ` (${u.score}%)`}: {u.reason}
                       </div>
                     ))}
                   </div>
