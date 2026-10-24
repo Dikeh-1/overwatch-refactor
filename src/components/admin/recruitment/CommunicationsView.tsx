@@ -1638,93 +1638,6 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
               </div>
             </div>
 
-            {/* Smart Context & Quick Action Tokens Bar */}
-            <div className="bg-slate-50/90 border-b border-slate-200/80 px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
-              {/* Active Target Audience Indicator */}
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-50 text-sky-800 border border-sky-200 shadow-2xs">
-                  <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse" />
-                  <span className="truncate max-w-[200px]">
-                    {fixedRecipient
-                      ? fixedRecipient.name
-                      : targetAudience === "shortlisted_unbooked"
-                      ? t("Shortlisted (Awaiting Booking)", "Convocadas (Pendente Agendamento)")
-                      : targetAudience === "booked_confirmed"
-                      ? t("Booked Sessions", "Testes Agendados")
-                      : targetAudience === "next_phase"
-                      ? t("Next Phase", "Próxima Fase")
-                      : targetAudience === "tested"
-                      ? t("Tested", "Testes Concluídos")
-                      : targetAudience === "interview"
-                      ? t("In Interview", "Em Entrevista")
-                      : targetAudience === "hired"
-                      ? t("Hired", "Contratados")
-                      : t("All in Role", "Todas da Vaga")}
-                  </span>
-                  <span className="text-sky-600 font-semibold font-mono">({targetCandidates.length})</span>
-                </span>
-                <span className="text-[10px] text-slate-400 font-mono hidden md:inline">
-                  {emailLang === "en" ? "EN" : "PT-MZ"}
-                </span>
-              </div>
-
-              {/* Quick 1-Click Action Token Inserters (Available Right Here Without Scrolling Left) */}
-              {canvasTab === "edit" && (
-                <div className="flex items-center gap-1 overflow-x-auto py-0.5">
-                  <span className="text-[10px] text-slate-400 font-semibold mr-0.5 hidden xl:inline">
-                    {t("Quick Tokens:", "Inserir:")}
-                  </span>
-                  <button
-                    type="button"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => insertActionToken(BOOKING_TOKEN, t("Test Booking Button", "Botão de Agendamento"))}
-                    className="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-600 hover:bg-sky-700 text-white transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
-                    title={t("Insert Test Booking Link token", "Inserir token de Agendamento de Teste")}
-                  >
-                    <Calendar size={11} />
-                    <span>+ Agendar</span>
-                  </button>
-                  <button
-                    type="button"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => insertActionToken("{{confirm_button}}", t("Confirmation Button", "Botão de Confirmação"))}
-                    className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
-                    title={t("Insert Confirmation Button token", "Inserir token de Confirmação")}
-                  >
-                    <Check size={11} />
-                    <span>+ Confirmar</span>
-                  </button>
-                  <button
-                    type="button"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => insertActionToken("{{response_buttons}}", t("Accept / Decline Buttons", "Botões Aceitar / Recusar"))}
-                    className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#0b1329] hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
-                    title={t("Insert Dual Response Buttons token", "Inserir botões Sim / Não")}
-                  >
-                    <CheckSquare size={11} />
-                    <span>+ Sim/Não</span>
-                  </button>
-                  <button
-                    type="button"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => handleInsertTag("{{candidate_name}}")}
-                    className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 transition-colors cursor-pointer shadow-2xs"
-                    title={t("Insert Candidate Name token", "Inserir nome do candidato")}
-                  >
-                    + Nome
-                  </button>
-                  <button
-                    type="button"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => handleInsertTag("{{role_title}}")}
-                    className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 transition-colors cursor-pointer shadow-2xs"
-                    title={t("Insert Job Role token", "Inserir cargo / vaga")}
-                  >
-                    + Vaga
-                  </button>
-                </div>
-              )}
-            </div>
 
             {/* Tab 1: Professional Rich Message Editor */}
             <div style={{ display: canvasTab === "edit" ? "block" : "none" }} className="p-6 space-y-5">
@@ -1882,62 +1795,65 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                 {includeBookingButton && <button type="button" aria-pressed={arrangingBooking} onClick={() => setArrangingBooking(value => !value)} className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs font-semibold text-sky-700">{arrangingBooking ? t("Done positioning", "Concluir posicionamento") : t("Position booking button", "Posicionar botão de agendamento")}</button>}
 
                 {/* The Actual Official Letterhead Sheet */}
-                <div className="w-full max-w-2xl rounded-2xl border border-slate-300 bg-white shadow-xl overflow-hidden text-left">
-                  {/* Navy Header Band #0a1128 */}
-                  <div className="bg-[#0a1128] px-6 py-4.5 border-b-2 border-white/10 flex items-center justify-between text-white">
-                    <Logo variant="light" size="sm" />
-                    <div className="text-right">
-                      <span className="inline-block bg-white/10 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded border border-white/15 tracking-wider">
-                        REF: COM-{new Date().getFullYear()}/MAPUTO
-                      </span>
-                      <span className="block text-[10px] text-slate-300 font-medium mt-0.5">
-                        {emailLang === "en" ? "Human Resources Department" : "Departamento de Recursos Humanos"}
-                      </span>
+                <div className="w-full max-w-2xl rounded-2xl border border-slate-300 bg-white shadow-xl overflow-hidden text-left flex flex-col">
+                  {/* Pinned / Static Header Section (Stops here when scrolling) */}
+                  <div className="sticky top-0 z-20 shrink-0 bg-white shadow-xs">
+                    {/* Navy Header Band #0a1128 */}
+                    <div className="bg-[#0a1128] px-6 py-4.5 border-b-2 border-white/10 flex items-center justify-between text-white">
+                      <Logo variant="light" size="sm" />
+                      <div className="text-right">
+                        <span className="inline-block bg-white/10 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded border border-white/15 tracking-wider">
+                          REF: COM-{new Date().getFullYear()}/MAPUTO
+                        </span>
+                        <span className="block text-[10px] text-slate-300 font-medium mt-0.5">
+                          {emailLang === "en" ? "Human Resources Department" : "Departamento de Recursos Humanos"}
+                        </span>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Sub-bar */}
-                  <div className="bg-slate-50 px-6 py-2.5 border-b border-slate-200 flex items-center justify-between text-[11px] text-slate-600 font-medium">
-                    <span className="font-bold text-slate-900 tracking-wider uppercase text-[10px]">
-                      {emailLang === "en" ? "OFFICIAL COMMUNICATION · RECRUITMENT PROCESS" : "COMUNICAÇÃO OFICIAL · PROCESSO DE RECRUTAMENTO"}
-                    </span>
-                    <span>Maputo, Moçambique</span>
-                  </div>
+                    {/* Sub-bar */}
+                    <div className="bg-slate-50 px-6 py-2.5 border-b border-slate-200 flex items-center justify-between text-[11px] text-slate-600 font-medium">
+                      <span className="font-bold text-slate-900 tracking-wider uppercase text-[10px]">
+                        {emailLang === "en" ? "OFFICIAL COMMUNICATION · RECRUITMENT PROCESS" : "COMUNICAÇÃO OFICIAL · PROCESSO DE RECRUTAMENTO"}
+                      </span>
+                      <span>Maputo, Moçambique</span>
+                    </div>
 
-                  {/* Metadata Bar */}
-                  <div className="p-6 pb-4 border-b border-slate-100 bg-white grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                    <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                        {emailLang === "en" ? "To / Recipient:" : "Para / Destinatário:"}
-                      </span>
-                      <span className="font-bold text-slate-900 truncate block mt-0.5">
-                        {sampleCandidate.name}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                        {emailLang === "en" ? "Position / Role:" : "Vaga / Função:"}
-                      </span>
-                      <span className="font-semibold text-slate-800 truncate block mt-0.5">
-                        {previewRoleTitle}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                        {emailLang === "en" ? "Date:" : "Data de Emissão:"}
-                      </span>
-                      <span className="font-mono text-slate-700 block mt-0.5">
-                        {new Date().toLocaleDateString(emailLang === "en" ? "en-US" : "pt-PT", {
-                          day: "numeric",
-                          month: "long",
-                          year: "numeric",
-                        })}
-                      </span>
+                    {/* Metadata Bar */}
+                    <div className="p-6 pb-4 border-b border-slate-100 bg-white grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                          {emailLang === "en" ? "To / Recipient:" : "Para / Destinatário:"}
+                        </span>
+                        <span className="font-bold text-slate-900 truncate block mt-0.5">
+                          {sampleCandidate.name}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                          {emailLang === "en" ? "Position / Role:" : "Vaga / Função:"}
+                        </span>
+                        <span className="font-semibold text-slate-800 truncate block mt-0.5">
+                          {previewRoleTitle}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                          {emailLang === "en" ? "Date:" : "Data de Emissão:"}
+                        </span>
+                        <span className="font-mono text-slate-700 block mt-0.5">
+                          {new Date().toLocaleDateString(emailLang === "en" ? "en-US" : "pt-PT", {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                          })}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
                   {/* Letter Body Rendered */}
-                  <div className="p-6 bg-white space-y-4">
+                  <div className="p-6 bg-white space-y-4 max-h-[calc(100vh-340px)] overflow-y-auto admin-scrollbar">
                     <div
                       onClick={event => {
                         const target = event.target as HTMLElement | null;
