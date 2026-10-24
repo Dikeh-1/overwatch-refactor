@@ -113,10 +113,32 @@ export function useCommunicationDraft<T extends DraftContent>(scope: string, sna
     await flush().catch(() => {}); state.current.id = crypto.randomUUID(); state.current.version = 0; state.current.saved = ""; state.current.savedAttachments = "";
     restoreRef.current({}); setRevision(n => n + 1); setStatus("New draft");
   };
+  const deleteDraft = async (idToDelete?: string) => {
+    const targetId = idToDelete || state.current.id;
+    if (targetId) {
+      try {
+        await fetch("/api/admin/careers/mail", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "delete", scope, ids: [targetId] }),
+        });
+      } catch {
+        /* Browser network failure fallback */
+      }
+    }
+    try { localStorage.removeItem(`overwatch-draft:${scope}`); } catch {}
+    state.current.id = crypto.randomUUID();
+    state.current.version = 0;
+    state.current.saved = "";
+    state.current.savedAttachments = "";
+    restoreRef.current({});
+    setRevision(n => n + 1);
+    setStatus("Draft deleted");
+  };
   const sent = (queued = false) => {
     try { localStorage.removeItem(`overwatch-draft:${scope}`); } catch { /* Optional browser cache. */ }
     state.current.id = crypto.randomUUID(); state.current.version = 0; state.current.saved = ""; state.current.savedAttachments = "";
     restoreRef.current({}); setStatus(queued ? "Queued · message preserved in Outbox" : "Sent · ready for a new draft");
   };
-  return { ready, status, flush, open, newDraft, sent };
+  return { ready, status, flush, open, newDraft, deleteDraft, sent };
 }

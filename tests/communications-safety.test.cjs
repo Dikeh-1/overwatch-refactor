@@ -106,3 +106,16 @@ test('outbox retry supports both individual and bulk failed/skipped deliveries a
  assert.equal(rows.get('already-sent').data.status,'sent');
  assert.equal(rows.get('retry-parent').data.status,'queued');
 });
+
+test('draft deletion removes draft messages and marks them deleted while isolating scope',async()=>{
+ const scope='draft-delete-scope';
+ rows.set('active-draft',{id:'active-draft',kind:'draft',scope,version:1,data:{status:'draft',subject:'Draft To Delete'}});
+ rows.set('other-draft',{id:'other-draft',kind:'draft',scope:'other-scope',version:1,data:{status:'draft',subject:'Other Draft'}});
+ const res=await drafts.POST(request({action:'delete',scope,ids:['active-draft','other-draft']}));
+ assert.equal(res.status,200);
+ const body=await res.json();
+ assert.deepEqual(body.deleted,['active-draft']);
+ assert.deepEqual(body.blocked,['other-draft']);
+ assert.equal(rows.get('active-draft').data.status,'deleted');
+ assert.equal(rows.get('other-draft').data.status,'draft');
+});

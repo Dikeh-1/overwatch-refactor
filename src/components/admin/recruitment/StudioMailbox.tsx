@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Languages, Lock } from "lucide-react";
+import { Languages, Lock, Trash2 } from "lucide-react";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import { safeEmailDocument } from "@/lib/communication-content";
 import { renderOfficialMail } from "@/lib/communication-renderer";
@@ -246,12 +246,23 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
       setSelected([]);
       setRetry((n) => n + 1);
       setItems((current) => current.filter((item) => !result.deleted?.includes(item.id)));
+      result.deleted?.forEach((delId: string) => {
+        try {
+          const cached = JSON.parse(localStorage.getItem(`overwatch-draft:${scope}`) || "null");
+          if (cached?.id === delId) localStorage.removeItem(`overwatch-draft:${scope}`);
+        } catch {}
+      });
       setConfirmIds(null);
       setNotice(
-        t(
-          `${result.deleted?.length || 0} messages removed from Outbox. Pending deliveries were cancelled.`,
-          `${result.deleted?.length || 0} mensagens removidas. Os envios pendentes foram cancelados.`
-        )
+        folder === "drafts"
+          ? t(
+              `${result.deleted?.length || 0} draft(s) permanently deleted.`,
+              `${result.deleted?.length || 0} rascunho(s) eliminados com sucesso.`
+            )
+          : t(
+              `${result.deleted?.length || 0} messages removed from Outbox. Pending deliveries were cancelled.`,
+              `${result.deleted?.length || 0} mensagens removidas. Os envios pendentes foram cancelados.`
+            )
       );
       if (result.blocked?.length)
         setError(
@@ -444,7 +455,7 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
     .filter(
       (item) =>
         (item.kind === "outbox" && ["queued", "failed", "skipped"].includes(item.data.status)) ||
-        (item.kind === "draft" && item.data.status === "queued")
+        (item.kind === "draft" && (item.data.status === "queued" || item.data.status === "draft"))
     )
     .map((item) => item.id);
   const selectedIds = selected.filter((id) => removableIds.includes(id));
@@ -563,9 +574,9 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
           </div>
         )}
 
-      {folder === "outbox" && removableIds.length > 0 && (
+      {(folder === "outbox" || folder === "drafts") && removableIds.length > 0 && (
         <div className="flex flex-wrap items-center gap-3 text-sm">
-          <label>
+          <label className="flex items-center gap-2">
             <input
               type="checkbox"
               disabled={Boolean(action) || !removableIds.length}
@@ -575,23 +586,31 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
               checked={removableIds.length > 0 && selectedIds.length === removableIds.length}
               onChange={(event) => setSelected(event.target.checked ? removableIds : [])}
             />{" "}
-            {t("Select removable messages", "Seleccionar mensagens removíveis")}
+            {folder === "drafts"
+              ? t("Select all drafts", "Seleccionar todos os rascunhos")
+              : t("Select removable messages", "Seleccionar mensagens removíveis")}
           </label>
           <button
             disabled={!selectedIds.length || Boolean(action) || busy}
-            className="rounded-lg border border-red-200 px-3 py-2 text-red-700 disabled:opacity-40"
+            className="rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 px-3 py-2 text-xs font-semibold text-red-700 disabled:opacity-40 flex items-center gap-1.5 transition-colors cursor-pointer"
             onClick={() => {
               setError("");
               setConfirmIds([...selectedIds]);
             }}
           >
+            <Trash2 size={13} />
             {t("Delete selected", "Apagar seleccionadas")} ({selectedIds.length})
           </button>
           <span className="text-xs text-slate-500">
-            {t(
-              "Sending messages cannot be removed. Deleting pending mail cancels its delivery.",
-              "Mensagens em envio não podem ser removidas. Apagar mensagens pendentes cancela o envio."
-            )}
+            {folder === "drafts"
+              ? t(
+                  "Selected drafts will be permanently removed.",
+                  "Os rascunhos seleccionados serão eliminados permanentemente."
+                )
+              : t(
+                  "Sending messages cannot be removed. Deleting pending mail cancels its delivery.",
+                  "Mensagens em envio não podem ser removidas. Apagar mensagens pendentes cancela o envio."
+                )}
           </span>
         </div>
       )}
@@ -641,13 +660,20 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
         className="fixed inset-0 m-auto w-[min(92vw,440px)] rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl backdrop:bg-slate-950/50"
       >
         <h2 id="delete-mail-title" className="text-lg font-semibold">
-          {t("Delete selected Outbox messages?", "Apagar mensagens seleccionadas?")}
+          {folder === "drafts"
+            ? t("Delete selected draft(s)?", "Apagar rascunho(s) seleccionado(s)?")
+            : t("Delete selected Outbox messages?", "Apagar mensagens seleccionadas?")}
         </h2>
         <p id="delete-mail-description" className="mt-3 text-sm text-slate-600">
-          {t(
-            `${confirmIds?.length || 0} messages will be removed and their pending deliveries cancelled. Messages already sending cannot be deleted.`,
-            `${confirmIds?.length || 0} mensagens serão removidas e os envios pendentes cancelados. Mensagens em envio não podem ser apagadas.`
-          )}
+          {folder === "drafts"
+            ? t(
+                `${confirmIds?.length || 0} draft(s) will be permanently deleted. This cannot be undone.`,
+                `${confirmIds?.length || 0} rascunho(s) serão eliminados permanentemente. Esta acção não pode ser anulada.`
+              )
+            : t(
+                `${confirmIds?.length || 0} messages will be removed and their pending deliveries cancelled. Messages already sending cannot be deleted.`,
+                `${confirmIds?.length || 0} mensagens serão removidas e os envios pendentes cancelados. Mensagens em envio não podem ser apagadas.`
+              )}
         </p>
         {error && (
           <p role="alert" className="mt-3 text-sm text-red-700">
@@ -849,9 +875,10 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
             >
               <div className="inline-flex flex-wrap items-center justify-between gap-2 w-[calc(100%-1.5rem)] align-middle">
                 <div>
-                  {folder === "outbox" &&
+                  {((folder === "outbox" &&
                     ((item.kind === "outbox" && ["queued", "failed", "skipped"].includes(item.data.status)) ||
-                      (item.kind === "draft" && item.data.status === "queued")) && (
+                      (item.kind === "draft" && item.data.status === "queued"))) ||
+                    (folder === "drafts" && item.kind === "draft" && item.data.status === "draft")) && (
                       <input
                         aria-label={t("Select message", "Seleccionar mensagem")}
                         type="checkbox"
@@ -1114,15 +1141,29 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
                 </p>
               )}
               {folder === "drafts" && (
-                <button
-                  className="rounded-lg bg-sky-600 px-3 py-2 text-xs font-semibold text-white"
-                  disabled={Boolean(action)}
-                  onClick={() => void runAction(`draft:${item.id}`, () => onOpenDraft(item.id))}
-                >
-                  {action === `draft:${item.id}`
-                    ? t("Opening draft…", "A abrir rascunho…")
-                    : t("Continue editing", "Continuar a editar")}
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    className="rounded-lg bg-sky-600 hover:bg-sky-700 px-3 py-2 text-xs font-semibold text-white transition-colors cursor-pointer"
+                    disabled={Boolean(action)}
+                    onClick={() => void runAction(`draft:${item.id}`, () => onOpenDraft(item.id))}
+                  >
+                    {action === `draft:${item.id}`
+                      ? t("Opening draft…", "A abrir rascunho…")
+                      : t("Continue editing", "Continuar a editar")}
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 px-3 py-2 text-xs font-semibold text-red-700 flex items-center gap-1.5 transition-colors cursor-pointer"
+                    disabled={Boolean(action)}
+                    onClick={() => {
+                      setError("");
+                      setConfirmIds([item.id]);
+                    }}
+                  >
+                    <Trash2 size={13} />
+                    <span>{t("Delete draft", "Eliminar rascunho")}</span>
+                  </button>
+                </div>
               )}
             </div>
             )}
