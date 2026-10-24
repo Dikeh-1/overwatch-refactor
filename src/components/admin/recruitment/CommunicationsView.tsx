@@ -156,7 +156,7 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
   const draft = useCommunicationDraft(scope, { emailLang, subject, messageBody, attachments, includeBookingButton, targetAudience, selectedIndividualId, selectedSlot, followUpEnabled, followUpSubject, followUpBody }, data => {
     setEmailLang(data.emailLang === "en" ? "en" : "pt");
     setSubject(data.subject || ""); setMessageBody(data.messageBody || ""); setAttachments(data.attachments || []);
-    setIncludeBookingButton(Boolean(data.includeBookingButton)); setFollowUpEnabled(Boolean(data.followUpEnabled));
+    setIncludeBookingButton(Boolean(data.includeBookingButton && (data.messageBody?.includes(BOOKING_TOKEN) || data.targetAudience === "shortlisted_unbooked"))); setFollowUpEnabled(Boolean(data.followUpEnabled));
     setFollowUpSubject(data.followUpSubject || ""); setFollowUpBody(data.followUpBody || "");
     if (!fixedRecipient && data.targetAudience) setTargetAudience(data.targetAudience);
     if (!fixedRecipient && data.selectedIndividualId !== undefined) setSelectedIndividualId(data.selectedIndividualId);
@@ -1148,6 +1148,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
             <div className="flex flex-wrap gap-1.5">
               {[
                 { tag: "{{candidate_name}}", label: t("Applicant Name", "Nome Candidato") },
+                { tag: "{{booking_link}}", label: t("Test Booking Button", "Botão de Agendamento") },
                 { tag: "{{role_title}}", label: t("Job Role Title", "Título da Vaga") },
                 { tag: "{{confirm_button}}", label: t("Confirm Button (Single-Click)", "Botão Confirmar") },
                 { tag: "{{response_buttons}}", label: t("Accept / Decline Buttons", "Botões Aceitar / Recusar") },
@@ -1233,10 +1234,20 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                   onChange={setFollowUpBody}
                   lang={lang}
                   availableVariables={[
-                    { code: "{{candidate_name}}", label: t("Name", "Nome") },
-                    { code: "{{role_title}}", label: t("Role", "Vaga") },
-                    { code: "{{test_slot}}", label: t("Booked test date & time", "Data e hora agendadas") },
-                    { code: "{{company_name}}", label: t("Company Name", "Overwatch") },
+                    { code: "{{candidate_name}}", label: t("Candidate Full Name", "Nome Completo") },
+                    { code: "{{name}}", label: t("Candidate Name (Short)", "Nome Candidato") },
+                    { code: "{{role_title}}", label: t("Job Role Title", "Cargo / Função") },
+                    { code: "{{booking_link}}", label: t("Test Booking Button", "Botão de Agendamento") },
+                    { code: "{{confirm_button}}", label: t("Confirm Button (Single RSVP)", "Botão Confirmar Presença") },
+                    { code: "{{response_buttons}}", label: t("Dual Response Buttons (Yes / No)", "Botões Sim / Não") },
+                    { code: "{{yes_button}}", label: t("Acceptance Button", "Botão Sim (Aceitar)") },
+                    { code: "{{no_button}}", label: t("Decline Button", "Botão Não (Recusar)") },
+                    { code: "{{next_phase_link}}", label: t("Confirmation Portal Link", "Link do Portal de Confirmação") },
+                    { code: "{{score}}", label: t("Test Score %", "Nota do Teste %") },
+                    { code: "{{test_slot}}", label: t("Assigned / Booked Test Slot", "Turno Agendado") },
+                    { code: "{{location}}", label: t("HQ Facility Address", "Endereço das Instalações") },
+                    { code: "{{company_name}}", label: t("Company Name", "Overwatch Moçambique") },
+                    { code: "{{date}}", label: t("Current Official Date", "Data Oficial") },
                   ]}
                 />
                 {(!followUpSubject.trim() || !followUpBody.trim()) && (
@@ -1454,6 +1465,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                     { code: "{{candidate_name}}", label: t("Candidate Full Name", "Nome Completo") },
                     { code: "{{name}}", label: t("Candidate Name (Short)", "Nome Candidato") },
                     { code: "{{role_title}}", label: t("Job Role Title", "Cargo / Função") },
+                    { code: "{{booking_link}}", label: t("Test Booking Button", "Botão de Agendamento") },
                     { code: "{{confirm_button}}", label: t("Confirm Button (Single RSVP)", "Botão Confirmar Presença") },
                     { code: "{{response_buttons}}", label: t("Dual Response Buttons (Yes / No)", "Botões Sim / Não") },
                     { code: "{{yes_button}}", label: t("Acceptance Button", "Botão Sim (Aceitar)") },

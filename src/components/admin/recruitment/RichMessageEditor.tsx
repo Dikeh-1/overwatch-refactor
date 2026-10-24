@@ -608,8 +608,8 @@ export default function RichMessageEditor({
             </button>
           </div>
 
-          {/* Personalized Variable Dropdown */}
-          <div className="relative">
+          {/* Personalized Variable Dropdown - With Outside Click & Clean Scroll Container */}
+          <div className="relative" ref={variablePickerRef}>
             <button
               type="button"
               onClick={() => {
@@ -626,25 +626,31 @@ export default function RichMessageEditor({
             </button>
 
             {showVariablePicker && (
-              <div className="absolute left-0 top-full mt-1.5 z-40 w-72 bg-white border border-slate-200 rounded-xl p-2 shadow-2xl space-y-1">
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1">
-                  {lang === "en" ? "Personalized Tokens" : "Campos Personalizados"}
+              <div className="absolute left-0 top-full mt-1.5 z-50 w-80 max-h-64 overflow-y-auto overscroll-contain bg-white border border-slate-200/90 rounded-xl p-1.5 shadow-2xl space-y-0.5 divide-y divide-slate-100">
+                <div className="sticky top-0 bg-white/95 backdrop-blur-xs text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1.5 border-b border-slate-100 z-10 flex items-center justify-between">
+                  <span>{lang === "en" ? "Personalized Tokens" : "Campos Personalizados"}</span>
+                  <span className="text-[9px] font-normal text-slate-400 font-mono">{availableVariables.length} tags</span>
                 </div>
-                {availableVariables.map((v) => (
-                  <button
-                    key={v.code}
-                    type="button"
-                    onClick={() => handleInsertVariable(v.code)}
-                    className="w-full text-left p-2 rounded-lg hover:bg-sky-50 flex items-center justify-between text-xs transition-colors cursor-pointer group"
-                  >
-                    <code className="text-sky-700 font-mono font-bold bg-sky-50 group-hover:bg-sky-100 px-1.5 py-0.5 rounded text-[11px]">
-                      {v.code}
-                    </code>
-                    <span className="text-[11px] text-slate-500 truncate ml-2">
-                      {v.label}
-                    </span>
-                  </button>
-                ))}
+                <div className="pt-1 space-y-0.5">
+                  {availableVariables.map((v) => (
+                    <button
+                      key={v.code}
+                      type="button"
+                      onClick={() => {
+                        handleInsertVariable(v.code);
+                        setShowVariablePicker(false);
+                      }}
+                      className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-sky-50 flex items-center justify-between text-xs transition-colors cursor-pointer group"
+                    >
+                      <code className="text-sky-700 font-mono font-bold bg-sky-50 group-hover:bg-sky-100 px-1.5 py-0.5 rounded text-[11px] shrink-0">
+                        {v.code}
+                      </code>
+                      <span className="text-[11px] text-slate-500 truncate ml-2 text-right">
+                        {v.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>

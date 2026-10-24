@@ -94,7 +94,10 @@ export function useCommunicationDraft<T extends DraftContent>(scope: string, sna
   }, [scope]);
   useEffect(() => {
     if (!ready || state.current.scope !== scope) return;
-    if (!snapshot.subject && !snapshot.messageBody && !snapshot.attachments?.length) return;
+    if (!snapshot.subject && !snapshot.messageBody && !snapshot.attachments?.length) {
+      try { localStorage.removeItem(`overwatch-draft:${scope}`); } catch {}
+      return;
+    }
     try { localStorage.setItem(`overwatch-draft:${scope}`, JSON.stringify({ id: state.current.id, version: state.current.version, data: snapshot, savedAt: new Date().toISOString() })); } catch { queueMicrotask(() => setStatus("Browser recovery storage full · saving to server…")); }
     const timer = setTimeout(() => { void flush().catch(() => {}); }, 2000);
     return () => clearTimeout(timer);
