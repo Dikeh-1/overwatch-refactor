@@ -30,7 +30,17 @@ import {
   MapPin,
 } from "lucide-react";
 import { Application, Role, stages, formatPhoneDisplay, formatSlotDisplay } from "@/lib/careers";
-import { hasTested, hasAttended, isTerminal, isNextPhase, isQualified, isEligibleForTest } from "@/lib/careers-workflow";
+import {
+  hasTested,
+  hasAttended,
+  isTerminal,
+  isNextPhase,
+  isQualified,
+  isEligibleForTest,
+  isScreened,
+  passedScreening,
+  isNotAdvancing,
+} from "@/lib/careers-workflow";
 import { classifyCandidateLocation, LocationFilterValue } from "@/lib/location-utils";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import { useActiveRole } from "../shell/ActiveRoleContext";
@@ -38,11 +48,51 @@ import CelebrationOverlay from "@/components/admin/ui/CelebrationOverlay";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 import StickyScrollContainer from "@/components/admin/ui/StickyScrollContainer";
 
+function mapMetricToView(metric: string): string | null {
+  switch (metric) {
+    case "booked":
+      return "test_booked";
+    case "eligible":
+    case "invited":
+    case "awaiting":
+      return "awaiting_booking";
+    case "attended":
+    case "tested":
+    case "scored":
+      return "tested";
+    case "notAdvancing":
+      return "archived";
+    case "screened":
+    case "screeningPassed":
+      return "screened";
+    case "qualified":
+    case "nextPhase":
+      return "next_phase";
+    case "confirmed":
+      return "confirmed";
+    case "declined":
+      return "declined";
+    case "interview":
+      return "interview";
+    case "training":
+      return "active";
+    case "hired":
+      return "hired";
+    case "total":
+      return "all";
+    default:
+      return null;
+  }
+}
+
 interface CandidatesTableViewProps {
   scopedRoleId?: string;
   applications: Application[];
   roles: Role[];
   lang?: "pt" | "en";
+  initialMetricFilter?: string;
+  metricLabel?: string;
+  onClearMetricFilter?: () => void;
   onBulkStatusChange?: (ids: string[], status: string) => Promise<void>;
   onBulkArchive?: (ids: string[], reason: string) => Promise<void>;
   onRefresh?: () => void | Promise<void>;
@@ -53,6 +103,9 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
   roles,
   scopedRoleId,
   lang: propLang,
+  initialMetricFilter,
+  metricLabel,
+  onClearMetricFilter,
   onBulkStatusChange,
   onBulkArchive,
   onRefresh,
@@ -67,7 +120,9 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
 
   // Read URL query params or fallback
   const urlSearch = searchParams.get("search") || "";
-  const urlView = scopedRoleId ? "all" : searchParams.get("view") || "all";
+  const initialView = initialMetricFilter
+    ? mapMetricToView(initialMetricFilter) || "all"
+    : (scopedRoleId ? "all" : searchParams.get("view") || "all");
   const urlRole = scopedRoleId || searchParams.get("role") || "all";
   const urlStage = scopedRoleId ? "all" : searchParams.get("stage") || "all";
   const urlLoc = (searchParams.get("loc") as LocationFilterValue) || "all";
@@ -75,7 +130,8 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
   const urlPageSize = parseInt(searchParams.get("size") || "25", 10);
 
   const [searchQuery, setSearchQuery] = useState(urlSearch);
-  const [activeView, setActiveView] = useState(urlView);
+  const [activeView, setActiveView] = useState(initialView);
+  const [activeMetric, setActiveMetric] = useState<string | null>(initialMetricFilter || null);
   const [roleFilter, setRoleFilter] = useState(urlRole);
   const [stageFilter, setStageFilter] = useState(urlStage);
   const [locationFilter, setLocationFilter] = useState<LocationFilterValue>(urlLoc);
@@ -83,6 +139,14 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
   const [expFilter, setExpFilter] = useState<"all" | "yes" | "no">("all");
   const [currentPage, setCurrentPage] = useState(Number.isFinite(urlPage) && urlPage > 0 ? urlPage : 1);
   const [pageSize, setPageSize] = useState([25, 50, 100].includes(urlPageSize) ? urlPageSize : 25);
+
+  useEffect(() => {
+    setActiveMetric(initialMetricFilter || null);
+    if (initialMetricFilter) {
+      const mapped = mapMetricToView(initialMetricFilter);
+      if (mapped) setActiveView(mapped);
+    }
+  }, [initialMetricFilter]);
 
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -127,6 +191,10 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
   };
 
   const handleViewChange = (view: string) => {
+    if (activeMetric) {
+      setActiveMetric(null);
+      onClearMetricFilter?.();
+    }
     setActiveView(view);
     setCurrentPage(1);
     setSelectedIds(new Set());
@@ -198,59 +266,98 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
     return list;
   }, [hasTesting, hasNextPhase, lang]);
 
+  const METRIC_PREDICATES: Record<string, (a: Application) => boolean> = useMemo(
+    () => ({
+      total: () => true,
+      screened: isScreened,
+      screeningPassed: passedScreening,
+      notAdvancing: isNotAdvancing,
+      qualified: isNextPhase,
+      eligible: isEligibleForTest,
+      invited: (a: Application) => Boolean(a.invitedAt) || a.status === "test_invited",
+      booked: (a: Application) => Boolean(a.testSlot) && a.status !== "archived",
+      attended: hasAttended,
+      tested: hasTested,
+      scored: (a: Application) => typeof a.testScore === "number" && Number.isFinite(a.testScore),
+      nextPhase: isNextPhase,
+      confirmed: (a: Application) =>
+        isNextPhase(a) && (a.nextPhaseResponse === "yes" || a.nextPhaseStatus === "confirmed" || a.status === "interest_confirmed"),
+      awaiting: (a: Application) =>
+        !isTerminal(a) &&
+        !a.testSlot &&
+        (Boolean(a.invitedAt) || a.status === "test_invited"),
+      declined: (a: Application) =>
+        isNextPhase(a) && (a.nextPhaseResponse === "no" || a.nextPhaseStatus === "declined" || a.status === "interest_declined"),
+      interview: (a: Application) => a.status === "interview",
+      training: (a: Application) => a.status === "training",
+      hired: (a: Application) => a.status === "hired",
+    }),
+    []
+  );
+
   // Filter candidates
   const filteredCandidates = useMemo(() => {
     return applications.filter((cand) => {
-      // 1. Saved view logic
-      if (activeView === "active") {
-        if (isTerminal(cand)) return false;
-      } else if (activeView === "screened") {
-        if (isTerminal(cand)) return false;
-        const isScreened =
-          Boolean(cand.screeningResult?.passedMandatory) ||
-          (typeof cand.screeningScore === "number" && cand.screeningScore >= 50) ||
-          cand.status === "shortlisted" ||
-          cand.status === "screening" ||
-          cand.status === "interview" ||
-          cand.status === "hired";
-        if (!isScreened) return false;
-      } else if (activeView === "interview") {
-        if (cand.status !== "interview") return false;
-      } else if (activeView === "hired") {
-        if (cand.status !== "hired") return false;
-      } else if (activeView === "awaiting_booking") {
-        if (!isEligibleForTest(cand)) return false;
-      } else if (activeView === "test_booked") {
-        if (!cand.testSlot || cand.status === "archived") return false;
-      } else if (activeView === "tested") {
-        if (!hasTested(cand)) return false;
-      } else if (activeView === "next_phase") {
-        const isNp =
-          cand.nextPhaseStatus === "selected" ||
-          cand.nextPhaseStatus === "invited" ||
-          cand.nextPhaseStatus === "confirmed" ||
-          cand.status === "next_phase_selected" ||
-          cand.status === "next_phase_invited" ||
-          cand.status === "interest_confirmed" ||
-          Boolean(cand.nextPhaseToken);
-        if (!isNp) return false;
-      } else if (activeView === "confirmed") {
-        const isConf =
-          cand.nextPhaseResponse === "yes" ||
-          cand.nextPhaseStatus === "confirmed" ||
-          cand.status === "interest_confirmed";
-        if (!isConf) return false;
-      } else if (activeView === "declined") {
-        const isDecl =
-          cand.nextPhaseResponse === "no" ||
-          cand.nextPhaseStatus === "declined" ||
-          cand.status === "interest_declined";
-        if (!isDecl) return false;
-      } else if (activeView === "archived") {
-        if (cand.status !== "archived") return false;
-      } else if (activeView === "all") {
-        // If user is actively searching, search across all candidates including archived
-        // All means all records, including unresolved historical and archived records.
+      // 0. Active metric filter if present
+      if (activeMetric && METRIC_PREDICATES[activeMetric]) {
+        if (!METRIC_PREDICATES[activeMetric](cand)) return false;
+      } else {
+        // 1. Saved view logic
+        if (activeView === "active") {
+          if (isTerminal(cand)) return false;
+        } else if (activeView === "screened") {
+          if (isTerminal(cand)) return false;
+          const isScreenedCandidate =
+            Boolean(cand.screeningResult?.passedMandatory) ||
+            (typeof cand.screeningScore === "number" && cand.screeningScore >= 50) ||
+            cand.status === "shortlisted" ||
+            cand.status === "screening" ||
+            cand.status === "interview" ||
+            cand.status === "hired";
+          if (!isScreenedCandidate) return false;
+        } else if (activeView === "interview") {
+          if (cand.status !== "interview") return false;
+        } else if (activeView === "hired") {
+          if (cand.status !== "hired") return false;
+        } else if (activeView === "awaiting_booking") {
+          if (isTerminal(cand)) return false;
+          if (Boolean(cand.testSlot) || hasTested(cand) || hasAttended(cand)) return false;
+          const isAwaitingBooking =
+            Boolean(cand.invitedAt) ||
+            cand.status === "test_invited" ||
+            isEligibleForTest(cand);
+          if (!isAwaitingBooking) return false;
+        } else if (activeView === "test_booked") {
+          if (!cand.testSlot || cand.status === "archived") return false;
+        } else if (activeView === "tested") {
+          if (!hasTested(cand)) return false;
+        } else if (activeView === "next_phase") {
+          const isNp =
+            cand.nextPhaseStatus === "selected" ||
+            cand.nextPhaseStatus === "invited" ||
+            cand.nextPhaseStatus === "confirmed" ||
+            cand.status === "next_phase_selected" ||
+            cand.status === "next_phase_invited" ||
+            cand.status === "interest_confirmed" ||
+            Boolean(cand.nextPhaseToken);
+          if (!isNp) return false;
+        } else if (activeView === "confirmed") {
+          const isConf =
+            cand.nextPhaseResponse === "yes" ||
+            cand.nextPhaseStatus === "confirmed" ||
+            cand.status === "interest_confirmed";
+          if (!isConf) return false;
+        } else if (activeView === "declined") {
+          const isDecl =
+            cand.nextPhaseResponse === "no" ||
+            cand.nextPhaseStatus === "declined" ||
+            cand.status === "interest_declined";
+          if (!isDecl) return false;
+        } else if (activeView === "archived") {
+          if (cand.status !== "archived") return false;
+        } else if (activeView === "all") {
+          // All means all records, including unresolved historical and archived records.
+        }
       }
 
       // 2. Role filter (robustly normalize CCTV operator aliases)
@@ -496,6 +603,32 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
 
       {/* Sticky Navigation, Filter & Bulk Action Header */}
       <div className="sticky top-[var(--workspace-sticky-top,48px)] z-20 bg-[#F7F8FA]/95 backdrop-blur-md pt-2 pb-2 space-y-3">
+      {/* Active Metric Filter Banner */}
+      {activeMetric && (
+        <div className="flex items-center justify-between bg-sky-50/90 border border-sky-200 rounded-lg px-3 py-2 text-xs text-sky-900 shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-sky-950">{t("Active filter:", "Filtro activo:")}</span>
+            <span className="bg-sky-200/80 text-sky-950 px-2 py-0.5 rounded font-medium">
+              {metricLabel || activeMetric}
+            </span>
+            <span className="text-sky-700">
+              ({filteredCandidates.length} {t("candidates", "candidatos")})
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveMetric(null);
+              setActiveView("all");
+              onClearMetricFilter?.();
+            }}
+            className="text-xs font-semibold text-sky-700 hover:text-sky-950 hover:underline cursor-pointer flex items-center gap-1"
+          >
+            <X size={13} />
+            <span>{t("Clear filter (show all)", "Limpar filtro (ver todos)")}</span>
+          </button>
+        </div>
+      )}
       {/* Saved View Tabs */}
       <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto pb-1 admin-scrollbar">
         {savedViews.map((sv) => (

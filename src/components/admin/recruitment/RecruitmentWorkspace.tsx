@@ -526,27 +526,45 @@ export default function RecruitmentWorkspace({
               "hired",
             ].includes(tab)) && (
             <>
-              <div className="flex justify-between text-sm">
-                <span>{metric ? labels[metric] : ""}</span>
-                {metric && (
-                  <button onClick={() => navigate(tab)}>
-                    {t("Back to overview", "Voltar à visão geral")}
-                  </button>
-                )}
-              </div>
+              {metric && (
+                <div className="flex justify-between items-center text-sm mb-2">
+                  <div className="flex items-center gap-2">
+                    {tab === "overview" && (
+                      <button
+                        type="button"
+                        onClick={() => navigate("overview", "")}
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-2.5 py-1 rounded-md shadow-sm transition-colors cursor-pointer"
+                      >
+                        <span>←</span>
+                        <span>{t("Back to overview", "Voltar à visão geral")}</span>
+                      </button>
+                    )}
+                    <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                      {labels[metric] || metric}
+                    </span>
+                  </div>
+                </div>
+              )}
               <CandidatesTableView
-                key={`${cohort?.id}-${tab}-${metric}`}
+                key={`${cohort?.id}-${tab}`}
                 applications={
-                  metric
-                    ? visibleApps
-                    : tab === "screening"
-                      ? apps
-                      : ["interview", "training", "hired"].includes(tab)
-                        ? apps.filter((a) => a.status === tab)
-                        : apps
+                  tab === "screening"
+                    ? apps
+                    : ["interview", "training", "hired"].includes(tab)
+                      ? apps.filter((a) => a.status === tab)
+                      : apps
                 }
                 roles={[workspaceRole]}
                 scopedRoleId={role.id}
+                initialMetricFilter={metric || undefined}
+                metricLabel={metric ? labels[metric] : undefined}
+                onClearMetricFilter={() => {
+                  if (tab === "overview") {
+                    navigate("applications", "");
+                  } else {
+                    navigate(tab, "");
+                  }
+                }}
                 onRefresh={load}
                 onBulkStatusChange={async (ids, status) => {
                   await mutate(
