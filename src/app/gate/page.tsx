@@ -779,7 +779,6 @@ function GateSecurityContent() {
                   <span className="hidden sm:inline">{t.postTitle}</span>
                   <span className="sm:hidden">{lang === "pt" ? "Portaria" : "Gate"}</span>
                 </h1>
-                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 shrink-0" />
               </div>
               <p className="text-[10px] text-white/50 truncate hidden md:flex items-center gap-1">
                 <MapPin size={10} className="text-white/40" />
@@ -800,10 +799,10 @@ function GateSecurityContent() {
                 </span>
               </div>
             ) : (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg sm:rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 font-mono text-[10px] sm:text-xs">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 shrink-0" />
-                <span className="hidden sm:inline">Maputo:</span>
-                <span className="font-bold">{maputoTime.timeString}</span>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg sm:rounded-xl border border-white/10 bg-white/[0.04] text-white/90 font-mono text-[10px] sm:text-xs">
+                <Clock size={12} className="text-white/50 shrink-0" />
+                <span className="hidden sm:inline text-white/60">Maputo:</span>
+                <span className="font-bold text-white">{maputoTime.timeString}</span>
               </div>
             )}
 
@@ -812,7 +811,7 @@ function GateSecurityContent() {
               <div className="text-[8px] sm:text-[9px] text-white/50 font-medium leading-none hidden xs:block">
                 {t.presentToday}
               </div>
-              <div className="text-[11px] sm:text-xs font-bold text-emerald-400 font-mono">
+              <div className="text-[11px] sm:text-xs font-bold text-white font-mono">
                 {rosterStats.present}/{rosterStats.total}
               </div>
             </div>

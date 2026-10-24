@@ -540,7 +540,9 @@ export function getMaputoToday(date: Date = new Date()) {
     countdownString = `${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   }
 
-  const timeString = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:${String(second).padStart(2, "0")}`;
+  const hour12 = hour % 12 || 12;
+  const ampm = hour < 12 ? "AM" : "PM";
+  const timeString = `${String(hour12).padStart(2, "0")}:${String(minute).padStart(2, "0")}:${String(second).padStart(2, "0")} ${ampm}`;
 
   return {
     day,
