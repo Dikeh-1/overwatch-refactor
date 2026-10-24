@@ -62,19 +62,35 @@ export async function GET(request: Request) {
 async function handlePOST(request: Request) {
   try {
     const body = await request.json();
-    const { token, choice } = body;
+    const { token, choice, responseOption: customOption } = body;
 
-    if (!token || !["yes", "no"].includes(choice)) {
+    const rawChoice = (choice || "").toString().trim();
+    const lowerChoice = rawChoice.toLowerCase();
+
+    const isAffirmative =
+      ["yes", "confirm", "confirmed", "accept", "accepted", "agree", "sim", "aceitar", "confirmar", "attended"].includes(lowerChoice) ||
+      lowerChoice.startsWith("confirm") ||
+      lowerChoice.startsWith("sim");
+
+    const isNegative =
+      ["no", "declined", "decline", "reject", "rejected", "recusar", "nao", "não", "withdrawn"].includes(lowerChoice) ||
+      lowerChoice.startsWith("recus") ||
+      lowerChoice.startsWith("não") ||
+      lowerChoice.startsWith("nao");
+
+    if (!token || (!isAffirmative && !isNegative && !rawChoice)) {
       return Response.json({ error: "Invalid parameters" }, { status: 400 });
     }
+
+    const effectiveChoice: "yes" | "no" = isNegative ? "no" : "yes";
 
     // Handle preview tokens gracefully
     if (token.startsWith("preview_")) {
       return Response.json({
         success: true,
         preview: true,
-        choice,
-        message: choice === "yes" ? "Simulação de aceitação confirmada." : "Simulação de recusa registada.",
+        choice: effectiveChoice,
+        message: effectiveChoice === "yes" ? "Simulação de aceitação confirmada." : "Simulação de recusa registada.",
       });
     }
 
@@ -89,11 +105,11 @@ async function handlePOST(request: Request) {
     if (!isNextPhase(effective) || ["hired", "training", "interview"].includes(effective.status)) return Response.json({ error: "Contact the recruitment team to update this decision." }, { status: 409 });
 
     // Idempotency: If already responded with same choice, return current state
-    if (candidate.nextPhaseRespondedAt && candidate.nextPhaseResponse === choice) {
+    if (candidate.nextPhaseRespondedAt && candidate.nextPhaseResponse === effectiveChoice) {
       return Response.json({
         success: true,
         alreadyProcessed: true,
-        choice,
+        choice: effectiveChoice,
         candidateName: candidate.name,
       });
     }
@@ -102,7 +118,7 @@ async function handlePOST(request: Request) {
     const communications = candidate.communications || [];
     const activityLog = candidate.activityLog || [];
 
-    if (choice === "yes") {
+    if (effectiveChoice === "yes") {
       // 1. Candidate accepted conditions
       communications.push({
         id: crypto.randomUUID(),
@@ -122,7 +138,7 @@ async function handlePOST(request: Request) {
         details: "Accepted 10-day initial training & 3-month practical conditions via secure portal link",
       });
 
-      const responseOption = "Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas.";
+      const responseOption = customOption || (rawChoice && rawChoice !== "yes" ? rawChoice : "Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas.");
 
       await updateApplication(candidate.id, {
         nextPhaseStatus: "confirmed",
@@ -169,7 +185,7 @@ async function handlePOST(request: Request) {
         details: "Candidate indicated lack of interest/availability for next phase conditions",
       });
 
-      const responseOption = "Não tenho interesse";
+      const responseOption = customOption || (rawChoice && rawChoice !== "no" ? rawChoice : "Não tenho interesse");
 
       await updateApplication(candidate.id, {
         nextPhaseStatus: "declined",

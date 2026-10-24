@@ -77,7 +77,8 @@ export type ArchiveReason =
   | "Outside Maputo Region"
   | "Duplicate"
   | "Recruitment Closed"
-  | "Other";
+  | "Other"
+  | (string & {});
 
 export type ScreeningEvaluationResult = {
   passedMandatory: boolean;

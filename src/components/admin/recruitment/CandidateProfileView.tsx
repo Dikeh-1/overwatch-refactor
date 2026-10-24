@@ -75,6 +75,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
   // Modals & Action States
   const [archiveModalOpen, setArchiveModalOpen] = useState(false);
   const [archiveReason, setArchiveReason] = useState<ArchiveReason>("Not Selected for Next Phase");
+  const [customArchiveReason, setCustomArchiveReason] = useState<string>("");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [statusSuccessMsg, setStatusSuccessMsg] = useState<string | null>(null);
@@ -1105,10 +1106,24 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                 <option value="No Show">{t("No Show (Absent from Test)", "Faltou ao Teste Presencial")}</option>
                 <option value="Candidate Withdrew">{t("Candidate Withdrew", "Candidato Desistiu do Processo")}</option>
                 <option value="Declined Next Phase">{t("Declined Next Phase Conditions", "Recusou Condições da Próxima Fase")}</option>
+                <option value="Outside Mozambique">{t("Outside Mozambique", "Não Reside em Moçambique")}</option>
+                <option value="Outside Maputo Region">{t("Outside Maputo Region", "Fora da Região de Maputo")}</option>
                 <option value="Duplicate">{t("Duplicate Application", "Candidatura Duplicada")}</option>
                 <option value="Recruitment Closed">{t("Recruitment Closed", "Concurso Encerrado")}</option>
-                <option value="Other">{t("Other Reason", "Outro Motivo")}</option>
+                <option value="Other">{t("Other Reason (Custom)", "Outro Motivo (Personalizado)")}</option>
               </select>
+
+              {archiveReason === "Other" && (
+                <div className="mt-2.5">
+                  <input
+                    type="text"
+                    value={customArchiveReason}
+                    onChange={(e) => setCustomArchiveReason(e.target.value)}
+                    placeholder={t("Enter custom archive reason...", "Indique o motivo personalizado do arquivo...")}
+                    className="w-full px-3 py-2 text-xs rounded-md border border-slate-300 text-slate-800 bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
@@ -1126,7 +1141,10 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                 onClick={async () => {
                   setIsArchiving(true);
                   try {
-                    await onArchive(candidate.id, archiveReason);
+                    const finalReason = archiveReason === "Other" && customArchiveReason.trim()
+                      ? customArchiveReason.trim()
+                      : archiveReason;
+                    await onArchive(candidate.id, finalReason);
                     setArchiveModalOpen(false);
                   } finally {
                     setIsArchiving(false);

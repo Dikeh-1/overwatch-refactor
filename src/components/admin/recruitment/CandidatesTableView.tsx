@@ -155,6 +155,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
   const [bulkActionBusy, setBulkActionBusy] = useState(false);
   const [archiveModalOpen, setArchiveModalOpen] = useState(false);
   const [archiveReason, setArchiveReason] = useState<string>("Not Selected for Next Phase");
+  const [customArchiveReason, setCustomArchiveReason] = useState<string>("");
   const [declineLocationModalOpen, setDeclineLocationModalOpen] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [singleAdvanceBusy, setSingleAdvanceBusy] = useState<string | null>(null);
@@ -172,6 +173,55 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
     show: boolean;
     count: number;
   } | null>(null);
+
+  const getDynamicArchiveReason = (cand: Application): string => {
+    if (cand.archiveReason) {
+      const r = cand.archiveReason;
+      if (r === "Below Test Threshold") return t("Below Test Cutoff (< 80%)", "Abaixo da Nota de Teste (< 80%)");
+      if (r === "Not Selected for Next Phase") return t("Not Selected for Next Phase", "Não Selecionado para Próx. Fase");
+      if (r === "No Show") return t("Absent from Test", "Faltou ao Teste Presencial");
+      if (r === "Candidate Withdrew") return t("Candidate Withdrew", "Desistiu do Processo");
+      if (r === "Declined Next Phase") return cand.nextPhaseResponseOption || t("Declined Next Phase Conditions", "Recusou Condições da Próx. Fase");
+      if (r === "Outside Mozambique") return t("Outside Mozambique", "Não Reside em Moçambique");
+      if (r === "Outside Maputo Region") return t("Outside Deployment Region", "Fora da Região Operacional");
+      if (r === "Duplicate") return t("Duplicate Application", "Candidatura Duplicada");
+      if (r === "Recruitment Closed") return t("Recruitment Cycle Closed", "Concurso Encerrado");
+      if (r === "Other") return (cand as any).customArchiveReason || t("Archived by Admin", "Arquivado pela Administração");
+      return r;
+    }
+
+    if (cand.status === "interest_declined" || cand.nextPhaseResponse === "no" || cand.nextPhaseStatus === "declined") {
+      return cand.nextPhaseResponseOption || t("Declined Next Phase", "Recusou Convocatória Próxima Fase");
+    }
+
+    if (cand.status === "rejected") {
+      const reasons = lang === "pt" && cand.screeningResult?.failedReasonsPt?.length
+        ? cand.screeningResult.failedReasonsPt
+        : cand.screeningResult?.failedReasons;
+      if (reasons && reasons.length > 0) {
+        return reasons.join("; ");
+      }
+      return t("Did not meet screening criteria", "Não cumpriu critérios de triagem");
+    }
+
+    if (cand.status === "disqualified") {
+      return t("Disqualified from Pipeline", "Desqualificado do Concurso");
+    }
+
+    const loc = classifyCandidateLocation(cand);
+    if (loc.group === "outside_mozambique") {
+      return t("Outside Mozambique", "Residência Fora de Moçambique");
+    }
+    if (loc.group === "mozambique_other") {
+      return t("Outside Operational Region", "Fora da Região Operacional");
+    }
+
+    if ((cand as any).statusBeforeArchive) {
+      return `${t("Archived from", "Arquivado de")} ${(cand as any).statusBeforeArchive}`;
+    }
+
+    return t("Archived", "Arquivado");
+  };
 
   const handleSingleAdvance = async (cand: Application) => {
     setSingleAdvanceBusy(cand.id);
@@ -287,11 +337,11 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
       );
     }
 
-    // Next Phase Cohort, Confirmed (YES), Declined (NO) are available across all pipelines
+    // Next Phase Cohort, Confirmed, Declined are available across all pipelines
     list.push(
       { id: "next_phase", label: t("Next Phase Cohort", "Turma Próxima Fase") },
-      { id: "confirmed", label: t("Confirmed (YES)", "Confirmados (SIM)") },
-      { id: "declined", label: t("Declined (NO)", "Recusados (NÃO)") }
+      { id: "confirmed", label: t("Confirmed", "Confirmados") },
+      { id: "declined", label: t("Declined", "Recusados") }
     );
     if (hasTesting) {
       list.push({ id: "interview", label: t("Interview Stage", "Em Entrevista") });
@@ -533,17 +583,29 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
   const renderStageBadge = (cand: Application) => {
     if (cand.stageSource === "unresolved") return <span className="text-xs text-amber-800">{t("Historical stage needs review", "Etapa histórica por rever")}</span>;
     if (["not_advancing", "rejected", "withdrawn", "disqualified", "archived"].includes(cand.status)) return <span className="text-xs text-slate-600">{cand.status === "not_advancing" ? t("Not advancing", "Não avança") : cand.status}</span>;
-    if (cand.nextPhaseResponse === "yes" || cand.nextPhaseStatus === "confirmed") {
+    if (cand.nextPhaseResponse === "yes" || cand.nextPhaseStatus === "confirmed" || cand.status === "interest_confirmed") {
+      const label = cand.nextPhaseResponseOption && cand.nextPhaseResponseOption.length <= 25
+        ? cand.nextPhaseResponseOption
+        : t("Confirmed", "Confirmado");
       return (
-        <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1">
-          ✓ {t("Confirmed YES", "Confirmou SIM")}
+        <span
+          className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1"
+          title={cand.nextPhaseResponseOption || t("Confirmed", "Confirmado")}
+        >
+          ✓ {label}
         </span>
       );
     }
-    if (cand.nextPhaseResponse === "no" || cand.nextPhaseStatus === "declined") {
+    if (cand.nextPhaseResponse === "no" || cand.nextPhaseStatus === "declined" || cand.status === "interest_declined") {
+      const label = cand.nextPhaseResponseOption && cand.nextPhaseResponseOption.length <= 25
+        ? cand.nextPhaseResponseOption
+        : t("Declined", "Recusado");
       return (
-        <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-slate-100 text-slate-700 border border-slate-300">
-          ✕ {t("Declined NO", "Recusou NÃO")}
+        <span
+          className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-slate-100 text-slate-700 border border-slate-300 inline-flex items-center gap-1"
+          title={cand.nextPhaseResponseOption || t("Declined", "Recusado")}
+        >
+          ✕ {label}
         </span>
       );
     }
@@ -561,7 +623,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
         </span>
       );
     }
-    switch (cand.status) {
+    switch (cand.status as string) {
       case "training":
         return <span className="text-xs text-sky-700">{t("Training", "Formação")}</span>;
       case "hired":
@@ -636,9 +698,20 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                 t("Slot", "Turno"),
                 t("Attendance", "Presença"),
                 t("Technical Match", "Match Técnico"),
-                t("Test Score", "Pontuação Teste"),
+                activeView === "archived" ? t("Reason for Archive", "Motivo do Arquivo") : t("Test Score", "Pontuação Teste"),
               ];
-              const rows = filteredCandidates.map(c => [c.id, c.name, c.email, c.whatsapp, c.role || "cctv", c.status, c.testSlot || "", hasAttended(c) ? t("Attended", "Presente") : t("Not recorded", "Não registada"), c.screeningResult ? `${c.screeningResult.matchPercentage}%` : "", c.testScore ?? ""]);
+              const rows = filteredCandidates.map(c => [
+                c.id,
+                c.name,
+                c.email,
+                c.whatsapp,
+                c.role || "cctv",
+                c.status,
+                c.testSlot || "",
+                hasAttended(c) ? t("Attended", "Presente") : t("Not recorded", "Não registada"),
+                c.screeningResult ? `${c.screeningResult.matchPercentage}%` : "",
+                activeView === "archived" ? getDynamicArchiveReason(c) : (c.testScore ?? "")
+              ]);
               const csv = "\uFEFF" + [headers, ...rows].map(row => row.map(csvCell).join(",")).join("\r\n");
               const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
               const url = URL.createObjectURL(blob);
@@ -803,28 +876,29 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
             </span>
           </div>
 
-          {/* Action buttons inside the bar - Smart, Context-Aware & Clean */}
+          {/* Action buttons inside the bar - Truly Smart, Stage-Aware & Targeted */}
           {(() => {
             const selectedList = applications.filter((a) => selectedIds.has(a.id));
-            const hasConfirmedCandidate = selectedList.some(
-              (c) => c.nextPhaseResponse === "yes" || c.nextPhaseStatus === "confirmed" || c.status === "interest_confirmed"
+
+            // Candidate subsets based on actual recruitment stage
+            const initialCandidates = selectedList.filter(
+              (c) => !hasTested(c) && !isNextPhase(c) && c.status !== "interview" && c.status !== "hired" && c.status !== "test_booked" && !isTerminal(c)
             );
-            const hasNextPhaseCandidate = selectedList.some(
-              (c) => c.status === "next_phase_selected" || c.nextPhaseStatus === "selected" || c.status === "next_phase_invited"
+            const testedPendingNextPhase = selectedList.filter(
+              (c) => hasTested(c) && !isNextPhase(c) && c.status !== "interview" && c.status !== "hired" && !isTerminal(c)
             );
-            const hasTestedCandidate = selectedList.some((c) => hasTested(c));
-            const hasOutsideLocation = selectedList.some((c) => {
+            const readyForInterview = selectedList.filter(
+              (c) => (isNextPhase(c) || c.nextPhaseResponse === "yes" || c.status === "interview") && c.status !== "hired" && !isTerminal(c)
+            );
+            const outsideLocationCandidates = selectedList.filter((c) => {
               const loc = classifyCandidateLocation(c);
               return loc.group === "outside_mozambique" || loc.group === "mozambique_other";
             });
-            const isAllInitialStage = selectedList.every(
-              (c) => !hasTested(c) && !isNextPhase(c) && c.status !== "interview" && c.status !== "hired" && c.status !== "test_booked"
-            );
 
             return (
               <div className="flex items-center gap-2 flex-wrap">
-                {/* 1. If early stage, allow shortlisting */}
-                {isAllInitialStage && (
+                {/* 1. If any selected candidate is in initial review, allow shortlisting */}
+                {initialCandidates.length > 0 && (
                   <button
                     type="button"
                     disabled={bulkActionBusy}
@@ -832,20 +906,25 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                       if (onBulkStatusChange) {
                         setBulkActionBusy(true);
                         try {
-                          await onBulkStatusChange(Array.from(selectedIds), "shortlisted");
+                          const idsToShortlist = initialCandidates.map((c) => c.id);
+                          await onBulkStatusChange(idsToShortlist, "shortlisted");
                           setCelebrationState({
                             show: true,
                             variant: "shortlisted",
                             title: t(
-                              `${selectedIds.size} Candidates Shortlisted!`,
-                              `${selectedIds.size} Candidatos Pré-selecionados!`,
+                              `${idsToShortlist.length} Candidate(s) Shortlisted!`,
+                              `${idsToShortlist.length} Candidato(s) Pré-selecionado(s)!`,
                             ),
                             subtitle: t(
                               "Candidates are placed in the shortlisted queue for test scheduling and assessment.",
                               "Os candidatos foram colocados na lista de convocatória para agendamento de provas.",
                             ),
                           });
-                          setSelectedIds(new Set());
+                          setSelectedIds((prev) => {
+                            const next = new Set(prev);
+                            idsToShortlist.forEach((id) => next.delete(id));
+                            return next;
+                          });
                         } finally {
                           setBulkActionBusy(false);
                         }
@@ -859,13 +938,17 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                         <span>{t("Processing...", "A processar...")}</span>
                       </>
                     ) : (
-                      <span>{t("Set Shortlisted", "Marcar Pré-selecionado")}</span>
+                      <span>
+                        {initialCandidates.length === selectedIds.size
+                          ? t("Set Shortlisted", "Marcar Pré-selecionado")
+                          : `${t("Set Shortlisted", "Marcar Pré-selecionado")} (${initialCandidates.length})`}
+                      </span>
                     )}
                   </button>
                 )}
 
-                {/* 2. Advance to Next Phase (for tested candidates not yet in next phase) */}
-                {hasTestedCandidate && !hasNextPhaseCandidate && !hasConfirmedCandidate && (
+                {/* 2. Advance to Next Phase (for tested candidates who have NOT yet been advanced) */}
+                {testedPendingNextPhase.length > 0 && (
                   <button
                     type="button"
                     disabled={bulkActionBusy}
@@ -873,20 +956,25 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                       if (onBulkStatusChange) {
                         setBulkActionBusy(true);
                         try {
-                          await onBulkStatusChange(Array.from(selectedIds), "next_phase_selected");
+                          const idsToAdvance = testedPendingNextPhase.map((c) => c.id);
+                          await onBulkStatusChange(idsToAdvance, "next_phase_selected");
                           setCelebrationState({
                             show: true,
                             variant: "next_phase",
                             title: t(
-                              `${selectedIds.size} Candidates Advanced to Next Phase!`,
-                              `${selectedIds.size} Candidatos Avançados para a Próxima Fase!`,
+                              `${idsToAdvance.length} Candidate(s) Advanced to Next Phase!`,
+                              `${idsToAdvance.length} Candidato(s) Avançado(s) para a Próxima Fase!`,
                             ),
                             subtitle: t(
                               "Candidates are now selected and approved for next-phase training and assessment.",
                               "Os candidatos foram selecionados e aprovados para a convocatória da próxima fase.",
                             ),
                           });
-                          setSelectedIds(new Set());
+                          setSelectedIds((prev) => {
+                            const next = new Set(prev);
+                            idsToAdvance.forEach((id) => next.delete(id));
+                            return next;
+                          });
                         } finally {
                           setBulkActionBusy(false);
                         }
@@ -895,12 +983,16 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                     className="px-2.5 py-1 rounded bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-semibold transition-colors inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
                   >
                     <Award size={13} />
-                    <span>{t("Advance to Next Phase", "Avançar p/ Próx. Fase")}</span>
+                    <span>
+                      {testedPendingNextPhase.length === selectedIds.size
+                        ? t("Advance to Next Phase", "Avançar p/ Próx. Fase")
+                        : `${t("Advance to Next Phase", "Avançar p/ Próx. Fase")} (${testedPendingNextPhase.length})`}
+                    </span>
                   </button>
                 )}
 
-                {/* 3. Advance to Interview (logical next action for Confirmed or Next Phase candidates) */}
-                {(hasConfirmedCandidate || hasNextPhaseCandidate || (!hasTesting && !isAllInitialStage)) && (
+                {/* 3. Advance to Interview (for candidates in Next Phase or Confirmed) */}
+                {readyForInterview.length > 0 && (
                   <button
                     type="button"
                     disabled={bulkActionBusy}
@@ -908,20 +1000,25 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                       if (onBulkStatusChange) {
                         setBulkActionBusy(true);
                         try {
-                          await onBulkStatusChange(Array.from(selectedIds), "interview");
+                          const idsToInterview = readyForInterview.map((c) => c.id);
+                          await onBulkStatusChange(idsToInterview, "interview");
                           setCelebrationState({
                             show: true,
                             variant: "next_phase",
                             title: t(
-                              `${selectedIds.size} Candidates Advanced to Interview!`,
-                              `${selectedIds.size} Candidatos Convocados para Entrevista!`,
+                              `${idsToInterview.length} Candidate(s) Advanced to Interview!`,
+                              `${idsToInterview.length} Candidato(s) Convocado(s) para Entrevista!`,
                             ),
                             subtitle: t(
                               "Candidates are now placed in the interview pipeline for evaluation.",
                               "Os candidatos estão agora na etapa de entrevistas presenciais para avaliação.",
                             ),
                           });
-                          setSelectedIds(new Set());
+                          setSelectedIds((prev) => {
+                            const next = new Set(prev);
+                            idsToInterview.forEach((id) => next.delete(id));
+                            return next;
+                          });
                         } finally {
                           setBulkActionBusy(false);
                         }
@@ -930,7 +1027,11 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                     className="px-2.5 py-1 rounded bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-semibold transition-colors inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
                   >
                     <CalendarCheck size={13} />
-                    <span>{t("Advance to Interview", "Convocar para Entrevista")}</span>
+                    <span>
+                      {readyForInterview.length === selectedIds.size
+                        ? t("Advance to Interview", "Convocar para Entrevista")
+                        : `${t("Advance to Interview", "Convocar para Entrevista")} (${readyForInterview.length})`}
+                    </span>
                   </button>
                 )}
 
@@ -996,7 +1097,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                 </div>
 
                 {/* 6. Decline Candidates Outside Mozambique - only visible if any selected candidate is outside MZ */}
-                {hasOutsideLocation && (
+                {outsideLocationCandidates.length > 0 && (
                   <button
                     type="button"
                     disabled={bulkActionBusy}
@@ -1005,7 +1106,11 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                     title={t("Decline selected candidates based outside Mozambique or deployment zone", "Recusar candidatos com base fora da área")}
                   >
                     <Globe size={13} />
-                    <span>{t("Decline Outside MZ", "Recusar Fora de Moçambique")}</span>
+                    <span>
+                      {outsideLocationCandidates.length === selectedIds.size
+                        ? t("Decline Outside MZ", "Recusar Fora de Moçambique")
+                        : `${t("Decline Outside MZ", "Recusar Fora de Moçambique")} (${outsideLocationCandidates.length})`}
+                    </span>
                   </button>
                 )}
 
@@ -1234,16 +1339,18 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                 <th className="px-4 py-2.5">{t("Date Applied", "Data")}</th>
                 <th className="px-4 py-2.5">{t("Stage", "Estado")}</th>
                 <th className="px-4 py-2.5">{t("Technical Match", "Match Técnico")}</th>
-                {hasTesting && (
+                {activeView === "archived" ? (
+                  <th className="px-4 py-2.5">{t("Reason for Archive", "Motivo do Arquivo")}</th>
+                ) : hasTesting ? (
                   <th className="px-4 py-2.5">{t("Test Score", "Pontuação Teste")}</th>
-                )}
+                ) : null}
                 <th className="px-4 py-2.5 text-right">{t("Action", "Ação")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
               {paginatedCandidates.length === 0 ? (
                 <tr>
-                  <td colSpan={hasTesting ? 9 : 8} className="text-center py-12 text-slate-400 text-xs">
+                  <td colSpan={activeView === "archived" || hasTesting ? 9 : 8} className="text-center py-12 text-slate-400 text-xs">
                     {activeView === "tested" ? (
                       <div className="max-w-md mx-auto py-4 space-y-3">
                         <div className="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-200 text-sky-600 flex items-center justify-center mx-auto shadow-2xs">
@@ -1367,8 +1474,22 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                         )}
                       </td>
 
-                      {/* Testing Stage Test Score (Exam / Practical) */}
-                      {hasTesting && (
+                      {/* Reason for Archive (when in Archived view) or Test Score */}
+                      {activeView === "archived" ? (
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          {(() => {
+                            const reason = getDynamicArchiveReason(candidate);
+                            return (
+                              <span
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.7rem] font-medium bg-slate-100 text-slate-700 border border-slate-200 max-w-[240px] truncate"
+                                title={reason}
+                              >
+                                {reason}
+                              </span>
+                            );
+                          })()}
+                        </td>
+                      ) : hasTesting ? (
                         <td className="px-4 py-3 whitespace-nowrap font-mono">
                           {typeof candidate.testScore === "number" ? (
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-[0.68rem] font-bold bg-slate-100 text-slate-800 border border-slate-200">
@@ -1378,7 +1499,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                             <span className="text-slate-300 text-xs">—</span>
                           )}
                         </td>
-                      )}
+                      ) : null}
 
                       <td className="px-4 py-3 text-right whitespace-nowrap">
                         <div className="inline-flex items-center gap-1.5 justify-end">
@@ -1523,8 +1644,20 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                 <option value="Outside Maputo Region">{t("Outside Maputo Region (Beira, Nampula, etc.)", "Fora da Região de Maputo (Beira, Nampula, etc.)")}</option>
                 <option value="Duplicate">{t("Duplicate Application", "Candidatura Duplicada")}</option>
                 <option value="Recruitment Closed">{t("Recruitment Closed", "Concurso Encerrado")}</option>
-                <option value="Other">{t("Other Reason", "Outro Motivo")}</option>
+                <option value="Other">{t("Other Reason (Custom)", "Outro Motivo (Personalizado)")}</option>
               </select>
+
+              {archiveReason === "Other" && (
+                <div className="mt-2.5">
+                  <input
+                    type="text"
+                    value={customArchiveReason}
+                    onChange={(e) => setCustomArchiveReason(e.target.value)}
+                    placeholder={t("Enter custom archive reason...", "Indique o motivo personalizado do arquivo...")}
+                    className="w-full px-3 py-2 text-xs rounded-md border border-slate-300 text-slate-800 bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
@@ -1543,9 +1676,13 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
                   if (onBulkArchive) {
                     setBulkActionBusy(true);
                     try {
-                      await onBulkArchive(Array.from(selectedIds), archiveReason);
+                      const finalArchiveReason = archiveReason === "Other" && customArchiveReason.trim()
+                        ? customArchiveReason.trim()
+                        : archiveReason;
+                      await onBulkArchive(Array.from(selectedIds), finalArchiveReason);
                       setSelectedIds(new Set());
                       setArchiveModalOpen(false);
+                      setCustomArchiveReason("");
                       if (onRefresh) await onRefresh();
                     } finally {
                       setBulkActionBusy(false);
