@@ -252,8 +252,22 @@ export default function RichMessageEditor({
 
   const handleInsertVariable = (varCode: string) => {
     if (editorMode === "visual") {
-      restoreSelection(); document.execCommand("insertText", false, varCode);
-      rememberSelection(); handleContentChange();
+      restoreSelection();
+      const editor = editorRef.current;
+      if (editor) {
+        editor.focus();
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0 || !editor.contains(sel.anchorNode)) {
+          const range = document.createRange();
+          range.selectNodeContents(editor);
+          range.collapse(false);
+          sel?.removeAllRanges();
+          sel?.addRange(range);
+        }
+      }
+      document.execCommand("insertText", false, varCode);
+      rememberSelection();
+      handleContentChange();
     } else {
       const field = rawRef.current;
       const start = field?.selectionStart ?? value.length, end = field?.selectionEnd ?? start;
@@ -266,6 +280,18 @@ export default function RichMessageEditor({
   const handleInsertHtml = (html: string) => {
     if (editorMode === "visual") {
       restoreSelection();
+      const editor = editorRef.current;
+      if (editor) {
+        editor.focus();
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0 || !editor.contains(sel.anchorNode)) {
+          const range = document.createRange();
+          range.selectNodeContents(editor);
+          range.collapse(false);
+          sel?.removeAllRanges();
+          sel?.addRange(range);
+        }
+      }
       document.execCommand("insertHTML", false, html);
       rememberSelection();
       handleContentChange();

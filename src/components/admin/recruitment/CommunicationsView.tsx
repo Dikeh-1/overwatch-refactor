@@ -727,25 +727,37 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
     setTimeout(() => setCopiedWhatsApp(false), 3000);
   };
 
-  const insertCustomRsvpButton = useCallback((label: string, action: "confirm" | "decline" | "portal", style: "navy" | "emerald" | "outline") => {
+  const insertCustomRsvpButton = useCallback((label: string, action: "confirm" | "decline" | "portal" | "dual", style: "navy" | "emerald" | "outline" = "navy") => {
     const cleanLabel = (label || "").trim();
-    if (!cleanLabel) return;
-    const bg = style === "emerald" ? "#059669" : style === "navy" ? "#0b1329" : "#ffffff";
-    const text = style === "outline" ? "#334155" : "#ffffff";
-    const border = style === "outline" ? "border:1px solid #cbd5e1;" : "";
-    const choice = action === "decline" ? "no" : "yes";
-    const href = action === "portal"
-      ? "{{next_phase_link}}"
-      : `{{next_phase_link}}?choice=${choice}&responseOption=${encodeURIComponent(cleanLabel)}`;
+    if (!cleanLabel && action !== "dual") return;
 
-    const buttonHtml = `<a data-action-button="true" href="${href}" target="_blank" style="display:inline-block;background-color:${bg};color:${text};${border}padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;margin:8px 4px;">${escapeMailText(cleanLabel)}</a>`;
+    let buttonHtml = "";
+    if (action === "dual") {
+      const yesUrl = `{{next_phase_link}}?choice=yes`;
+      const noUrl = `{{next_phase_link}}?choice=no`;
+      const yesBtn = `<a data-action-button="true" href="${yesUrl}" target="_blank" style="display:inline-block;background-color:#059669;color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px;margin-right:12px;">${emailLang === "en" ? "Yes, Confirm Attendance" : "Sim, Confirmar Presença"} →</a>`;
+      const noBtn = `<a data-action-button="true" href="${noUrl}" target="_blank" style="display:inline-block;background-color:#ffffff;color:#475569;border:1px solid #cbd5e1;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;">${emailLang === "en" ? "Decline / Unavailable" : "Declinar / Indisponível"}</a>`;
+      buttonHtml = `<p style="margin:16px 0;">${yesBtn}${noBtn}</p>`;
+    } else {
+      const bg = style === "emerald" ? "#059669" : style === "navy" ? "#0b1329" : "#ffffff";
+      const text = style === "outline" ? "#334155" : "#ffffff";
+      const border = style === "outline" ? "border:1px solid #cbd5e1;" : "";
+      const choice = action === "decline" ? "no" : "yes";
+      const href = action === "portal"
+        ? "{{next_phase_link}}"
+        : `{{next_phase_link}}?choice=${choice}&responseOption=${encodeURIComponent(cleanLabel)}`;
+
+      buttonHtml = `<p style="margin:16px 0;"><a data-action-button="true" href="${href}" target="_blank" style="display:inline-block;background-color:${bg};color:${text};${border}padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px;">${escapeMailText(cleanLabel)}</a></p>`;
+    }
 
     if (canvasTab === "edit" && editorHandle.current?.insertHtml) {
       editorHandle.current.insertHtml(buttonHtml);
     } else {
       setMessageBody(prev => prev ? `${prev}\n\n${buttonHtml}` : buttonHtml);
     }
-  }, [canvasTab]);
+
+    setDeliveryNotice(t(`Inserted "${cleanLabel || "RSVP Buttons"}" into email draft`, `Botão "${cleanLabel || "Botões RSVP"}" inserido na minuta do email`));
+  }, [canvasTab, emailLang, t]);
 
   const advisorDiagnostics = useMemo(() => {
     const diagnostics: Array<{
@@ -1306,48 +1318,68 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                 title={t("Create and insert custom RSVP buttons into your email", "Criar e inserir botões RSVP personalizados no email")}
               >
                 <Plus size={13} />
-                <span>{t("+ Create Custom RSVP", "+ Criar Botão RSVP")}</span>
+                <span>{t("Create Custom RSVP", "Criar Botão RSVP")}</span>
               </button>
             </div>
 
-            {/* Quick RSVP Button Bar */}
-            <div className="rounded-lg bg-slate-50 border border-slate-200/80 p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-700">
-                  {t("Interactive Next Phase RSVP Buttons:", "Botões Interativos de RSVP (Próxima Fase):")}
+            {/* Interactive RSVP Action Buttons Section */}
+            <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-3.5 space-y-2.5">
+              <div>
+                <span className="text-xs font-bold text-slate-800 block">
+                  {t("Interactive Candidate Response Buttons", "Botões Interativos de Resposta (RSVP)")}
                 </span>
-                <span className="text-[10px] text-slate-400">{t("One-click insert", "Inserção com 1 clique")}</span>
+                <span className="text-[10px] text-slate-500">
+                  {t("Click any button below to embed it into the email at your cursor position:", "Clique para inserir o botão diretamente na mensagem:")}
+                </span>
               </div>
-              <div className="flex flex-wrap gap-1.5">
+
+              <div className="flex flex-wrap gap-2 pt-0.5">
                 <button
                   type="button"
                   onClick={() => insertCustomRsvpButton(t("Confirm Attendance", "Confirmar Presença"), "confirm", "emerald")}
-                  className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold transition-colors shadow-2xs cursor-pointer flex items-center gap-1"
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
+                  title={t("Inserts a green confirmation button. Automatically records confirmation when clicked.", "Insere botão de confirmação. Regista confirmação automaticamente.")}
                 >
-                  <Check size={12} />
-                  <span>{t("Confirm Presence (Green)", "Confirmar Presença (Verde)")}</span>
+                  <Check size={13} />
+                  <span>{t("Confirm Attendance", "Confirmar Presença")}</span>
                 </button>
+
                 <button
                   type="button"
                   onClick={() => insertCustomRsvpButton(t("Confirm In-Person Interview", "Confirmar Entrevista Presencial"), "confirm", "navy")}
-                  className="px-2.5 py-1 rounded-md bg-[#0b1329] hover:bg-slate-800 text-white text-[11px] font-semibold transition-colors shadow-2xs cursor-pointer"
+                  className="px-3 py-1.5 rounded-lg bg-[#0b1329] hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                  title={t("Inserts an interview RSVP button", "Insere botão de confirmação de entrevista")}
                 >
-                  {t("Confirm Interview (Navy)", "Confirmar Entrevista (Navy)")}
+                  {t("Confirm Interview", "Confirmar Entrevista")}
                 </button>
+
                 <button
                   type="button"
                   onClick={() => insertCustomRsvpButton(t("Accept Training Terms", "Aceitar Termos da Formação"), "confirm", "navy")}
-                  className="px-2.5 py-1 rounded-md bg-[#0b1329] hover:bg-slate-800 text-white text-[11px] font-semibold transition-colors shadow-2xs cursor-pointer"
+                  className="px-3 py-1.5 rounded-lg bg-[#0b1329] hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                  title={t("Inserts training acceptance button", "Insere botão de aceitação de formação")}
                 >
-                  {t("Accept Training (Navy)", "Aceitar Formação (Navy)")}
+                  {t("Accept Training", "Aceitar Formação")}
                 </button>
+
                 <button
                   type="button"
-                  onClick={() => insertCustomRsvpButton(t("Decline / Reschedule", "Declinar / Outro Horário"), "decline", "outline")}
-                  className="px-2.5 py-1 rounded-md bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-[11px] font-medium transition-colors shadow-2xs cursor-pointer"
+                  onClick={() => insertCustomRsvpButton("", "dual")}
+                  className="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-semibold transition-all shadow-2xs cursor-pointer flex items-center gap-1"
+                  title={t("Inserts two side-by-side buttons: Yes (Confirm) and Decline", "Insere par de botões lado a lado: Sim (Confirmar) e Recusar")}
                 >
-                  {t("Decline / Other Time (Outline)", "Declinar / Outro Horário")}
+                  <span>{t("Dual Choice (Yes / No)", "Botões Duplos (Sim / Não)")}</span>
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => insertCustomRsvpButton(t("Decline / Unavailable", "Declinar / Indisponível"), "decline", "outline")}
+                  className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-600 border border-slate-300 text-xs font-medium transition-all shadow-2xs cursor-pointer"
+                  title={t("Inserts subtle decline option", "Insere opção discreta de recusa")}
+                >
+                  {t("Decline", "Declinar")}
+                </button>
+
                 <button
                   type="button"
                   onClick={() => {
@@ -1356,18 +1388,19 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                     setCustomRsvpStyle("navy");
                     setCustomRsvpModalOpen(true);
                   }}
-                  className="px-2 py-1 rounded-md border border-dashed border-sky-400 bg-white hover:bg-sky-50 text-sky-700 text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1"
+                  className="px-2.5 py-1.5 rounded-lg border border-dashed border-sky-400 bg-sky-50/60 hover:bg-sky-100 text-sky-800 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1"
+                  title={t("Build custom RSVP button with your own wording", "Criar botão RSVP com texto personalizado")}
                 >
-                  <Plus size={11} />
+                  <Plus size={12} />
                   <span>{t("Custom...", "Personalizado...")}</span>
                 </button>
               </div>
             </div>
 
-            {/* Standard Variable Chips */}
-            <div className="space-y-1.5">
-              <span className="text-[11px] font-semibold text-slate-700">
-                {t("Standard Personalized Fields:", "Campos Dinâmicos Padrão:")}
+            {/* Standard Variable Chips Section */}
+            <div className="space-y-1.5 pt-1">
+              <span className="text-[11px] font-semibold text-slate-700 block">
+                {t("Standard Personalized Candidate Tokens:", "Campos Dinâmicos do Candidato:")}
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {[
@@ -1561,7 +1594,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
         {/* ========================================================================= */}
         {/* RIGHT COLUMN: THE OFFICIAL OVERWATCH COMMUNICATIONS STUDIO CANVAS (7 cols) */}
         {/* ========================================================================= */}
-        <div className="lg:col-span-7 space-y-4">
+        <div className={`lg:col-span-7 space-y-4 lg:sticky ${fixedRecipient ? "lg:top-[164px]" : "lg:top-[158px]"} self-start lg:max-h-[calc(100vh-175px)] lg:overflow-y-auto admin-scrollbar`}>
           {/* Main Studio Canvas Container */}
           <div
             onDragOver={(e) => {
