@@ -151,9 +151,9 @@ test('matchScoresToCandidates matches by email, phone, and name with strict anti
 
   // 3 rejected/flagged entries: duplicate in file, ambiguous name, and unknown candidate
   assert.equal(unmatched.length, 3);
-  assert.match(unmatched[0].reason, /Duplicação no ficheiro/);
-  assert.match(unmatched[1].reason, /Ambiguidade/);
-  assert.match(unmatched[2].reason, /Candidato não encontrado/);
+  assert.match(unmatched[0].reason, /Duplicate in file|Duplicação no ficheiro/i);
+  assert.match(unmatched[1].reason, /Ambiguity|Ambiguidade/i);
+  assert.match(unmatched[2].reason, /not found|não encontrado/i);
 });
 
 test('upload-test-scores route performs preview and commits scores and next phase transition with demotion safeguards', async () => {

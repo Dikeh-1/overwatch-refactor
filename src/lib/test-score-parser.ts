@@ -371,8 +371,10 @@ export async function parseScoresFile(
 export function matchScoresToCandidates(
   records: ParsedScoreRecord[],
   candidates: Application[],
-  allDatabaseCandidates?: Application[]
+  allDatabaseCandidates?: Application[],
+  lang: "pt" | "en" = "en"
 ): MatchResults {
+  const loc = (en: string, pt: string) => (lang === "pt" ? pt : en);
   const matched: CandidateMatch[] = [];
   const unmatched: UnmatchedRecord[] = [];
   const matchedCandidateIds = new Set<string>();
@@ -391,7 +393,10 @@ export function matchScoresToCandidates(
       if (seenFileEmails.has(emailLower)) {
         unmatched.push({
           record,
-          reason: `Duplicação no ficheiro (Linha ${rowNum}): O email "${record.email}" aparece mais de uma vez no documento. Apenas a primeira entrada foi considerada.`,
+          reason: loc(
+            `Duplicate in file (Row ${rowNum}): Email "${record.email}" appears more than once. Only the first entry was processed.`,
+            `Duplicação no ficheiro (Linha ${rowNum}): O email "${record.email}" aparece mais de uma vez no documento. Apenas a primeira entrada foi considerada.`
+          ),
         });
         continue;
       }
@@ -404,7 +409,10 @@ export function matchScoresToCandidates(
         if (seenFilePhones.has(phoneNorm)) {
           unmatched.push({
             record,
-            reason: `Duplicação no ficheiro (Linha ${rowNum}): O contacto "${record.phone}" aparece mais de uma vez no documento. Apenas a primeira entrada foi considerada.`,
+            reason: loc(
+              `Duplicate in file (Row ${rowNum}): Contact "${record.phone}" appears more than once. Only the first entry was processed.`,
+              `Duplicação no ficheiro (Linha ${rowNum}): O contacto "${record.phone}" aparece mais de uma vez no documento. Apenas a primeira entrada foi considerada.`
+            ),
           });
           continue;
         }
@@ -429,7 +437,10 @@ export function matchScoresToCandidates(
         if (matchedCandidateIds.has(cand.id)) {
           unmatched.push({
             record,
-            reason: `Conflito de duplicação: O candidato "${cand.name}" já foi associado a outra linha anterior neste ficheiro.`,
+            reason: loc(
+              `Duplicate conflict: Candidate "${cand.name}" was already assigned to a previous row.`,
+              `Conflito de duplicação: O candidato "${cand.name}" já foi associado a outra linha anterior neste ficheiro.`
+            ),
           });
           continue;
         }
@@ -439,12 +450,18 @@ export function matchScoresToCandidates(
         // Check if name had a typo in the file
         if (record.name && normalizeText(record.name) !== normalizeText(cand.name)) {
           hasCorrection = true;
-          correctionDetail = `Nome corrigido pela BD: "${cand.name}" (ficheiro continha "${record.name}")`;
+          correctionDetail = loc(
+            `Name corrected from DB: "${cand.name}" (file contained "${record.name}")`,
+            `Nome corrigido pela BD: "${cand.name}" (ficheiro continha "${record.name}")`
+          );
         }
       } else if (emailMatches.length > 1) {
         unmatched.push({
           record,
-          reason: `Ambiguidade no email: Existem ${emailMatches.length} candidaturas com o email "${record.email}" no funil.`,
+          reason: loc(
+            `Email ambiguity: Multiple applications exist for email "${record.email}".`,
+            `Ambiguidade no email: Existem ${emailMatches.length} candidaturas com o email "${record.email}" no funil.`
+          ),
         });
         continue;
       }
@@ -464,7 +481,10 @@ export function matchScoresToCandidates(
           if (matchedCandidateIds.has(cand.id)) {
             unmatched.push({
               record,
-              reason: `Conflito de duplicação: O candidato "${cand.name}" já foi associado a outra linha anterior neste ficheiro.`,
+              reason: loc(
+                `Duplicate conflict: Candidate "${cand.name}" was already assigned to a previous row.`,
+                `Conflito de duplicação: O candidato "${cand.name}" já foi associado a outra linha anterior neste ficheiro.`
+              ),
             });
             continue;
           }
@@ -473,15 +493,24 @@ export function matchScoresToCandidates(
 
           if (record.email && cand.email && record.email.toLowerCase().trim() !== cand.email.toLowerCase().trim()) {
             hasCorrection = true;
-            correctionDetail = `Email corrigido pela BD: "${cand.email}" (ficheiro continha erro "${record.email}")`;
+            correctionDetail = loc(
+              `Email corrected from DB: "${cand.email}" (file contained typo "${record.email}")`,
+              `Email corrigido pela BD: "${cand.email}" (ficheiro continha erro "${record.email}")`
+            );
           } else if (record.name && normalizeText(record.name) !== normalizeText(cand.name)) {
             hasCorrection = true;
-            correctionDetail = `Nome corrigido pela BD: "${cand.name}" (ficheiro continha erro "${record.name}")`;
+            correctionDetail = loc(
+              `Name corrected from DB: "${cand.name}" (file contained typo "${record.name}")`,
+              `Nome corrigido pela BD: "${cand.name}" (ficheiro continha erro "${record.name}")`
+            );
           }
         } else if (phoneMatches.length > 1) {
           unmatched.push({
             record,
-            reason: `Ambiguidade no telefone: ${phoneMatches.length} candidatos têm o contacto "${record.phone}".`,
+            reason: loc(
+              `Phone ambiguity: Multiple candidates have contact "${record.phone}".`,
+              `Ambiguidade no telefone: ${phoneMatches.length} candidatos têm o contacto "${record.phone}".`
+            ),
           });
           continue;
         }
@@ -499,7 +528,10 @@ export function matchScoresToCandidates(
           if (matchedCandidateIds.has(cand.id)) {
             unmatched.push({
               record,
-              reason: `Conflito de duplicação: O candidato "${cand.name}" já foi associado a outra linha anterior neste ficheiro.`,
+              reason: loc(
+                `Duplicate conflict: Candidate "${cand.name}" was already assigned to a previous row.`,
+                `Conflito de duplicação: O candidato "${cand.name}" já foi associado a outra linha anterior neste ficheiro.`
+              ),
             });
             continue;
           }
@@ -508,13 +540,19 @@ export function matchScoresToCandidates(
 
           if (record.email && cand.email && record.email.toLowerCase().trim() !== cand.email.toLowerCase().trim()) {
             hasCorrection = true;
-            correctionDetail = `Email corrigido pela BD: "${cand.email}" (ficheiro continha "${record.email}")`;
+            correctionDetail = loc(
+              `Email corrected from DB: "${cand.email}" (file contained "${record.email}")`,
+              `Email corrigido pela BD: "${cand.email}" (ficheiro continha "${record.email}")`
+            );
           }
         } else if (exactMatches.length > 1) {
           // Strict Anti-Mixing Guard: do NOT pick arbitrarily!
           unmatched.push({
             record,
-            reason: `Ambiguidade de nome: Existem ${exactMatches.length} candidatos com o nome exato "${record.name}" neste ciclo/funil (${exactMatches.map((c) => c.email || c.whatsapp).join(", ")}). É necessário indicar o email ou contacto na folha para evitar misturar notas.`,
+            reason: loc(
+              `Name ambiguity: Multiple candidates share the exact name "${record.name}". Please provide email or phone.`,
+              `Ambiguidade de nome: Existem ${exactMatches.length} candidatos com o nome exato "${record.name}" neste ciclo/funil. É necessário indicar o email ou contacto na folha para evitar misturar notas.`
+            ),
           });
           continue;
         }
@@ -544,7 +582,10 @@ export function matchScoresToCandidates(
           if (matchedCandidateIds.has(cand.id)) {
             unmatched.push({
               record,
-              reason: `Conflito de duplicação: O candidato "${cand.name}" já foi associado a outra linha anterior neste ficheiro.`,
+              reason: loc(
+                `Duplicate conflict: Candidate "${cand.name}" was already assigned to a previous row.`,
+                `Conflito de duplicação: O candidato "${cand.name}" já foi associado a outra linha anterior neste ficheiro.`
+              ),
             });
             continue;
           }
@@ -552,12 +593,18 @@ export function matchScoresToCandidates(
           matchType = "name_fuzzy";
 
           hasCorrection = true;
-          correctionDetail = `Nome aproximado validado pela BD: "${cand.name}" (ficheiro continha "${record.name}")`;
+          correctionDetail = loc(
+            `Approximate name validated from DB: "${cand.name}" (file contained "${record.name}")`,
+            `Nome aproximado validado pela BD: "${cand.name}" (ficheiro continha "${record.name}")`
+          );
         } else if (fuzzyMatches.length > 1) {
           // Strict Anti-Mixing Guard: do NOT pick arbitrarily!
           unmatched.push({
             record,
-            reason: `Ambiguidade de nome: Múltiplos candidatos têm o primeiro e último nome correspondentes (${fuzzyMatches.map((c) => c.name).join(", ")}). Adicione o email ou telefone para desambiguar e garantir que as notas não são trocadas.`,
+            reason: loc(
+              `Name ambiguity: Multiple candidates share similar first and last names. Please add email or phone.`,
+              `Ambiguidade de nome: Múltiplos candidatos têm o primeiro e último nome correspondentes. Adicione o email ou telefone para desambiguar.`
+            ),
           });
           continue;
         }
@@ -578,14 +625,20 @@ export function matchScoresToCandidates(
           if (matchedCandidateIds.has(cand.id)) {
             unmatched.push({
               record,
-              reason: `Conflito de duplicação: O candidato "${cand.name}" já foi associado a outra linha anterior neste ficheiro.`,
+              reason: loc(
+                `Duplicate conflict: Candidate "${cand.name}" was already assigned to a previous row.`,
+                `Conflito de duplicação: O candidato "${cand.name}" já foi associado a outra linha anterior neste ficheiro.`
+              ),
             });
             continue;
           }
           matchedCandidate = cand;
           matchType = "name_fuzzy";
           hasCorrection = true;
-          correctionDetail = `Nome aproximado (${Math.round(scored[0].sim * 100)}% de correspondência com "${cand.name}")`;
+          correctionDetail = loc(
+            `Approximate name (${Math.round(scored[0].sim * 100)}% match with "${cand.name}")`,
+            `Nome aproximado (${Math.round(scored[0].sim * 100)}% de correspondência com "${cand.name}")`
+          );
         }
       }
     }
@@ -599,7 +652,10 @@ export function matchScoresToCandidates(
       ) {
         unmatched.push({
           record,
-          reason: `Candidato Desqualificado/Arquivado: "${matchedCandidate.name}" consta no histórico como '${matchedCandidate.status}' (rejeitado/não elegível para provas presenciais).`,
+          reason: loc(
+            `Disqualified/Archived applicant: "${matchedCandidate.name}" is recorded as '${matchedCandidate.status}' (ineligible for physical testing).`,
+            `Candidato Desqualificado/Arquivado: "${matchedCandidate.name}" consta no histórico como '${matchedCandidate.status}' (rejeitado/não elegível para provas presenciais).`
+          ),
         });
         continue;
       }
@@ -616,9 +672,14 @@ export function matchScoresToCandidates(
       });
     } else {
       // Diagnostic check against all database candidates if provided
-      let diagnosticReason = `Candidato não encontrado na base de dados deste ciclo/funil ("${
-        record.name || record.email || record.phone || "linha"
-      }"). Verifique se o candidato pertence a este ciclo e se o nome ou email está correto.`;
+      let diagnosticReason = loc(
+        `Candidate not found in this cycle/pipeline ("${
+          record.name || record.email || record.phone || "row"
+        }"). Please verify candidate spelling or role.`,
+        `Candidato não encontrado na base de dados deste ciclo/funil ("${
+          record.name || record.email || record.phone || "linha"
+        }"). Verifique se o candidato pertence a este ciclo e se o nome ou email está correto.`
+      );
 
       if (allDatabaseCandidates && allDatabaseCandidates.length > 0) {
         const targetEmail = record.email ? record.email.toLowerCase().trim() : null;
@@ -634,11 +695,18 @@ export function matchScoresToCandidates(
 
         if (globalMatch) {
           if (globalMatch.status === "archived" || globalMatch.status === "not_advancing" || globalMatch.status === "rejected") {
-            diagnosticReason = `Candidato Desqualificado/Arquivado: "${globalMatch.name}" consta no histórico como ${globalMatch.status} (não aprovado nesta fase).`;
+            diagnosticReason = loc(
+              `Disqualified/Archived applicant: "${globalMatch.name}" is recorded as '${globalMatch.status}' (ineligible for physical testing).`,
+              `Candidato Desqualificado/Arquivado: "${globalMatch.name}" consta no histórico como ${globalMatch.status} (não aprovado nesta fase).`
+            );
           } else if (globalMatch.role && globalMatch.role !== "cctv_technical_manager") {
-            diagnosticReason = `Fora do funil de testes: "${globalMatch.name}" pertence à função ${
-              globalMatch.role === "cctv" ? "Operador de CCTV (CCO)" : globalMatch.role
-            } e não a esta vaga de Gestor Técnico.`;
+            const roleName = globalMatch.role === "cctv" ? "CCTV Operator (CCO)" : globalMatch.role;
+            diagnosticReason = loc(
+              `Out of pipeline: "${globalMatch.name}" applied for ${roleName} and does not belong to this Technical Manager pipeline.`,
+              `Fora do funil de testes: "${globalMatch.name}" pertence à função ${
+                globalMatch.role === "cctv" ? "Operador de CCTV (CCO)" : globalMatch.role
+              } e não a esta vaga de Gestor Técnico.`
+            );
           }
         }
       }

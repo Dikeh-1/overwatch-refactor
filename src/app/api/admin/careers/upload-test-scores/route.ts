@@ -21,6 +21,7 @@ async function handlePOST(request: Request): Promise<Response> {
     const file = formData.get("file") as File | null;
     const roleId = (formData.get("roleId") as string | null) || undefined;
     const cohortId = (formData.get("cohortId") as string | null) || undefined;
+    const lang = (formData.get("lang") as string | null) === "pt" ? "pt" : "en";
     const commit = formData.get("commit") === "true";
     const advanceIdsJson = formData.get("advanceIds") as string | null;
 
@@ -71,7 +72,7 @@ async function handlePOST(request: Request): Promise<Response> {
     }
 
     // Prioritize active & booked/invited candidates within the scoped cycle/cohort/role
-    const { matched, unmatched } = matchScoresToCandidates(records, targetCandidates, allApps);
+    const { matched, unmatched } = matchScoresToCandidates(records, targetCandidates, allApps, lang);
 
     // 3. Dry-run preview mode
     if (!commit) {

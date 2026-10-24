@@ -5,15 +5,11 @@ import {
   X,
   Upload,
   FileSpreadsheet,
-  FileText,
   CheckCircle2,
-  AlertTriangle,
+  AlertCircle,
   Award,
-  Users,
   ArrowRight,
-  Check,
-  RefreshCw,
-  CopyX,
+  Info,
 } from "lucide-react";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 
@@ -99,6 +95,7 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
     try {
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("lang", lang);
       if (roleId) formData.append("roleId", roleId);
       if (cohortId) formData.append("cohortId", cohortId);
       formData.append("commit", "false"); // dry-run preview
@@ -144,6 +141,7 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
     try {
       const formData = new FormData();
       formData.append("file", selectedFile);
+      formData.append("lang", lang);
       if (roleId) formData.append("roleId", roleId);
       if (cohortId) formData.append("cohortId", cohortId);
       formData.append("commit", "true");
@@ -204,23 +202,21 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 overflow-y-auto"
     >
-      <div className="relative w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden my-8 max-h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/80 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 border border-sky-200">
-              <Upload size={20} />
-            </div>
+      <div className="relative w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden my-8 max-h-[90vh] flex flex-col">
+        {/* Clean, Minimal Header */}
+        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-white shrink-0">
+          <div className="flex items-center gap-2.5">
+            <Upload size={18} className="text-slate-800 shrink-0" />
             <div>
-              <h3 className="text-base font-bold text-slate-900">
+              <h3 className="text-base font-semibold text-slate-900 tracking-tight">
                 {t("Upload Physical Test Scores", "Carregar Notas de Testes Físicos")}
               </h3>
               <p className="text-xs text-slate-500">
                 {t(
-                  "Import results from Excel, CSV, or PDF with automated candidate matching and Next Phase advancement",
-                  "Importe notas de Excel, CSV ou PDF com correspondência automática e avanço para a Próxima Fase"
+                  "Import results from Excel, CSV, or PDF with automated verification",
+                  "Importe notas de Excel, CSV ou PDF com verificação automática"
                 )}
               </p>
             </div>
@@ -228,37 +224,37 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+            className="rounded-lg p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
             title={t("Close", "Fechar")}
           >
-            <X size={18} />
+            <X size={17} />
           </button>
         </div>
 
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto flex-1 space-y-4">
           {error && (
-            <div className="p-3.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-xs flex items-center gap-2.5">
-              <AlertTriangle size={16} className="shrink-0 text-rose-600" />
+            <div className="p-3 rounded-lg border border-slate-300 bg-slate-50 text-slate-800 text-xs flex items-center gap-2">
+              <AlertCircle size={15} className="shrink-0 text-slate-600" />
               <div className="flex-1">{error}</div>
             </div>
           )}
 
-          {/* STEP 3: SUCCESS CONFIRMATION */}
+          {/* SUCCESS SCREEN */}
           {committedSuccess && (
             <div className="py-8 text-center space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-emerald-100 border border-emerald-300 text-emerald-700 flex items-center justify-center mx-auto shadow-xs">
-                <CheckCircle2 size={32} />
+              <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 text-slate-800 flex items-center justify-center mx-auto shadow-2xs">
+                <CheckCircle2 size={24} />
               </div>
               <div className="space-y-1">
-                <h4 className="text-lg font-bold text-slate-900">
-                  {t("Scores Successfully Applied!", "Notas Registadas com Sucesso!")}
+                <h4 className="text-base font-semibold text-slate-900">
+                  {t("Scores Successfully Applied", "Notas Registadas com Sucesso")}
                 </h4>
-                <p className="text-xs text-slate-600 max-w-md mx-auto">
+                <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
                   {t(
                     `Updated test scores for ${committedSuccess.count} candidates (marked Present). ${
                       committedSuccess.advancedCount > 0
-                        ? `${committedSuccess.advancedCount} candidates were pushed to the Next Phase. `
+                        ? `${committedSuccess.advancedCount} candidates were advanced to Next Phase. `
                         : ""
                     }${
                       committedSuccess.absentCount && committedSuccess.absentCount > 0
@@ -282,7 +278,7 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-xs transition-colors cursor-pointer"
                 >
                   {t("Done & View Candidates", "Concluir e Ver Candidatos")}
                 </button>
@@ -290,7 +286,7 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
             </div>
           )}
 
-          {/* STEP 1: DROPZONE (When no preview yet) */}
+          {/* STEP 1: DROPZONE */}
           {!committedSuccess && !previewData && (
             <div className="space-y-4">
               <div
@@ -306,10 +302,10 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
                   if (file) handleFileSelected(file);
                 }}
                 onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${
+                className={`border border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
                   dragOver
-                    ? "border-sky-500 bg-sky-50/50"
-                    : "border-slate-300 hover:border-sky-400 bg-slate-50/50 hover:bg-sky-50/20"
+                    ? "border-slate-500 bg-slate-50"
+                    : "border-slate-300 hover:border-slate-400 bg-slate-50/50 hover:bg-slate-50"
                 }`}
               >
                 <input
@@ -331,19 +327,18 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    <div className="flex justify-center gap-2 text-slate-400">
-                      <FileSpreadsheet size={32} className="text-emerald-600" />
-                      <FileText size={32} className="text-sky-600" />
+                  <div className="space-y-2.5">
+                    <div className="flex justify-center text-slate-400">
+                      <FileSpreadsheet size={28} className="text-slate-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-slate-800">
+                      <p className="text-xs font-semibold text-slate-800">
                         {t(
                           "Click to browse or drag and drop your file here",
                           "Clique para procurar ou arraste o ficheiro para aqui"
                         )}
                       </p>
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-[11px] text-slate-500 mt-0.5">
                         {t(
                           "Supports Excel (.xlsx, .xls), CSV (.csv), or PDF (.pdf)",
                           "Suporta Excel (.xlsx, .xls), CSV (.csv) ou PDF (.pdf)"
@@ -351,80 +346,46 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
                       </p>
                     </div>
 
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-slate-200 text-[11px] font-medium text-slate-600 shadow-2xs">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white border border-slate-200 text-[11px] text-slate-600">
                       <span>{t("Recognized columns (EN & PT):", "Colunas reconhecidas (PT & EN):")}</span>
-                      <strong className="text-slate-900">Nome / Email / WhatsApp</strong> · <strong className="text-slate-900">Nota / Score</strong> · <strong className="text-slate-900">Decisão / Próxima Fase</strong>
+                      <strong className="text-slate-800">Name / Email / Phone</strong> · <strong className="text-slate-800">Score / Grade</strong> · <strong className="text-slate-800">Decision / Next Phase</strong>
                     </div>
                   </div>
                 )}
-              </div>
-
-              {/* Safeguards & Format guidance box */}
-              <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 text-xs text-slate-600 space-y-2">
-                <p className="font-semibold text-slate-800 flex items-center gap-1.5">
-                  <CheckCircle2 size={14} className="text-emerald-600" />
-                  <span>{t("Strict Anti-Error & Anti-Collision Safeguards:", "Proteções Estritas Contra Erros e Mistura de Notas:")}</span>
-                </p>
-                <ul className="list-disc list-inside space-y-1 text-slate-600">
-                  <li>
-                    {t(
-                      "Multi-Tier Identity Matching: Email exact match first, followed by WhatsApp/Phone, then exact and tokenized Name.",
-                      "Correspondência por Níveis: Primeiro por Email exato, depois WhatsApp/Contacto, e por fim Nome completo."
-                    )}
-                  </li>
-                  <li>
-                    {t(
-                      "Anti-Mixing Protection: If multiple candidates share an ambiguous name, the row is flagged so scores are never mixed up.",
-                      "Proteção contra Mistura: Se houver candidatos com nomes semelhantes no ciclo, o sistema bloqueia e exige email/telefone para não trocar notas."
-                    )}
-                  </li>
-                  <li>
-                    {t(
-                      "Duplicate Detection: Prevents duplicate rows or duplicate scores from overwriting candidates in the same document.",
-                      "Deteção de Duplicados: Impede que linhas duplicadas no mesmo ficheiro sobrescrevam notas indevidamente."
-                    )}
-                  </li>
-                  <li>
-                    {t(
-                      "Document-Driven Selection: Recognizes 'Próxima Fase', 'Aprovado', 'Pass', or 'Selected' columns in PT & EN to auto-advance candidates.",
-                      "Seleção pelo Documento: Reconhece colunas de 'Próxima Fase', 'Aprovado' ou 'Selected' em PT e EN para avançar automaticamente."
-                    )}
-                  </li>
-                </ul>
               </div>
             </div>
           )}
 
           {/* STEP 2: PREVIEW & VERIFICATION TABLE */}
           {!committedSuccess && previewData && (
-            <div className="space-y-4">
-              {/* File stats card */}
-              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-2.5">
-                  <FileSpreadsheet size={18} className="text-sky-600 shrink-0" />
+            <div className="space-y-3.5">
+              {/* Minimal Clean Stats Bar */}
+              <div className="p-3 bg-white border border-slate-200 rounded-xl flex flex-wrap items-center justify-between gap-2.5 text-xs">
+                <div className="flex items-center gap-2">
+                  <FileSpreadsheet size={16} className="text-slate-600 shrink-0" />
                   <div>
-                    <span className="font-bold text-slate-900 block truncate max-w-xs">
+                    <span className="font-semibold text-slate-900 block truncate max-w-xs">
                       {previewData.fileName}
                     </span>
                     <span className="text-slate-500 text-[11px]">
-                      {previewData.totalRecords} {t("records read in document", "registos lidos no ficheiro")}
+                      {previewData.totalRecords} {t("records found", "registos lidos")}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2.5">
-                  <span className="px-2.5 py-1 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300 font-semibold">
-                    ✓ {previewData.matched.length} {t("Matched", "Correspondidos")}
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800 border border-slate-200">
+                    {previewData.matched.length} {t("Matched", "Correspondidos")}
                   </span>
                   {previewData.unmatched.length > 0 && (
-                    <span className="px-2.5 py-1 rounded-md bg-amber-100 text-amber-800 border border-amber-300 font-semibold">
-                      ⚠ {previewData.unmatched.length} {t("Warnings / Unmatched", "Avisos / Não associados")}
+                    <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-50 text-slate-600 border border-slate-200">
+                      {previewData.unmatched.length} {t("Ineligible / Unmatched", "Não elegíveis / Não encontrados")}
                     </span>
                   )}
                   <button
                     type="button"
                     onClick={handleReset}
-                    className="text-slate-600 hover:text-slate-900 text-xs underline cursor-pointer ml-1"
+                    className="text-slate-500 hover:text-slate-900 text-xs underline cursor-pointer ml-1"
                   >
                     {t("Change file", "Mudar ficheiro")}
                   </button>
@@ -432,10 +393,10 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
               </div>
 
               {/* Matched candidates table */}
-              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
-                <div className="px-4 py-2.5 bg-slate-100 border-b border-slate-200 flex items-center justify-between">
-                  <span className="font-bold text-xs text-slate-800">
-                    {t("Matched Candidates & Scores to Apply", "Candidatos Correspondidos e Notas a Aplicar")}
+              <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs">
+                <div className="px-4 py-2 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between">
+                  <span className="font-semibold text-xs text-slate-800">
+                    {t("Matched Candidates", "Candidatos Correspondidos")}
                   </span>
 
                   {/* Bulk advance toggle */}
@@ -447,9 +408,9 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
                         selectedToAdvance.size === previewData.matched.length
                       }
                       onChange={toggleSelectAllAdvance}
-                      className="rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                      className="rounded border-slate-300 text-slate-900 focus:ring-slate-900"
                     />
-                    <span>{t("Select all to advance to Next Phase", "Selecionar todos p/ Próxima Fase")}</span>
+                    <span>{t("Select all for Next Phase", "Selecionar todos p/ Próxima Fase")}</span>
                   </label>
                 </div>
 
@@ -470,20 +431,20 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
                       return (
                         <div
                           key={item.candidateId}
-                          className="px-4 py-2.5 flex items-center justify-between gap-3 hover:bg-slate-50/80 transition-colors"
+                          className="px-4 py-2.5 flex items-center justify-between gap-3 hover:bg-slate-50/60 transition-colors"
                         >
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-slate-900 truncate">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-medium text-slate-900 truncate">
                                 {item.candidateName}
                               </span>
                               {item.documentNextPhase && (
-                                <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold">
-                                  ✓ {t("Selected in Doc", "Selecionado no Doc")}
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                                  {t("Doc: Approved", "Doc: Aprovado")}
                                 </span>
                               )}
                               {isAlreadyAdvanced && (
-                                <span className="px-1.5 py-0.2 rounded bg-sky-100 text-sky-800 border border-sky-300 text-[10px] font-bold">
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
                                   {t("In Next Phase", "Na Próx. Fase")}
                                 </span>
                               )}
@@ -492,34 +453,33 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
                               {item.candidateEmail} {item.candidatePhone ? `· ${item.candidatePhone}` : ""}
                             </span>
                             {item.hasCorrection && item.correctionDetail && (
-                              <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200/70 px-1.5 py-0.5 rounded mt-0.5 inline-block font-medium">
-                                ℹ {item.correctionDetail}
+                              <span className="text-[11px] text-slate-500 block mt-0.5">
+                                • {item.correctionDetail}
                               </span>
                             )}
                           </div>
 
                           {/* Score Pill */}
-                          <div className="flex items-center gap-2 shrink-0">
+                          <div className="flex items-center gap-1.5 shrink-0">
                             <span className="text-slate-400 text-[11px]">
                               {item.currentScore !== null ? `${item.currentScore}%` : "—"} →
                             </span>
-                            <span className="px-2.5 py-1 rounded-md font-mono font-bold text-xs bg-slate-900 text-white">
+                            <span className="px-2 py-0.5 rounded font-mono font-medium text-xs bg-slate-100 text-slate-900 border border-slate-200">
                               {item.newScore}%
                             </span>
                           </div>
 
-                          {/* Next Phase checkbox */}
-                          <div className="shrink-0 pl-2">
+                          {/* Next Phase Button */}
+                          <div className="shrink-0 pl-1">
                             <button
                               type="button"
                               onClick={() => toggleAdvanceCandidate(item.candidateId)}
-                              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all inline-flex items-center gap-1 cursor-pointer border ${
+                              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer border ${
                                 willAdvance || isAlreadyAdvanced
-                                  ? "bg-sky-600 text-white border-sky-600 shadow-2xs"
-                                  : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
+                                  ? "bg-slate-900 text-white border-slate-900 shadow-2xs"
+                                  : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900"
                               }`}
                             >
-                              <Award size={12} />
                               <span>
                                 {willAdvance || isAlreadyAdvanced
                                   ? t("Selected for Next Phase", "Selecionado p/ Próx. Fase")
@@ -534,29 +494,29 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
                 </div>
               </div>
 
-              {/* Unmatched / Safeguard warning accordion */}
+              {/* Minimal Clean Warnings / Ineligible Accordion */}
               {previewData.unmatched.length > 0 && (
-                <details className="border border-amber-200 rounded-xl bg-amber-50/60 p-3 text-xs text-amber-900" open>
-                  <summary className="font-semibold cursor-pointer flex items-center justify-between">
+                <details className="border border-slate-200 rounded-xl bg-slate-50/70 p-3 text-xs text-slate-700" open>
+                  <summary className="font-medium text-slate-800 cursor-pointer flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
-                      <AlertTriangle size={14} className="text-amber-600" />
+                      <Info size={14} className="text-slate-500" />
                       <span>
                         {previewData.unmatched.length}{" "}
                         {t(
-                          "records require attention (duplicates, ambiguities, or not in this cycle)",
-                          "registos requerem atenção (duplicados, ambiguidades ou fora deste ciclo)"
+                          "ineligible or unverified rows (duplicates, out of pipeline, or archived)",
+                          "linhas não elegíveis ou não encontradas"
                         )}
                       </span>
                     </span>
-                    <span className="text-[11px] text-amber-700 underline font-normal">
-                      {t("View details", "Ver detalhes")}
+                    <span className="text-[11px] text-slate-500 underline font-normal">
+                      {t("Toggle details", "Ver detalhes")}
                     </span>
                   </summary>
-                  <div className="mt-2.5 space-y-1.5 pl-2 max-h-36 overflow-y-auto">
+                  <div className="mt-2.5 space-y-1.5 max-h-36 overflow-y-auto">
                     {previewData.unmatched.map((u, i) => (
-                      <div key={i} className="text-[11px] text-amber-900 bg-amber-100/60 p-2 rounded-lg border border-amber-200/80">
-                        <strong className="font-bold">{u.name || u.email || "Item"}</strong>
-                        {u.score !== undefined && ` (${u.score}%)`}: {u.reason}
+                      <div key={i} className="text-[11px] bg-white p-2 rounded-lg border border-slate-200 text-slate-600">
+                        <strong className="font-semibold text-slate-900">{u.name || u.email || "Item"}</strong>
+                        {u.score !== undefined && ` (${u.score}%)`}: <span className="text-slate-500">{u.reason}</span>
                       </div>
                     ))}
                   </div>
@@ -568,12 +528,12 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
 
         {/* Modal Footer */}
         {!committedSuccess && previewData && (
-          <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between bg-slate-50/80 shrink-0">
+          <div className="px-6 py-3.5 border-t border-slate-200 flex items-center justify-between bg-slate-50/80 shrink-0">
             <button
               type="button"
               onClick={handleReset}
               disabled={busy}
-              className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-medium cursor-pointer"
+              className="px-3.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium cursor-pointer"
             >
               {t("Cancel / Re-upload", "Cancelar / Voltar")}
             </button>
@@ -582,7 +542,7 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
               type="button"
               disabled={busy || previewData.matched.length === 0}
               onClick={handleCommit}
-              className="px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-md inline-flex items-center gap-2 cursor-pointer"
+              className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white text-xs font-medium transition-colors shadow-xs inline-flex items-center gap-2 cursor-pointer"
             >
               {busy ? (
                 <>
@@ -598,11 +558,11 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
                     )}
                   </span>
                   {selectedToAdvance.size > 0 && (
-                    <span className="bg-sky-700 px-1.5 py-0.5 rounded text-[10px]">
+                    <span className="bg-slate-800 text-slate-300 text-[10px] px-1.5 py-0.5 rounded font-medium">
                       +{selectedToAdvance.size} {t("to Next Phase", "p/ Próxima Fase")}
                     </span>
                   )}
-                  <ArrowRight size={14} />
+                  <ArrowRight size={13} />
                 </>
               )}
             </button>
