@@ -28,6 +28,8 @@ interface CandidatePreview {
   documentNextPhase?: boolean;
   decisionRaw?: string;
   matchType: "email" | "phone" | "name_exact" | "name_fuzzy";
+  hasCorrection?: boolean;
+  correctionDetail?: string;
 }
 
 interface UnmatchedRow {
@@ -75,6 +77,7 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
   const [committedSuccess, setCommittedSuccess] = useState<{
     count: number;
     advancedCount: number;
+    absentCount?: number;
   } | null>(null);
 
   if (!isOpen) return null;
@@ -159,6 +162,7 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
       setCommittedSuccess({
         count: data.updatedCount || 0,
         advancedCount: (data.candidates || []).filter((c: any) => c.advanced).length,
+        absentCount: data.absentCount || 0,
       });
 
       if (onSuccess) {
@@ -252,14 +256,22 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
                 </h4>
                 <p className="text-xs text-slate-600 max-w-md mx-auto">
                   {t(
-                    `Updated test scores for ${committedSuccess.count} candidates. ${
+                    `Updated test scores for ${committedSuccess.count} candidates (marked Present). ${
                       committedSuccess.advancedCount > 0
-                        ? `${committedSuccess.advancedCount} candidates were pushed to the Next Phase.`
+                        ? `${committedSuccess.advancedCount} candidates were pushed to the Next Phase. `
+                        : ""
+                    }${
+                      committedSuccess.absentCount && committedSuccess.absentCount > 0
+                        ? `${committedSuccess.absentCount} booked candidate(s) who did not attend were marked as Absent.`
                         : ""
                     }`,
-                    `Foram atualizadas as notas de ${committedSuccess.count} candidatos. ${
+                    `Foram atualizadas as notas de ${committedSuccess.count} candidatos (Presentes no Portão). ${
                       committedSuccess.advancedCount > 0
-                        ? `${committedSuccess.advancedCount} candidatos foram avançados para a Próxima Fase.`
+                        ? `${committedSuccess.advancedCount} candidatos foram avançados para a Próxima Fase. `
+                        : ""
+                    }${
+                      committedSuccess.absentCount && committedSuccess.absentCount > 0
+                        ? `${committedSuccess.absentCount} candidato(s) agendados ausentes foram marcados como Ausentes.`
                         : ""
                     }`
                   )}
@@ -479,6 +491,11 @@ export const UploadTestResultsModal: React.FC<UploadTestResultsModalProps> = ({
                             <span className="text-[11px] text-slate-500 truncate block">
                               {item.candidateEmail} {item.candidatePhone ? `· ${item.candidatePhone}` : ""}
                             </span>
+                            {item.hasCorrection && item.correctionDetail && (
+                              <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200/70 px-1.5 py-0.5 rounded mt-0.5 inline-block font-medium">
+                                ℹ {item.correctionDetail}
+                              </span>
+                            )}
                           </div>
 
                           {/* Score Pill */}

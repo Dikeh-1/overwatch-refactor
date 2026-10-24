@@ -18,6 +18,8 @@ export type CandidateMatch = {
   score: number;
   nextPhaseSelected: boolean;
   matchType: "email" | "phone" | "name_exact" | "name_fuzzy";
+  hasCorrection?: boolean;
+  correctionDetail?: string;
 };
 
 export type UnmatchedRecord = {
@@ -42,6 +44,37 @@ export function normalizeText(s?: string | null): string {
     .replace(/[^a-z0-9\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/**
+ * Fast Levenshtein distance string similarity score between 0 and 1
+ */
+export function stringSimilarity(a: string, b: string): number {
+  if (a === b) return 1;
+  if (!a || !b) return 0;
+  const la = a.length,
+    lb = b.length;
+  const maxL = Math.max(la, lb);
+  if (maxL === 0) return 1;
+
+  const matrix: number[][] = [];
+  for (let i = 0; i <= lb; i++) matrix[i] = [i];
+  for (let j = 0; j <= la; j++) matrix[0][j] = j;
+
+  for (let i = 1; i <= lb; i++) {
+    for (let j = 1; j <= la; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+  return 1 - matrix[lb][la] / maxL;
 }
 
 /**
@@ -332,12 +365,13 @@ export async function parseScoresFile(
  * Built-in safeguards:
  * 1. Anti-mixing: If multiple candidates share an identical or ambiguous name, do not guess. Flag ambiguity!
  * 2. Anti-duplication: If the file has multiple rows for the same candidate or duplicate emails/phones, flag duplication!
- * 3. Scope containment: Candidate matches are strictly evaluated within the provided cohort and role candidate set.
- * 4. Next Phase preservation: Records marked as selected in document are carried forward.
+ * 3. Typo-tolerant correction: Recovers candidates when there is a typo in email, phone or name using the available DB record.
+ * 4. Cross-role diagnosis: Distinguishes candidates outside this role/pipeline (e.g. CCO) or archived/disqualified candidates.
  */
 export function matchScoresToCandidates(
   records: ParsedScoreRecord[],
-  candidates: Application[]
+  candidates: Application[],
+  allDatabaseCandidates?: Application[]
 ): MatchResults {
   const matched: CandidateMatch[] = [];
   const unmatched: UnmatchedRecord[] = [];
@@ -380,6 +414,8 @@ export function matchScoresToCandidates(
 
     let matchedCandidate: Application | undefined;
     let matchType: "email" | "phone" | "name_exact" | "name_fuzzy" = "email";
+    let hasCorrection = false;
+    let correctionDetail: string | undefined;
 
     // 1. Match by Email (highest confidence)
     if (record.email) {
@@ -399,6 +435,12 @@ export function matchScoresToCandidates(
         }
         matchedCandidate = cand;
         matchType = "email";
+
+        // Check if name had a typo in the file
+        if (record.name && normalizeText(record.name) !== normalizeText(cand.name)) {
+          hasCorrection = true;
+          correctionDetail = `Nome corrigido pela BD: "${cand.name}" (ficheiro continha "${record.name}")`;
+        }
       } else if (emailMatches.length > 1) {
         unmatched.push({
           record,
@@ -408,7 +450,7 @@ export function matchScoresToCandidates(
       }
     }
 
-    // 2. Match by Phone / WhatsApp
+    // 2. Match by Phone / WhatsApp (helps if email had a typo)
     if (!matchedCandidate && record.phone) {
       const targetPhone = normalizePhone(record.phone);
       if (targetPhone.length >= 8) {
@@ -428,6 +470,14 @@ export function matchScoresToCandidates(
           }
           matchedCandidate = cand;
           matchType = "phone";
+
+          if (record.email && cand.email && record.email.toLowerCase().trim() !== cand.email.toLowerCase().trim()) {
+            hasCorrection = true;
+            correctionDetail = `Email corrigido pela BD: "${cand.email}" (ficheiro continha erro "${record.email}")`;
+          } else if (record.name && normalizeText(record.name) !== normalizeText(cand.name)) {
+            hasCorrection = true;
+            correctionDetail = `Nome corrigido pela BD: "${cand.name}" (ficheiro continha erro "${record.name}")`;
+          }
         } else if (phoneMatches.length > 1) {
           unmatched.push({
             record,
@@ -438,7 +488,7 @@ export function matchScoresToCandidates(
       }
     }
 
-    // 3. Match by Exact Normalized Name
+    // 3. Match by Exact Normalized Name (helps if email had a typo)
     if (!matchedCandidate && record.name) {
       const normInput = normalizeText(record.name);
       if (normInput.length >= 4) {
@@ -455,6 +505,11 @@ export function matchScoresToCandidates(
           }
           matchedCandidate = cand;
           matchType = "name_exact";
+
+          if (record.email && cand.email && record.email.toLowerCase().trim() !== cand.email.toLowerCase().trim()) {
+            hasCorrection = true;
+            correctionDetail = `Email corrigido pela BD: "${cand.email}" (ficheiro continha "${record.email}")`;
+          }
         } else if (exactMatches.length > 1) {
           // Strict Anti-Mixing Guard: do NOT pick arbitrarily!
           unmatched.push({
@@ -495,6 +550,9 @@ export function matchScoresToCandidates(
           }
           matchedCandidate = cand;
           matchType = "name_fuzzy";
+
+          hasCorrection = true;
+          correctionDetail = `Nome aproximado validado pela BD: "${cand.name}" (ficheiro continha "${record.name}")`;
         } else if (fuzzyMatches.length > 1) {
           // Strict Anti-Mixing Guard: do NOT pick arbitrarily!
           unmatched.push({
@@ -506,7 +564,46 @@ export function matchScoresToCandidates(
       }
     }
 
+    // 5. Tier 5: Levenshtein String Similarity (handles minor character typos in name when phone/email also have typos)
+    if (!matchedCandidate && record.name) {
+      const normInput = normalizeText(record.name);
+      if (normInput.length >= 5) {
+        const scored = candidates
+          .map((c) => ({ cand: c, sim: stringSimilarity(normInput, normalizeText(c.name)) }))
+          .filter((s) => s.sim >= 0.82)
+          .sort((a, b) => b.sim - a.sim);
+
+        if (scored.length === 1 || (scored.length > 1 && scored[0].sim - scored[1].sim >= 0.12)) {
+          const cand = scored[0].cand;
+          if (matchedCandidateIds.has(cand.id)) {
+            unmatched.push({
+              record,
+              reason: `Conflito de duplicação: O candidato "${cand.name}" já foi associado a outra linha anterior neste ficheiro.`,
+            });
+            continue;
+          }
+          matchedCandidate = cand;
+          matchType = "name_fuzzy";
+          hasCorrection = true;
+          correctionDetail = `Nome aproximado (${Math.round(scored[0].sim * 100)}% de correspondência com "${cand.name}")`;
+        }
+      }
+    }
+
     if (matchedCandidate) {
+      if (
+        matchedCandidate.status === "archived" ||
+        matchedCandidate.status === "not_advancing" ||
+        matchedCandidate.status === "rejected" ||
+        matchedCandidate.status === "disqualified"
+      ) {
+        unmatched.push({
+          record,
+          reason: `Candidato Desqualificado/Arquivado: "${matchedCandidate.name}" consta no histórico como '${matchedCandidate.status}' (rejeitado/não elegível para provas presenciais).`,
+        });
+        continue;
+      }
+
       matchedCandidateIds.add(matchedCandidate.id);
       matched.push({
         candidate: matchedCandidate,
@@ -514,13 +611,41 @@ export function matchScoresToCandidates(
         score: record.score,
         nextPhaseSelected: record.nextPhaseSelected || false,
         matchType,
+        hasCorrection,
+        correctionDetail,
       });
     } else {
+      // Diagnostic check against all database candidates if provided
+      let diagnosticReason = `Candidato não encontrado na base de dados deste ciclo/funil ("${
+        record.name || record.email || record.phone || "linha"
+      }"). Verifique se o candidato pertence a este ciclo e se o nome ou email está correto.`;
+
+      if (allDatabaseCandidates && allDatabaseCandidates.length > 0) {
+        const targetEmail = record.email ? record.email.toLowerCase().trim() : null;
+        const targetPhone = record.phone ? normalizePhone(record.phone) : null;
+        const targetNormName = record.name ? normalizeText(record.name) : null;
+
+        const globalMatch = allDatabaseCandidates.find((c) => {
+          if (targetEmail && c.email && c.email.toLowerCase().trim() === targetEmail) return true;
+          if (targetPhone && targetPhone.length >= 8 && normalizePhone(c.whatsapp).endsWith(targetPhone)) return true;
+          if (targetNormName && targetNormName.length >= 5 && normalizeText(c.name) === targetNormName) return true;
+          return false;
+        });
+
+        if (globalMatch) {
+          if (globalMatch.status === "archived" || globalMatch.status === "not_advancing" || globalMatch.status === "rejected") {
+            diagnosticReason = `Candidato Desqualificado/Arquivado: "${globalMatch.name}" consta no histórico como ${globalMatch.status} (não aprovado nesta fase).`;
+          } else if (globalMatch.role && globalMatch.role !== "cctv_technical_manager") {
+            diagnosticReason = `Fora do funil de testes: "${globalMatch.name}" pertence à função ${
+              globalMatch.role === "cctv" ? "Operador de CCTV (CCO)" : globalMatch.role
+            } e não a esta vaga de Gestor Técnico.`;
+          }
+        }
+      }
+
       unmatched.push({
         record,
-        reason: `Candidato não encontrado na base de dados deste ciclo/funil ("${
-          record.name || record.email || record.phone || "linha"
-        }"). Verifique se o candidato pertence a este ciclo e se o nome ou email está correto.`,
+        reason: diagnosticReason,
       });
     }
   }

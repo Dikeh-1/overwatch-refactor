@@ -71,7 +71,7 @@ async function handlePOST(request: Request): Promise<Response> {
     }
 
     // Prioritize active & booked/invited candidates within the scoped cycle/cohort/role
-    const { matched, unmatched } = matchScoresToCandidates(records, targetCandidates);
+    const { matched, unmatched } = matchScoresToCandidates(records, targetCandidates, allApps);
 
     // 3. Dry-run preview mode
     if (!commit) {
@@ -92,6 +92,8 @@ async function handlePOST(request: Request): Promise<Response> {
           documentNextPhase: m.nextPhaseSelected,
           decisionRaw: m.record.decisionRaw,
           matchType: m.matchType,
+          hasCorrection: m.hasCorrection,
+          correctionDetail: m.correctionDetail,
         })),
         unmatched: unmatched.map((u) => ({
           name: u.record.name,
@@ -103,6 +105,7 @@ async function handlePOST(request: Request): Promise<Response> {
     }
 
     // 4. Commit mode: Apply scores to candidates
+    const matchedCandidateIds = new Set(matched.map((m) => m.candidate.id));
     const updatedCandidates: Array<{
       id: string;
       name: string;
@@ -111,6 +114,7 @@ async function handlePOST(request: Request): Promise<Response> {
       alreadyAdvanced: boolean;
     }> = [];
 
+    // A) Process matched candidates (present at physical test)
     for (const m of matched) {
       const candidate = m.candidate;
       const documentSelected = Boolean(m.nextPhaseSelected);
@@ -177,13 +181,43 @@ async function handlePOST(request: Request): Promise<Response> {
       });
     }
 
+    // B) Process booked candidates in this pipeline/cohort who did NOT appear in the score sheet (Absent / Faltou)
+    const absentCandidates: Array<{ id: string; name: string }> = [];
+    const bookedNotTested = targetCandidates.filter(
+      (c) =>
+        (c.status === "test_booked" || Boolean(c.testSlot)) &&
+        !matchedCandidateIds.has(c.id) &&
+        !isTerminal(c)
+    );
+
+    for (const absentCand of bookedNotTested) {
+      const log = absentCand.activityLog || [];
+      await updateApplication(absentCand.id, {
+        attendanceStatus: "absent",
+        attendedAt: undefined,
+        activityLog: [
+          ...log,
+          {
+            id: crypto.randomUUID(),
+            action: "Attendance Recorded",
+            details: "Candidato agendado ausente da sessão presencial de testes (Não compareceu)",
+            actor: "Sistema de Avaliação Presencial",
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      });
+      absentCandidates.push({ id: absentCand.id, name: absentCand.name });
+    }
+
     return Response.json({
       success: true,
       fileName,
       totalProcessed: records.length,
       updatedCount: updatedCandidates.length,
+      absentCount: absentCandidates.length,
       unmatchedCount: unmatched.length,
       candidates: updatedCandidates,
+      absentCandidates,
       unmatched: unmatched.map((u) => ({
         name: u.record.name,
         email: u.record.email,
