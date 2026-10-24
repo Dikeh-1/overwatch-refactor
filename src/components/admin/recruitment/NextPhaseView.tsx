@@ -863,7 +863,7 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang, co
       )}
 
       {/* Sticky Filter, Search and Bulk Action Header */}
-      <div className="sticky top-[var(--workspace-sticky-top,48px)] z-20 bg-[#F7F8FA]/95 backdrop-blur-md pt-2 pb-2 space-y-3">
+      <div className="sticky top-[var(--workspace-sticky-top,48px)] z-20 bg-[#F7F8FA] pt-2 pb-2 space-y-3">
       {/* Filter and Search Bar */}
       <div className="bg-white border border-slate-200 rounded-lg p-3 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
         <div className="flex items-center gap-2.5 flex-1 min-w-[260px] max-w-xl">

@@ -399,7 +399,7 @@ export default function RecruitmentWorkspace({
         <nav
           style={snapshotMode ? { display: "none" } : undefined}
           aria-label={t("Recruitment stages", "Etapas de recrutamento")}
-          className="sticky top-[46px] z-25 flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white/95 backdrop-blur-md p-2 shadow-sm admin-scrollbar"
+          className="sticky top-[46px] z-25 flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2 shadow-sm admin-scrollbar"
         >
           {[
             { id: "overview", label: t("Overview", "Visão geral") },

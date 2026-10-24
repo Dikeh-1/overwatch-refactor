@@ -39,7 +39,7 @@ export interface AttachmentItem {
   content: string; // base64
 }
 
-export type RichMessageEditorHandle = { insertText: (text: string) => void };
+export type RichMessageEditorHandle = { insertText: (text: string) => void; insertHtml: (html: string) => void };
 
 interface RichMessageEditorProps {
   ref?: React.Ref<RichMessageEditorHandle>;
@@ -263,7 +263,27 @@ export default function RichMessageEditor({
     setShowVariablePicker(false);
   };
 
-  React.useImperativeHandle(externalRef, () => ({ insertText: handleInsertVariable }));
+  const handleInsertHtml = (html: string) => {
+    if (editorMode === "visual") {
+      restoreSelection();
+      document.execCommand("insertHTML", false, html);
+      rememberSelection();
+      handleContentChange();
+    } else {
+      const field = rawRef.current;
+      const start = field?.selectionStart ?? value.length, end = field?.selectionEnd ?? start;
+      onChange(value.slice(0, start) + html + value.slice(end));
+      requestAnimationFrame(() => {
+        field?.focus();
+        field?.setSelectionRange(start + html.length, start + html.length);
+      });
+    }
+  };
+
+  React.useImperativeHandle(externalRef, () => ({
+    insertText: handleInsertVariable,
+    insertHtml: handleInsertHtml,
+  }));
 
   const handleInsertLink = () => {
     const url = prompt(
@@ -608,7 +628,7 @@ export default function RichMessageEditor({
             </button>
           </div>
 
-          {/* Personalized Variable Dropdown - With Outside Click & Clean Scroll Container */}
+          {/* Personalized Variable Dropdown - Solid Opaque Header & Contained Scrolling */}
           <div className="relative" ref={variablePickerRef}>
             <button
               type="button"
@@ -626,12 +646,19 @@ export default function RichMessageEditor({
             </button>
 
             {showVariablePicker && (
-              <div className="absolute left-0 top-full mt-1.5 z-50 w-80 max-h-64 overflow-y-auto overscroll-contain bg-white border border-slate-200/90 rounded-xl p-1.5 shadow-2xl space-y-0.5 divide-y divide-slate-100">
-                <div className="sticky top-0 bg-white/95 backdrop-blur-xs text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1.5 border-b border-slate-100 z-10 flex items-center justify-between">
-                  <span>{lang === "en" ? "Personalized Tokens" : "Campos Personalizados"}</span>
-                  <span className="text-[9px] font-normal text-slate-400 font-mono">{availableVariables.length} tags</span>
+              <div className="absolute left-0 top-full mt-1.5 z-50 w-80 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden">
+                {/* 100% Solid Opaque Header - Fixed completely outside scroll container */}
+                <div className="bg-slate-50 border-b border-slate-200 px-3 py-2 flex items-center justify-between select-none">
+                  <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                    {lang === "en" ? "Personalized Tokens" : "Campos Personalizados"}
+                  </span>
+                  <span className="text-[10px] font-mono font-bold text-slate-500">
+                    {availableVariables.length} tags
+                  </span>
                 </div>
-                <div className="pt-1 space-y-0.5">
+
+                {/* Scrollable list strictly below the header */}
+                <div className="max-h-60 overflow-y-auto overscroll-contain p-1.5 space-y-0.5 divide-y divide-slate-100">
                   {availableVariables.map((v) => (
                     <button
                       key={v.code}
@@ -645,7 +672,7 @@ export default function RichMessageEditor({
                       <code className="text-sky-700 font-mono font-bold bg-sky-50 group-hover:bg-sky-100 px-1.5 py-0.5 rounded text-[11px] shrink-0">
                         {v.code}
                       </code>
-                      <span className="text-[11px] text-slate-500 truncate ml-2 text-right">
+                      <span className="text-[11px] text-slate-600 truncate ml-2 text-right">
                         {v.label}
                       </span>
                     </button>
