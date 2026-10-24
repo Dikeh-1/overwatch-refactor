@@ -673,11 +673,13 @@ function GateSecurityContent() {
         <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-[#121827]/95 p-8 shadow-[0_32px_80px_rgba(0,0,0,0.6)] backdrop-blur-md">
           {/* Top Language Toggle */}
           <div className="flex justify-end mb-2">
-            <div className="flex items-center rounded-xl bg-white/[0.06] border border-white/10 p-0.5 text-xs">
+            <div translate="no" className="flex items-center rounded-xl bg-white/[0.06] border border-white/10 p-0.5 text-xs notranslate">
               <button
                 type="button"
+                translate="no"
+                lang="pt"
                 onClick={() => switchLanguage("pt")}
-                className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer notranslate ${
                   lang === "pt"
                     ? "bg-white text-[#090d16] shadow-sm font-bold"
                     : "text-white/60 hover:text-white"
@@ -687,8 +689,10 @@ function GateSecurityContent() {
               </button>
               <button
                 type="button"
+                translate="no"
+                lang="en"
                 onClick={() => switchLanguage("en")}
-                className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer notranslate ${
                   lang === "en"
                     ? "bg-white text-[#090d16] shadow-sm font-bold"
                     : "text-white/60 hover:text-white"
@@ -817,11 +821,13 @@ function GateSecurityContent() {
             </div>
 
             {/* Language Switcher Pill */}
-            <div className="flex items-center rounded-lg sm:rounded-xl bg-white/[0.06] border border-white/10 p-0.5 text-[10px] sm:text-xs font-bold">
+            <div translate="no" className="flex items-center rounded-lg sm:rounded-xl bg-white/[0.06] border border-white/10 p-0.5 text-[10px] sm:text-xs font-bold notranslate">
               <button
                 type="button"
+                translate="no"
+                lang="pt"
                 onClick={() => switchLanguage("pt")}
-                className={`px-2 sm:px-2.5 py-1 rounded-md sm:rounded-lg font-semibold transition-all cursor-pointer ${
+                className={`px-2 sm:px-2.5 py-1 rounded-md sm:rounded-lg font-semibold transition-all cursor-pointer notranslate ${
                   lang === "pt"
                     ? "bg-white text-[#090d16] shadow-sm font-bold"
                     : "text-white/60 hover:text-white"
@@ -831,8 +837,10 @@ function GateSecurityContent() {
               </button>
               <button
                 type="button"
+                translate="no"
+                lang="en"
                 onClick={() => switchLanguage("en")}
-                className={`px-2 sm:px-2.5 py-1 rounded-md sm:rounded-lg font-semibold transition-all cursor-pointer ${
+                className={`px-2 sm:px-2.5 py-1 rounded-md sm:rounded-lg font-semibold transition-all cursor-pointer notranslate ${
                   lang === "en"
                     ? "bg-white text-[#090d16] shadow-sm font-bold"
                     : "text-white/60 hover:text-white"

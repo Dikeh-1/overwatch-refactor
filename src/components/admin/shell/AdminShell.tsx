@@ -348,14 +348,16 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
         <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-[#121827]/95 p-8 shadow-[0_32px_80px_rgba(0,0,0,0.6)] backdrop-blur-md">
           {/* Top Language Toggle */}
           <div className="flex justify-end mb-2">
-            <div className="flex items-center rounded-xl bg-white/[0.06] border border-white/10 p-0.5 text-xs">
+            <div translate="no" className="flex items-center rounded-xl bg-white/[0.06] border border-white/10 p-0.5 text-xs notranslate">
               <button
                 type="button"
+                translate="no"
+                lang="en"
                 onClick={() => {
                   setLang("en");
                   localStorage.setItem("overwatch_admin_lang", "en");
                 }}
-                className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer notranslate ${
                   lang === "en"
                     ? "bg-white text-[#090d16] shadow-sm font-bold"
                     : "text-white/60 hover:text-white"
@@ -365,11 +367,13 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
               </button>
               <button
                 type="button"
+                translate="no"
+                lang="pt"
                 onClick={() => {
                   setLang("pt");
                   localStorage.setItem("overwatch_admin_lang", "pt");
                 }}
-                className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer notranslate ${
                   lang === "pt"
                     ? "bg-white text-[#090d16] shadow-sm font-bold"
                     : "text-white/60 hover:text-white"
@@ -596,11 +600,13 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
           <div className="flex items-center gap-3">
             {/* Header Language Switcher */}
             <SectionHistoryButton />
-            <div className="flex items-center rounded-md bg-slate-100 p-0.5 text-xs font-semibold">
+            <div translate="no" className="flex items-center rounded-md bg-slate-100 p-0.5 text-xs font-semibold notranslate">
               <button
                 type="button"
+                translate="no"
+                lang="en"
                 onClick={() => setLang("en")}
-                className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                className={`px-2 py-0.5 rounded transition-all cursor-pointer notranslate ${
                   lang === "en" ? "bg-white text-slate-900 shadow-xs font-bold" : "text-slate-500 hover:text-slate-900"
                 }`}
               >
@@ -608,8 +614,10 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
               </button>
               <button
                 type="button"
+                translate="no"
+                lang="pt"
                 onClick={() => setLang("pt")}
-                className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                className={`px-2 py-0.5 rounded transition-all cursor-pointer notranslate ${
                   lang === "pt" ? "bg-white text-slate-900 shadow-xs font-bold" : "text-slate-500 hover:text-slate-900"
                 }`}
               >
