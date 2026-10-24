@@ -143,6 +143,15 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
   const [dispatchResultCount, setDispatchResultCount] = useState(0);
   const [deliveryNotice, setDeliveryNotice] = useState<string | null>(null);
 
+  // Auto-dismiss delivery notice after 5 seconds
+  useEffect(() => {
+    if (!deliveryNotice) return;
+    const timer = setTimeout(() => {
+      setDeliveryNotice(null);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [deliveryNotice]);
+
   // Delivery History Drawer
   const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
   const [historySearch, setHistorySearch] = useState("");
@@ -857,7 +866,19 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       </div>
       {folder !== "compose" && <StudioMailbox scope={scope} folder={folder} applications={applications} onOpenDraft={async id => { await draft.open(id); setFolder("compose"); }} onOpenProgress={campaignId => setDeliveryCampaign(campaignId)} />}
       {/* MAIN 2-COLUMN STUDIO LAYOUT */}
-      {deliveryNotice && <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{deliveryNotice}</p>}
+      {deliveryNotice && (
+        <div role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 flex items-center justify-between gap-3 animate-in fade-in duration-200">
+          <span>{deliveryNotice}</span>
+          <button
+            type="button"
+            onClick={() => setDeliveryNotice(null)}
+            className="text-emerald-600 hover:text-emerald-900 p-0.5 rounded transition-colors cursor-pointer shrink-0"
+            title={t("Dismiss", "Fechar")}
+          >
+            <X size={15} />
+          </button>
+        </div>
+      )}
       <div hidden={folder !== "compose"} inert={!draft.ready || isDispatching} className={folder !== "compose" ? "hidden" : "grid grid-cols-1 lg:grid-cols-12 gap-6 items-start"}>
         {/* ========================================================================= */}
         {/* LEFT COLUMN: COMPOSER PALETTE & DISPATCH CONTROLS (5 cols on lg) */}

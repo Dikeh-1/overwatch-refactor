@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Languages, Lock, Trash2 } from "lucide-react";
+import { Languages, Lock, Trash2, X } from "lucide-react";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import { safeEmailDocument } from "@/lib/communication-content";
 import { renderOfficialMail } from "@/lib/communication-renderer";
@@ -106,6 +106,15 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
       detailsAbort.current.abort();
     };
   }, []);
+
+  // Auto-dismiss notice banner after 5 seconds
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => {
+      setNotice("");
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [notice]);
 
   useEffect(() => {
     if (confirmIds) confirmation.current?.showModal();
@@ -711,9 +720,17 @@ function MailboxSession({ scope, folder, applications, onOpenDraft, onOpenProgre
         </p>
       )}
       {notice && !action && (
-        <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
-          {notice}
-        </p>
+        <div role="status" className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-sm text-emerald-800 flex items-center justify-between gap-3 animate-in fade-in duration-200">
+          <span>{notice}</span>
+          <button
+            type="button"
+            onClick={() => setNotice("")}
+            className="text-emerald-600 hover:text-emerald-900 p-0.5 rounded transition-colors cursor-pointer shrink-0"
+            title={t("Dismiss", "Fechar")}
+          >
+            <X size={15} />
+          </button>
+        </div>
       )}
       {busy && (
         <p role="status" className="text-sm text-slate-500">
