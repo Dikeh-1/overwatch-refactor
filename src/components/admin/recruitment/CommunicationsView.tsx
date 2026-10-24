@@ -835,7 +835,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
           ["outbox", t("Outbox", "Caixa de saída")],
           ["scheduled", t("Scheduled Auto Follow-Ups", "Seguimentos Automáticos")],
         ] as const).map(([key,label]) => <button key={key} type="button" aria-pressed={folder === key} onClick={() => setFolder(key)} className={`rounded-lg px-3 py-2 text-xs font-medium ${folder === key ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"}`}>{label}</button>)}</nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <span role="status" className="max-w-sm text-xs text-slate-500">{draft.status}</span>
           <button
             type="button"
@@ -849,31 +849,9 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                 setOpeningDraft(false);
               });
             }}
-            className="rounded-lg border border-slate-300 hover:bg-slate-50 px-3 py-2 text-xs font-medium cursor-pointer disabled:opacity-50"
+            className="rounded-lg border px-3 py-2 text-xs font-medium cursor-pointer disabled:opacity-50"
           >
             {openingDraft ? t("Creating draft…", "A criar rascunho…") : t("New draft", "Novo rascunho")}
-          </button>
-          <button
-            type="button"
-            disabled={!draft.ready || isDispatching || openingDraft}
-            onClick={() => {
-              if (window.confirm(t("Delete this draft message and clear the editor?", "Eliminar este rascunho e limpar o editor?"))) {
-                void draft.deleteDraft().then(() => {
-                  setSubject("");
-                  setMessageBody("");
-                  setAttachments([]);
-                  setFollowUpEnabled(false);
-                  setFollowUpSubject("");
-                  setFollowUpBody("");
-                  setDeliveryNotice(t("Draft message deleted successfully.", "Rascunho eliminado com sucesso."));
-                }).catch(error => setDeliveryNotice((error as Error).message));
-              }
-            }}
-            className="rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 px-3 py-2 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-            title={t("Permanently delete current draft", "Eliminar permanentemente o rascunho actual")}
-          >
-            <Trash2 size={13} />
-            <span>{t("Delete draft", "Eliminar rascunho")}</span>
           </button>
         </div>
       </div>
