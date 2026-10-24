@@ -3,7 +3,7 @@ import { getMail, listMail } from "@/lib/communication-mail-store";
 import { after } from "next/server";
 import { sameBookingScope, getQuotaForSlot } from "@/lib/careers-booking-rules";
 import { auditRequest } from "@/lib/admin-activity";
-import { resolveApplication, isTerminal } from "@/lib/careers-workflow";
+import { resolveApplication, isTerminal, isNextPhase } from "@/lib/careers-workflow";
 import { getCandidateSlotConfig, reserveTestSlot } from "@/lib/careers-booking";
 import { getApplication, updateApplication, getApplications } from "@/lib/careers-store";
 import { normalizeSlot, isPastDateSlot, type Application } from "@/lib/careers";
@@ -269,6 +269,8 @@ export async function GET(request: Request) {
         attendedAt: candidate.attendedAt || null,
         attendanceStatus: candidate.attendanceStatus || null,
         address: siteContact.address.pt,
+        isNextPhase: isNextPhase(candidate),
+        nextPhaseToken: candidate.nextPhaseToken || candidate.id,
         supportEmail: siteContact.email,
       },
       { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } },

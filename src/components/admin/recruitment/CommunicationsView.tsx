@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useCommunicationDraft } from "../hooks/useCommunicationDraft";
 import { StudioMailbox, type StudioFolder } from "./StudioMailbox";
 import { DeliveryProgress } from "./DeliveryProgress";
-import { BOOKING_TOKEN, candidateVariables, renderStudioMessage, messageBlocks, moveBookingToken, studioScope } from "@/lib/communication-content";
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import { BOOKING_TOKEN, candidateVariables, renderStudioMessage, messageBlocks, moveBookingToken, studioScope, escapeMailText } from "@/lib/communication-content";
+import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import {
   Mail,
   Search,
@@ -727,6 +727,117 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
     setTimeout(() => setCopiedWhatsApp(false), 3000);
   };
 
+  const insertCustomRsvpButton = useCallback((label: string, action: "confirm" | "decline" | "portal", style: "navy" | "emerald" | "outline") => {
+    const cleanLabel = (label || "").trim();
+    if (!cleanLabel) return;
+    const bg = style === "emerald" ? "#059669" : style === "navy" ? "#0b1329" : "#ffffff";
+    const text = style === "outline" ? "#334155" : "#ffffff";
+    const border = style === "outline" ? "border:1px solid #cbd5e1;" : "";
+    const choice = action === "decline" ? "no" : "yes";
+    const href = action === "portal"
+      ? "{{next_phase_link}}"
+      : `{{next_phase_link}}?choice=${choice}&responseOption=${encodeURIComponent(cleanLabel)}`;
+
+    const buttonHtml = `<a data-action-button="true" href="${href}" target="_blank" style="display:inline-block;background-color:${bg};color:${text};${border}padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;margin:8px 4px;">${escapeMailText(cleanLabel)}</a>`;
+
+    if (canvasTab === "edit" && editorHandle.current?.insertHtml) {
+      editorHandle.current.insertHtml(buttonHtml);
+    } else {
+      setMessageBody(prev => prev ? `${prev}\n\n${buttonHtml}` : buttonHtml);
+    }
+  }, [canvasTab]);
+
+  const advisorDiagnostics = useMemo(() => {
+    const diagnostics: Array<{
+      type: "warning" | "info" | "success";
+      title: string;
+      message: string;
+      actions?: Array<{ label: string; onClick: () => void }>;
+    }> = [];
+
+    const hasNextPhaseLink = messageBody.includes("{{next_phase_link}}") ||
+      messageBody.includes("{{confirm_button}}") ||
+      messageBody.includes("{{response_buttons}}") ||
+      messageBody.includes("{{yes_button}}") ||
+      messageBody.includes("{{no_button}}") ||
+      messageBody.includes("data-action-button");
+
+    const hasBookingLink = messageBody.includes(BOOKING_TOKEN) || includeBookingButton;
+
+    // Diagnostic 1: Next phase links in pre-test audience
+    if (hasNextPhaseLink && (targetAudience === "shortlisted_unbooked" || targetAudience === "all_role" || targetAudience === "screened")) {
+      diagnostics.push({
+        type: "warning",
+        title: t(
+          "Link Safeguard: Next Phase Links in Pre-Test Audience",
+          "Proteção de Links: Links da Próxima Fase em Público Pré-Teste"
+        ),
+        message: t(
+          "Your selected audience contains applicants who have not yet taken or passed the test. Next Phase tokens only activate for approved candidates. If clicked, applicants will be safely directed to their test-booking schedule instead of the advanced portal.",
+          "O público selecionado contém candidatos que ainda não realizaram ou foram aprovados no teste. Os links da Próxima Fase só devem ser enviados a candidatos aprovados. Ao clicar, o candidato será encaminhado com segurança para o agendamento de teste."
+        ),
+        actions: [
+          {
+            label: t("Change Audience to Next Phase", "Alterar Público para Próxima Fase"),
+            onClick: () => setTargetAudience("next_phase"),
+          },
+          {
+            label: t("Replace with Test Booking Link", "Substituir por Botão de Agendamento"),
+            onClick: () => {
+              setIncludeBookingButton(true);
+              setMessageBody(prev => {
+                let updated = prev
+                  .replace(/{{next_phase_link}}/g, BOOKING_TOKEN)
+                  .replace(/{{confirm_button}}/g, BOOKING_TOKEN)
+                  .replace(/{{response_buttons}}/g, BOOKING_TOKEN);
+                if (!updated.includes(BOOKING_TOKEN)) updated += `\n\n${BOOKING_TOKEN}`;
+                return updated;
+              });
+            },
+          },
+        ],
+      });
+    }
+
+    // Diagnostic 2: Test Booking link in post-test audience
+    if (hasBookingLink && (targetAudience === "next_phase" || targetAudience === "tested" || targetAudience === "interview" || targetAudience === "hired")) {
+      diagnostics.push({
+        type: "info",
+        title: t(
+          "Link Safeguard: Booking Button in Post-Test Audience",
+          "Proteção de Links: Botão de Agendamento em Público Pós-Teste"
+        ),
+        message: t(
+          "These applicants have already completed their screening tests. They do not need to book another test slot. For this audience, consider using Next Phase links or RSVP buttons instead.",
+          "Estes candidatos já concluíram os testes de selecção. Não necessitam de novo agendamento de teste. Recomendamos o uso de links da Próxima Fase ou botões RSVP."
+        ),
+        actions: [
+          {
+            label: t("Remove Booking Link", "Remover Botão de Agendamento"),
+            onClick: () => {
+              setIncludeBookingButton(false);
+              setMessageBody(prev => prev.replaceAll(BOOKING_TOKEN, ""));
+            },
+          },
+        ],
+      });
+    }
+
+    // Diagnostic 3: Score variable in unscreened audience
+    if (messageBody.includes("{{score}}") && (targetAudience === "shortlisted_unbooked" || targetAudience === "screened" || targetAudience === "all_role")) {
+      diagnostics.push({
+        type: "info",
+        title: t("Dynamic Variable Notice: {{score}}", "Aviso de Variável: {{score}}"),
+        message: t(
+          "{{score}} will automatically remain blank for applicants who have not yet taken a test.",
+          "{{score}} permanecerá automaticamente em branco para candidatos sem teste registado."
+        ),
+      });
+    }
+
+    return diagnostics;
+  }, [messageBody, includeBookingButton, targetAudience, t]);
+
   // All past communication logs for history drawer
   const allLogs = useMemo(() => {
     const list: {
@@ -1176,45 +1287,116 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
             </div>
           </div>
 
-          {/* CARD 3: DYNAMIC VARIABLE INSERTION */}
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-2.5">
-            <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5 uppercase tracking-wider">
-              <SlidersHorizontal size={14} className="text-slate-600" />
-              <span>{t("3. Dynamic Variables", "3. Variáveis Dinâmicas")}</span>
-            </span>
-            <p className="text-[11px] text-slate-500">
-              {t(
-                "Click any tag to insert personalized applicant values into your letter text:",
-                "Clique numa etiqueta para inserir campos personalizados no texto da minuta:"
-              )}
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {[
-                { tag: "{{candidate_name}}", label: t("Applicant Name", "Nome Candidato") },
-                { tag: "{{booking_link}}", label: t("Test Booking Button", "Botão de Agendamento") },
-                { tag: "{{role_title}}", label: t("Job Role Title", "Título da Vaga") },
-                { tag: "{{confirm_button}}", label: t("Confirm Button (Single-Click)", "Botão Confirmar") },
-                { tag: "{{response_buttons}}", label: t("Accept / Decline Buttons", "Botões Aceitar / Recusar") },
-                { tag: "{{yes_button}}", label: t("Accept Button", "Botão Aceitar") },
-                { tag: "{{no_button}}", label: t("Decline Button", "Botão Recusar") },
-                { tag: "{{next_phase_link}}", label: t("Next Phase Portal Link", "Link Próxima Fase") },
-                { tag: "{{score}}", label: t("Test Score %", "Nota do Teste %") },
-                { tag: "{{test_slot}}", label: t("Scheduled Test Slot", "Turno Agendado") },
-                { tag: "{{location}}", label: t("Candidate Location", "Localização") },
-                { tag: "{{company_name}}", label: t("Company Name", "Overwatch") },
-                { tag: "{{date}}", label: t("Current Date", "Data Atual") },
-              ].map((v) => (
+          {/* CARD 3: DYNAMIC VARIABLES & NEXT PHASE RSVP BUTTONS */}
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-3.5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5 uppercase tracking-wider">
+                <SlidersHorizontal size={14} className="text-slate-600" />
+                <span>{t("3. Next Phase Options & Variables", "3. Opções da Próxima Fase & Variáveis")}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomRsvpLabel("");
+                  setCustomRsvpAction("confirm");
+                  setCustomRsvpStyle("navy");
+                  setCustomRsvpModalOpen(true);
+                }}
+                className="px-3 py-1.5 rounded-lg border border-sky-300 bg-sky-50 hover:bg-sky-100 text-sky-800 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                title={t("Create and insert custom RSVP buttons into your email", "Criar e inserir botões RSVP personalizados no email")}
+              >
+                <Plus size={13} />
+                <span>{t("+ Create Custom RSVP", "+ Criar Botão RSVP")}</span>
+              </button>
+            </div>
+
+            {/* Quick RSVP Button Bar */}
+            <div className="rounded-lg bg-slate-50 border border-slate-200/80 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-700">
+                  {t("Interactive Next Phase RSVP Buttons:", "Botões Interativos de RSVP (Próxima Fase):")}
+                </span>
+                <span className="text-[10px] text-slate-400">{t("One-click insert", "Inserção com 1 clique")}</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
                 <button
-                  key={v.tag}
                   type="button"
-                  onMouseDown={event => event.preventDefault()}
-                  onClick={() => handleInsertTag(v.tag)}
-                  className="px-2 py-1 rounded-md bg-white hover:bg-slate-50 hover:border-sky-400 hover:text-sky-700 text-slate-700 text-[10px] font-mono font-medium border border-slate-200 transition-colors cursor-pointer shadow-2xs"
-                  title={v.label}
+                  onClick={() => insertCustomRsvpButton(t("Confirm Attendance", "Confirmar Presença"), "confirm", "emerald")}
+                  className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold transition-colors shadow-2xs cursor-pointer flex items-center gap-1"
                 >
-                  {v.tag}
+                  <Check size={12} />
+                  <span>{t("Confirm Presence (Green)", "Confirmar Presença (Verde)")}</span>
                 </button>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => insertCustomRsvpButton(t("Confirm In-Person Interview", "Confirmar Entrevista Presencial"), "confirm", "navy")}
+                  className="px-2.5 py-1 rounded-md bg-[#0b1329] hover:bg-slate-800 text-white text-[11px] font-semibold transition-colors shadow-2xs cursor-pointer"
+                >
+                  {t("Confirm Interview (Navy)", "Confirmar Entrevista (Navy)")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertCustomRsvpButton(t("Accept Training Terms", "Aceitar Termos da Formação"), "confirm", "navy")}
+                  className="px-2.5 py-1 rounded-md bg-[#0b1329] hover:bg-slate-800 text-white text-[11px] font-semibold transition-colors shadow-2xs cursor-pointer"
+                >
+                  {t("Accept Training (Navy)", "Aceitar Formação (Navy)")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertCustomRsvpButton(t("Decline / Reschedule", "Declinar / Outro Horário"), "decline", "outline")}
+                  className="px-2.5 py-1 rounded-md bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-[11px] font-medium transition-colors shadow-2xs cursor-pointer"
+                >
+                  {t("Decline / Other Time (Outline)", "Declinar / Outro Horário")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomRsvpLabel("");
+                    setCustomRsvpAction("confirm");
+                    setCustomRsvpStyle("navy");
+                    setCustomRsvpModalOpen(true);
+                  }}
+                  className="px-2 py-1 rounded-md border border-dashed border-sky-400 bg-white hover:bg-sky-50 text-sky-700 text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1"
+                >
+                  <Plus size={11} />
+                  <span>{t("Custom...", "Personalizado...")}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Standard Variable Chips */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-semibold text-slate-700">
+                {t("Standard Personalized Fields:", "Campos Dinâmicos Padrão:")}
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { tag: "{{candidate_name}}", label: t("Applicant Name", "Nome Candidato") },
+                  { tag: "{{booking_link}}", label: t("Test Booking Button", "Botão de Agendamento") },
+                  { tag: "{{role_title}}", label: t("Job Role Title", "Título da Vaga") },
+                  { tag: "{{confirm_button}}", label: t("Confirm Button (Single-Click)", "Botão Confirmar") },
+                  { tag: "{{response_buttons}}", label: t("Accept / Decline Buttons", "Botões Aceitar / Recusar") },
+                  { tag: "{{yes_button}}", label: t("Accept Button", "Botão Aceitar") },
+                  { tag: "{{no_button}}", label: t("Decline Button", "Botão Recusar") },
+                  { tag: "{{next_phase_link}}", label: t("Next Phase Portal Link", "Link Próxima Fase") },
+                  { tag: "{{score}}", label: t("Test Score %", "Nota do Teste %") },
+                  { tag: "{{test_slot}}", label: t("Scheduled Test Slot", "Turno Agendado") },
+                  { tag: "{{location}}", label: t("Candidate Location", "Localização") },
+                  { tag: "{{company_name}}", label: t("Company Name", "Overwatch") },
+                  { tag: "{{date}}", label: t("Current Date", "Data Atual") },
+                ].map((v) => (
+                  <button
+                    key={v.tag}
+                    type="button"
+                    onMouseDown={event => event.preventDefault()}
+                    onClick={() => handleInsertTag(v.tag)}
+                    className="px-2 py-1 rounded-md bg-white hover:bg-slate-50 hover:border-sky-400 hover:text-sky-700 text-slate-700 text-[10px] font-mono font-medium border border-slate-200 transition-colors cursor-pointer shadow-2xs"
+                    title={v.label}
+                  >
+                    {v.tag}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -1461,6 +1643,48 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
 
             {/* Tab 1: Professional Rich Message Editor */}
             <div style={{ display: canvasTab === "edit" ? "block" : "none" }} className="p-6 space-y-5">
+              {/* Intelligent Link & Audience Safeguard Advisor Banner */}
+              {advisorDiagnostics.length > 0 && (
+                <div className="space-y-2">
+                  {advisorDiagnostics.map((diag, i) => (
+                    <div
+                      key={i}
+                      className={`p-3.5 rounded-xl border text-xs space-y-2 ${
+                        diag.type === "warning"
+                          ? "bg-amber-50/90 border-amber-300 text-amber-900"
+                          : "bg-sky-50/90 border-sky-300 text-sky-900"
+                      }`}
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <AlertCircle
+                          size={16}
+                          className={`mt-0.5 shrink-0 ${
+                            diag.type === "warning" ? "text-amber-600" : "text-sky-600"
+                          }`}
+                        />
+                        <div className="flex-1 space-y-1">
+                          <h4 className="font-bold text-xs">{diag.title}</h4>
+                          <p className="text-[11px] leading-relaxed text-slate-700">{diag.message}</p>
+                        </div>
+                      </div>
+                      {diag.actions && diag.actions.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-200/60 pl-6">
+                          {diag.actions.map((act, actIdx) => (
+                            <button
+                              key={actIdx}
+                              type="button"
+                              onClick={act.onClick}
+                              className="px-2.5 py-1 rounded-md bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 text-[11px] font-semibold transition-colors cursor-pointer shadow-2xs"
+                            >
+                              {act.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
               {/* Official Email Subject Bar */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
@@ -1833,6 +2057,194 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       {/* ========================================================================= */}
       {/* MODAL: SAVE AS NEW REUSABLE TEMPLATE */}
       {/* ========================================================================= */}
+      {/* ========================================================================= */}
+      {/* CUSTOM RSVP BUTTON CREATOR MODAL */}
+      {/* ========================================================================= */}
+      {customRsvpModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="relative w-full max-w-lg rounded-2xl bg-white border border-slate-200 p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <SlidersHorizontal size={16} className="text-sky-600" />
+                  <span>{t("Create Custom RSVP Button", "Criar Botão RSVP Personalizado")}</span>
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  {t(
+                    "Insert personalized action buttons that automatically record candidate choices in their profile.",
+                    "Insira botões de ação que registam automaticamente a escolha do candidato no seu perfil."
+                  )}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCustomRsvpModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Field 1: Button Label */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700 block">
+                {t("Button Label / Wording *", "Texto do Botão *")}
+              </label>
+              <input
+                type="text"
+                value={customRsvpLabel}
+                onChange={(e) => setCustomRsvpLabel(e.target.value)}
+                placeholder={t("e.g. Confirm Presence, Confirmar Entrevista, Accept Training Terms", "Ex: Confirmar Presença, Confirmar Entrevista, Aceitar Formação")}
+                className="w-full text-xs rounded-lg border border-slate-300 p-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              />
+              <div className="flex flex-wrap gap-1 pt-1">
+                <span className="text-[10px] text-slate-400 self-center mr-1">{t("Suggestions:", "Sugestões:")}</span>
+                {[
+                  { label: t("Confirm Presence", "Confirmar Presença"), action: "confirm" as const, style: "emerald" as const },
+                  { label: t("Confirm In-Person Interview", "Confirmar Entrevista Presencial"), action: "confirm" as const, style: "navy" as const },
+                  { label: t("Accept Training Terms", "Aceitar Termos da Formação"), action: "confirm" as const, style: "navy" as const },
+                  { label: t("Decline / Reschedule", "Declinar / Outro Horário"), action: "decline" as const, style: "outline" as const },
+                  { label: t("Review Details in Portal", "Ver Detalhes no Portal"), action: "portal" as const, style: "navy" as const },
+                ].map((sug) => (
+                  <button
+                    key={sug.label}
+                    type="button"
+                    onClick={() => {
+                      setCustomRsvpLabel(sug.label);
+                      setCustomRsvpAction(sug.action);
+                      setCustomRsvpStyle(sug.style);
+                    }}
+                    className="px-2 py-0.5 rounded text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
+                  >
+                    {sug.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Field 2: Response Category / Ação Registada */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700 block">
+                {t("Candidate Action / Category", "Ação Registada / Categoria")}
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  {
+                    id: "confirm" as const,
+                    title: t("Accept / Confirm", "Confirmar / Aceitar"),
+                    desc: t("Marks as Confirmed", "Marca como Confirmado"),
+                    color: "border-emerald-300 bg-emerald-50 text-emerald-900",
+                  },
+                  {
+                    id: "decline" as const,
+                    title: t("Decline", "Declinar / Recusar"),
+                    desc: t("Marks as Declined", "Marca como Recusado"),
+                    color: "border-rose-300 bg-rose-50 text-rose-900",
+                  },
+                  {
+                    id: "portal" as const,
+                    title: t("Portal Review", "Apenas Portal"),
+                    desc: t("Opens Decision Portal", "Abre Portal de Revisão"),
+                    color: "border-sky-300 bg-sky-50 text-sky-900",
+                  },
+                ].map((act) => (
+                  <button
+                    key={act.id}
+                    type="button"
+                    onClick={() => setCustomRsvpAction(act.id)}
+                    className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer ${
+                      customRsvpAction === act.id ? act.color + " ring-2 ring-offset-1 ring-sky-500 font-semibold" : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    <div className="text-xs font-bold">{act.title}</div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">{act.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Field 3: Button Style */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700 block">
+                {t("Button Style", "Estilo Visual do Botão")}
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: "navy" as const, label: t("Overwatch Navy", "Overwatch Navy"), preview: "bg-[#0b1329] text-white" },
+                  { id: "emerald" as const, label: t("Emerald Green", "Verde Esmeralda"), preview: "bg-[#059669] text-white" },
+                  { id: "outline" as const, label: t("Subtle Outline", "Contorno Discreto"), preview: "bg-white text-slate-800 border border-slate-300" },
+                ].map((st) => (
+                  <button
+                    key={st.id}
+                    type="button"
+                    onClick={() => setCustomRsvpStyle(st.id)}
+                    className={`p-2 rounded-lg border text-center transition-all cursor-pointer ${
+                      customRsvpStyle === st.id ? "border-sky-500 ring-2 ring-offset-1 ring-sky-500 font-bold bg-sky-50/50" : "border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700"
+                    }`}
+                  >
+                    <div className="text-xs">{st.label}</div>
+                    <div className={`mt-1.5 mx-auto px-2 py-0.5 rounded text-[10px] w-fit ${st.preview}`}>
+                      Preview
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Live Preview Box */}
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                {t("Live Candidate View Preview:", "Pré-visualização do Candidato:")}
+              </span>
+              <div className="p-3 bg-white rounded-lg border border-slate-200 flex items-center justify-center min-h-[50px]">
+                <span
+                  style={{
+                    display: "inline-block",
+                    backgroundColor: customRsvpStyle === "emerald" ? "#059669" : customRsvpStyle === "navy" ? "#0b1329" : "#ffffff",
+                    color: customRsvpStyle === "outline" ? "#334155" : "#ffffff",
+                    border: customRsvpStyle === "outline" ? "1px solid #cbd5e1" : "none",
+                    padding: "10px 20px",
+                    borderRadius: "8px",
+                    fontWeight: 700,
+                    fontSize: "13px",
+                  }}
+                >
+                  {customRsvpLabel.trim() || t("Button Label", "Texto do Botão")}
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-500">
+                {t(
+                  "When the candidate clicks this in their email, /api/careers/next-phase/respond logs their choice with this exact label and updates their recruitment status.",
+                  "Quando o candidato clicar no email, o sistema regista a escolha com este texto e atualiza o estado no processo de recrutamento."
+                )}
+              </p>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setCustomRsvpModalOpen(false)}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
+              >
+                {t("Cancel", "Cancelar")}
+              </button>
+              <button
+                type="button"
+                disabled={!customRsvpLabel.trim()}
+                onClick={() => {
+                  insertCustomRsvpButton(customRsvpLabel.trim(), customRsvpAction, customRsvpStyle);
+                  setCustomRsvpModalOpen(false);
+                }}
+                className="px-4 py-1.5 rounded-lg bg-sky-600 text-xs font-semibold text-white hover:bg-sky-700 disabled:opacity-50 cursor-pointer shadow-xs"
+              >
+                {t("Insert into Email", "Inserir no Email")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {saveTemplateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
           <div className="relative w-full max-w-md rounded-2xl bg-white border border-slate-200 p-6 shadow-2xl space-y-4">

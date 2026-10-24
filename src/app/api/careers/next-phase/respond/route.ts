@@ -25,14 +25,16 @@ export async function GET(request: Request) {
   }
 
   const applications = await getApplications();
-  const candidate = applications.find((a) => a.nextPhaseToken === token);
+  let candidate = applications.find((a) => a.nextPhaseToken === token);
+  if (!candidate) {
+    candidate = applications.find((a) => a.id === token || (a.email && a.email.toLowerCase() === token.toLowerCase()));
+  }
 
   if (!candidate) {
     return Response.json({ error: "Token inválido ou não encontrado" }, { status: 404 });
   }
 
-  if (!isNextPhase(resolveApplication(candidate))) return Response.json({ error: "This invitation is no longer active" }, { status: 410 });
-
+  const effective = resolveApplication(candidate);
   const isTechManager =
     candidate.role === "cctv_technical_manager" ||
     candidate.role === "technical" ||
@@ -43,6 +45,32 @@ export async function GET(request: Request) {
     : candidate.role === "cctv"
     ? "Operadora de CCO"
     : candidate.role || "Candidato";
+
+  if (!isNextPhase(effective)) {
+    return Response.json({
+      valid: true,
+      stageMismatch: true,
+      stage: effective.status,
+      candidate: {
+        id: candidate.id,
+        name: candidate.name,
+        email: candidate.email,
+        role: candidate.role,
+        roleTitle,
+        isTechManager,
+        testScore: candidate.testScore ?? null,
+        testSlot: candidate.testSlot || null,
+      },
+      bookingUrl: `/careers/test-invite/${candidate.id}`,
+      checkStatusUrl: `/careers/check-status`,
+    });
+  }
+
+  if (!candidate.nextPhaseToken) {
+    const genToken = crypto.randomUUID();
+    candidate.nextPhaseToken = genToken;
+    await updateApplication(candidate.id, { nextPhaseToken: genToken });
+  }
 
   return Response.json({
     valid: true,
@@ -62,7 +90,8 @@ export async function GET(request: Request) {
 async function handlePOST(request: Request) {
   try {
     const body = await request.json();
-    const { token, choice, responseOption: customOption } = body;
+    const { token, choice, responseOption: customOption, customAction } = body;
+    const activeCustomOption = customOption || customAction;
 
     const rawChoice = (choice || "").toString().trim();
     const lowerChoice = rawChoice.toLowerCase();
@@ -95,7 +124,10 @@ async function handlePOST(request: Request) {
     }
 
     const applications = await getApplications();
-    const candidate = applications.find((a) => a.nextPhaseToken === token);
+    let candidate = applications.find((a) => a.nextPhaseToken === token);
+    if (!candidate) {
+      candidate = applications.find((a) => a.id === token || (a.email && a.email.toLowerCase() === token.toLowerCase()));
+    }
 
     if (!candidate) {
       return Response.json({ error: "Convite não encontrado ou token inválido" }, { status: 404 });
@@ -138,7 +170,7 @@ async function handlePOST(request: Request) {
         details: "Accepted 10-day initial training & 3-month practical conditions via secure portal link",
       });
 
-      const responseOption = customOption || (rawChoice && rawChoice !== "yes" ? rawChoice : "Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas.");
+      const responseOption = activeCustomOption || (rawChoice && rawChoice !== "yes" ? rawChoice : "Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas.");
 
       await updateApplication(candidate.id, {
         nextPhaseStatus: "confirmed",
@@ -185,7 +217,7 @@ async function handlePOST(request: Request) {
         details: "Candidate indicated lack of interest/availability for next phase conditions",
       });
 
-      const responseOption = customOption || (rawChoice && rawChoice !== "no" ? rawChoice : "Não tenho interesse");
+      const responseOption = activeCustomOption || (rawChoice && rawChoice !== "no" ? rawChoice : "Não tenho interesse");
 
       await updateApplication(candidate.id, {
         nextPhaseStatus: "declined",

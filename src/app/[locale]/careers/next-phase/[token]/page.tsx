@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { Check, AlertCircle } from "lucide-react";
+import { Check, AlertCircle, Calendar, ArrowRight } from "lucide-react";
 import OverwatchOrbitLoader from "@/components/ui/OverwatchOrbitLoader";
 
 /* ================================================================
@@ -32,6 +32,20 @@ export default function NextPhaseCandidatePage() {
   } | null>(null);
 
   const [isPreview, setIsPreview] = useState(false);
+  const [stageMismatchInfo, setStageMismatchInfo] = useState<{
+    candidate: {
+      id?: string;
+      name: string;
+      email: string;
+      role?: string;
+      roleTitle?: string;
+      testSlot?: string | null;
+      testScore?: number | null;
+    };
+    stage?: string;
+    bookingUrl: string;
+    checkStatusUrl: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedChoice, setSelectedChoice] = useState<"yes" | "no">(initialChoice);
@@ -75,7 +89,11 @@ export default function NextPhaseCandidatePage() {
       const res = await fetch("/api/careers/next-phase/respond", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, choice: selectedChoice }),
+        body: JSON.stringify({
+        token,
+        choice: selectedChoice,
+        responseOption: searchParams.get("responseOption") || searchParams.get("customAction") || undefined,
+      }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -134,6 +152,64 @@ export default function NextPhaseCandidatePage() {
       {/* ---- MAIN CONTENT ---- */}
       <main className="flex-1 flex flex-col items-center px-4 sm:px-6 py-8 sm:py-12">
         <div className="w-full max-w-[680px]">
+
+          {/* ---- Stage Mismatch Guidance Card (Unconfirmed/Pre-test candidate opened link) ---- */}
+          {stageMismatchInfo && (
+            <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 sm:p-8 shadow-xs space-y-6">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-center shrink-0 text-sky-700">
+                  <Calendar size={24} />
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-sky-700 bg-sky-50 px-2.5 py-0.5 rounded-full border border-sky-200">
+                    Processo de Recrutamento Overwatch
+                  </span>
+                  <h1 className="text-xl font-bold text-slate-900">
+                    Olá, {stageMismatchInfo.candidate.name}
+                  </h1>
+                  <p className="text-xs text-slate-500">
+                    {stageMismatchInfo.candidate.roleTitle || "Candidatura Overwatch"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-3">
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-800">
+                  <AlertCircle size={16} className="text-sky-600" />
+                  <span>Estado Atual da sua Candidatura</span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Recebeu esta ligação para confirmação de fases subsequentes. No entanto, o seu processo encontra-se atualmente na fase de agendamento e realização de testes de selecção presenciais.
+                </p>
+                {stageMismatchInfo.candidate.testSlot ? (
+                  <div className="p-3 bg-white rounded-lg border border-slate-200 text-xs text-slate-700">
+                    <span className="font-semibold text-slate-900">Turno de teste já reservado: </span>
+                    <span className="font-mono text-sky-700 font-bold">{stageMismatchInfo.candidate.testSlot}</span>
+                  </div>
+                ) : (
+                  <p className="text-xs text-amber-800 bg-amber-50 p-2.5 rounded-lg border border-amber-200 font-medium">
+                    Ainda não escolheu o seu turno para o teste presencial. Por favor clique no botão abaixo para selecionar a sua data e horário.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+                <a
+                  href={stageMismatchInfo.bookingUrl}
+                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#0b1329] hover:bg-slate-800 text-white text-xs font-bold transition-colors text-center shadow-xs flex items-center justify-center gap-2"
+                >
+                  <Calendar size={15} />
+                  <span>{stageMismatchInfo.candidate.testSlot ? "Ver Bilhete de Agendamento →" : "Agendar Data e Turno do Teste →"}</span>
+                </a>
+                <a
+                  href={stageMismatchInfo.checkStatusUrl}
+                  className="w-full sm:w-auto px-5 py-3 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors text-center"
+                >
+                  Consultar Estado Geral
+                </a>
+              </div>
+            </div>
+          )}
 
           {/* ---- Error-only state (invalid/expired token) ---- */}
           {error && !candidateInfo && (

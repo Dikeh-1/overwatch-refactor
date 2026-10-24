@@ -53,6 +53,8 @@ type CandidateData = {
   slotStats?: Record<string, SlotStat>;
   windowFilledNotice?: boolean;
   address: string;
+  isNextPhase?: boolean;
+  nextPhaseToken?: string;
   supportEmail?: string;
 };
 
@@ -482,6 +484,34 @@ export default function CandidateBookingClient({
         /* ── MAIN CANDIDATE VIEW ─────────────────────────────────── */
         ) : candidate ? (
           <div className="space-y-5">
+
+            {candidate.isNextPhase && (
+              <div className="rounded-2xl border border-emerald-300 bg-emerald-50/90 p-4 sm:p-5 shadow-xs space-y-2.5">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+                    <CheckCircle2 size={18} />
+                  </div>
+                  <div className="space-y-1">
+                    <h2 className="text-sm font-bold text-emerald-950">
+                      {isPt ? "Aprovado(a) para a Próxima Fase!" : "Advanced to Next Phase!"}
+                    </h2>
+                    <p className="text-xs text-emerald-800 leading-relaxed">
+                      {isPt
+                        ? "Já concluiu a fase de testes e foi selecionado(a) para a Próxima Fase do recrutamento. Aceda ao seu portal para confirmar disponibilidade."
+                        : "You have already completed the testing phase and advanced to the Next Phase. Visit your portal to confirm availability."}
+                    </p>
+                  </div>
+                </div>
+                <div className="pt-1">
+                  <a
+                    href={`/${locale}/careers/next-phase/${encodeURIComponent(candidate.nextPhaseToken || candidate.id)}`}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0b1329] hover:bg-slate-800 text-white text-xs font-bold transition-colors shadow-2xs"
+                  >
+                    <span>{isPt ? "Aceder ao Portal da Próxima Fase →" : "Access Next Phase Portal →"}</span>
+                  </a>
+                </div>
+              </div>
+            )}
 
             {/* Identity header */}
             <div className="border border-gray-100 rounded-2xl bg-white shadow-sm overflow-hidden">

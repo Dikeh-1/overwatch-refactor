@@ -14,7 +14,7 @@ export function safeMailHtml(html: string): string {
       "font-size": [/^\d+(?:\.\d+)?(?:px|pt|em|rem|%)$/], "font-family": [/^[a-z\s,"'-]+$/i],
       "text-align": [/^(left|right|center|justify)$/], "font-weight": [/^(bold|normal|[1-9]00)$/],
       "font-style": [/^(italic|normal)$/], "text-decoration": [/^(underline|line-through|none)(?:\s+(?:underline|line-through))*$/],
-      padding: [/^[\d\s.pxemr%]+$/], margin: [/^[\d\s.pxemr%]+$/], "border-radius": [/^\d+px$/], display: [/^(inline-block|block|inline)$/]
+      padding: [/^[\d\s.pxemr%]+$/], margin: [/^[\d\s.pxemr%]+$/], "border-radius": [/^\d+px$/], display: [/^(inline-block|block|inline)$/], border: [/^[\d\s.pxemr%#a-z]+$/i], "border-width": [/^[\d]+px$/], "border-style": [/^(solid|dashed|dotted|none)$/], "border-color": [/^#[0-9a-f]{3,8}$/i,/^rgba?\([\d\s.,%]+\)$/i,/^[a-z]+$/i]
     } },
     transformTags: { a: (_tag, attributes) => ({ tagName: "a", attribs: { ...attributes, rel: "noopener noreferrer" } }) }
   });
