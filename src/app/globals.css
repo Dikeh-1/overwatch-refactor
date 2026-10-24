@@ -572,15 +572,21 @@ input[type="search"]::-webkit-search-results-decoration {
 }
 
 /* Custom scrollbar for horizontal admin tables */
+.floating-horizontal-scrollbar,
+.admin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #e2e8f0;
+}
+
 .floating-horizontal-scrollbar::-webkit-scrollbar,
 .admin-scrollbar::-webkit-scrollbar {
-  height: 9px;
-  width: 9px;
+  height: 12px;
+  width: 10px;
 }
 
 .floating-horizontal-scrollbar::-webkit-scrollbar-track,
 .admin-scrollbar::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #e2e8f0;
   border-radius: 6px;
 }
 
@@ -588,12 +594,17 @@ input[type="search"]::-webkit-search-results-decoration {
 .admin-scrollbar::-webkit-scrollbar-thumb {
   background: #94a3b8;
   border-radius: 6px;
-  border: 2px solid #f1f5f9;
+  border: 2px solid #e2e8f0;
 }
 
 .floating-horizontal-scrollbar::-webkit-scrollbar-thumb:hover,
 .admin-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: #475569;
+}
+
+.dark .floating-horizontal-scrollbar,
+.dark .admin-scrollbar {
+  scrollbar-color: #475569 #1e293b;
 }
 
 .dark .floating-horizontal-scrollbar::-webkit-scrollbar-track,

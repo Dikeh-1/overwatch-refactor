@@ -389,7 +389,7 @@ export default function RichMessageEditor({
       {/* =========================================================================
           TOOLBAR HEADER
          ========================================================================= */}
-      <div onMouseDown={event => { if (!(event.target as Element).closest("select,input")) event.preventDefault(); }} className="border-b border-slate-200 bg-slate-50/80 p-2 sm:p-2.5 flex flex-wrap items-center justify-between gap-2 select-none">
+      <div onMouseDown={event => { if (!(event.target as Element).closest("select,input")) event.preventDefault(); }} className="sticky top-0 z-20 border-b border-slate-200 bg-slate-50/95 backdrop-blur-xs p-2 sm:p-2.5 flex flex-wrap items-center justify-between gap-2 select-none shadow-2xs">
         {/* Left Toolbar: Actions */}
         <div className="flex flex-wrap items-center gap-1">
           {/* History Undo / Redo */}

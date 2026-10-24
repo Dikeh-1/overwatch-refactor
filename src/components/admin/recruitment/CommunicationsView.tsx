@@ -1558,7 +1558,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
         {/* ========================================================================= */}
         {/* RIGHT COLUMN: THE OFFICIAL OVERWATCH COMMUNICATIONS STUDIO CANVAS (7 cols) */}
         {/* ========================================================================= */}
-        <div className={`lg:col-span-7 space-y-4 lg:sticky ${fixedRecipient ? "lg:top-[164px]" : "lg:top-[158px]"} self-start lg:max-h-[calc(100vh-175px)] lg:overflow-y-auto admin-scrollbar`}>
+        <div className="lg:col-span-7 space-y-4 lg:sticky lg:top-4 self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto admin-scrollbar">
           {/* Main Studio Canvas Container */}
           <div
             onDragOver={(e) => {
@@ -1586,8 +1586,8 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
               </div>
             )}
 
-            {/* Studio Canvas Mode Header Tabs */}
-            <div className="rounded-t-2xl border-b border-slate-200 bg-slate-50 px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+            {/* Studio Canvas Mode Header Tabs (Sticky Top) */}
+            <div className="rounded-t-2xl border-b border-slate-200 bg-slate-50 px-6 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-30 backdrop-blur-xs bg-slate-50/95">
               <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200">
                 <button
                   type="button"
@@ -1636,6 +1636,94 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                   )}
                 </button>
               </div>
+            </div>
+
+            {/* Smart Context & Quick Action Tokens Bar */}
+            <div className="bg-slate-50/90 border-b border-slate-200/80 px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+              {/* Active Target Audience Indicator */}
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-50 text-sky-800 border border-sky-200 shadow-2xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse" />
+                  <span className="truncate max-w-[200px]">
+                    {fixedRecipient
+                      ? fixedRecipient.name
+                      : targetAudience === "shortlisted_unbooked"
+                      ? t("Shortlisted (Awaiting Booking)", "Convocadas (Pendente Agendamento)")
+                      : targetAudience === "booked_confirmed"
+                      ? t("Booked Sessions", "Testes Agendados")
+                      : targetAudience === "next_phase"
+                      ? t("Next Phase", "Próxima Fase")
+                      : targetAudience === "tested"
+                      ? t("Tested", "Testes Concluídos")
+                      : targetAudience === "interview"
+                      ? t("In Interview", "Em Entrevista")
+                      : targetAudience === "hired"
+                      ? t("Hired", "Contratados")
+                      : t("All in Role", "Todas da Vaga")}
+                  </span>
+                  <span className="text-sky-600 font-semibold font-mono">({targetCandidates.length})</span>
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono hidden md:inline">
+                  {emailLang === "en" ? "EN" : "PT-MZ"}
+                </span>
+              </div>
+
+              {/* Quick 1-Click Action Token Inserters (Available Right Here Without Scrolling Left) */}
+              {canvasTab === "edit" && (
+                <div className="flex items-center gap-1 overflow-x-auto py-0.5">
+                  <span className="text-[10px] text-slate-400 font-semibold mr-0.5 hidden xl:inline">
+                    {t("Quick Tokens:", "Inserir:")}
+                  </span>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => insertActionToken(BOOKING_TOKEN, t("Test Booking Button", "Botão de Agendamento"))}
+                    className="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-600 hover:bg-sky-700 text-white transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
+                    title={t("Insert Test Booking Link token", "Inserir token de Agendamento de Teste")}
+                  >
+                    <Calendar size={11} />
+                    <span>+ Agendar</span>
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => insertActionToken("{{confirm_button}}", t("Confirmation Button", "Botão de Confirmação"))}
+                    className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
+                    title={t("Insert Confirmation Button token", "Inserir token de Confirmação")}
+                  >
+                    <Check size={11} />
+                    <span>+ Confirmar</span>
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => insertActionToken("{{response_buttons}}", t("Accept / Decline Buttons", "Botões Aceitar / Recusar"))}
+                    className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#0b1329] hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
+                    title={t("Insert Dual Response Buttons token", "Inserir botões Sim / Não")}
+                  >
+                    <CheckSquare size={11} />
+                    <span>+ Sim/Não</span>
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => handleInsertTag("{{candidate_name}}")}
+                    className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 transition-colors cursor-pointer shadow-2xs"
+                    title={t("Insert Candidate Name token", "Inserir nome do candidato")}
+                  >
+                    + Nome
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => handleInsertTag("{{role_title}}")}
+                    className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 transition-colors cursor-pointer shadow-2xs"
+                    title={t("Insert Job Role token", "Inserir cargo / vaga")}
+                  >
+                    + Vaga
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Tab 1: Professional Rich Message Editor */}
