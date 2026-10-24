@@ -800,7 +800,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
             value={searchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder={t("Search candidates by name, email, phone...", "Pesquisar por nome, email, telefone...")}
-            className="w-full pl-9 pr-8 py-1.5 text-xs rounded-md border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 [::-webkit-search-cancel-button]:hidden"
+            className="w-full pl-9 pr-8 py-1.5 text-xs rounded-md border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
           />
           {searchQuery && (
             <button
