@@ -379,7 +379,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
       </div>
 
       {/* Sticky Tab Navigation Strip */}
-      <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm overflow-x-auto admin-scrollbar">
+      <div className="sticky top-[48px] z-20 flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm overflow-x-auto admin-scrollbar">
         {tabs.map((tab) => (
           <button
             key={tab.id}

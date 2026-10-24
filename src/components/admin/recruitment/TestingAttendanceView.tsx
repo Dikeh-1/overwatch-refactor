@@ -23,9 +23,7 @@ import {
   SlidersHorizontal,
   Plus,
   Trash2,
-  Upload,
 } from "lucide-react";
-import { UploadTestResultsModal } from "./UploadTestResultsModal";
 import { hasAttended, isTerminal } from "@/lib/careers-workflow";
 import { getQuotaForSlot } from "@/lib/careers-booking-rules";
 import { Application, normalizeSlot, formatSlotDisplay, formatPhoneDisplay } from "@/lib/careers";
@@ -72,7 +70,6 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
   const [newSlotText, setNewSlotText] = useState("");
   const [savingConfig, setSavingConfig] = useState(false);
   const [togglingAttendanceId, setTogglingAttendanceId] = useState<string | null>(null);
-  const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
   useEffect(() => {
     setEditingSlots(broadcastSlots);
@@ -190,16 +187,6 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Upload Test Scores */}
-          <button
-            type="button"
-            onClick={() => setUploadModalOpen(true)}
-            className="px-3 py-1.5 rounded-md border border-sky-300 bg-sky-50/90 hover:bg-sky-100 text-sky-800 text-xs font-semibold transition-colors inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
-          >
-            <Upload size={13} className="text-sky-600" />
-            <span>{t("Upload Test Scores", "Carregar Notas")}</span>
-          </button>
-
           {/* Gate Pass Dispatch */}
           <button
             type="button"
@@ -237,7 +224,7 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
       </div>
 
       {/* Sticky Session Navigation & Search Toolbar */}
-      <div className="space-y-3">
+      <div className="sticky top-[102px] z-20 bg-[#F7F8FA] pt-1 pb-2 space-y-2.5">
       {/* Session Navigation Tabs */}
       <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto pb-1 admin-scrollbar">
         <button
@@ -585,19 +572,6 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
           </div>
         </div>
       )}
-      {/* Upload Test Scores Modal */}
-      <UploadTestResultsModal
-        isOpen={uploadModalOpen}
-        onClose={() => setUploadModalOpen(false)}
-        roleId={activeRoleId !== "all" ? activeRoleId : undefined}
-        cohortId={currentRoleDef?.activeCohortId || undefined}
-        lang={lang}
-        onSuccess={async () => {
-          if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("admin:careers-updated"));
-          }
-        }}
-      />
     </div>
   );
 };

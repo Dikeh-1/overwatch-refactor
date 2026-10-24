@@ -835,7 +835,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       </div>
 
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3"><label className="text-xs font-semibold">{t("Email language", "Idioma do email")}<select aria-label={t("Email language", "Idioma do email")} value={emailLang} onChange={event => setEmailLang(event.target.value as "pt" | "en")} className="ml-3 rounded-lg border px-3 py-2"><option value="pt">Português</option><option value="en">English</option></select></label><span className="text-xs text-slate-500">{t("Controls templates, role names, booking buttons and the letterhead. The admin interface can stay in English.", "Controla os modelos, nomes de vagas, botões de agendamento e o timbre.")}</span></div>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+      <div className="sticky top-[102px] z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
         <nav aria-label={t("Mailbox folders", "Pastas de correio")} className="flex flex-wrap gap-1">{([
           ["compose", t("Compose", "Escrever")],
           ["drafts", t("Drafts", "Rascunhos")],

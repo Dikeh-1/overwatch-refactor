@@ -730,7 +730,7 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
       </div>
 
       {/* Sticky Navigation, Filter & Bulk Action Header */}
-      <div className="space-y-3">
+      <div className="sticky top-[102px] z-20 bg-[#F7F8FA] pt-1 pb-2 space-y-2.5">
       {/* Active Metric Filter Banner */}
       {activeMetric && (
         <div className="flex items-center justify-between bg-sky-50/90 border border-sky-200 rounded-lg px-3 py-2 text-xs text-sky-900 shadow-sm">
