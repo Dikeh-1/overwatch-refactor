@@ -127,11 +127,14 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
+      const cleanQ = q.startsWith("#") ? q.slice(1).trim() : q;
       list = list.filter(
         (a) =>
           a.name.toLowerCase().includes(q) ||
           a.email.toLowerCase().includes(q) ||
-          a.whatsapp.includes(q)
+          a.whatsapp.includes(q) ||
+          a.id.toLowerCase().includes(cleanQ) ||
+          a.id.slice(0, 8).toLowerCase().includes(cleanQ)
       );
     }
     return list;

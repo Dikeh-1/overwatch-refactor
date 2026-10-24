@@ -478,8 +478,9 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
       // 7. Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const haystack = `${cand.id} ${cand.id.slice(0, 8)} ${cand.name} ${cand.email} ${cand.whatsapp} ${cand.nextPhaseToken || ""} ${cand.lastProfession || ""} ${cand.currentLocation || ""} ${cand.yearsCctvExperience || ""}`.toLowerCase();
-        if (!haystack.includes(q)) return false;
+        const cleanQ = q.startsWith("#") ? q.slice(1).trim() : q;
+        const haystack = `${cand.id} #${cand.id.slice(0, 8)} ${cand.id.slice(0, 8)} #${cand.id} ${cand.name} ${cand.email} ${cand.whatsapp} ${cand.nextPhaseToken || ""} ${cand.lastProfession || ""} ${cand.currentLocation || ""} ${cand.yearsCctvExperience || ""}`.toLowerCase();
+        if (!haystack.includes(q) && !haystack.includes(cleanQ)) return false;
       }
 
       return true;

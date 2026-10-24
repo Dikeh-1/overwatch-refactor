@@ -266,14 +266,19 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang, co
       // 4. Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
+        const cleanQ = q.startsWith("#") ? q.slice(1).trim() : q;
         const rawPhone = (c.phone || "").replace(/\D/g, "");
-        const cleanQuery = q.replace(/\D/g, "");
+        const cleanPhone = cleanQ.replace(/\D/g, "");
         const matchName =
           (c.name || "").toLowerCase().includes(q) ||
           (c.approvedName || "").toLowerCase().includes(q);
         const matchEmail = (c.email || "").toLowerCase().includes(q);
-        const matchPhone = cleanQuery.length > 2 && rawPhone.includes(cleanQuery);
-        if (!matchName && !matchEmail && !matchPhone) return false;
+        const matchPhone = cleanPhone.length > 2 && rawPhone.includes(cleanPhone);
+        const matchId =
+          c.id.toLowerCase().includes(cleanQ) ||
+          c.id.slice(0, 8).toLowerCase().includes(cleanQ) ||
+          Boolean(c.token && c.token.toLowerCase().includes(cleanQ));
+        if (!matchName && !matchEmail && !matchPhone && !matchId) return false;
       }
 
       return true;

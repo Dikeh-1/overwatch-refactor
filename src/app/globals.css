@@ -560,3 +560,27 @@ button:disabled, [aria-disabled="true"] { cursor: not-allowed; }
 @media (prefers-reduced-motion: no-preference) {
   [data-admin-ui] button, [data-admin-ui] a[href] { transition: background-color 120ms, box-shadow 120ms, transform 120ms; }
 }
+
+/* Custom scrollbar for horizontal admin tables */
+.floating-horizontal-scrollbar::-webkit-scrollbar,
+.admin-scrollbar::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.floating-horizontal-scrollbar::-webkit-scrollbar-track,
+.admin-scrollbar::-webkit-scrollbar-track {
+  background: #334155;
+  border-radius: 4px;
+}
+
+.floating-horizontal-scrollbar::-webkit-scrollbar-thumb,
+.admin-scrollbar::-webkit-scrollbar-thumb {
+  background: #38bdf8;
+  border-radius: 4px;
+}
+
+.floating-horizontal-scrollbar::-webkit-scrollbar-thumb:hover,
+.admin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #0ea5e9;
+}

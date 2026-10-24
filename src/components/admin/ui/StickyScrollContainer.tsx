@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface StickyScrollContainerProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
@@ -133,6 +134,12 @@ export default function StickyScrollContainer({
     }
   };
 
+  const scrollLeftBy = (amount: number) => {
+    if (containerRef.current) {
+      containerRef.current.scrollBy({ left: amount, behavior: "smooth" });
+    }
+  };
+
   return (
     <div className={`relative ${className}`} {...props}>
       {/* Primary Scrollable Table Container */}
@@ -147,28 +154,63 @@ export default function StickyScrollContainer({
       {/* Floating Sticky Horizontal Scrollbar Pinned to Viewport Bottom */}
       {isStickyVisible && barBounds.width > 0 && (
         <div
-          ref={floatingBarRef}
-          onScroll={handleFloatingScroll}
-          onWheel={handleFloatingWheel}
           style={{
             position: "fixed",
             bottom: 0,
             left: barBounds.left,
             width: barBounds.width,
-            height: 14,
             zIndex: 35,
           }}
-          className="overflow-x-auto floating-horizontal-scrollbar bg-slate-100 border-t border-slate-300 shadow-md transition-opacity duration-150"
-          title="Scroll horizontally"
-          aria-hidden="true"
+          className="flex items-center bg-[#0b1329] text-white shadow-2xl border-t border-slate-700 px-3 py-1.5 gap-2.5 select-none transition-opacity duration-150 animate-in fade-in"
         >
-          <div
-            style={{
-              width: scrollWidth,
-              minWidth: scrollWidth,
-              height: 1,
-            }}
-          />
+          {/* Scroll Left Button */}
+          <button
+            type="button"
+            onClick={() => scrollLeftBy(-280)}
+            className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-sky-400 hover:text-white transition-colors shrink-0 cursor-pointer text-xs flex items-center gap-1 font-bold shadow-xs"
+            title="Deslizar colunas para a esquerda (Previous columns)"
+          >
+            <ChevronLeft size={16} />
+          </button>
+
+          {/* Center Scroll Track + Informative Label */}
+          <div className="flex-1 flex flex-col justify-center min-w-0">
+            <div className="flex items-center justify-between text-[10px] text-slate-300 font-medium px-1 mb-1">
+              <span className="flex items-center gap-1 text-sky-300 font-semibold">
+                <span>↔ Deslize para ver todas as colunas / Scroll for more columns</span>
+              </span>
+              <span className="text-slate-400 font-mono text-[9px] hidden sm:inline">
+                Tabela ampla
+              </span>
+            </div>
+
+            {/* Custom Horizontal Scrollbar Strip */}
+            <div
+              ref={floatingBarRef}
+              onScroll={handleFloatingScroll}
+              onWheel={handleFloatingWheel}
+              className="w-full overflow-x-auto floating-horizontal-scrollbar h-2 rounded bg-slate-800"
+              title="Role a barra ou utilize as setas laterais para visualizar colunas adicionais"
+            >
+              <div
+                style={{
+                  width: scrollWidth,
+                  minWidth: scrollWidth,
+                  height: 1,
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Scroll Right Button */}
+          <button
+            type="button"
+            onClick={() => scrollLeftBy(280)}
+            className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-sky-400 hover:text-white transition-colors shrink-0 cursor-pointer text-xs flex items-center gap-1 font-bold shadow-xs"
+            title="Deslizar colunas para a direita (Next columns)"
+          >
+            <ChevronRight size={16} />
+          </button>
         </div>
       )}
     </div>

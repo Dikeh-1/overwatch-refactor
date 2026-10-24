@@ -2,7 +2,7 @@
 import { evaluateApplicationWithRules, screeningValue } from "@/lib/careers-evaluator";
 import { DEFAULT_SCREENING_RULES_BY_ROLE } from "@/lib/careers-models";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -26,6 +26,7 @@ import {
   Check,
   X,
   Copy,
+  History as HistoryIcon,
 } from "lucide-react";
 import { Application, Role, stages, formatPhoneDisplay, formatSlotDisplay, ArchiveReason } from "@/lib/careers";
 import { classifyCandidateLocation } from "@/lib/location-utils";
@@ -62,7 +63,8 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
   const lang = propLang ?? contextLang;
   const t = (en: string, pt: string) => (lang === "en" ? en : pt);
 
-  const [activeTab, setActiveTab] = useState<"overview" | "application" | "test" | "documents" | "communications" | "activity">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "application" | "test" | "documents" | "communications" | "history" | "activity">("overview");
+  const [refCopied, setRefCopied] = useState(false);
   useEffect(() => {
     const back = (event: Event) => { if (activeTab !== "overview") { event.preventDefault(); setActiveTab("overview"); } };
     window.addEventListener("admin:back", back);
@@ -230,11 +232,195 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
     { id: "application", label: t("Application & Questionnaire", "Candidatura & Respostas") },
     ...(isTechnicalRole ? [] : [{ id: "test", label: t("Test & Scores", "Teste Presencial") }]),
     { id: "documents", label: t("Documents & CV", "Documentos & CV") },
-    { id: "communications", label: t("Communications", "Comunicações") },
+    { id: "communications", label: t("Communications Studio", "Comunicações") },
+    { id: "history", label: t("Communication History", "Histórico de Comunicações") },
     { id: "activity", label: t("Activity Log", "Histórico de Auditoria") },
   ];
 
-  const backTarget = adminParent(`/admin/recruitment/candidates/${candidate.id}`, new URLSearchParams(searchParams));
+    // Synthesized Full Audit Timeline capturing all candidate actions, bookings, communications, and evaluations
+  const synthesizedAuditTimeline = useMemo(() => {
+    type TimelineItem = {
+      id: string;
+      action: string;
+      details?: string;
+      actor: string;
+      timestamp: string;
+      badgeColor: string;
+      category: "email" | "booking" | "attendance" | "score" | "nextphase" | "submission" | "archive" | "general";
+    };
+
+    const items: TimelineItem[] = [];
+
+    // 1. Explicit activityLog items from candidate record
+    if (candidate.activityLog) {
+      candidate.activityLog.forEach((act, idx) => {
+        const lower = act.action.toLowerCase();
+        items.push({
+          id: act.id || `act-${idx}`,
+          action: act.action,
+          details: act.details,
+          actor: act.actor || "System",
+          timestamp: act.timestamp,
+          category: lower.includes("decline") || lower.includes("disqualif")
+            ? "archive"
+            : lower.includes("confirm") || lower.includes("pass")
+            ? "nextphase"
+            : lower.includes("score") || lower.includes("test")
+            ? "score"
+            : "general",
+          badgeColor: lower.includes("decline") || lower.includes("disqualif")
+            ? "border-rose-200 bg-rose-50 text-rose-800"
+            : lower.includes("confirm") || lower.includes("pass")
+            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+            : "border-slate-200 bg-slate-50 text-slate-800",
+        });
+      });
+    }
+
+    // 2. All communications dispatched
+    if (candidate.communications) {
+      candidate.communications.forEach((comm, idx) => {
+        items.push({
+          id: comm.id || `comm-${idx}`,
+          action: t("Official Email Dispatched", "Email Oficial Enviado"),
+          details: `${comm.subject} • ${t("Recipient:", "Destinatário:")} ${comm.recipient} (${(comm.status || "SENT").toUpperCase()})`,
+          actor: comm.sender || "Admin Recruiter",
+          timestamp: comm.sentAt,
+          category: "email",
+          badgeColor: comm.status === "failed"
+            ? "border-red-200 bg-red-50 text-red-800"
+            : "border-sky-200 bg-sky-50 text-sky-800",
+        });
+      });
+    }
+
+    // 3. Application Submission
+    if (candidate.createdAt) {
+      items.push({
+        id: `created-${candidate.id}`,
+        action: t("Application Submitted", "Candidatura Submetida"),
+        details: t("Candidate completed online application questionnaire with CV and documentation", "Candidato submeteu a candidatura online com CV e questionário"),
+        actor: "Candidate",
+        timestamp: candidate.createdAt,
+        category: "submission",
+        badgeColor: "border-slate-200 bg-slate-50 text-slate-800",
+      });
+    }
+
+    // 4. Test Invitation Dispatched
+    if (candidate.invitedAt) {
+      items.push({
+        id: `invite-${candidate.id}`,
+        action: t("Test Invitation Issued", "Convocatória para Teste Emitida"),
+        details: t("Invitation dispatched with personalized booking link and instructions", "Convocatória enviada com ligação pessoal para escolha de data do teste"),
+        actor: "System / Recruitment Admin",
+        timestamp: candidate.invitedAt,
+        category: "email",
+        badgeColor: "border-sky-200 bg-sky-50 text-sky-800",
+      });
+    }
+
+    // 5. Booking link opened
+    if (candidate.bookingLinkOpenedAt) {
+      items.push({
+        id: `open-${candidate.id}`,
+        action: t("Booking Link Opened", "Link de Convocatória Acedido"),
+        details: t("Candidate accessed their personal session selection schedule", "Candidato acedeu à plataforma de agendamento de testes presenciais"),
+        actor: "Candidate",
+        timestamp: candidate.bookingLinkOpenedAt,
+        category: "booking",
+        badgeColor: "border-blue-200 bg-blue-50 text-blue-800",
+      });
+    }
+
+    // 6. Test Slot Booked
+    if (candidate.testBookedAt && candidate.testSlot) {
+      items.push({
+        id: `booked-${candidate.id}`,
+        action: t("Test Slot Booked & Confirmed", "Turno de Teste Agendado"),
+        details: `${t("Confirmed session slot:", "Turno confirmado:")} ${formatSlotDisplay(candidate.testSlot, lang)}`,
+        actor: "Candidate",
+        timestamp: candidate.testBookedAt,
+        category: "booking",
+        badgeColor: "border-emerald-200 bg-emerald-50 text-emerald-800",
+      });
+    }
+
+    // 7. Gate Attendance / Check-In
+    if (candidate.attendedAt) {
+      items.push({
+        id: `attended-${candidate.id}`,
+        action: t("Gate Attendance Verified", "Presença Registada na Portaria"),
+        details: `${t("Physical check-in at Maputo HQ", "Entrada física validada nas instalações de Maputo")}${candidate.attendanceStatus ? ` (${candidate.attendanceStatus})` : ""}`,
+        actor: "Gate Security / Reception",
+        timestamp: candidate.attendedAt,
+        category: "attendance",
+        badgeColor: "border-emerald-200 bg-emerald-50 text-emerald-800",
+      });
+    }
+
+    // 8. Test Score Recorded (if not duplicate of activityLog)
+    const scoreVal = typeof candidate.testScore === "number" ? candidate.testScore : typeof candidate.score === "number" ? candidate.score : null;
+    const hasScoreInLog = items.some(it => it.action.toLowerCase().includes("test result") || it.action.toLowerCase().includes("score") || it.action.toLowerCase().includes("nota"));
+    if (scoreVal !== null && !hasScoreInLog) {
+      items.push({
+        id: `score-${candidate.id}`,
+        action: t("Test Score Recorded", "Nota do Teste Registada"),
+        details: `${t("Evaluated score:", "Nota atribuída:")} ${scoreVal}%`,
+        actor: "Recruitment Admin",
+        timestamp: candidate.attendedAt || candidate.createdAt,
+        category: "score",
+        badgeColor: "border-purple-200 bg-purple-50 text-purple-800",
+      });
+    }
+
+    // 9. Next Phase Decision / Response
+    if (candidate.nextPhaseRespondedAt) {
+      const isYes = candidate.nextPhaseResponse === "yes";
+      items.push({
+        id: `nextphase-${candidate.id}`,
+        action: isYes ? t("Next Phase Confirmed", "Próxima Fase Confirmada") : t("Next Phase Declined", "Próxima Fase Declinada"),
+        details: candidate.nextPhaseResponseOption || (isYes ? t("Candidate accepted terms & conditions", "Candidato aceitou os termos e condições") : t("Candidate declined", "Candidato recusou")),
+        actor: "Candidate (via Portal)",
+        timestamp: candidate.nextPhaseRespondedAt,
+        category: "nextphase",
+        badgeColor: isYes ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-rose-200 bg-rose-50 text-rose-800",
+      });
+    }
+
+    // 10. Archived / Disqualified
+    if (candidate.status === "archived") {
+      items.push({
+        id: `archived-${candidate.id}`,
+        action: t("Candidate Archived", "Candidatura Arquivada"),
+        details: candidate.archiveReason || t("Archived from active funnel", "Arquivado do funil ativo"),
+        actor: "Recruitment Admin",
+        timestamp: candidate.archivedAt || new Date().toISOString(),
+        category: "archive",
+        badgeColor: "border-slate-200 bg-slate-100 text-slate-800",
+      });
+    }
+
+    // Deduplicate items with similar action within 5-second window
+    const seen = new Set<string>();
+    const uniqueItems: TimelineItem[] = [];
+
+    // Sort newest first
+    items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    for (const it of items) {
+      const timeBucket = Math.round(new Date(it.timestamp).getTime() / 5000);
+      const key = `${it.action.toLowerCase().slice(0, 15)}_${timeBucket}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueItems.push(it);
+      }
+    }
+
+    return uniqueItems;
+  }, [candidate, t, lang]);
+
+const backTarget = adminParent(`/admin/recruitment/candidates/${candidate.id}`, new URLSearchParams(searchParams));
 
   return (
     <div className="space-y-6">
@@ -329,6 +515,19 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
                 <h1 className="text-lg font-bold text-slate-900 tracking-tight">
                   {candidate.name}
                 </h1>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`#${candidate.id.slice(0, 8).toUpperCase()}`);
+                    setRefCopied(true);
+                    setTimeout(() => setRefCopied(false), 2000);
+                  }}
+                  className="px-2 py-0.5 rounded text-[0.7rem] font-mono font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition-colors cursor-pointer inline-flex items-center gap-1 shadow-2xs"
+                  title={t("Click to copy reference number", "Clique para copiar número de referência")}
+                >
+                  <span>#{candidate.id.slice(0, 8).toUpperCase()}</span>
+                  {refCopied ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} className="text-slate-400" />}
+                </button>
                 <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
                   {roleLabel}
                 </span>
@@ -378,8 +577,9 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
         </div>
       </div>
 
-      {/* Sticky Tab Navigation Strip */}
-      <div className="sticky top-[48px] z-20 flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm overflow-x-auto admin-scrollbar">
+      {/* Sticky Tab Navigation Strip with solid non-transparent background */}
+      <div className="sticky top-[48px] z-25 -mx-6 px-6 py-2 bg-[#F7F8FA]">
+        <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm overflow-x-auto admin-scrollbar">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -394,6 +594,7 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
             {tab.label}
           </button>
         ))}
+        </div>
       </div>
 
       {/* TAB 1: OVERVIEW */}
@@ -1002,74 +1203,175 @@ export const CandidateProfileView: React.FC<CandidateProfileViewProps> = ({
         </div>
       )}
 
-      {/* TAB 5: COMMUNICATIONS */}
+      {/* TAB 5: COMMUNICATIONS STUDIO (COMPOSE & INDIVIDUAL TOOLS) */}
       {activeTab === "communications" && (
-        <div className="space-y-5">
-          <button type="button" onClick={() => setActiveTab("overview")} className="inline-flex items-center gap-1.5 text-xs text-slate-600"><ArrowLeft size={14}/>{t("Back to profile", "Voltar ao perfil")}</button>
-          <CommunicationsView key={candidate.id} applications={[candidate]} fixedRecipient={candidate} cohortId={candidate.cohortId} lang={lang} onSent={onRefresh}/>
-        <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-4">
-          <h2 className="text-sm font-bold text-slate-900">
-            {t("Communication History", "Histórico de Comunicações")}
-          </h2>
-
-          <div className="divide-y divide-slate-100 text-xs">
-            {candidate.communications && candidate.communications.length > 0 ? (
-              candidate.communications.map((comm, idx) => (
-                <div key={idx} className="py-3 flex items-start justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="font-semibold text-slate-900">{comm.subject}</div>
-                    <div className="text-[0.7rem] text-slate-500">
-                      {t("To:", "Para:")} {comm.recipient} • {t("Type:", "Tipo:")} {comm.type}
-                    </div>
-                    {comm.bodySnippet && <details className="pt-2"><summary className="cursor-pointer text-sky-700">{t("View message", "Ver mensagem")}</summary><pre className="mt-2 whitespace-pre-wrap break-words font-sans text-xs text-slate-700">{comm.bodySnippet}</pre></details>}
-                  </div>
-                  <div className="text-right shrink-0">
-                    <span className={`px-2 py-0.5 rounded text-[0.65rem] font-semibold border ${comm.status === "failed" ? "bg-red-50 text-red-700 border-red-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"}`}>
-                      {comm.status.toUpperCase()}
-                    </span>
-                    <div className="text-[0.65rem] text-slate-400 mt-1">
-                      {new Date(comm.sentAt).toLocaleString("pt-MZ")}
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="py-8 text-center text-slate-400 text-xs">
-                {t("No communication records logged yet.", "Nenhum registo de comunicação registado.")}
-              </div>
-            )}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between pb-1">
+            <button type="button" onClick={() => setActiveTab("overview")} className="inline-flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900 transition-colors">
+              <ArrowLeft size={14}/>
+              <span>{t("Back to profile", "Voltar ao perfil")}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("history")}
+              className="text-xs text-sky-700 hover:text-sky-900 font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <HistoryIcon size={13} />
+              <span>{t("View sent communication history →", "Ver histórico de comunicações enviadas →")}</span>
+            </button>
           </div>
-        </div>
+          <CommunicationsView key={candidate.id} applications={[candidate]} fixedRecipient={candidate} cohortId={candidate.cohortId} lang={lang} onSent={onRefresh}/>
         </div>
       )}
 
-      {/* TAB 6: ACTIVITY LOG */}
+      {/* TAB 6: COMMUNICATION HISTORY (DEDICATED LOG BEFORE ACTIVITY LOG) */}
+      {activeTab === "history" && (
+        <div className="space-y-4">
+          <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="space-y-0.5">
+                <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Mail size={16} className="text-sky-600" />
+                  <span>{t("Communication History", "Histórico de Comunicações")}</span>
+                </h2>
+                <p className="text-xs text-slate-500">
+                  {t(
+                    "All official emails, convocations, and updates sent to this candidate.",
+                    "Todos os emails oficiais, convites e actualizações enviados a este candidato."
+                  )}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 font-mono text-xs font-semibold">
+                  {(candidate.communications || []).length} {t("sent", "enviados")}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("communications")}
+                  className="px-3 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-700 font-semibold text-xs transition-colors cursor-pointer"
+                >
+                  {t("+ New Message", "+ Nova Mensagem")}
+                </button>
+              </div>
+            </div>
+
+            <div className="divide-y divide-slate-100 text-xs">
+              {candidate.communications && candidate.communications.length > 0 ? (
+                candidate.communications.map((comm, idx) => (
+                  <div key={idx} className="py-3.5 flex items-start justify-between gap-4">
+                    <div className="space-y-1.5 flex-1 min-w-0">
+                      <div className="font-semibold text-slate-900 text-xs sm:text-sm">{comm.subject}</div>
+                      <div className="text-[0.72rem] text-slate-500 flex items-center gap-2 flex-wrap">
+                        <span>{t("To:", "Para:")} <span className="font-medium text-slate-700">{comm.recipient}</span></span>
+                        <span>•</span>
+                        <span>{t("Type:", "Tipo:")} <span className="font-mono uppercase">{comm.type}</span></span>
+                        {comm.sender && (
+                          <>
+                            <span>•</span>
+                            <span>{t("Sender:", "Remetente:")} {comm.sender}</span>
+                          </>
+                        )}
+                      </div>
+                      {comm.bodySnippet && (
+                        <details className="pt-1.5 group">
+                          <summary className="cursor-pointer text-sky-700 font-medium hover:underline text-xs inline-flex items-center gap-1">
+                            <span>{t("View message content", "Ver conteúdo da mensagem")}</span>
+                            <ChevronDown size={12} className="group-open:rotate-180 transition-transform" />
+                          </summary>
+                          <div className="mt-2 p-3 rounded-lg bg-slate-50 border border-slate-200/80 whitespace-pre-wrap break-words font-sans text-xs text-slate-800 leading-relaxed max-h-80 overflow-y-auto">
+                            {comm.bodySnippet}
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className={`px-2.5 py-0.5 rounded text-[0.65rem] font-bold border tracking-wide uppercase ${
+                        comm.status === "failed"
+                          ? "bg-red-50 text-red-700 border-red-200"
+                          : comm.status === "delivered" || comm.status === "sent"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : "bg-sky-50 text-sky-700 border-sky-200"
+                      }`}>
+                        {(comm.status || "SENT").toUpperCase()}
+                      </span>
+                      <div className="text-[0.68rem] text-slate-400 font-mono mt-1.5">
+                        {new Date(comm.sentAt).toLocaleString("pt-MZ")}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="py-12 text-center text-slate-400 text-xs space-y-2">
+                  <Mail size={24} className="mx-auto text-slate-300" />
+                  <p>{t("No communication records logged yet.", "Nenhum registo de comunicação registado.")}</p>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("communications")}
+                    className="px-3 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-700 font-semibold text-xs transition-colors"
+                  >
+                    {t("Send first message →", "Enviar primeira mensagem →")}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 7: ACTIVITY AUDIT LOG (COMPREHENSIVE FULL TIMELINE) */}
       {activeTab === "activity" && (
         <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-4">
-          <h2 className="text-sm font-bold text-slate-900">
-            {t("Activity Audit Timeline", "Histórico de Auditoria")}
-          </h2>
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="space-y-0.5">
+              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <ShieldCheck size={16} className="text-slate-700" />
+                <span>{t("Activity Audit Timeline", "Histórico Completo de Auditoria")}</span>
+              </h2>
+              <p className="text-xs text-slate-500">
+                {t(
+                  "Chronological audit trail of all candidate submissions, communications, bookings, gate attendance, scores, and status updates.",
+                  "Registo cronológico de todas as submissões, comunicações, agendamentos, presença física, notas e decisões."
+                )}
+              </p>
+            </div>
+            <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 font-mono text-xs font-semibold">
+              {synthesizedAuditTimeline.length} {t("events logged", "eventos registados")}
+            </span>
+          </div>
 
-          <div className="space-y-3">
-            {candidate.activityLog && candidate.activityLog.length > 0 ? (
-              candidate.activityLog.map((act, idx) => (
-                <div key={idx} className="p-3 rounded-md border border-slate-200 bg-slate-50 flex items-start justify-between gap-3 text-xs">
-                  <div>
-                    <div className="font-semibold text-slate-900">{act.action}</div>
-                    {act.details && <div className="text-slate-600 mt-0.5">{act.details}</div>}
-                    <div className="text-[0.7rem] text-slate-400 mt-1">{t("Actor:", "Operador:")} {act.actor || "System"}</div>
+          <div className="space-y-3 pt-1">
+            {synthesizedAuditTimeline.length > 0 ? (
+              synthesizedAuditTimeline.map((item: { id: string; action: string; details?: string; actor: string; timestamp: string; badgeColor: string; category: string }) => (
+                <div
+                  key={item.id}
+                  className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-slate-50 transition-colors flex items-start justify-between gap-4 text-xs shadow-2xs"
+                >
+                  <div className="space-y-1 flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-slate-900 text-xs sm:text-sm">{item.action}</span>
+                      <span className={`px-2 py-0.5 rounded text-[0.65rem] font-semibold border ${item.badgeColor}`}>
+                        {item.category.toUpperCase()}
+                      </span>
+                    </div>
+                    {item.details && (
+                      <p className="text-slate-600 leading-relaxed text-xs break-words">{item.details}</p>
+                    )}
+                    <div className="text-[0.7rem] text-slate-400 font-medium pt-0.5">
+                      {t("Actor:", "Operador:")} <span className="font-semibold text-slate-700">{item.actor}</span>
+                    </div>
                   </div>
-                  <span className="text-[0.65rem] text-slate-400 whitespace-nowrap font-mono shrink-0">
-                    {new Date(act.timestamp).toLocaleString("pt-MZ")}
-                  </span>
+                  <div className="text-right shrink-0">
+                    <span className="text-[0.68rem] text-slate-500 font-mono bg-white px-2 py-1 rounded border border-slate-200 shadow-2xs whitespace-nowrap block">
+                      {new Date(item.timestamp).toLocaleString("pt-MZ")}
+                    </span>
+                  </div>
                 </div>
               ))
             ) : (
-              <div className="p-3 rounded-md border border-slate-200 bg-slate-50 text-xs text-slate-600">
-                <div className="font-semibold text-slate-900">{t("Application Submitted", "Candidatura Submetida")}</div>
-                <div className="text-[0.7rem] text-slate-400 mt-1">
-                  {new Date(candidate.createdAt).toLocaleString("pt-MZ")}
-                </div>
+              <div className="p-8 text-center text-slate-400 text-xs space-y-1">
+                <Clock size={20} className="mx-auto text-slate-300 mb-1" />
+                <p className="font-medium text-slate-600">{t("No audit activities recorded.", "Nenhuma atividade de auditoria registada.")}</p>
+                <p className="text-[11px] text-slate-400">{t("Candidate submission details will appear here as actions occur.", "Os detalhes aparecerão aqui à medida que as ações ocorrerem.")}</p>
               </div>
             )}
           </div>
