@@ -221,11 +221,12 @@ async function handlePOST(request: Request) {
 
       await updateApplication(candidate.id, {
         nextPhaseStatus: "declined",
-        status: "interest_declined",
+        status: "archived",
+        statusBeforeArchive: candidate.status,
         nextPhaseResponse: "no",
         nextPhaseResponseOption: responseOption,
         nextPhaseRespondedAt: now,
-        archiveReason: "Declined Next Phase",
+        archiveReason: responseOption ? `Declined Next Phase: ${responseOption}` : "Declined Next Phase",
         communications,
         activityLog,
       });

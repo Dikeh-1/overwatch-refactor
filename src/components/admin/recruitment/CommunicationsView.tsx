@@ -502,26 +502,26 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
     const bookedEmails = new Set(roleApps.filter(a => Boolean(a.testSlot) && a.status !== "archived").map(a => a.email.trim().toLowerCase()));
 
     let pool = includeBookingButton ? roleApps.filter(canReceiveTestInvitation) : roleApps;
-    pool = deduplicateByEmail(pool);
 
-    if (targetAudience === "next_phase") return pool.filter(isNextPhase);
-    if (targetAudience === "screened") return pool.filter(isQualified);
-    if (targetAudience === "tested") return pool.filter((a) => hasTested(a) && !isTerminal(a));
-    if (targetAudience === "interview") return pool.filter((a) => a.status === "interview");
-    if (targetAudience === "hired") return pool.filter((a) => a.status === "hired");
+    if (targetAudience === "next_phase") return deduplicateByEmail(pool.filter(isNextPhase));
+    if (targetAudience === "screened") return deduplicateByEmail(pool.filter(isQualified));
+    if (targetAudience === "tested") return deduplicateByEmail(pool.filter((a) => hasTested(a) && !isTerminal(a)));
+    if (targetAudience === "interview") return deduplicateByEmail(pool.filter((a) => a.status === "interview"));
+    if (targetAudience === "hired") return deduplicateByEmail(pool.filter((a) => a.status === "hired"));
 
     if (targetAudience === "shortlisted_unbooked") {
-      return pool.filter((a) => !a.testSlot && !bookedEmails.has(a.email.trim().toLowerCase()) && !isTerminal(a));
+      return deduplicateByEmail(pool.filter((a) => !a.testSlot && a.status !== "archived" && !isTerminal(a)));
     }
 
     if (targetAudience === "booked_confirmed") {
+      let list = pool.filter((a) => Boolean(a.testSlot) && a.status !== "archived");
       if (selectedSlot) {
-        return pool.filter((a) => a.testSlot && normalizeSlot(a.testSlot) === normalizeSlot(selectedSlot));
+        list = list.filter((a) => a.testSlot && normalizeSlot(a.testSlot) === normalizeSlot(selectedSlot));
       }
-      return pool.filter((a) => Boolean(a.testSlot) && a.status !== "archived");
+      return deduplicateByEmail(list);
     }
 
-    return pool.filter((a) => a.status !== "archived" && !isTerminal(a) && !hasSentCommunication(a) && !contactedEmails.has(a.email.trim().toLowerCase()));
+    return deduplicateByEmail(pool.filter((a) => a.status !== "archived" && !isTerminal(a) && !hasSentCommunication(a)));
   }, [applications, fixedRecipient, targetAudience, selectedRole, selectedIndividualId, selectedSlot, includeBookingButton]);
 
   // Distinct test slots for slot filter
@@ -1040,18 +1040,13 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
               <div className="grid grid-cols-1 gap-1.5 text-xs">
                 {(() => {
                   const rawRolePool = applications.filter((a) => selectedRole === "all" || sameRole(a.role, selectedRole));
-                  const contactedEmails = new Set(rawRolePool.filter(hasSentCommunication).map((a) => a.email.trim().toLowerCase()));
-                  const bookedEmails = new Set(rawRolePool.filter((a) => Boolean(a.testSlot) && a.status !== "archived").map((a) => a.email.trim().toLowerCase()));
-                  const rolePool = deduplicateByEmail(
-                    (includeBookingButton ? applications.filter(canReceiveTestInvitation) : applications).filter((a) => selectedRole === "all" || sameRole(a.role, selectedRole))
-                  );
-                  const uncontactedCount = rolePool.filter((a) => a.status !== "archived" && !isTerminal(a) && !hasSentCommunication(a) && !contactedEmails.has(a.email.trim().toLowerCase())).length;
-                  const unbookedCount = rolePool.filter((a) => !a.testSlot && !bookedEmails.has(a.email.trim().toLowerCase()) && !isTerminal(a)).length;
-                  const bookedCount = rolePool.filter((a) => Boolean(a.testSlot) && a.status !== "archived").length;
-                  const testedCount = rolePool.filter((a) => hasTested(a) && !isTerminal(a)).length;
-                  const nextPhaseCount = applications.filter((a) => isNextPhase(a) && (selectedRole === "all" || sameRole(a.role, selectedRole))).length;
-                  const interviewCount = rolePool.filter((a) => a.status === "interview").length;
-                  const hiredCount = rolePool.filter((a) => a.status === "hired").length;
+                  const uncontactedCount = rawRolePool.filter((a) => a.status !== "archived" && !isTerminal(a) && !hasSentCommunication(a)).length;
+                  const unbookedCount = rawRolePool.filter((a) => !a.testSlot && a.status !== "archived" && !isTerminal(a)).length;
+                  const bookedCount = rawRolePool.filter((a) => Boolean(a.testSlot) && a.status !== "archived").length;
+                  const testedCount = rawRolePool.filter((a) => hasTested(a) && !isTerminal(a)).length;
+                  const nextPhaseCount = rawRolePool.filter((a) => isNextPhase(a)).length;
+                  const interviewCount = rawRolePool.filter((a) => a.status === "interview").length;
+                  const hiredCount = rawRolePool.filter((a) => a.status === "hired").length;
                   const list: { id: string; label: string }[] = [];
 
                   list.push({

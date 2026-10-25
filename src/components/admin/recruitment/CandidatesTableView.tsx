@@ -372,7 +372,10 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
         !a.testSlot &&
         (Boolean(a.invitedAt) || a.status === "test_invited"),
       declined: (a: Application) =>
-        isNextPhase(a) && (a.nextPhaseResponse === "no" || a.nextPhaseStatus === "declined" || a.status === "interest_declined"),
+        a.nextPhaseResponse === "no" ||
+        a.nextPhaseStatus === "declined" ||
+        a.status === "interest_declined" ||
+        (a.status === "archived" && Boolean(a.archiveReason && a.archiveReason.toLowerCase().includes("decline"))),
       interview: (a: Application) => a.status === "interview",
       training: (a: Application) => a.status === "training",
       hired: (a: Application) => a.status === "hired",
@@ -437,7 +440,8 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
           const isDecl =
             cand.nextPhaseResponse === "no" ||
             cand.nextPhaseStatus === "declined" ||
-            cand.status === "interest_declined";
+            cand.status === "interest_declined" ||
+            (cand.status === "archived" && Boolean(cand.archiveReason && cand.archiveReason.toLowerCase().includes("decline")));
           if (!isDecl) return false;
         } else if (activeView === "archived") {
           if (!isTerminal(cand) && cand.status !== "archived") return false;
@@ -597,16 +601,14 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
         </span>
       );
     }
-    if (cand.nextPhaseResponse === "no" || cand.nextPhaseStatus === "declined" || cand.status === "interest_declined") {
-      const label = cand.nextPhaseResponseOption && cand.nextPhaseResponseOption.length <= 25
-        ? cand.nextPhaseResponseOption
-        : t("Declined", "Recusado");
+    if (cand.nextPhaseResponse === "no" || cand.nextPhaseStatus === "declined" || cand.status === "interest_declined" || (cand.status === "archived" && Boolean(cand.archiveReason && cand.archiveReason.toLowerCase().includes("decline")))) {
+      const reason = cand.nextPhaseResponseOption || cand.archiveReason || t("Declined", "Recusado");
       return (
         <span
           className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-slate-100 text-slate-700 border border-slate-300 inline-flex items-center gap-1"
-          title={cand.nextPhaseResponseOption || t("Declined", "Recusado")}
+          title={reason}
         >
-          ✕ {label}
+          <span className="text-slate-500 font-normal">{t("Archived", "Arquivado")} ·</span> {reason.length <= 25 ? reason : t("Declined", "Recusado")}
         </span>
       );
     }

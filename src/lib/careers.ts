@@ -139,6 +139,7 @@ export type Application = {
   screeningResult?: ScreeningEvaluationResult;
   screeningScore?: number;
   testScore?: number;
+  score?: number;
   nextPhaseStatus?: "selected" | "invited" | "confirmed" | "declined" | "not_advancing";
   nextPhaseToken?: string;
   nextPhaseInvitedAt?: string;

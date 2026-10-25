@@ -10,7 +10,8 @@ export function canonicalRole(id?: string | null): string {
 export const sameRole = (a?: string | null, b?: string | null) =>
   canonicalRole(a) === canonicalRole(b);
 export const hasScore = (a: Application) =>
-  typeof a.testScore === "number" && Number.isFinite(a.testScore);
+  (typeof a.testScore === "number" && Number.isFinite(a.testScore)) ||
+  (typeof a.score === "number" && Number.isFinite(a.score));
 export const hasAttended = (a: Application) =>
   a.attendanceStatus !== "absent" && (Boolean(a.attendedAt) || a.attendanceStatus === "present" || a.attendanceStatus === "late" || a.historicalAttendanceConfirmed === true);
 export const hasTested = (a: Application) =>
@@ -46,10 +47,11 @@ export const isConfirmed = (a: Application) =>
     a.nextPhaseStatus === "confirmed" ||
     a.status === "interest_confirmed");
 export const isDeclined = (a: Application) =>
-  isNextPhase(a) &&
+  (isNextPhase(a) || a.status === "archived" || a.status === "interest_declined") &&
   (a.nextPhaseResponse === "no" ||
     a.nextPhaseStatus === "declined" ||
-    a.status === "interest_declined");
+    a.status === "interest_declined" ||
+    (a.status === "archived" && Boolean(a.archiveReason && a.archiveReason.toLowerCase().includes("decline"))));
 export const isAwaiting = (a: Application) =>
   isNextPhase(a) &&
   !isConfirmed(a) &&
