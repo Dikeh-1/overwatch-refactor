@@ -220,7 +220,7 @@ const AdminShellInner: React.FC<AdminShellProps> = ({ children }) => {
         warningActiveRef.current = false;
         setSessionWarningOpen(false);
         setSessionCountdown(60);
-        setSessionExpiry(data.expiresAt || Date.now() + 8 * 60 * 60 * 1000);
+        setSessionExpiry(data.expiresAt || Date.now() + 1 * 60 * 60 * 1000);
       } else {
         warningActiveRef.current = false;
         setSessionWarningOpen(false);

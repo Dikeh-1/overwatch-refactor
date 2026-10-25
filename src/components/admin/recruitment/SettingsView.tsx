@@ -61,8 +61,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ lang: propLang }) =>
       if (res.ok && data.authenticated) {
         setSessionRenewNotice(
           t(
-            "✓ Admin session successfully extended for 8 hours (active sliding renewal active).",
-            "✓ Sessão de administrador prolongada com sucesso por 8 horas (renovação contínua activa).",
+            "✓ Admin session successfully extended for 1 hour (active sliding renewal active).",
+            "✓ Sessão de administrador prolongada com sucesso por 1 hora (renovação contínua activa).",
           ),
         );
       } else {
@@ -499,7 +499,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ lang: propLang }) =>
                   <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                     <span>{t("Admin Session Security & Inactivity Timeout", "Segurança da Sessão de Administrador e Tempo Limite")}</span>
                     <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200">
-                      {t("8h Sliding Session", "Sessão Deslizante 8h")}
+                      {t("1h Sliding Session", "Sessão Deslizante 1h")}
                     </span>
                   </h3>
                   <p className="text-[11px] text-slate-500">
@@ -520,7 +520,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ lang: propLang }) =>
                 <span>
                   {sessionRenewing
                     ? t("Extending…", "A prolongar…")
-                    : t("Refresh Session (+8 Hours)", "Prolongar Sessão (+8 Horas)")}
+                    : t("Refresh Session (+1 Hour)", "Prolongar Sessão (+1 Hora)")}
                 </span>
               </button>
             </div>
