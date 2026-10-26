@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { candidateProfileTarget } from "@/lib/admin-navigation";
 import {
+  GraduationCap,
   Award,
   Send,
   Eye,
@@ -58,6 +59,9 @@ interface NextPhaseCandidate {
   responseOption?: string | null;
   recruitmentStage?: string;
   token?: string;
+  trainingGroupId?: string | null;
+  trainingGroup?: string | null;
+  trainingBookedAt?: string | null;
 }
 
 interface NextPhaseSummary {
@@ -1173,10 +1177,23 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang, co
                       {/* Candidate Response */}
                       <td className="px-4 py-3 whitespace-nowrap">
                         {isConfirmed ? (
-                          <span className="px-2.5 py-0.5 rounded text-[0.65rem] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1">
-                            <Check size={11} className="stroke-[3]" />
-                            <span>{t("Confirmed YES", "Confirmou SIM")}</span>
-                          </span>
+                          <div className="flex flex-col gap-1 items-start">
+                            <span className="px-2.5 py-0.5 rounded text-[0.65rem] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1">
+                              <Check size={11} className="stroke-[3]" />
+                              <span>{t("Confirmed YES", "Confirmou SIM")}</span>
+                            </span>
+                            {cand.trainingGroup ? (
+                              <span className="px-2 py-0.5 rounded text-[0.62rem] font-bold bg-blue-50 text-blue-800 border border-blue-200 inline-flex items-center gap-1" title={formatTimestamp(cand.trainingBookedAt)}>
+                                <GraduationCap size={10} className="text-blue-600" />
+                                <span>{cand.trainingGroup}</span>
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded text-[0.60rem] font-medium bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1">
+                                <Clock size={9} />
+                                <span>{t("Group Pending", "Grupo Pendente")}</span>
+                              </span>
+                            )}
+                          </div>
                         ) : isDeclined ? (
                           <span className="px-2.5 py-0.5 rounded text-[0.65rem] font-bold bg-slate-100 text-slate-700 border border-slate-300 inline-flex items-center gap-1">
                             <X size={11} className="stroke-[3]" />
@@ -1568,6 +1585,69 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang, co
                           : t("Awaiting candidate submission", "Aguardando submissão")}
                       </strong>
                     </div>
+
+                    {/* Training Group & Practical Phase Allocation */}
+                    {selectedCandidate.candidateResponse === "confirmed" && (
+                      <div className="pt-2 border-t border-slate-200 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[0.68rem] font-bold uppercase tracking-wider text-slate-500">
+                            {t("Training Group (Formação Prática):", "Grupo de Formação Prática:")}
+                          </span>
+                          {selectedCandidate.trainingGroup ? (
+                            <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-blue-100 text-blue-800 border border-blue-300 inline-flex items-center gap-1">
+                              <GraduationCap size={11} className="text-blue-700" />
+                              <span>{selectedCandidate.trainingGroup}</span>
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                              {t("Pending Group Choice", "Pendente de Escolha")}
+                            </span>
+                          )}
+                        </div>
+
+                        {selectedCandidate.trainingBookedAt && (
+                          <div className="flex justify-between items-baseline text-[0.7rem] text-slate-500">
+                            <span>{t("Slot Selection Date:", "Data de Inscrição no Turno:")}</span>
+                            <span className="font-mono text-slate-700">{formatTimestamp(selectedCandidate.trainingBookedAt)}</span>
+                          </div>
+                        )}
+
+                        {/* Direct link to Training Booking Portal */}
+                        <div className="p-2.5 rounded bg-blue-50/60 border border-blue-200 space-y-1.5">
+                          <span className="text-[0.65rem] font-semibold text-blue-900 block">
+                            {t("Dedicated Training Invite / Group Booking Link:", "Link Dedicado de Escolha de Grupo (Formação):")}
+                          </span>
+                          <div className="p-1.5 rounded bg-white border border-blue-200 font-mono text-[0.70rem] text-blue-950 break-all select-all">
+                            {typeof window !== "undefined"
+                              ? `${window.location.origin}/pt/careers/training-invite/${selectedCandidate.id}`
+                              : `https://www.overwatchmoz.com/pt/careers/training-invite/${selectedCandidate.id}`}
+                          </div>
+                          <div className="flex items-center gap-2 pt-0.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const url = `${window.location.origin}/pt/careers/training-invite/${selectedCandidate.id}`;
+                                navigator.clipboard.writeText(url);
+                                alert(t("Training booking link copied to clipboard!", "Link de escolha de grupo de formação copiado!"));
+                              }}
+                              className="px-2.5 py-1 rounded border border-blue-300 bg-white hover:bg-blue-50 text-blue-800 text-[0.68rem] font-semibold inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Copy size={11} />
+                              <span>{t("Copy Training Link", "Copiar Link de Formação")}</span>
+                            </button>
+                            <a
+                              href={`/pt/careers/training-invite/${selectedCandidate.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-2.5 py-1 rounded border border-blue-300 bg-blue-600 hover:bg-blue-700 text-white text-[0.68rem] font-semibold inline-flex items-center gap-1"
+                            >
+                              <ExternalLink size={11} />
+                              <span>{t("Open Training Portal", "Abrir Portal de Formação")}</span>
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Exact Quoted Selection Box */}
                     <div className="pt-2 border-t border-slate-200">

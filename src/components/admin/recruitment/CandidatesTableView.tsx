@@ -426,14 +426,25 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
         } else if (activeView === "tested") {
           if (!hasTested(cand)) return false;
         } else if (activeView === "next_phase") {
+          // Terminal/declined/disqualified candidates are excluded from active next phase cohort
+          if (cand.status === "not_advancing" || cand.status === "disqualified" || cand.status === "rejected" || isTerminal(cand)) {
+            return false;
+          }
+          if (
+            cand.nextPhaseResponse === "no" ||
+            cand.nextPhaseStatus === "declined" ||
+            cand.status === "interest_declined" ||
+            (cand.status === "archived" && Boolean(cand.archiveReason && cand.archiveReason.toLowerCase().includes("decline")))
+          ) {
+            return false;
+          }
           const isNp =
             cand.nextPhaseStatus === "selected" ||
             cand.nextPhaseStatus === "invited" ||
             cand.nextPhaseStatus === "confirmed" ||
             cand.status === "next_phase_selected" ||
             cand.status === "next_phase_invited" ||
-            cand.status === "interest_confirmed" ||
-            Boolean(cand.nextPhaseToken);
+            cand.status === "interest_confirmed";
           if (!isNp) return false;
         } else if (activeView === "confirmed") {
           const isConf =
@@ -592,7 +603,8 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
   // Stage badge formatting
   const renderStageBadge = (cand: Application) => {
     if (cand.stageSource === "unresolved") return <span className="text-xs text-amber-800">{t("Historical stage needs review", "Etapa histórica por rever")}</span>;
-    if (["not_advancing", "rejected", "withdrawn", "disqualified", "archived"].includes(cand.status)) return <span className="text-xs text-slate-600">{cand.status === "not_advancing" ? t("Not advancing", "Não avança") : cand.status}</span>;
+
+    // Check specific Next Phase responses first so confirmed/declined aren't masked by generic 'archived'
     if (cand.nextPhaseResponse === "yes" || cand.nextPhaseStatus === "confirmed" || cand.status === "interest_confirmed") {
       const label = cand.nextPhaseResponseOption && cand.nextPhaseResponseOption.length <= 25
         ? cand.nextPhaseResponseOption
@@ -613,7 +625,14 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
           className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-slate-100 text-slate-700 border border-slate-300 inline-flex items-center gap-1"
           title={reason}
         >
-          <span className="text-slate-500 font-normal">{t("Archived", "Arquivado")} ·</span> {reason.length <= 25 ? reason : t("Declined", "Recusado")}
+          <span className="text-slate-500 font-normal">{t("Declined", "Recusou")} ·</span> {reason.length <= 25 ? reason : t("Declined", "Recusado")}
+        </span>
+      );
+    }
+    if (["not_advancing", "rejected", "withdrawn", "disqualified", "archived"].includes(cand.status)) {
+      return (
+        <span className="px-2 py-0.5 rounded text-[0.65rem] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+          {cand.status === "not_advancing" ? t("Not advancing", "Não avança") : cand.status}
         </span>
       );
     }

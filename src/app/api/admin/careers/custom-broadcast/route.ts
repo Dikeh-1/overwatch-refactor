@@ -24,6 +24,9 @@ interface BroadcastRequest {
   locale?: "en" | "pt";
   cohortId?: string;
   audienceFilter:
+    | "uncontacted"
+    | "not_advancing"
+    | "all_active"
     | "invited_unconfirmed"
     | "shortlisted_unbooked"
     | "booked_confirmed"
@@ -197,7 +200,11 @@ async function handlePOST(request: Request) {
       targetPool = roleApps;
 
       // Filter by audience cohort
-      if (audienceFilter === "invited_unconfirmed" || audienceFilter === "shortlisted_unbooked") {
+      if (audienceFilter === "uncontacted") {
+        targetPool = targetPool.filter(a => !isTerminal(a) && a.status !== "not_advancing" && !hasSentCommunication(a) && (a.screeningResult ? a.screeningResult.passedMandatory !== false : true));
+      } else if (audienceFilter === "not_advancing") {
+        targetPool = targetPool.filter(a => isTerminal(a) || a.status === "not_advancing" || a.status === "rejected" || a.status === "disqualified" || a.screeningResult?.passedMandatory === false);
+      } else if (audienceFilter === "invited_unconfirmed" || audienceFilter === "shortlisted_unbooked") {
         targetPool = targetPool.filter(a => !isTerminal(a) && a.status !== "not_advancing" && !a.testSlot && !bookedEmails.has(a.email.trim().toLowerCase()) && !hasTested(a) && !isNextPhase(a));
       } else if (audienceFilter === "booked_confirmed") {
         targetPool = targetPool.filter(

@@ -97,7 +97,7 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
   // Audience Target State
   const initialRole = fixedRecipient?.role || propRoleId || activeRoleId || roles[0]?.id || "cctv";
   const [selectedRole, setSelectedRole] = useState<string>(initialRole);
-  const [targetAudience, setTargetAudience] = useState<string>(fixedRecipient ? "individual" : "shortlisted_unbooked");
+  const [targetAudience, setTargetAudience] = useState<string>(fixedRecipient ? "individual" : "uncontacted");
   const [individualSearch, setIndividualSearch] = useState("");
   const [selectedIndividualId, setSelectedIndividualId] = useState<string>(fixedRecipient?.id || "");
   const [selectedSlot, setSelectedSlot] = useState<string>("");
@@ -713,6 +713,29 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
 
     let pool = includeBookingButton ? activeRoleApps.filter(canReceiveTestInvitation) : activeRoleApps;
 
+    if (targetAudience === "uncontacted") {
+      return deduplicateByEmail(
+        pool.filter(
+          (a) =>
+            isNonTerminal(a) &&
+            !hasSentCommunication(a) &&
+            (a.screeningResult ? a.screeningResult.passedMandatory !== false : true)
+        )
+      );
+    }
+    if (targetAudience === "not_advancing") {
+      return deduplicateByEmail(
+        roleApps.filter(
+          (a) =>
+            !isNonTerminal(a) ||
+            a.status === "not_advancing" ||
+            a.status === "rejected" ||
+            a.status === "disqualified" ||
+            a.screeningResult?.passedMandatory === false
+        )
+      );
+    }
+
     if (targetAudience === "next_phase" || targetAudience === "next_phase_confirmed") return deduplicateByEmail(pool.filter(isConfirmed));
     if (targetAudience === "next_phase_awaiting") return deduplicateByEmail(pool.filter(isAwaiting));
     if (targetAudience === "next_phase_all") return deduplicateByEmail(pool.filter(isNextPhase));
@@ -851,6 +874,10 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
         payload.audienceFilter = "invited_unconfirmed";
       } else if (targetAudience === "booked_confirmed") {
         payload.audienceFilter = "booked_confirmed";
+      } else if (targetAudience === "uncontacted") {
+        payload.audienceFilter = "uncontacted";
+      } else if (targetAudience === "not_advancing") {
+        payload.audienceFilter = "not_advancing";
       } else if (targetAudience === "all_active") {
         payload.audienceFilter = "all_active";
       } else {
@@ -902,6 +929,12 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       const match = applications.find((a) => a.id === selectedIndividualId);
       if (match) return `${match.name} <${match.email}>`;
       return t("Individual Candidate", "Candidato Individual");
+    }
+    if (targetAudience === "uncontacted") {
+      return `${targetCandidates.length} ${t("Uncontacted Candidates Advancing in Selection", "Candidatos por Contactar Aprovados na Triagem")}`;
+    }
+    if (targetAudience === "not_advancing") {
+      return `${targetCandidates.length} ${t("Candidates Not Advancing / Closed", "Candidatos Não Selecionados / Encerrados")}`;
     }
     if (targetAudience === "next_phase" || targetAudience === "next_phase_confirmed") {
       return `${targetCandidates.length} ${t("Candidates Confirmed for Next Phase (Accepted SIM)", "Candidatas Confirmadas para a Próxima Fase (Aceitaram SIM)")}`;
@@ -1174,33 +1207,37 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       </div>
 
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3"><label className="text-xs font-semibold">{t("Email language", "Idioma do email")}<select aria-label={t("Email language", "Idioma do email")} value={emailLang} onChange={event => setEmailLang(event.target.value as "pt" | "en")} className="ml-3 rounded-lg border px-3 py-2"><option value="pt">Português</option><option value="en">English</option></select></label><span className="text-xs text-slate-500">{t("Controls templates, role names, booking buttons and the letterhead. The admin interface can stay in English.", "Controla os modelos, nomes de vagas, botões de agendamento e o timbre.")}</span></div>
-      <div className="sticky top-[102px] z-30 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-        <nav aria-label={t("Mailbox folders", "Pastas de correio")} className="flex flex-wrap gap-1">{([
-          ["compose", t("Compose", "Escrever")],
-          ["drafts", t("Drafts", "Rascunhos")],
-          ["incoming", t("Incoming", "Recebidos")],
-          ["sent", t("Sent", "Enviados")],
-          ["outbox", t("Outbox", "Caixa de saída")],
-          ["scheduled", t("Scheduled Auto Follow-Ups", "Seguimentos Automáticos")],
-        ] as const).map(([key,label]) => <button key={key} type="button" aria-pressed={folder === key} onClick={() => setFolder(key)} className={`rounded-lg px-3 py-2 text-xs font-medium ${folder === key ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"}`}>{label}</button>)}</nav>
-        <div className="flex items-center gap-3">
-          <span role="status" className="max-w-sm text-xs text-slate-500">{draft.status}</span>
-          <button
-            type="button"
-            disabled={!draft.ready || isDispatching || openingDraft}
-            onClick={() => {
-              if (newDraftLock.current) return;
-              newDraftLock.current = true;
-              setOpeningDraft(true);
-              void draft.newDraft().then(() => setFolder("compose")).catch(error => setDeliveryNotice(error.message)).finally(() => {
-                newDraftLock.current = false;
-                setOpeningDraft(false);
-              });
-            }}
-            className="rounded-lg border px-3 py-2 text-xs font-medium cursor-pointer disabled:opacity-50"
-          >
-            {openingDraft ? t("Creating draft…", "A criar rascunho…") : t("New draft", "Novo rascunho")}
-          </button>
+      
+      {/* Sticky Tab Navigation Bar with Solid Backdrop (Prevents Content Bleeding on Scroll) */}
+      <div className={`sticky ${propRoleId || cohortId ? "top-[94px]" : "top-[52px]"} z-30 bg-[#F7F8FA] -mx-4 px-4 sm:-mx-6 sm:px-6 py-2 -mt-2 -mb-2 transition-all`}>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <nav aria-label={t("Mailbox folders", "Pastas de correio")} className="flex flex-wrap gap-1">{([
+            ["compose", t("Compose", "Escrever")],
+            ["drafts", t("Drafts", "Rascunhos")],
+            ["incoming", t("Incoming", "Recebidos")],
+            ["sent", t("Sent", "Enviados")],
+            ["outbox", t("Outbox", "Caixa de saída")],
+            ["scheduled", t("Scheduled Auto Follow-Ups", "Seguimentos Automáticos")],
+          ] as const).map(([key,label]) => <button key={key} type="button" aria-pressed={folder === key} onClick={() => setFolder(key)} className={`rounded-lg px-3 py-2 text-xs font-medium cursor-pointer ${folder === key ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"}`}>{label}</button>)}</nav>
+          <div className="flex items-center gap-3">
+            <span role="status" className="max-w-sm text-xs text-slate-500">{draft.status}</span>
+            <button
+              type="button"
+              disabled={!draft.ready || isDispatching || openingDraft}
+              onClick={() => {
+                if (newDraftLock.current) return;
+                newDraftLock.current = true;
+                setOpeningDraft(true);
+                void draft.newDraft().then(() => setFolder("compose")).catch(error => setDeliveryNotice(error.message)).finally(() => {
+                  newDraftLock.current = false;
+                  setOpeningDraft(false);
+                });
+              }}
+              className="rounded-lg border px-3 py-2 text-xs font-medium cursor-pointer disabled:opacity-50"
+            >
+              {openingDraft ? t("Creating draft…", "A criar rascunho…") : t("New draft", "Novo rascunho")}
+            </button>
+          </div>
         </div>
       </div>
       {folder !== "compose" && <StudioMailbox scope={scope} folder={folder} applications={applications} onOpenDraft={async id => { await draft.open(id); setFolder("compose"); }} onOpenProgress={campaignId => setDeliveryCampaign(campaignId)} />}
@@ -1275,6 +1312,13 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                   const roleApps = applications.filter((a) => sameRole(a.role, selectedRole));
                   const activeRolePool = roleApps.filter(isNonTerminal);
 
+                  const uncontactedCount = deduplicateByEmail(
+                    activeRolePool.filter(
+                      (a) =>
+                        !hasSentCommunication(a) &&
+                        (a.screeningResult ? a.screeningResult.passedMandatory !== false : true)
+                    )
+                  ).length;
                   const unbookedCount = deduplicateByEmail(activeRolePool.filter((a) => !a.testSlot && !hasTested(a) && !isNextPhase(a))).length;
                   const bookedCount = deduplicateByEmail(activeRolePool.filter((a) => Boolean(a.testSlot) && !hasTested(a))).length;
                   const testedCount = deduplicateByEmail(roleApps.filter((a) => !isTerminal(a) && hasTested(a))).length;
@@ -1284,10 +1328,24 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                   const interviewCount = deduplicateByEmail(activeRolePool.filter((a) => a.status === "interview")).length;
                   const hiredCount = deduplicateByEmail(activeRolePool.filter((a) => a.status === "hired")).length;
                   const allActiveCount = deduplicateByEmail(activeRolePool).length;
+                  const notAdvancingCount = deduplicateByEmail(
+                    roleApps.filter(
+                      (a) =>
+                        !isNonTerminal(a) ||
+                        a.status === "not_advancing" ||
+                        a.status === "rejected" ||
+                        a.status === "disqualified" ||
+                        a.screeningResult?.passedMandatory === false
+                    )
+                  ).length;
 
                   const list: { id: string; label: string }[] = [];
 
                   list.push(
+                    {
+                      id: "uncontacted",
+                      label: t(`Uncontacted · Advancing (${uncontactedCount})`, `Por Contactar · Aprovados (${uncontactedCount})`),
+                    },
                     {
                       id: "shortlisted_unbooked",
                       label: t(`Shortlisted (Awaiting Booking) (${unbookedCount})`, `Convocadas (Pendente Agendamento) (${unbookedCount})`),
@@ -1323,6 +1381,10 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                     {
                       id: "all_active",
                       label: t(`All Active Candidates in this Role (${allActiveCount})`, `Todos os Candidatos Ativos desta Vaga (${allActiveCount})`),
+                    },
+                    {
+                      id: "not_advancing",
+                      label: t(`Not Advancing / Closed (${notAdvancingCount})`, `Não Selecionados / Encerrados (${notAdvancingCount})`),
                     },
                     {
                       id: "individual",
@@ -1832,7 +1894,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
         {/* ========================================================================= */}
         {/* RIGHT COLUMN: THE OFFICIAL OVERWATCH COMMUNICATIONS STUDIO CANVAS (7 cols) */}
         {/* ========================================================================= */}
-        <div className="lg:col-span-7 space-y-4 lg:sticky lg:top-[164px] self-start lg:max-h-[calc(100vh-11rem)] lg:overflow-y-auto admin-scrollbar z-10">
+        <div className="lg:col-span-7 space-y-4">
           {/* Main Studio Canvas Container */}
           <div
             onDragOver={(e) => {

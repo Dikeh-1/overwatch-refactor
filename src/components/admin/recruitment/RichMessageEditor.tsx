@@ -575,9 +575,9 @@ export default function RichMessageEditor({
   return (
     <div className={`rounded-2xl border border-slate-200 bg-white shadow-2xs overflow-hidden flex flex-col ${className}`}>
       {/* =========================================================================
-          TOOLBAR HEADER
+          TOOLBAR HEADER (Sticky / Frozen Toolbar)
          ========================================================================= */}
-      <div onMouseDown={event => { if (!(event.target as Element).closest("select,input")) event.preventDefault(); }} className="sticky top-0 z-20 border-b border-slate-200 bg-slate-50/95 backdrop-blur-xs p-2 sm:p-2.5 flex flex-wrap items-center justify-between gap-2 select-none shadow-2xs">
+      <div onMouseDown={event => { if (!(event.target as Element).closest("select,input")) event.preventDefault(); }} className="sticky top-0 z-20 border-b border-slate-200 bg-slate-50/95 backdrop-blur-xs p-2 sm:p-2.5 flex flex-wrap items-center justify-between gap-2 select-none shadow-xs">
         {/* Left Toolbar: Actions */}
         <div className="flex flex-wrap items-center gap-1">
           {/* History Undo / Redo */}
@@ -1065,9 +1065,9 @@ export default function RichMessageEditor({
       </div>
 
       {/* =========================================================================
-          EDITOR CANVAS
+          EDITOR CANVAS - Dedicated Scroll Container (Toolbar stays frozen at top)
          ========================================================================= */}
-      <div className="relative min-h-[340px] flex-1 bg-white p-6">
+      <div className="relative min-h-[340px] max-h-[520px] overflow-y-auto admin-scrollbar flex-1 bg-white p-6">
         {/* ContentEditable Visual Element (Persistently preserved in DOM) */}
         <div
           ref={editorRef}
@@ -1103,7 +1103,7 @@ export default function RichMessageEditor({
           }}
           rows={14}
           style={{ display: editorMode === "raw" ? "block" : "none" }}
-          className="w-full h-full min-h-[300px] text-xs font-mono text-slate-900 leading-relaxed outline-none resize-y p-3 bg-slate-50/50 rounded-xl border border-slate-200"
+          className="w-full h-full min-h-[300px] max-h-[480px] overflow-y-auto admin-scrollbar text-xs font-mono text-slate-900 leading-relaxed outline-none resize-y p-3 bg-slate-50/50 rounded-xl border border-slate-200"
           placeholder={placeholder}
         />
       </div>

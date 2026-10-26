@@ -35,6 +35,9 @@ export async function GET(request: Request) {
       responseDate: a.nextPhaseRespondedAt || null, respondedAt: a.nextPhaseRespondedAt || null,
       responseOption: a.nextPhaseResponseOption || a.archiveReason || null, recruitmentStage: a.status,
       token: a.nextPhaseToken || null,
+      trainingGroupId: a.trainingGroupId || null,
+      trainingGroup: a.trainingGroup || null,
+      trainingBookedAt: a.trainingBookedAt || null,
     }));
     return Response.json({ candidates, summary: { totalSelected: candidates.length, notSent: candidates.filter(c => c.invitationStatus === "not_sent").length, awaiting: candidates.filter(c => c.candidateResponse === "awaiting").length, confirmed: candidates.filter(c => c.candidateResponse === "confirmed").length, declined: candidates.filter(c => c.candidateResponse === "declined").length } }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { console.error(error); return Response.json({ error: "Unable to load next phase" }, { status: 503 }); }
