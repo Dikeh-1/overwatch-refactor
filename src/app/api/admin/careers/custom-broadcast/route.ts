@@ -8,7 +8,7 @@ import { isPastDateSlot, isSlotBookingExpired } from "@/lib/careers";
 import { auditRequest } from "@/lib/admin-activity";
 import crypto from "node:crypto";
 import { getRecruitmentWorkspaceData } from "@/lib/careers-workspace-store";
-import { applicationsForCohort, sameRole, canReceiveTestInvitation, hasSentCommunication, isNextPhase, isQualified } from "@/lib/careers-workflow";
+import { applicationsForCohort, sameRole, canReceiveTestInvitation, hasSentCommunication, isNextPhase, isQualified, hasTested, isConfirmed, isAwaiting } from "@/lib/careers-workflow";
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
 import { getApplications, updateApplication } from "@/lib/careers-store";
 import { sendTransactionalEmail } from "@/lib/careers-email";
@@ -31,9 +31,13 @@ interface BroadcastRequest {
     | "all_applied"
     | "all_role"
     | "screened"
+    | "tested"
     | "interview"
     | "disqualified"
     | "next_phase"
+    | "next_phase_confirmed"
+    | "next_phase_awaiting"
+    | "next_phase_all"
     | "individual";
   genderFilter?: "all" | "female" | "male";
   roleId?: string;
@@ -189,7 +193,7 @@ async function handlePOST(request: Request) {
 
       // Filter by audience cohort
       if (audienceFilter === "invited_unconfirmed" || audienceFilter === "shortlisted_unbooked") {
-        targetPool = targetPool.filter(a => !a.testSlot && !bookedEmails.has(a.email.trim().toLowerCase()) && !["archived", "rejected", "not_advancing", "withdrawn", "disqualified"].includes(a.status));
+        targetPool = targetPool.filter(a => !a.testSlot && !bookedEmails.has(a.email.trim().toLowerCase()) && !["archived", "rejected", "disqualified"].includes(a.status));
       } else if (audienceFilter === "booked_confirmed") {
         targetPool = targetPool.filter(
           (a) => Boolean(a.testSlot) && a.status !== "archived",
@@ -200,11 +204,17 @@ async function handlePOST(request: Request) {
         );
       } else if (audienceFilter === "screened") {
         targetPool = targetPool.filter(isQualified);
+      } else if (audienceFilter === "tested") {
+        targetPool = targetPool.filter(hasTested);
       } else if (audienceFilter === "interview") {
         targetPool = targetPool.filter(
           (a) => a.status === "interview",
         );
-      } else if (audienceFilter === "next_phase") {
+      } else if (audienceFilter === "next_phase_confirmed" || audienceFilter === "next_phase") {
+        targetPool = targetPool.filter(isConfirmed);
+      } else if (audienceFilter === "next_phase_awaiting") {
+        targetPool = targetPool.filter(isAwaiting);
+      } else if (audienceFilter === "next_phase_all") {
         targetPool = targetPool.filter(isNextPhase);
       } else if (audienceFilter === "disqualified") {
         targetPool = targetPool.filter((a) => a.status === "archived");

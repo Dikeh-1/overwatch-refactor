@@ -38,7 +38,7 @@ import {
   RefreshCw,
   GraduationCap,
 } from "lucide-react";
-import { isNextPhase, isQualified, isTerminal, sameRole, canReceiveTestInvitation, hasSentCommunication, hasTested } from "@/lib/careers-workflow";
+import { isNextPhase, isQualified, isTerminal, sameRole, canReceiveTestInvitation, hasSentCommunication, hasTested, isConfirmed, isAwaiting, isDeclined } from "@/lib/careers-workflow";
 import { Application, formatSlotDisplay, normalizeSlot } from "@/lib/careers";
 import Logo from "@/components/ui/Logo";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
@@ -602,14 +602,16 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
 
     let pool = includeBookingButton ? roleApps.filter(canReceiveTestInvitation) : roleApps;
 
-    if (targetAudience === "next_phase") return deduplicateByEmail(pool.filter(isNextPhase));
+    if (targetAudience === "next_phase" || targetAudience === "next_phase_confirmed") return deduplicateByEmail(pool.filter(isConfirmed));
+    if (targetAudience === "next_phase_awaiting") return deduplicateByEmail(pool.filter(isAwaiting));
+    if (targetAudience === "next_phase_all") return deduplicateByEmail(pool.filter(isNextPhase));
     if (targetAudience === "screened") return deduplicateByEmail(pool.filter(isQualified));
-    if (targetAudience === "tested") return deduplicateByEmail(pool.filter((a) => hasTested(a) && !isTerminal(a)));
+    if (targetAudience === "tested") return deduplicateByEmail(pool.filter(hasTested));
     if (targetAudience === "interview") return deduplicateByEmail(pool.filter((a) => a.status === "interview"));
     if (targetAudience === "hired") return deduplicateByEmail(pool.filter((a) => a.status === "hired"));
 
     if (targetAudience === "shortlisted_unbooked") {
-      return deduplicateByEmail(pool.filter((a) => !a.testSlot && a.status !== "archived" && !isTerminal(a)));
+      return deduplicateByEmail(pool.filter((a) => !a.testSlot && a.status !== "archived" && a.status !== "disqualified"));
     }
 
     if (targetAudience === "booked_confirmed") {
@@ -620,7 +622,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       return deduplicateByEmail(list);
     }
 
-    return deduplicateByEmail(pool.filter((a) => a.status !== "archived" && !isTerminal(a) && !hasSentCommunication(a)));
+    return deduplicateByEmail(pool.filter((a) => a.status !== "archived" && a.status !== "disqualified" && !hasSentCommunication(a)));
   }, [applications, fixedRecipient, targetAudience, selectedRole, selectedIndividualId, selectedSlot, includeBookingButton]);
 
   // Distinct test slots for slot filter
@@ -722,8 +724,14 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
         payload.audienceFilter = "individual";
         payload.candidateId = fixedRecipient?.id || selectedIndividualId;
         payload.roleId = fixedRecipient?.role || selectedRole;
-      } else if (targetAudience === "next_phase") {
-        payload.audienceFilter = "next_phase";
+      } else if (targetAudience === "next_phase" || targetAudience === "next_phase_confirmed") {
+        payload.audienceFilter = "next_phase_confirmed";
+      } else if (targetAudience === "next_phase_awaiting") {
+        payload.audienceFilter = "next_phase_awaiting";
+      } else if (targetAudience === "next_phase_all") {
+        payload.audienceFilter = "next_phase_all";
+      } else if (targetAudience === "tested") {
+        payload.audienceFilter = "tested";
       } else if (targetAudience === "shortlisted_unbooked") {
         payload.audienceFilter = "invited_unconfirmed";
       } else if (targetAudience === "booked_confirmed") {
@@ -778,8 +786,14 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       if (match) return `${match.name} <${match.email}>`;
       return t("Individual Candidate", "Candidato Individual");
     }
-    if (targetAudience === "next_phase") {
-      return `${targetCandidates.length} ${t("Candidates Selected for Next Phase", "Candidatas Seleccionadas para a Próxima Fase")}`;
+    if (targetAudience === "next_phase" || targetAudience === "next_phase_confirmed") {
+      return `${targetCandidates.length} ${t("Candidates Confirmed for Next Phase (Accepted SIM)", "Candidatas Confirmadas para a Próxima Fase (Aceitaram SIM)")}`;
+    }
+    if (targetAudience === "next_phase_awaiting") {
+      return `${targetCandidates.length} ${t("Candidates Awaiting Response for Next Phase", "Candidatas a Aguardar Resposta da Próxima Fase")}`;
+    }
+    if (targetAudience === "next_phase_all") {
+      return `${targetCandidates.length} ${t("All Candidates Selected for Next Phase", "Todas as Candidatas Seleccionadas para a Próxima Fase")}`;
     }
     if (targetAudience === "tested") {
       return `${targetCandidates.length} ${t("Candidates who Completed Physical Test", "Candidatos que Realizaram o Teste Físico")}`;
@@ -1139,11 +1153,13 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
               <div className="grid grid-cols-1 gap-1.5 text-xs">
                 {(() => {
                   const rawRolePool = applications.filter((a) => selectedRole === "all" || sameRole(a.role, selectedRole));
-                  const uncontactedCount = rawRolePool.filter((a) => a.status !== "archived" && !isTerminal(a) && !hasSentCommunication(a)).length;
-                  const unbookedCount = rawRolePool.filter((a) => !a.testSlot && a.status !== "archived" && !isTerminal(a)).length;
+                  const uncontactedCount = rawRolePool.filter((a) => a.status !== "archived" && a.status !== "disqualified" && !hasSentCommunication(a)).length;
+                  const unbookedCount = rawRolePool.filter((a) => !a.testSlot && a.status !== "archived" && a.status !== "disqualified").length;
                   const bookedCount = rawRolePool.filter((a) => Boolean(a.testSlot) && a.status !== "archived").length;
-                  const testedCount = rawRolePool.filter((a) => hasTested(a) && !isTerminal(a)).length;
-                  const nextPhaseCount = rawRolePool.filter((a) => isNextPhase(a)).length;
+                  const testedCount = rawRolePool.filter(hasTested).length;
+                  const nextPhaseConfirmedCount = rawRolePool.filter(isConfirmed).length;
+                  const nextPhaseAwaitingCount = rawRolePool.filter(isAwaiting).length;
+                  const nextPhaseAllCount = rawRolePool.filter(isNextPhase).length;
                   const interviewCount = rawRolePool.filter((a) => a.status === "interview").length;
                   const hiredCount = rawRolePool.filter((a) => a.status === "hired").length;
                   const list: { id: string; label: string }[] = [];
@@ -1168,7 +1184,15 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                     },
                     {
                       id: "next_phase",
-                      label: t(`Selected for Next Phase (${nextPhaseCount})`, `Selecionados Próxima Fase (${nextPhaseCount})`),
+                      label: t(`Selected for Next Phase · Confirmed (SIM) (${nextPhaseConfirmedCount})`, `Selecionados Próxima Fase · Confirmados (SIM) (${nextPhaseConfirmedCount})`),
+                    },
+                    {
+                      id: "next_phase_awaiting",
+                      label: t(`Selected for Next Phase · Awaiting Response (${nextPhaseAwaitingCount})`, `Selecionados Próxima Fase · Aguardando Resposta (${nextPhaseAwaitingCount})`),
+                    },
+                    {
+                      id: "next_phase_all",
+                      label: t(`Selected for Next Phase · All (${nextPhaseAllCount})`, `Selecionados Próxima Fase · Todos (${nextPhaseAllCount})`),
                     },
                     {
                       id: "interview",

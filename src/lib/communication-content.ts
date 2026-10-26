@@ -98,8 +98,16 @@ export function candidateVariables(text: string, candidate: Candidate, roleTitle
   return text.replace(/\{\{?\s*([a-zA-Z0-9_]+)\s*\}\}?/gi, (tokenMatch, key) => {
     const value = values[key.toLowerCase()];
     if (value === undefined) return tokenMatch;
-    // Don't escape pre-built HTML button fragments
-    if (html && (key.toLowerCase().endsWith("_button") || key.toLowerCase().endsWith("_buttons"))) {
+    // Don't escape pre-built HTML button/link fragments or HTML content
+    if (
+      html &&
+      (key.toLowerCase().endsWith("_button") ||
+        key.toLowerCase().endsWith("_buttons") ||
+        key.toLowerCase().endsWith("_link") ||
+        key.toLowerCase().startsWith("link_") ||
+        key.toLowerCase().startsWith("botao_") ||
+        value.trim().startsWith("<"))
+    ) {
       return value;
     }
     return html ? escapeMailText(value) : value;

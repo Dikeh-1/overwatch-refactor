@@ -50,6 +50,11 @@ test('communications studio tokens include {{training_link}} and {{training_grou
   assert.match(rendered, /Olá Ana Maria/);
   assert.match(rendered, /\/careers\/training-invite\/test-cand-abc/);
   assert.match(rendered, /Grupo A — Manhã/);
+
+  // Live Studio Preview HTML rendering check: ensure button HTML is not escaped to &lt;a
+  const studioHtml = renderStudioMessage(text, candidate, 'Operadora de CCO', 'pt');
+  assert.ok(studioHtml.includes('<a data-action-button="true"'), 'Should render live unescaped HTML action button');
+  assert.ok(!studioHtml.includes('&lt;a data-action-button='), 'Must not escape button into raw HTML string &lt;a');
 });
 
 test('training slot configuration supports adding more groups dynamically (Group C, D, etc.)', async () => {
@@ -187,3 +192,58 @@ test('training slot configuration isolates pipelines per recruitment cycle (coho
     process.chdir(cwd);
   }
 });
+
+test('communications studio next-phase audience isolates confirmed (SIM) from awaiting response', () => {
+  const { isConfirmed, isAwaiting, isNextPhase, hasTested } = require('../src/lib/careers-workflow.ts');
+
+  const confirmedApplicant = {
+    id: 'cand-1',
+    name: 'Cand 1',
+    role: 'cctv_operator',
+    status: 'interest_confirmed',
+    testScore: 85,
+  };
+  const awaitingApplicant = {
+    id: 'cand-2',
+    name: 'Cand 2',
+    role: 'cctv_operator',
+    status: 'next_phase_invited',
+    testScore: 80,
+  };
+  const testedNotAdvancing = {
+    id: 'cand-3',
+    name: 'Cand 3',
+    role: 'cctv_operator',
+    status: 'not_advancing',
+    testScore: 65,
+  };
+  const unbookedApplicant = {
+    id: 'cand-4',
+    name: 'Cand 4',
+    role: 'cctv_operator',
+    status: 'not_advancing', // cycle closed / unbooked but terminal
+    testSlot: null,
+  };
+
+  const pool = [confirmedApplicant, awaitingApplicant, testedNotAdvancing, unbookedApplicant];
+
+  // Confirmed audience ONLY returns interest_confirmed (the 17 who accepted SIM)
+  const confirmedPool = pool.filter(isConfirmed);
+  assert.equal(confirmedPool.length, 1);
+  assert.equal(confirmedPool[0].id, 'cand-1');
+
+  // Awaiting audience ONLY returns next_phase_invited (the 2 still waiting)
+  const awaitingPool = pool.filter(isAwaiting);
+  assert.equal(awaitingPool.length, 1);
+  assert.equal(awaitingPool[0].id, 'cand-2');
+
+  // All next phase returns both (19 total)
+  const nextPhaseAll = pool.filter(isNextPhase);
+  assert.equal(nextPhaseAll.length, 2);
+
+  // Tested audience includes all candidates who took test, even if not advancing
+  const testedPool = pool.filter(hasTested);
+  assert.equal(testedPool.length, 3);
+  assert.ok(testedPool.some((c) => c.id === 'cand-3'));
+});
+
