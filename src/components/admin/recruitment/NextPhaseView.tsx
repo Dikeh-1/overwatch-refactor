@@ -39,6 +39,7 @@ import { useActiveRole } from "../shell/ActiveRoleContext";
 import Logo from "@/components/ui/Logo";
 import OverwatchOrbitLoader from "@/components/admin/ui/OverwatchOrbitLoader";
 import StickyScrollContainer from "@/components/admin/ui/StickyScrollContainer";
+import { NextPhaseTrainingGroupsView } from "./NextPhaseTrainingGroupsView";
 
 interface NextPhaseCandidate {
   id: string;
@@ -85,6 +86,11 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang, co
   const lang = propLang ?? contextLang;
   const t = (en: string, pt: string) => (lang === "en" ? en : pt);
 
+  const [mainTab, setMainTab] = useState<"roster" | "training_groups">(
+    params.get("subtab") === "training_groups" || params.get("tab") === "training_groups"
+      ? "training_groups"
+      : "roster"
+  );
   const [roleFilter, setRoleFilter] = useState<string>(roleId || "all");
   const [copiedCandidateId, setCopiedCandidateId] = useState<string | null>(null);
 
@@ -674,6 +680,47 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang, co
         </div>
       </div>
 
+      {/* Standalone Sub-tab Navigation: Approved Candidates vs Practical Training Groups */}
+      <div className="flex items-center gap-1 border-b border-slate-200">
+        <button
+          type="button"
+          onClick={() => setMainTab("roster")}
+          className={`px-4 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
+            mainTab === "roster"
+              ? "border-sky-600 text-sky-700 bg-sky-50/50"
+              : "border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+          }`}
+        >
+          <Award size={14} className={mainTab === "roster" ? "text-sky-600" : "text-slate-400"} />
+          <span>{t(`Approved Candidates Roster (${candidates.length})`, `Candidatas Aprovadas (${candidates.length})`)}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMainTab("training_groups")}
+          className={`px-4 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
+            mainTab === "training_groups"
+              ? "border-blue-600 text-blue-700 bg-blue-50/50"
+              : "border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+          }`}
+        >
+          <GraduationCap size={15} className={mainTab === "training_groups" ? "text-blue-600" : "text-slate-400"} />
+          <span>{t("Practical Training Groups (Formação Prática)", "Grupos de Formação Prática")}</span>
+          <span className="px-1.5 py-0.2 rounded-full text-[0.62rem] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+            {summary.confirmed} {t("confirmed", "confirmadas")}
+          </span>
+        </button>
+      </div>
+
+      {mainTab === "training_groups" ? (
+        <NextPhaseTrainingGroupsView
+          cohortId={cohortId}
+          roleId={roleId}
+          candidates={candidates}
+          onRefresh={() => loadData(false)}
+        />
+      ) : (
+        <>
       {/* Interactive Operational KPI Summary Bar - Clickable to filter */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between text-[0.7rem] text-slate-500 px-0.5">
@@ -1328,6 +1375,8 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang, co
           </table>
         </StickyScrollContainer>
       </div>
+        </>
+      )}
 
       {/* Candidate Detail Slide-Over Panel */}
       {selectedCandidate && (

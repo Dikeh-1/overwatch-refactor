@@ -119,6 +119,19 @@ async function handlePATCH(request: Request) {
       await updateApplication(data.id, { testSlot: undefined, testBookedAt: undefined, ...(candidate.status === "test_booked" ? { status: "test_invited" as const } : {}) });
     }
     else if (
+      data.kind === "clear_training_group" &&
+      typeof data.id === "string" && /^[w-]{6,64}$/i.test(data.id.trim())
+    ) {
+      const candidate = await getApplication(data.id);
+      if (!candidate) return Response.json({ error: "Candidate not found" }, { status: 404 });
+      await updateApplication(data.id, {
+        trainingGroupId: undefined,
+        trainingGroup: undefined,
+        trainingBookedAt: undefined,
+        trainingStatus: undefined,
+      });
+    }
+    else if (
       data.kind === "score" &&
       typeof data.id === "string" && /^[\w-]{6,64}$/i.test(data.id.trim()) &&
       typeof data.score === "number" && Number.isFinite(data.score)
