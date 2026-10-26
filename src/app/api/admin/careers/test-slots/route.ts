@@ -4,7 +4,7 @@ import { saveCohort, invalidateCampaignStoreCache } from "@/lib/careers-campaign
 import { parseSlotComponents, normalizeSlot } from "@/lib/careers";
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
 import { getTestSlotConfig, saveTestSlotConfig, updateApplication, invalidateApplicationsCache } from "@/lib/careers-store";
-import { applicationsForCohort } from "@/lib/careers-workflow";
+import { applicationsForCohort, isTerminal } from "@/lib/careers-workflow";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +24,24 @@ export async function GET(request: Request) {
       if (params.has("cohortId") && !cohort) {
         return Response.json({ error: "Cycle not found" }, { status: 404 });
       }
+
+      const computeBookedCounts = (targetCohort: (typeof workspace.cohorts)[0]) => {
+        const counts: Record<string, number> = {};
+        const apps = workspace.applications.filter(
+          (a) =>
+            (a.cohortId === targetCohort.id || (!a.cohortId && a.role === targetCohort.roleId)) &&
+            !isTerminal(a) &&
+            Boolean(a.testSlot),
+        );
+        for (const a of apps) {
+          if (!a.testSlot) continue;
+          const norm = normalizeSlot(a.testSlot);
+          counts[norm] = (counts[norm] || 0) + 1;
+          counts[a.testSlot] = counts[norm];
+        }
+        return counts;
+      };
+
       return Response.json(
         cohort
           ? {
@@ -31,6 +49,7 @@ export async function GET(request: Request) {
               quota: cohort.slotQuota || 15,
               slotQuotas: cohort.slotQuotas || {},
               cohortId: cohort.id,
+              bookedCounts: computeBookedCounts(cohort),
             }
           : {
               roles: workspace.roles.map((r) => ({ id: r.id, en: r.en, pt: r.pt, open: r.open, activeCohortId: r.activeCohortId })),
@@ -46,6 +65,7 @@ export async function GET(request: Request) {
                   testSlots: c.testSlots || [],
                   slotQuota: c.slotQuota || 15,
                   slotQuotas: c.slotQuotas || {},
+                  bookedCounts: computeBookedCounts(c),
                 })),
             },
         { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } },

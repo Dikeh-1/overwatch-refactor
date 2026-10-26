@@ -83,6 +83,7 @@ export interface CareerCohort {
   testSlots?: string[];
   slotQuota?: number;
   slotQuotas?: Record<string, number>;
+  bookedCounts?: Record<string, number>;
   trainingSlots?: TrainingSlotConfig;
   applicationQuota?: number | null;
   historicalAttendance?: { applicationIds: string[]; confirmedAt: string; basis: "admin_confirmed_booked_attendees"; previousAbsenceIds?: string[] };

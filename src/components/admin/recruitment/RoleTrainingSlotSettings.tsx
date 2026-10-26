@@ -296,6 +296,34 @@ export function RoleTrainingSlotSettings() {
             </span>
           </div>
 
+          {/* Live Training Slots Summary Bar */}
+          {groups.length > 0 && (() => {
+            const totalTrainingCapacity = groups.reduce((acc, g) => acc + (g.capacity || 0), 0);
+            const totalTrainingBooked = groups.reduce((acc, g) => acc + (stats[g.id] || 0), 0);
+            const totalTrainingRemaining = Math.max(0, totalTrainingCapacity - totalTrainingBooked);
+
+            return (
+              <div className="flex flex-wrap items-center gap-2 py-1">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700">
+                  <span>{t("Total Training Capacity:", "Lotação Total de Formação:")}</span>
+                  <strong className="text-slate-900">{totalTrainingCapacity}</strong>
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 border border-sky-200 text-xs font-semibold text-sky-800">
+                  <span>{t("Booked:", "Inscritos:")}</span>
+                  <strong className="text-sky-950">{totalTrainingBooked}</strong>
+                </span>
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-bold ${
+                  totalTrainingRemaining > 0
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                    : "bg-rose-50 border-rose-200 text-rose-800"
+                }`}>
+                  <span>{t("Live Available Slots Remaining:", "Vagas Disponíveis em Tempo Real:")}</span>
+                  <strong className="underline decoration-2">{totalTrainingRemaining}</strong>
+                </span>
+              </div>
+            );
+          })()}
+
           <div className="grid grid-cols-1 gap-3.5">
             {groups.map((group, idx) => {
               const booked = stats[group.id] || 0;
@@ -427,17 +455,33 @@ export function RoleTrainingSlotSettings() {
                         </div>
                       </div>
 
-                      <div className="pt-1">
-                        <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md ${
-                          isExpired
-                            ? "bg-amber-100 text-amber-800 border border-amber-200"
-                            : booked >= group.capacity
-                            ? "bg-red-100 text-red-800 border border-red-200"
-                            : "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                        }`}>
-                          <Users size={11} />
-                          <span>{booked} / {group.capacity} {t("booked", "inscritos")}</span>
-                        </span>
+                      <div className="pt-1 flex flex-col gap-1">
+                        {(() => {
+                          const remaining = Math.max(0, group.capacity - booked);
+                          return (
+                            <>
+                              <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md border ${
+                                isExpired
+                                  ? "bg-amber-100 text-amber-800 border-amber-200"
+                                  : remaining === 0
+                                  ? "bg-rose-100 text-rose-800 border-rose-200"
+                                  : "bg-emerald-100 text-emerald-800 border-emerald-200"
+                              }`}>
+                                <Users size={11} />
+                                <span>
+                                  {isExpired
+                                    ? t("Booking Closed", "Inscrições Fechadas")
+                                    : remaining === 0
+                                    ? t("0 available remaining · Full", "0 vagas disponíveis · Esgotado")
+                                    : t(`${remaining} available remaining`, `${remaining} vagas disponíveis`)}
+                                </span>
+                              </span>
+                              <span className="text-[10px] text-slate-500 font-medium pl-0.5">
+                                {t(`${booked} / ${group.capacity} booked`, `${booked} / ${group.capacity} inscritos`)}
+                              </span>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
 

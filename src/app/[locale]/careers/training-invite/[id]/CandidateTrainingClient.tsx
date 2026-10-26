@@ -144,7 +144,7 @@ export default function CandidateTrainingClient({
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
         <OverwatchOrbitLoader />
-        <p className="mt-4 text-xs font-semibold text-slate-400 animate-pulse tracking-wide uppercase font-mono">
+        <p className="mt-4 text-xs font-semibold text-slate-400 tracking-wide uppercase font-mono">
           {isPt ? "A carregar dados da formação…" : "Loading training details…"}
         </p>
       </div>

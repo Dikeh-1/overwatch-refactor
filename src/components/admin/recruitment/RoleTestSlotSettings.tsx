@@ -297,13 +297,18 @@ export function RoleTestSlotSettings() {
             {(() => {
               const activeSlots = slots.filter((s) => !isSlotBookingExpired(s));
               const expiredSlots = slots.filter((s) => isSlotBookingExpired(s));
+              const currentCohort = catalog?.cohorts.find((c) => c.id === cycleId);
+              const bookedCounts = currentCohort?.bookedCounts || {};
+
+              const totalCapacity = activeSlots.reduce((sum, s) => sum + getQuotaForSlot(s, quota, slotQuotas), 0);
+              const totalBooked = activeSlots.reduce((sum, s) => sum + (bookedCounts[normalizeSlot(s)] || bookedCounts[s] || 0), 0);
+              const totalAvailable = Math.max(0, totalCapacity - totalBooked);
 
               return (
                 <>
                   {expiredSlots.length > 0 && (
                     <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl border border-amber-200 bg-amber-50/50 text-xs text-amber-900">
                       <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
                         <span className="font-medium">
                           {t(
                             `${expiredSlots.length} slot${expiredSlots.length > 1 ? "s" : ""} expired (booking cut-off passed at 11:59 PM day prior) · Synced with live candidate booking.`,
@@ -341,8 +346,8 @@ export function RoleTestSlotSettings() {
                     </div>
                   )}
 
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between pb-1 border-b border-slate-100 text-xs">
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-1 border-b border-slate-100 text-xs">
                       <span className="font-bold text-slate-800 uppercase tracking-wider font-mono">
                         {t(`Active Booking Slots (${activeSlots.length})`, `Turnos Activos para Agendamento (${activeSlots.length})`)}
                       </span>
@@ -351,10 +356,36 @@ export function RoleTestSlotSettings() {
                       </span>
                     </div>
 
+                    {/* Live Available Slots Summary Bar */}
+                    {activeSlots.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-2 py-1">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700">
+                          <span>{t("Total Capacity:", "Lotação Total:")}</span>
+                          <strong className="text-slate-900">{totalCapacity}</strong>
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 border border-sky-200 text-xs font-semibold text-sky-800">
+                          <span>{t("Booked:", "Inscritos:")}</span>
+                          <strong className="text-sky-950">{totalBooked}</strong>
+                        </span>
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-bold ${
+                          totalAvailable > 0
+                            ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                            : "bg-rose-50 border-rose-200 text-rose-800"
+                        }`}>
+                          <span>{t("Live Available Slots Remaining:", "Vagas Disponíveis em Tempo Real:")}</span>
+                          <strong className="underline decoration-2">{totalAvailable}</strong>
+                        </span>
+                      </div>
+                    )}
+
                     <ul className="divide-y divide-slate-100">
                       {activeSlots.map((slot) => {
                         const isEditingThis = editingSlot === slot;
                         const currentSlotCapacity = getQuotaForSlot(slot, quota, slotQuotas);
+                        const booked = bookedCounts[normalizeSlot(slot)] || bookedCounts[slot] || 0;
+                        const remaining = Math.max(0, currentSlotCapacity - booked);
+                        const isFull = remaining === 0;
+
                         return (
                           <li key={slot} className="flex flex-wrap items-center justify-between gap-3 py-2.5 text-sm">
                             {isEditingThis ? (
@@ -427,10 +458,24 @@ export function RoleTestSlotSettings() {
                                 </button>
                               </div>
                             ) : (
-                              <div className="flex flex-wrap items-center gap-2.5">
-                                <span className="font-medium text-slate-900">{formatSlotDisplay(slot, lang)}</span>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-semibold text-slate-900">{formatSlotDisplay(slot, lang)}</span>
                                 <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-700">
-                                  {t(`Capacity: ${currentSlotCapacity}`, `Capacidade: ${currentSlotCapacity}`)}
+                                  {t(`Capacity: ${currentSlotCapacity}`, `Lotação: ${currentSlotCapacity}`)}
+                                </span>
+                                <span className="inline-flex items-center rounded-md border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-800">
+                                  {t(`${booked} booked`, `${booked} inscritos`)}
+                                </span>
+                                <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-bold ${
+                                  isFull
+                                    ? "border-rose-200 bg-rose-50 text-rose-800"
+                                    : remaining <= 2
+                                    ? "border-amber-200 bg-amber-50 text-amber-900"
+                                    : "border-emerald-200 bg-emerald-50 text-emerald-800"
+                                }`}>
+                                  {isFull
+                                    ? t("0 available (Full)", "0 disponíveis (Esgotado)")
+                                    : t(`${remaining} available`, `${remaining} vagas disponíveis`)}
                                 </span>
                               </div>
                             )}
@@ -498,15 +543,16 @@ export function RoleTestSlotSettings() {
                       <ul className="divide-y divide-slate-100 bg-slate-50/60 rounded-xl border border-slate-200 px-3">
                         {expiredSlots.map((slot) => {
                           const currentSlotCapacity = getQuotaForSlot(slot, quota, slotQuotas);
+                          const booked = bookedCounts[normalizeSlot(slot)] || bookedCounts[slot] || 0;
                           return (
                             <li key={slot} className="flex flex-wrap items-center justify-between gap-3 py-2 text-xs opacity-75">
-                              <div className="flex items-center gap-2.5">
-                                <span className="line-through text-slate-500">{formatSlotDisplay(slot, lang)}</span>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="line-through text-slate-500 font-medium">{formatSlotDisplay(slot, lang)}</span>
                                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
                                   {t("Booking Closed", "Inscrições Fechadas")}
                                 </span>
-                                <span className="text-slate-400">
-                                  {t(`Capacity: ${currentSlotCapacity}`, `Lotação: ${currentSlotCapacity}`)}
+                                <span className="text-slate-500 font-medium">
+                                  {t(`Capacity: ${currentSlotCapacity}`, `Lotação: ${currentSlotCapacity}`)} · {t(`${booked} booked`, `${booked} inscritos`)}
                                 </span>
                               </div>
                               <button

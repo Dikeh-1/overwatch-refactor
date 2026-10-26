@@ -235,6 +235,7 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
         {allSlots.map((slot, idx) => {
           const count = bookedCandidates.filter((c) => normalizeSlot(c.testSlot) === normalizeSlot(slot)).length;
           const thisSlotQuota = getQuotaForSlot(slot, slotQuota, slotQuotas);
+          const remaining = Math.max(0, thisSlotQuota - count);
           const isOver = count > thisSlotQuota;
 
           return (
@@ -250,13 +251,16 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
             >
               <span>{formatSlotDisplay(slot, lang)}</span>
               <span
-                className={`px-1.5 py-0.2 rounded text-[0.65rem] font-bold ${
+                className={`px-1.5 py-0.5 rounded text-[0.65rem] font-bold ${
                   isOver
                     ? "bg-amber-100 text-amber-800"
-                    : "bg-slate-100 text-slate-600"
+                    : remaining === 0
+                    ? "bg-rose-100 text-rose-800"
+                    : "bg-emerald-100 text-emerald-800"
                 }`}
+                title={t(`${remaining} available slots remaining (${count} / ${thisSlotQuota} booked)`, `${remaining} vagas disponíveis (${count} / ${thisSlotQuota} inscritos)`)}
               >
-                {count}/{thisSlotQuota}
+                {count}/{thisSlotQuota} · {remaining} {t("avail", "disp.")}
               </span>
             </button>
           );
@@ -321,6 +325,15 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
 
         <div className="flex items-center gap-3">
           <div className="text-xs text-slate-500">
+            {selectedSlot !== "all" && (
+              <span className="mr-3">
+                {t("Available Remaining:", "Vagas Disponíveis:")}{" "}
+                <strong className={selectedSlotQuota - currentSlotOccupancy > 0 ? "text-emerald-700 font-bold" : "text-rose-700 font-bold"}>
+                  {Math.max(0, selectedSlotQuota - currentSlotOccupancy)}
+                </strong>{" "}
+                ({currentSlotOccupancy}/{selectedSlotQuota}) ·
+              </span>
+            )}
             {t("Present:", "Presentes:")} <strong className="text-emerald-700 font-bold">{attendedCount}</strong> / {slotCandidates.length}
           </div>
 
