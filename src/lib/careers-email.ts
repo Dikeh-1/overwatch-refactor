@@ -3249,11 +3249,11 @@ export async function sendTrainingConfirmationEmail({
               <table style="width:100%;font-size:13px;color:#334155;border-collapse:collapse;">
                 <tr>
                   <td style="padding:5px 0;font-weight:700;width:140px;color:#64748b;">Período de Formação:</td>
-                  <td style="padding:5px 0;font-weight:600;">9, 10 e 11 de Novembro de 2026 (${group.timeRange})</td>
+                  <td style="padding:5px 0;font-weight:600;">2, 3 e 4 de Novembro de 2026 (${group.timeRange})</td>
                 </tr>
                 <tr>
                   <td style="padding:5px 0;font-weight:700;color:#64748b;">Avaliação Prática:</td>
-                  <td style="padding:5px 0;font-weight:600;">Quinta-feira, 12 de Novembro de 2026 (${group.evaluationTime})</td>
+                  <td style="padding:5px 0;font-weight:600;">Quinta-feira, 5 de Novembro de 2026 (${group.evaluationTime})</td>
                 </tr>
                 <tr>
                   <td style="padding:5px 0;font-weight:700;color:#64748b;">Local:</td>
@@ -3304,8 +3304,8 @@ export async function sendTrainingConfirmationEmail({
 Confirmamos com sucesso a sua inscrição na 2.ª Fase de Selecção – Formação Presencial em Consciência Situacional e Identificação de Ameaças através de CCTV para a função de Operadora do Centro de Controlo (CCO).
 
 GRUPO CONFIRMADO: ${group.name}
-- Período de Formação: 9, 10 e 11 de Novembro de 2026 (${group.timeRange})
-- Avaliação Prática: Quinta-feira, 12 de Novembro de 2026 (${group.evaluationTime})
+- Período de Formação: 2, 3 e 4 de Novembro de 2026 (${group.timeRange})
+- Avaliação Prática: Quinta-feira, 5 de Novembro de 2026 (${group.evaluationTime})
 - Local: ${location}
 - Horário de Chegada: Apresentar-se 15 minutos antes do início
 

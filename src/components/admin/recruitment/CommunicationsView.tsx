@@ -312,6 +312,104 @@ Após a avaliação da sua candidatura para {{role_title}}, temos a honra de inf
 Em anexo disponibilizamos o guia de preparação e cronograma de acolhimento. Lembramos da obrigatoriedade do documento de identificação original.`,
     },
     {
+      id: "training_convocation",
+      name: t("Training Group Selection Convocation", "Convocatória Formação 2.ª Fase (Grupos A/B)"),
+      badge: "FORMAÇÃO",
+      subject:
+        emailLang === "en"
+          ? "2nd Selection Phase: In-Person Training & Practical Evaluation — Overwatch"
+          : "2.ª Fase de Selecção: Convocatória para Formação e Avaliação Prática – Overwatch Moçambique",
+      body:
+        emailLang === "en"
+          ? `Dear {{candidate_name}},
+
+We are pleased to inform you that you have been selected for the 2nd Phase of our recruitment process for {{role_title}} at Overwatch Mozambique.
+
+This phase consists of an In-Person Practical Training in Situational Awareness and Threat Identification through CCTV, followed by an Individual Practical Evaluation.
+
+TRAINING SCHEDULE:
+Training runs from Monday, November 2nd to Wednesday, November 4th, 2026, with Individual Practical Evaluation on Thursday, November 5th, 2026.
+
+We offer two groups to choose from (limited slots per group, first come first served):
+
+• Group A — Morning:
+  - Training: November 2, 3 and 4 (08:00 to 12:00)
+  - Practical Evaluation: Thursday, November 5 (09:00 to 11:00)
+
+• Group B — Afternoon:
+  - Training: November 2, 3 and 4 (13:00 to 17:00)
+  - Practical Evaluation: Thursday, November 5 (13:00 to 15:00)
+
+SELECT YOUR TRAINING GROUP:
+To choose your preferred group, click your personal link below:
+
+{{training_link}}
+
+LOCATION:
+Overwatch Mozambique Headquarters — Av. Paulo Samuel Khankhomba, N.º 1948, Maputo.
+
+WHAT TO BRING:
+• Valid identification document (ID / Passport).
+• A physical photocopy of your ID document.
+• Blue or black pen.
+• A notebook or notepad.
+(No laptop required. All equipment and learning materials are provided by Overwatch.)
+
+IMPORTANT ACCESS INSTRUCTIONS:
+• Entry will be granted upon presenting your valid ID document and verifying your name on the reception roster. No QR code is required.
+• Attendance is mandatory across all 3 training days within the same chosen group. Alternating between morning and afternoon is not permitted.
+• Please arrive 15 minutes prior to the start of your scheduled session.
+
+Kind regards,
+Recruitment Team
+Overwatch Mozambique`
+          : `Prezada {{candidate_name}},
+
+Temos o prazer de comunicar que foi seleccionada para a 2.ª Fase do processo de recrutamento para a posição de {{role_title}} da Overwatch Moçambique.
+
+Esta fase consiste numa Formação Presencial em Consciência Situacional e Identificação de Ameaças através de CCTV, seguida de Avaliação Prática Individual.
+
+CRONOGRAMA E HORÁRIOS:
+A formação decorrerá de Segunda-feira, 2 de Novembro a Quarta-feira, 4 de Novembro de 2026, com Avaliação Prática Individual na Quinta-feira, 5 de Novembro de 2026.
+
+Disponibilizamos dois horários à escolha (vagas limitadas por ordem de inscrição):
+
+• Grupo A — Manhã:
+  - Formação: 2, 3 e 4 de Novembro (08h00 às 12h00)
+  - Avaliação Individual: Quinta-feira, 5 de Novembro (09h00 às 11h00)
+
+• Grupo B — Tarde:
+  - Formação: 2, 3 e 4 de Novembro (13h00 às 17h00)
+  - Avaliação Individual: Quinta-feira, 5 de Novembro (13h00 às 15h00)
+
+INSCRIÇÃO NO SEU GRUPO:
+Para escolher o horário da sua preferência, aceda ao link oficial abaixo e confirme a sua inscrição:
+
+{{training_link}}
+
+LOCAL DAS SESSÕES:
+Sede da Overwatch Moçambique — Av. Paulo Samuel Khankhomba, N.º 1948, Maputo.
+
+O QUE DEVERÁ TRAZER:
+• Documento de identificação original e válido (BI / Passaporte).
+• Uma cópia do documento de identificação (caso ainda não tenha entregue).
+• Uma caneta esferográfica (azul ou preta).
+• Um caderno ou bloco de notas para acompanhar as sessões.
+
+(Não é necessário trazer computador pessoal. Todos os equipamentos e materiais práticos serão disponibilizados pela Overwatch.)
+
+NOTAS IMPORTANTES:
+• A sua entrada nas instalações será autorizada mediante apresentação do seu Documento de Identificação válido e verificação do seu nome na lista da recepção. Não é necessário apresentar código QR.
+• É obrigatório frequentar os três dias consecutivos de formação no mesmo grupo selecionado. Não será permitida a alternância entre os grupos da manhã e da tarde.
+• Pedimos que chegue com 15 minutos de antecedência em relação ao horário de início da sua sessão.
+
+Caso tenha alguma questão, poderá responder directamente a este email ou contactar-nos através do nosso portal oficial.
+
+Com os melhores cumprimentos,
+Equipa de Recrutamento
+Overwatch Moçambique`,
+    },
+    {
       id: "test_convocation",
       name: t("Physical Test Convocation", "Convocatória para Teste Presencial"),
       badge: "TESTE",

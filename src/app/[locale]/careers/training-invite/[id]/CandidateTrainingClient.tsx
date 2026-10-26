@@ -261,7 +261,7 @@ export default function CandidateTrainingClient({
                     {candidate.trainingGroup}
                   </p>
                   <p className="text-xs text-slate-300 pt-1">
-                    {selectedGroup?.schedule || "9, 10 e 11 de Novembro de 2026"}
+                    {selectedGroup?.schedule || "2, 3 e 4 de Novembro de 2026"}
                   </p>
                 </div>
 
@@ -330,7 +330,7 @@ export default function CandidateTrainingClient({
                   Escolha do Grupo de Formação (Vagas Limitadas por Ordem de Inscrição):
                 </p>
                 <p>
-                  A formação tem a duração de quatro horas por dia, durante 3 dias consecutivos (<strong>9, 10 e 11 de Novembro</strong>), com avaliação prática individual na <strong>quinta-feira, 12 de Novembro</strong>. A candidata deverá frequentar os três dias no mesmo grupo.
+                  A formação tem a duração de quatro horas por dia, durante 3 dias consecutivos (<strong>2, 3 e 4 de Novembro</strong>), com avaliação prática individual na <strong>quinta-feira, 5 de Novembro</strong>. A candidata deverá frequentar os três dias no mesmo grupo.
                 </p>
               </div>
             </div>
@@ -387,11 +387,11 @@ export default function CandidateTrainingClient({
                       <div className="text-xs text-slate-300 space-y-1.5 border-t border-white/10 pt-3">
                         <div className="flex items-center gap-1.5 text-slate-200 font-medium">
                           <Calendar size={13} className="text-sky-400 shrink-0" />
-                          <span>9, 10 e 11 de Novembro: {g.timeRange}</span>
+                          <span>2, 3 e 4 de Novembro: {g.timeRange}</span>
                         </div>
                         <div className="flex items-center gap-1.5 text-amber-300 font-medium">
                           <Clock size={13} className="text-amber-400 shrink-0" />
-                          <span>Avaliação: 12 de Novembro ({g.evaluationTime})</span>
+                          <span>Avaliação: 5 de Novembro ({g.evaluationTime})</span>
                         </div>
                       </div>
 

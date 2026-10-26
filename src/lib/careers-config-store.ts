@@ -359,7 +359,7 @@ export const DEFAULT_TRAINING_SLOT_CONFIG: TrainingSlotConfig = {
     {
       id: "group_a",
       name: "GRUPO A — MANHÃ",
-      schedule: "Segunda a Quarta (9, 10 e 11 de Novembro): 08h00–12h00 | Avaliação: Quinta-feira, 12 de Novembro: 09h00–11h00",
+      schedule: "Segunda a Quarta (2, 3 e 4 de Novembro): 08h00–12h00 | Avaliação: Quinta-feira, 5 de Novembro: 09h00–11h00",
       timeRange: "08h00–12h00",
       evaluationTime: "09h00–11h00",
       capacity: 8,
@@ -368,7 +368,7 @@ export const DEFAULT_TRAINING_SLOT_CONFIG: TrainingSlotConfig = {
     {
       id: "group_b",
       name: "GRUPO B — TARDE",
-      schedule: "Segunda a Quarta (9, 10 e 11 de Novembro): 13h00–17h00 | Avaliação: Quinta-feira, 12 de Novembro: 13h00–15h00",
+      schedule: "Segunda a Quarta (2, 3 e 4 de Novembro): 13h00–17h00 | Avaliação: Quinta-feira, 5 de Novembro: 13h00–15h00",
       timeRange: "13h00–17h00",
       evaluationTime: "13h00–15h00",
       capacity: 8,

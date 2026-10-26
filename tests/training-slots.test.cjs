@@ -65,7 +65,7 @@ test('training slot configuration supports adding more groups dynamically (Group
         {
           id: 'group_a',
           name: 'GRUPO A — Manhã',
-          schedule: '9, 10 e 11 de Novembro (08h00–12h00)',
+          schedule: '2, 3 e 4 de Novembro (08h00–12h00)',
           timeRange: '08h00–12h00',
           evaluationTime: '09h00–11h00',
           capacity: 8,
@@ -74,7 +74,7 @@ test('training slot configuration supports adding more groups dynamically (Group
         {
           id: 'group_b',
           name: 'GRUPO B — Tarde',
-          schedule: '9, 10 e 11 de Novembro (13h00–17h00)',
+          schedule: '2, 3 e 4 de Novembro (13h00–17h00)',
           timeRange: '13h00–17h00',
           evaluationTime: '13h00–15h00',
           capacity: 8,
@@ -83,7 +83,7 @@ test('training slot configuration supports adding more groups dynamically (Group
         {
           id: 'group_c',
           name: 'GRUPO C — Noite / Especial',
-          schedule: '9, 10 e 11 de Novembro (18h00–21h00)',
+          schedule: '2, 3 e 4 de Novembro (18h00–21h00)',
           timeRange: '18h00–21h00',
           evaluationTime: '18h00–20h00',
           capacity: 6,
