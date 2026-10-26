@@ -1,6 +1,6 @@
 import { auditRequest } from "@/lib/admin-activity";
 import { getRecruitmentWorkspaceData } from "@/lib/careers-workspace-store";
-import { applicationsForCohort, sameRole, isNextPhase, isTerminal } from "@/lib/careers-workflow";
+import { applicationsForCohort, sameRole, isNextPhase, isDeclined, isTerminal } from "@/lib/careers-workflow";
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
 import {
   getApplications,
@@ -27,13 +27,13 @@ export async function GET(request: Request) {
     const cohort = cohortId ? workspace.cohorts.find(c => c.id === cohortId) : undefined;
     if (cohortId && !cohort) return Response.json({ error: "Cohort not found" }, { status: 404 });
     const members = cohort ? applicationsForCohort(workspace.applications, cohort, workspace.cohorts) : workspace.applications;
-    const candidates = members.filter(a => (!role || role === "all" || sameRole(a.role, role)) && isNextPhase(a) && !deleted.includes(a.id) && !deleted.includes(normalizeName(a.name))).sort((a,b) => (b.testScore ?? -1) - (a.testScore ?? -1) || a.name.localeCompare(b.name)).map((a,index) => ({
+    const candidates = members.filter(a => (!role || role === "all" || sameRole(a.role, role)) && (isNextPhase(a) || isDeclined(a)) && !deleted.includes(a.id) && !deleted.includes(normalizeName(a.name))).sort((a,b) => (b.testScore ?? -1) - (a.testScore ?? -1) || a.name.localeCompare(b.name)).map((a,index) => ({
       id: a.id, seedIndex: index+1, approvedName: a.name, name: a.name, score: a.testScore ?? null,
       email: a.email, phone: normalizePhone(a.whatsapp), isMatched: true, matchedId: a.id,
       nextPhaseStatus: a.nextPhaseStatus || "selected", invitationStatus: a.nextPhaseInvitedAt ? "sent" : "not_sent", invitationSentAt: a.nextPhaseInvitedAt || null,
-      candidateResponse: a.nextPhaseResponse === "yes" || a.nextPhaseStatus === "confirmed" ? "confirmed" : a.nextPhaseResponse === "no" || a.nextPhaseStatus === "declined" ? "declined" : a.nextPhaseInvitedAt ? "awaiting" : null,
+      candidateResponse: a.nextPhaseResponse === "yes" || a.nextPhaseStatus === "confirmed" ? "confirmed" : a.nextPhaseResponse === "no" || a.nextPhaseStatus === "declined" || isDeclined(a) ? "declined" : a.nextPhaseInvitedAt ? "awaiting" : null,
       responseDate: a.nextPhaseRespondedAt || null, respondedAt: a.nextPhaseRespondedAt || null,
-      responseOption: a.nextPhaseResponseOption || null, recruitmentStage: a.status,
+      responseOption: a.nextPhaseResponseOption || a.archiveReason || null, recruitmentStage: a.status,
       token: a.nextPhaseToken || null,
     }));
     return Response.json({ candidates, summary: { totalSelected: candidates.length, notSent: candidates.filter(c => c.invitationStatus === "not_sent").length, awaiting: candidates.filter(c => c.candidateResponse === "awaiting").length, confirmed: candidates.filter(c => c.candidateResponse === "confirmed").length, declined: candidates.filter(c => c.candidateResponse === "declined").length } }, { headers: { "Cache-Control": "no-store" } });

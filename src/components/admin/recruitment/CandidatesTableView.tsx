@@ -181,7 +181,12 @@ export const CandidatesTableView: React.FC<CandidatesTableViewProps> = ({
       if (r === "Not Selected for Next Phase") return t("Not Selected for Next Phase", "Não Selecionado para Próx. Fase");
       if (r === "No Show") return t("Absent from Test", "Faltou ao Teste Presencial");
       if (r === "Candidate Withdrew") return t("Candidate Withdrew", "Desistiu do Processo");
-      if (r === "Declined Next Phase") return cand.nextPhaseResponseOption || t("Declined Next Phase Conditions", "Recusou Condições da Próx. Fase");
+      if (r.startsWith("Declined Next Phase")) {
+        const opt = cand.nextPhaseResponseOption || r.replace(/^Declined Next Phase:?\s*/i, "");
+        const isDefaultNo = opt.toLowerCase().includes("não tenho interesse") || opt.toLowerCase().includes("no interest") || opt.toLowerCase().includes("not interested");
+        const optText = isDefaultNo ? t("Not interested in next phase", "Não tenho interesse") : opt;
+        return optText ? `${t("Declined Next Phase", "Recusou Próx. Fase")}: ${optText}` : t("Declined Next Phase Conditions", "Recusou Condições da Próx. Fase");
+      }
       if (r === "Outside Mozambique") return t("Outside Mozambique", "Não Reside em Moçambique");
       if (r === "Outside Maputo Region") return t("Outside Deployment Region", "Fora da Região Operacional");
       if (r === "Duplicate") return t("Duplicate Application", "Candidatura Duplicada");

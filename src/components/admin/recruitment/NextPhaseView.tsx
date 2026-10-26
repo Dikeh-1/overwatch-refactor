@@ -1578,10 +1578,20 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang, co
                       {selectedCandidate.candidateResponse === "confirmed" ? (
                         <div className="p-3 rounded-md bg-emerald-50/80 border-l-3 border-emerald-600 text-emerald-950 text-[0.75rem] leading-relaxed italic">
                           "{selectedCandidate.responseOption || "Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas."}"
+                          {lang === "en" && (
+                            <span className="block not-italic text-emerald-700 text-[0.7rem] mt-1 font-sans font-medium">
+                              (English translation: Confirmed interest and agreed to training conditions)
+                            </span>
+                          )}
                         </div>
                       ) : selectedCandidate.candidateResponse === "declined" ? (
                         <div className="p-3 rounded-md bg-slate-100 border-l-3 border-slate-500 text-slate-800 text-[0.75rem] leading-relaxed italic">
                           "{selectedCandidate.responseOption || "Não tenho interesse"}"
+                          {lang === "en" && (
+                            <span className="block not-italic text-slate-600 text-[0.7rem] mt-1 font-sans font-medium">
+                              (English translation: Declined — Not interested in attending next phase)
+                            </span>
+                          )}
                         </div>
                       ) : (
                         <div className="p-3 rounded-md bg-amber-50/50 border-l-3 border-amber-400 text-amber-900 text-[0.75rem] leading-relaxed italic">
