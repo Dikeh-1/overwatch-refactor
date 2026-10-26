@@ -36,6 +36,10 @@ export interface TrainingGroup {
   capacity: number;
   enabled: boolean;
   startDate?: string;
+  endDate?: string;
+  evaluationDate?: string;
+  startTime?: string;
+  endTime?: string;
 }
 
 export interface TrainingConfig {
@@ -63,6 +67,66 @@ interface Props {
   roleId?: string;
   candidates?: CandidateItem[];
   onRefresh?: () => Promise<void> | void;
+}
+
+const ptDayNames = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+const ptMonthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
+function parseTimes(timeStr?: string): { start: string; end: string } {
+  if (!timeStr) return { start: "08:00", end: "12:00" };
+  const matches = timeStr.match(/(\d{1,2})[h:](\d{2})/g);
+  if (matches && matches.length >= 2) {
+    const s = matches[0].replace('h', ':').padStart(5, '0');
+    const e = matches[1].replace('h', ':').padStart(5, '0');
+    return { start: s, end: e };
+  }
+  return { start: "08:00", end: "12:00" };
+}
+
+function formatTimes(s?: string, e?: string): string {
+  const sStr = s ? s.replace(':', 'h') : '08h00';
+  const eStr = e ? e.replace(':', 'h') : '12h00';
+  return `${sStr} – ${eStr}`;
+}
+
+function generateScheduleText(startIso?: string, endIso?: string, evalIso?: string, timeRange?: string, evalTime?: string): string {
+  if (!startIso) return "";
+  try {
+    const [sY, sM, sD] = startIso.split('-').map(Number);
+    if (!sY || !sM || !sD) return "";
+    const sDate = new Date(Date.UTC(sY, sM - 1, sD));
+    const sDayName = ptDayNames[sDate.getUTCDay()] ? ptDayNames[sDate.getUTCDay()].replace('-feira', '') : "";
+    const sMonth = ptMonthNames[sM - 1] || "";
+
+    let schedule = "";
+    if (endIso && endIso !== startIso) {
+      const [eY, eM, eD] = endIso.split('-').map(Number);
+      const eDate = new Date(Date.UTC(eY, eM - 1, eD));
+      const eDayName = ptDayNames[eDate.getUTCDay()] ? ptDayNames[eDate.getUTCDay()].replace('-feira', '') : "";
+      schedule = `${sDayName} a ${eDayName} (${sD} a ${eD} de ${sMonth})`;
+    } else {
+      schedule = `${sDayName}, ${sD} de ${sMonth}`;
+    }
+
+    if (timeRange) {
+      schedule += `: ${timeRange}`;
+    }
+
+    if (evalIso) {
+      const [evY, evM, evD] = evalIso.split('-').map(Number);
+      const evDate = new Date(Date.UTC(evY, evM - 1, evD));
+      const evDayName = ptDayNames[evDate.getUTCDay()] || "";
+      const evMonth = ptMonthNames[evM - 1] || "";
+      schedule += ` | Avaliação: ${evDayName}, ${evD} de ${evMonth}`;
+      if (evalTime) {
+        schedule += `: ${evalTime}`;
+      }
+    }
+
+    return schedule;
+  } catch {
+    return "";
+  }
 }
 
 export const NextPhaseTrainingGroupsView: React.FC<Props> = ({
@@ -457,86 +521,337 @@ export const NextPhaseTrainingGroupsView: React.FC<Props> = ({
               {t("Configured Shifts & Groups", "Grupos e Turnos Configurados")} ({editGroups.length})
             </h4>
 
-            <div className="space-y-2">
-              {editGroups.map((g, idx) => (
-                <div
-                  key={g.id || idx}
-                  className="bg-white border border-slate-200 rounded-lg p-3 grid grid-cols-1 sm:grid-cols-12 gap-3 items-center text-xs shadow-2xs"
-                >
-                  <div className="sm:col-span-3">
-                    <label className="block text-[0.65rem] text-slate-500 uppercase font-semibold mb-0.5">
-                      {t("Group Name", "Nome do Grupo")}
-                    </label>
-                    <input
-                      type="text"
-                      value={g.name}
-                      onChange={(e) => handleUpdateGroup(idx, "name", e.target.value)}
-                      className="w-full px-2.5 py-1 rounded border border-slate-300 font-semibold text-slate-800"
-                    />
-                  </div>
+            <div className="space-y-4">
+              {editGroups.map((g, idx) => {
+                const times = parseTimes(g.timeRange);
+                const startTime = g.startTime || times.start;
+                const endTime = g.endTime || times.end;
+                const startDate = g.startDate || "2026-11-02";
+                const endDate = g.endDate || "2026-11-04";
+                const evalDate = g.evaluationDate || "2026-11-05";
 
-                  <div className="sm:col-span-3">
-                    <label className="block text-[0.65rem] text-slate-500 uppercase font-semibold mb-0.5">
-                      {t("Time Range", "Horário")}
-                    </label>
-                    <input
-                      type="text"
-                      value={g.timeRange}
-                      onChange={(e) => handleUpdateGroup(idx, "timeRange", e.target.value)}
-                      className="w-full px-2.5 py-1 rounded border border-slate-300 font-mono text-slate-800"
-                      placeholder="08h00 – 12h00"
-                    />
-                  </div>
+                return (
+                  <div
+                    key={g.id || idx}
+                    className="bg-white border border-slate-200 rounded-xl p-4 space-y-3.5 shadow-2xs hover:border-slate-300 transition-colors"
+                  >
+                    {/* Header Row: Shift Identity, Name, Capacity, Active Toggle, Delete */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2 flex-1 min-w-[220px]">
+                        <span className="px-2.5 py-1 rounded text-[0.68rem] font-bold bg-slate-100 text-slate-700 border border-slate-200 uppercase tracking-wider font-mono">
+                          #{idx + 1}
+                        </span>
+                        <input
+                          type="text"
+                          value={g.name}
+                          onChange={(e) => handleUpdateGroup(idx, "name", e.target.value)}
+                          className="flex-1 px-3 py-1.5 rounded-lg border border-slate-300 font-bold text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                          placeholder="e.g. GRUPO A — MANHÃ"
+                        />
+                      </div>
 
-                  <div className="sm:col-span-2">
-                    <label className="block text-[0.65rem] text-slate-500 uppercase font-semibold mb-0.5">
-                      {t("Days / Schedule", "Dias")}
-                    </label>
-                    <input
-                      type="text"
-                      value={g.schedule}
-                      onChange={(e) => handleUpdateGroup(idx, "schedule", e.target.value)}
-                      className="w-full px-2.5 py-1 rounded border border-slate-300 text-slate-800"
-                      placeholder="Segunda a Sexta"
-                    />
-                  </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5">
+                          <label className="text-[0.68rem] text-slate-500 uppercase font-semibold">
+                            {t("Seats / Capacity", "Vagas")}:
+                          </label>
+                          <input
+                            type="number"
+                            min={1}
+                            max={50}
+                            value={g.capacity}
+                            onChange={(e) => handleUpdateGroup(idx, "capacity", parseInt(e.target.value) || 8)}
+                            className="w-16 px-2 py-1 rounded-lg border border-slate-300 font-mono font-bold text-xs text-slate-900 text-center"
+                          />
+                        </div>
 
-                  <div className="sm:col-span-2">
-                    <label className="block text-[0.65rem] text-slate-500 uppercase font-semibold mb-0.5">
-                      {t("Capacity (Seats)", "Vagas")}
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={50}
-                      value={g.capacity}
-                      onChange={(e) => handleUpdateGroup(idx, "capacity", parseInt(e.target.value) || 8)}
-                      className="w-full px-2.5 py-1 rounded border border-slate-300 font-mono font-bold text-slate-900"
-                    />
-                  </div>
+                        <label className="inline-flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-700 select-none bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg">
+                          <input
+                            type="checkbox"
+                            checked={g.enabled}
+                            onChange={(e) => handleUpdateGroup(idx, "enabled", e.target.checked)}
+                            className="rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                          />
+                          <span>{t("Active Shift", "Turno Ativo")}</span>
+                        </label>
 
-                  <div className="sm:col-span-2 flex items-center justify-end gap-2 pt-3 sm:pt-0">
-                    <label className="inline-flex items-center gap-1 cursor-pointer text-[0.7rem] font-medium text-slate-600">
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveGroup(idx)}
+                          disabled={editGroups.length <= 1}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-20 cursor-pointer transition-colors"
+                          title={t("Delete Group", "Eliminar Grupo")}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Organized 2-Column Section: Date Picker (Left) & Time Picker (Right) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                      {/* Column 1: Dates & Calendar */}
+                      <div className="bg-slate-50/70 border border-slate-200 rounded-lg p-3 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[0.68rem] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                            <Calendar size={13} className="text-slate-500" />
+                            <span>{t("Training Dates (Calendar Picker)", "Datas da Formação (Calendário)")}</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const auto = generateScheduleText(startDate, endDate, evalDate, g.timeRange, g.evaluationTime);
+                              handleUpdateGroup(idx, "schedule", auto);
+                            }}
+                            className="text-[0.65rem] text-sky-700 hover:text-sky-800 font-semibold underline cursor-pointer"
+                            title={t("Auto-generate formatted text", "Gerar texto automático")}
+                          >
+                            {t("Generate Schedule", "Gerar Escala")}
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[0.65rem] text-slate-500 font-medium mb-1">
+                              {t("Start Date", "Data de Início")}
+                            </label>
+                            <input
+                              type="date"
+                              value={startDate}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const next = [...editGroups];
+                                next[idx] = {
+                                  ...next[idx],
+                                  startDate: val,
+                                  schedule: generateScheduleText(val, endDate, evalDate, g.timeRange, g.evaluationTime),
+                                };
+                                setEditGroups(next);
+                              }}
+                              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-mono text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[0.65rem] text-slate-500 font-medium mb-1">
+                              {t("End Date", "Data de Término")}
+                            </label>
+                            <input
+                              type="date"
+                              value={endDate}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const next = [...editGroups];
+                                next[idx] = {
+                                  ...next[idx],
+                                  endDate: val,
+                                  schedule: generateScheduleText(startDate, val, evalDate, g.timeRange, g.evaluationTime),
+                                };
+                                setEditGroups(next);
+                              }}
+                              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-mono text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-[0.65rem] text-slate-500 font-medium mb-1">
+                            {t("Assessment / Evaluation Date", "Data da Avaliação Final")}
+                          </label>
+                          <input
+                            type="date"
+                            value={evalDate}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const next = [...editGroups];
+                              next[idx] = {
+                                ...next[idx],
+                                evaluationDate: val,
+                                schedule: generateScheduleText(startDate, endDate, val, g.timeRange, g.evaluationTime),
+                              };
+                              setEditGroups(next);
+                            }}
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-mono text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Column 2: Shift Timings & Time Pickers */}
+                      <div className="bg-slate-50/70 border border-slate-200 rounded-lg p-3 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[0.68rem] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                            <Clock size={13} className="text-slate-500" />
+                            <span>{t("Shift Timing (Time Picker)", "Horários do Turno (Relógio)")}</span>
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const formatted = "08h00 – 12h00";
+                                const next = [...editGroups];
+                                next[idx] = {
+                                  ...next[idx],
+                                  startTime: "08:00",
+                                  endTime: "12:00",
+                                  timeRange: formatted,
+                                  evaluationTime: "09h00 – 11h00",
+                                  schedule: generateScheduleText(startDate, endDate, evalDate, formatted, "09h00 – 11h00"),
+                                };
+                                setEditGroups(next);
+                              }}
+                              className="px-1.5 py-0.5 rounded text-[0.6rem] font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 cursor-pointer shadow-2xs"
+                            >
+                              Manhã
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const formatted = "13h00 – 17h00";
+                                const next = [...editGroups];
+                                next[idx] = {
+                                  ...next[idx],
+                                  startTime: "13:00",
+                                  endTime: "17:00",
+                                  timeRange: formatted,
+                                  evaluationTime: "13h00 – 15h00",
+                                  schedule: generateScheduleText(startDate, endDate, evalDate, formatted, "13h00 – 15h00"),
+                                };
+                                setEditGroups(next);
+                              }}
+                              className="px-1.5 py-0.5 rounded text-[0.6rem] font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 cursor-pointer shadow-2xs"
+                            >
+                              Tarde
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const formatted = "18h00 – 21h00";
+                                const next = [...editGroups];
+                                next[idx] = {
+                                  ...next[idx],
+                                  startTime: "18:00",
+                                  endTime: "21:00",
+                                  timeRange: formatted,
+                                  evaluationTime: "18h00 – 20h00",
+                                  schedule: generateScheduleText(startDate, endDate, evalDate, formatted, "18h00 – 20h00"),
+                                };
+                                setEditGroups(next);
+                              }}
+                              className="px-1.5 py-0.5 rounded text-[0.6rem] font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 cursor-pointer shadow-2xs"
+                            >
+                              Noite
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[0.65rem] text-slate-500 font-medium mb-1">
+                              {t("Shift Start Time", "Início do Turno")}
+                            </label>
+                            <input
+                              type="time"
+                              value={startTime}
+                              onChange={(e) => {
+                                const s = e.target.value;
+                                const formatted = formatTimes(s, endTime);
+                                const next = [...editGroups];
+                                next[idx] = {
+                                  ...next[idx],
+                                  startTime: s,
+                                  timeRange: formatted,
+                                  schedule: generateScheduleText(startDate, endDate, evalDate, formatted, g.evaluationTime),
+                                };
+                                setEditGroups(next);
+                              }}
+                              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-mono text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[0.65rem] text-slate-500 font-medium mb-1">
+                              {t("Shift End Time", "Fim do Turno")}
+                            </label>
+                            <input
+                              type="time"
+                              value={endTime}
+                              onChange={(e) => {
+                                const endVal = e.target.value;
+                                const formatted = formatTimes(startTime, endVal);
+                                const next = [...editGroups];
+                                next[idx] = {
+                                  ...next[idx],
+                                  endTime: endVal,
+                                  timeRange: formatted,
+                                  schedule: generateScheduleText(startDate, endDate, evalDate, formatted, g.evaluationTime),
+                                };
+                                setEditGroups(next);
+                              }}
+                              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-mono text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-[0.65rem] text-slate-500 font-medium mb-1">
+                            {t("Assessment Timing (Hours)", "Horário da Avaliação")}
+                          </label>
+                          <input
+                            type="text"
+                            value={g.evaluationTime || ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const next = [...editGroups];
+                              next[idx] = {
+                                ...next[idx],
+                                evaluationTime: val,
+                                schedule: generateScheduleText(startDate, endDate, evalDate, g.timeRange, val),
+                              };
+                              setEditGroups(next);
+                            }}
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-mono text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                            placeholder="e.g. 09h00 – 11h00"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Row 3: Full Days & Schedule Text String */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[0.65rem] text-slate-500 uppercase font-semibold">
+                          {t("Full Days / Schedule Text (Displayed to Candidates)", "Texto Completo da Escala (Apresentado às Candidatas)")}
+                        </label>
+                        <span className="text-[0.62rem] text-slate-400">
+                          {t("Freely editable or auto-synced with calendar above", "Editável livremente ou sincronizado com o calendário")}
+                        </span>
+                      </div>
                       <input
-                        type="checkbox"
-                        checked={g.enabled}
-                        onChange={(e) => handleUpdateGroup(idx, "enabled", e.target.checked)}
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        type="text"
+                        value={g.schedule}
+                        onChange={(e) => handleUpdateGroup(idx, "schedule", e.target.value)}
+                        className="w-full px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500 font-medium"
+                        placeholder="Segunda a Quarta (2, 3 e 4 de Novembro): 08h00–12h00 | Avaliação: Quinta-feira, 5 de Novembro: 09h00–11h00"
                       />
-                      <span>{t("Active", "Ativo")}</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveGroup(idx)}
-                      disabled={editGroups.length <= 1}
-                      className="p-1 rounded text-red-500 hover:text-red-700 hover:bg-red-50 disabled:opacity-30 cursor-pointer"
-                      title={t("Delete Group", "Eliminar Grupo")}
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    </div>
+
+                    {/* Row 4: Live Preview Pill */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 flex items-center justify-between text-[0.72rem] text-slate-600 gap-3">
+                      <div className="flex items-center gap-2 flex-wrap min-w-0">
+                        <span className="font-semibold text-slate-800">{g.name}:</span>
+                        <span className="font-mono text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-200">
+                          🕒 {g.timeRange || "08h00 – 12h00"}
+                        </span>
+                        <span className="text-slate-600 truncate">
+                          📅 {g.schedule || "Escala pendente"}
+                        </span>
+                      </div>
+                      <span className="font-mono font-bold text-slate-700 whitespace-nowrap shrink-0">
+                        {g.capacity} {t("seats", "vagas")}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
