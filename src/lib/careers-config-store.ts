@@ -158,6 +158,7 @@ export type SystemConfigKey =
   | "roles_config"
   | "cohorts"
   | "test_slots"
+  | "training_slots"
   | "deleted_next_phase";
 
 const FILENAME_MAP: Record<SystemConfigKey, string> = {
@@ -166,6 +167,7 @@ const FILENAME_MAP: Record<SystemConfigKey, string> = {
   roles_config: "roles_def.json",
   cohorts: "cohorts.json",
   test_slots: "test-slots.json",
+  training_slots: "training-slots.json",
   deleted_next_phase: "deleted-next-phase.json",
 };
 
@@ -331,12 +333,64 @@ export async function getConfiguredRoles(): Promise<CareerRoleDefinition[]> {
   return getSystemConfig<CareerRoleDefinition[]>("roles_config", []);
 }
 
+
+export interface TrainingSlotGroup {
+  id: string;
+  name: string;
+  schedule: string;
+  timeRange: string;
+  evaluationTime: string;
+  capacity: number;
+  enabled: boolean;
+}
+
+export interface TrainingSlotConfig {
+  roleId?: string;
+  title: string;
+  location: string;
+  groups: TrainingSlotGroup[];
+}
+
+export const DEFAULT_TRAINING_SLOT_CONFIG: TrainingSlotConfig = {
+  roleId: "cctv",
+  title: "Formação em Consciência Situacional e Identificação de Ameaças através de CCTV",
+  location: "Av Paulo Samuel Khankhomba 1948",
+  groups: [
+    {
+      id: "group_a",
+      name: "GRUPO A — MANHÃ",
+      schedule: "Segunda a Quarta (9, 10 e 11 de Novembro): 08h00–12h00 | Avaliação: Quinta-feira, 12 de Novembro: 09h00–11h00",
+      timeRange: "08h00–12h00",
+      evaluationTime: "09h00–11h00",
+      capacity: 8,
+      enabled: true,
+    },
+    {
+      id: "group_b",
+      name: "GRUPO B — TARDE",
+      schedule: "Segunda a Quarta (9, 10 e 11 de Novembro): 13h00–17h00 | Avaliação: Quinta-feira, 12 de Novembro: 13h00–15h00",
+      timeRange: "13h00–17h00",
+      evaluationTime: "13h00–15h00",
+      capacity: 8,
+      enabled: true,
+    },
+  ],
+};
+
+export async function getConfiguredTrainingSlots(): Promise<TrainingSlotConfig> {
+  return getSystemConfig<TrainingSlotConfig>("training_slots", DEFAULT_TRAINING_SLOT_CONFIG);
+}
+
+export async function setConfiguredTrainingSlots(config: TrainingSlotConfig): Promise<TrainingSlotConfig> {
+  return setSystemConfig<TrainingSlotConfig>("training_slots", config);
+}
+
 export async function setConfiguredRoles(roles: CareerRoleDefinition[]): Promise<CareerRoleDefinition[]> {
   return setSystemConfig<CareerRoleDefinition[]>("roles_config", roles);
 }
 
 export async function setSystemConfig<T>(key: SystemConfigKey, data: T): Promise<T> {
   const before = await getSystemConfig<unknown>(key, null);
-  const section = key === "communication_templates" ? "communications" : key === "roles_config" ? "roles" : key === "cohorts" ? "archive" : key === "test_slots" ? "testing" : key === "admin_settings" ? "settings" : "next-phase";
+  const section = key === "communication_templates" ? "communications" : key === "roles_config" ? "roles" : key === "cohorts" ? "archive" : key === "test_slots" ? "testing" : key === "training_slots" ? "training" : key === "admin_settings" ? "settings" : "next-phase";
   return auditChange(`Configuration changed: ${key}`, changedValues({ value: before }, { value: data }), () => persistSystemConfig(key, data), { section });
 }

@@ -4,7 +4,6 @@ import { getSystemConfig } from "./careers-config-store";
 import { DEFAULT_ADMIN_SETTINGS } from "./admin-settings";
 import fs from "node:fs";
 import path from "node:path";
-import QRCode from "qrcode";
 import { roles, type Application, formatSlotDisplay } from "./careers";
 import { siteContact } from "./site-config";
 
@@ -1002,33 +1001,19 @@ export async function sendGatePassEmail({
   const rawSlot = slot || application.testSlot || "Quarta-feira, 16 de Setembro – 10h00";
   const activeSlot = formatSlotDisplay(rawSlot, "pt") || rawSlot;
 
-  // Generate official high-res QR code PNG buffer and base64 string
-  let qrBase64 = "";
-  try {
-    const qrBuffer = await QRCode.toBuffer(checkInUrl, {
-      width: 440,
-      margin: 2,
-      color: {
-        dark: "#07090e",
-        light: "#ffffff",
-      },
-    });
-    qrBase64 = qrBuffer.toString("base64");
-  } catch (err) {
-    console.error("Failed to generate QR buffer for email:", err);
-  }
-
-  const qrDataUri = qrBase64 ? `data:image/png;base64,${qrBase64}` : "";
+  // No QR code generated - entry verified via identity document (BI) and attendee roster at reception
+  const qrBase64 = "";
+  const qrDataUri = "";
   const greeting = getMozambiqueGreeting("pt");
+
+  const isTechManager = application.role === "cctv_technical_manager" || Boolean(application.cohortId && application.cohortId.includes("cctv_technical_manager"));
+  const roleLabelPt = isTechManager ? "Gestor Técnico e Instalação de CCTV" : "Operadora de CCO";
 
   const outgoingSubject =
     subject ||
     (isReminder
-      ? `Lembrete: O seu teste presencial da Overwatch é amanhã — Traga o seu Passe QR`
-      : `Passe Oficial de Acesso: Teste Presencial Overwatch — Apresentação Obrigatória na Portaria`);
-
-  const isTechManager = application.role === "cctv_technical_manager" || Boolean(application.cohortId && application.cohortId.includes("cctv_technical_manager"));
-  const roleLabelPt = isTechManager ? "Gestor Técnico e Instalação de CCTV" : "Operadora de CCO";
+      ? `Lembrete: O seu Teste Presencial da Overwatch é Amanhã — ${roleLabelPt}`
+      : `Confirmação Oficial de Convocatória: Teste Presencial Overwatch — ${roleLabelPt}`);
   const refBadge = isReminder ? (isTechManager ? "REF: TM-2026/LEMBRETE" : "REF: CCO-2026/LEMBRETE") : (isTechManager ? "REF: TM-2026/PASSE-PORTARIA" : "REF: CCO-2026/PASSE-PORTARIA");
   const subHeading = isReminder
     ? "LEMBRETE OFICIAL · TESTE DE SELECÇÃO AMANHÃ"
@@ -1094,50 +1079,47 @@ export async function sendGatePassEmail({
               ${
                 isReminder
                   ? `Lembramos que o seu <strong>Teste Presencial de Selecção</strong> para a vaga de <strong>${roleLabelPt}</strong> da Overwatch Moçambique está agendado para <strong>amanhã</strong>.`
-                  : `Disponibilizamos abaixo o seu <strong>Passe Oficial de Acesso com Código QR</strong> para o Teste Presencial de Selecção Técnica para a vaga de <strong>${roleLabelPt}</strong>.`
+                  : `Confirmamos a sua convocatória para o <strong>Teste Presencial de Selecção Técnica</strong> para a vaga de <strong>${roleLabelPt}</strong>.`
               }
             </p>
 
             <!-- MANDATORY ACCESS NOTICE (Corporate Specification Card) -->
             <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #0b1329; border-radius: 6px; padding: 16px 20px; margin: 20px 0;">
               <strong style="font-size: 12px; color: #0b1329; display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 800;">
-                REGRA OBRIGATÓRIA DE ACESSO À PORTARIA DA OVERWATCH
+                INSTRUÇÕES DE ACESSO E ENTRADA NA RECEPÇÃO
               </strong>
               <p style="font-size: 13px; color: #334155; margin: 0 0 8px 0; line-height: 1.55;">
-                O controlo de acesso às nossas instalações é estritamente fiscalizado pelo posto de segurança. <strong>Para ter autorização de entrada na sede da empresa, é obrigatório apresentar este Código QR na portaria</strong> ao agente de segurança para validação da sua vaga.
+                A sua entrada nas instalações da Overwatch será autorizada mediante apresentação de um <strong>Documento de Identificação Original e Válido (BI / Passaporte / DIRE)</strong> e confirmação do seu nome na lista oficial da recepção. <strong>Não é necessário apresentar código QR.</strong>
               </p>
               <div style="font-size: 12px; color: #475569; line-height: 1.5; padding-top: 6px; border-top: 1px dashed #cbd5e1;">
-                • <strong>Cópia Digital:</strong> Exibindo o código QR directamente no ecrã do seu telemóvel.<br />
-                • <strong>OU Cópia Impressa:</strong> Imprimindo em papel este passe ou o ficheiro de imagem anexado a este e-mail.
+                • <strong>Horário de Comparência:</strong> Chegar com 15 a 20 minutos de antecedência.<br />
+                • <strong>O que Trazer:</strong> Documento de Identificação válido e caneta azul ou preta.
               </div>
             </div>
 
-            <!-- SECURITY PASS GRAPHIC CARD (Dark High-Tech Card) -->
-            <div style="background: linear-gradient(180deg, #0b1329 0%, #07090e 100%); border: 2px solid #1e293b; border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center; color: #ffffff; box-shadow: 0 8px 24px rgba(0,0,0,0.18);">
-              <div style="font-family: monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #34d399; font-weight: 700; margin-bottom: 4px;">
-                OVERWATCH MOÇAMBIQUE · PASSE DIGITAL DE ENTRADA
-              </div>
-              <div style="font-size: 19px; font-weight: 800; color: #ffffff; margin-bottom: 4px; letter-spacing: -0.01em;">
-                ${application.name}
-              </div>
-              <div style="font-size: 12px; color: #94a3b8; font-family: monospace; margin-bottom: 18px;">
-                Vaga: ${roleLabelPt} · ID: ${application.id.slice(0, 8).toUpperCase()}
-              </div>
+            <!-- OFFICIAL APPOINTMENT VOUCHER CARD -->
+            <div style="background-color: #0b1329; border: 2px solid #1e293b; border-radius: 12px; padding: 22px; margin: 24px 0; color: #ffffff; box-shadow: 0 8px 24px rgba(0,0,0,0.18);">
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td>
+                    <div style="font-family: monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #38bdf8; font-weight: 700; margin-bottom: 4px;">
+                      COMPROVATIVO OFICIAL DE AGENDAMENTO
+                    </div>
+                    <div style="font-size: 18px; font-weight: 800; color: #ffffff; margin-bottom: 2px;">
+                      ${application.name}
+                    </div>
+                    <div style="font-size: 12px; color: #94a3b8; font-family: monospace;">
+                      Vaga: ${roleLabelPt} · REF: #${application.id.slice(0, 8).toUpperCase()}
+                    </div>
+                  </td>
+                </tr>
+              </table>
 
-              <!-- White QR Box for 100% Reliable Scanner Contrast -->
-              <div style="background-color: #ffffff; border-radius: 12px; padding: 16px; display: inline-block; box-shadow: 0 4px 14px rgba(0,0,0,0.4);">
-                ${
-                  qrDataUri
-                    ? `<img src="${qrDataUri}" alt="Código QR de Acesso - ${application.name}" width="220" height="220" style="display: block; width: 220px; height: 220px; margin: 0 auto; border: 0;" />`
-                    : `<div style="width: 220px; height: 220px; background-color: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #64748b;">Consulte no link abaixo</div>`
-                }
-                <div style="font-size: 11px; font-family: monospace; color: #090d16; font-weight: 700; margin-top: 10px; letter-spacing: 0.02em;">
+              <div style="background-color: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 14px 16px; margin-top: 14px;">
+                <div style="font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 700;">Data e Turno Agendado:</div>
+                <div style="font-size: 15px; font-weight: 800; color: #34d399; margin-top: 2px;">
                   ${activeSlot}
                 </div>
-              </div>
-
-              <div style="margin-top: 16px; font-size: 11px; color: #94a3b8;">
-                Apresente este passe ao guarda na portaria para validação electrónica instantânea.
               </div>
             </div>
 
@@ -1240,8 +1222,8 @@ ${
     : "Disponibilizamos o seu Passe Oficial de Acesso com Código QR para o Teste Presencial de Selecção Técnica da Overwatch Moçambique."
 }
 
-REGRA OBRIGATÓRIA DE ACESSO À PORTARIA:
-Para ter autorização de entrada nas instalações da Overwatch, é indispensável apresentar o seu Código QR na portaria.
+INSTRUÇÕES DE ENTRADA NA RECEPÇÃO:
+A entrada nas instalações da Overwatch é confirmada pelo nome e BI na lista da recepção. Não é necessário apresentar código QR.
 Poderá apresentar uma CÓPIA DIGITAL (no ecrã do telemóvel) ou uma CÓPIA IMPRESSA (anexada a este e-mail).
 
 DETALHES DO TESTE:
@@ -1252,8 +1234,7 @@ DETALHES DO TESTE:
 - Local: Overwatch Moçambique — ${siteContact.address.pt}
 
 O QUE DEVE TRAZER:
-1. Passe de Acesso QR Code (digital ou impresso)
-2. Documento de Identificação Original e Válido (BI / Passaporte / DIRE)
+1. Documento de Identificação Original e Válido (BI / Passaporte / DIRE)
 3. Caneta esferográfica azul ou preta
 
 Consulte e descarregue o seu passe a qualquer momento no seu link pessoal:
@@ -1276,14 +1257,7 @@ Overwatch Moçambique`;
     textContent,
   };
 
-  if (qrBase64) {
-    payload.attachment = [
-      {
-        name: `Passe-Acesso-Overwatch-${safeName}.png`,
-        content: qrBase64,
-      },
-    ];
-  }
+  // No attachments needed - entry confirmed via identification document
 
   return sendTransactionalEmail(payload);
 }
@@ -1881,23 +1855,9 @@ export async function sendAddressCorrectionBroadcastEmail({
   const rawSlot = slot || application.testSlot || "Quinta-feira, 17 de Setembro – 10h00";
   const activeSlot = formatSlotDisplay(rawSlot, "pt") || rawSlot;
 
-  // Generate official high-res QR code PNG buffer and base64 string
-  let qrBase64 = "";
-  try {
-    const qrBuffer = await QRCode.toBuffer(checkInUrl, {
-      width: 440,
-      margin: 2,
-      color: {
-        dark: "#07090e",
-        light: "#ffffff",
-      },
-    });
-    qrBase64 = qrBuffer.toString("base64");
-  } catch (err) {
-    console.error("Failed to generate QR buffer for correction email:", err);
-  }
-
-  const qrDataUri = qrBase64 ? `data:image/png;base64,${qrBase64}` : "";
+  // No QR code needed - entry verified via identity document (BI) and attendee roster at reception
+  const qrBase64 = "";
+  const qrDataUri = "";
   const greeting = getMozambiqueGreeting("pt");
   const subject = "Rectificação Importante de Endereço: Teste Presencial — Overwatch Moçambique";
 
@@ -2156,33 +2116,9 @@ export async function sendHolidayRescheduleEmail({
   const formattedNewSlot = formatSlotDisplay(newSlot, "pt");
   const formattedOldSlot = formatSlotDisplay(oldSlot, "pt");
 
-  // Generate QR Code with updated pass info
-  let qrBase64 = "";
-  try {
-    const qrPayload = JSON.stringify({
-      v: 2,
-      id: application.id,
-      name: application.name,
-      role: "CCO Operator",
-      slot: newSlot,
-      status: "CONFIRMED",
-      holidayRescheduled: true,
-      ts: Date.now(),
-      checkInUrl: `${origin}/api/careers/check-in?id=${application.id}`,
-    });
-    const qrDataUrl = await QRCode.toDataURL(qrPayload, {
-      errorCorrectionLevel: "H",
-      margin: 2,
-      scale: 8,
-      color: {
-        dark: "#0b1329",
-        light: "#ffffff",
-      },
-    });
-    qrBase64 = qrDataUrl.replace(/^data:image\/png;base64,/, "");
-  } catch (err) {
-    console.error("[QR Generation Error - Holiday Reschedule]:", err);
-  }
+  // No QR code needed - entry verified via identity document (BI) and attendee roster at reception
+  const qrBase64 = "";
+  const qrDataUri = "";
 
   const subject = `[Overwatch] Actualização do Teste de Selecção — Feriado Nacional de 25 de Setembro`;
 
@@ -3238,4 +3174,160 @@ export async function sendTransactionalEmail(payload: SendEmailOptions, applicat
     recipientEntities: matched.map(app => ({ entityId: app.id, roleId: app.role, cohortId: app.cohortId })),
   }, () => deliverTransactionalEmail(payload), { section: "communications", entityId: matched.length === 1 ? matched[0].id : undefined,
     ...(roleIds.length === 1 ? { roleId: roleIds[0] } : {}), ...(cohortIds.length === 1 ? { cohortId: cohortIds[0] } : {}) });
+}
+
+
+export async function sendTrainingConfirmationEmail({
+  application,
+  group,
+  location = "Av Paulo Samuel Khankhomba 1948",
+  baseUrl,
+}: {
+  application: Application;
+  group: { name: string; schedule: string; timeRange: string; evaluationTime: string };
+  location?: string;
+  baseUrl?: string;
+}) {
+  if (
+    (!process.env.BREVO_API_KEY && !process.env.BREVO_API_KEY_BACKUP && !process.env.BREVO_API_KEY_SECONDARY) ||
+    application.email.endsWith(".invalid") ||
+    process.env.CAREERS_TEST_MODE === "true"
+  ) {
+    return { success: true, mocked: true };
+  }
+
+  const origin = (
+    baseUrl ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "https://www.overwatchmoz.com"
+  ).replace(/\/+$/, "");
+
+  const logoWhiteUrl = `${origin}/logo-white.png`;
+  const greeting = getMozambiqueGreeting("pt");
+  const subject = `Confirmação de Inscrição: Formação e Avaliação Prática – ${group.name} (CCO)`;
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="pt">
+    <head>
+      <meta charset="utf-8">
+      <title>${subject}</title>
+    </head>
+    <body style="margin:0;padding:0;background-color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e293b;">
+      <div style="background-color:#f1f5f9;padding:32px 14px;">
+        <div style="max-width:600px;margin:0 auto;background-color:#ffffff;border-radius:12px;border:1px solid #cbd5e1;box-shadow:0 4px 18px rgba(15,23,42,0.08);overflow:hidden;">
+          <div style="background-color:#0b1329;padding:18px 24px;border-bottom:2px solid rgba(255,255,255,0.15);">
+            <table style="width:100%;border-collapse:collapse;">
+              <tr>
+                <td style="vertical-align:middle;">
+                  <img src="${logoWhiteUrl}" alt="Overwatch" height="22" width="147" style="height:22px;width:auto;display:block;border:0;" />
+                </td>
+                <td style="vertical-align:middle;text-align:right;">
+                  <span style="display:inline-block;background-color:rgba(255,255,255,0.12);color:#ffffff;font-family:monospace;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);">
+                    REF: CCO-FORMAÇÃO-2026
+                  </span>
+                </td>
+              </tr>
+            </table>
+          </div>
+          
+          <div style="padding:28px 24px;background-color:#ffffff;">
+            <h1 style="font-size:18px;font-weight:700;color:#090d16;margin:0 0 12px 0;">
+              ${greeting}, ${application.name}
+            </h1>
+            <p style="font-size:14px;color:#334155;line-height:1.6;margin:0 0 16px 0;">
+              Confirmamos com sucesso a sua inscrição na <strong>2.ª Fase de Selecção – Formação Presencial em Consciência Situacional e Identificação de Ameaças através de CCTV</strong> para a função de <strong>Operadora do Centro de Controlo (CCO)</strong>.
+            </p>
+
+            <div style="background-color:#f8fafc;border:2px solid #0b1329;border-radius:10px;padding:20px;margin:20px 0;">
+              <div style="font-size:11px;font-weight:800;color:#0284c7;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">
+                GRUPO CONFIRMADO
+              </div>
+              <div style="font-size:18px;font-weight:800;color:#090d16;margin-bottom:12px;">
+                ${group.name}
+              </div>
+              <table style="width:100%;font-size:13px;color:#334155;border-collapse:collapse;">
+                <tr>
+                  <td style="padding:5px 0;font-weight:700;width:140px;color:#64748b;">Período de Formação:</td>
+                  <td style="padding:5px 0;font-weight:600;">9, 10 e 11 de Novembro de 2026 (${group.timeRange})</td>
+                </tr>
+                <tr>
+                  <td style="padding:5px 0;font-weight:700;color:#64748b;">Avaliação Prática:</td>
+                  <td style="padding:5px 0;font-weight:600;">Quinta-feira, 12 de Novembro de 2026 (${group.evaluationTime})</td>
+                </tr>
+                <tr>
+                  <td style="padding:5px 0;font-weight:700;color:#64748b;">Local:</td>
+                  <td style="padding:5px 0;font-weight:600;">${location}</td>
+                </tr>
+                <tr>
+                  <td style="padding:5px 0;font-weight:700;color:#64748b;">Comparência:</td>
+                  <td style="padding:5px 0;color:#b45309;font-weight:700;">Apresentar-se 15 minutos antes do início</td>
+                </tr>
+              </table>
+            </div>
+
+            <div style="background-color:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 16px;margin:16px 0;font-size:12px;color:#166534;line-height:1.6;">
+              <strong>Instruções de Entrada na Portaria:</strong> A sua entrada nas instalações da Overwatch será autorizada mediante apresentação de um <strong>Documento de Identificação válido (BI / Passaporte)</strong> e verificação do seu nome na lista da recepção. <strong>Não é necessário apresentar código QR.</strong>
+            </div>
+
+            <div style="font-size:13px;color:#334155;line-height:1.6;margin:18px 0;">
+              <strong>O que deverá trazer:</strong><br />
+              • Documento de identificação válido (BI / Passaporte).<br />
+              • Uma cópia do documento de identificação (caso ainda não entregue).<br />
+              • Caneta azul ou preta.<br />
+              • Caderno ou bloco de notas para acompanhar a formação.<br />
+              <em>Não é necessário trazer computador. Os materiais utilizados serão fornecidos pela Overwatch.</em>
+            </div>
+
+            <p style="font-size:13px;color:#475569;line-height:1.6;">
+              Recordamos que a candidata deverá frequentar os três dias de formação no mesmo grupo. Não será possível alternar entre o horário da manhã e o da tarde.
+            </p>
+
+            <p style="font-size:13px;color:#334155;margin-top:24px;">
+              Com os melhores cumprimentos,<br />
+              <strong>Equipa de Recrutamento</strong><br />
+              Overwatch Moçambique
+            </p>
+          </div>
+          
+          <div style="background-color:#f8fafc;padding:16px 24px;border-top:1px solid #e2e8f0;font-size:11px;color:#64748b;">
+            Overwatch Moçambique, Lda. · ${location}
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const textContent = `${greeting} ${application.name},
+
+Confirmamos com sucesso a sua inscrição na 2.ª Fase de Selecção – Formação Presencial em Consciência Situacional e Identificação de Ameaças através de CCTV para a função de Operadora do Centro de Controlo (CCO).
+
+GRUPO CONFIRMADO: ${group.name}
+- Período de Formação: 9, 10 e 11 de Novembro de 2026 (${group.timeRange})
+- Avaliação Prática: Quinta-feira, 12 de Novembro de 2026 (${group.evaluationTime})
+- Local: ${location}
+- Horário de Chegada: Apresentar-se 15 minutos antes do início
+
+INSTRUÇÕES DE ENTRADA NA PORTARIA:
+A sua entrada nas instalações da Overwatch será autorizada mediante apresentação de um Documento de Identificação válido (BI / Passaporte) e verificação do seu nome na lista da recepção. Não é necessário apresentar código QR.
+
+O que deverá trazer:
+- Documento de identificação válido (BI / Passaporte).
+- Uma cópia do documento de identificação (caso ainda não entregue).
+- Caneta azul ou preta.
+- Caderno ou bloco de notas para acompanhar a formação.
+(Não é necessário trazer computador. Os materiais utilizados serão fornecidos pela Overwatch.)
+
+Com os melhores cumprimentos,
+Equipa de Recrutamento
+Overwatch Moçambique`;
+
+  return sendTransactionalEmail({
+    sender: { name: "Overwatch Recrutamento", email: "noreply@overwatchmoz.com" },
+    to: [{ email: application.email, name: application.name }],
+    subject,
+    htmlContent,
+    textContent,
+  });
 }

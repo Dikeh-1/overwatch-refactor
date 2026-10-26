@@ -7,6 +7,9 @@ import { roles, type Role, type Application, DEFAULT_TEST_SLOTS } from "./career
 import {
   getConfiguredTestSlots,
   setConfiguredTestSlots,
+  getConfiguredTrainingSlots,
+  setConfiguredTrainingSlots,
+  type TrainingSlotConfig,
   getConfiguredDeletedNextPhase,
   setConfiguredDeletedNextPhase,
   purgeLegacySystemRowsFromApplicationsTable,
@@ -612,6 +615,14 @@ export async function saveTestSlotConfig(config: { slots: string[]; quota?: numb
 export async function saveTestSlots(slots: string[], quota?: number): Promise<string[]> {
   const saved = await setConfiguredTestSlots({ slots, quota });
   return saved.slots;
+}
+
+export async function getTrainingSlotConfig(): Promise<TrainingSlotConfig> {
+  return getConfiguredTrainingSlots();
+}
+
+export async function saveTrainingSlotConfig(config: TrainingSlotConfig): Promise<TrainingSlotConfig> {
+  return setConfiguredTrainingSlots(config);
 }
 
 export async function getDeletedNextPhaseIdentifiers(): Promise<string[]> {

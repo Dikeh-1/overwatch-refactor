@@ -147,6 +147,10 @@ export type Application = {
   nextPhaseResponse?: "yes" | "no";
   nextPhaseResponseOption?: string;
   archiveReason?: ArchiveReason;
+  trainingGroupId?: string;
+  trainingGroup?: string;
+  trainingBookedAt?: string;
+  trainingStatus?: "selected" | "invited" | "booked" | "attended" | "completed";
   communications?: CommunicationRecord[];
   activityLog?: ActivityRecord[];
   bookingLinkOpenedAt?: string;

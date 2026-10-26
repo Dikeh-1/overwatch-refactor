@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import QRCode from "qrcode";
 import {
   Calendar,
   CheckCircle2,
@@ -11,7 +10,6 @@ import {
   RefreshCw,
   Lock,
   ShieldOff,
-  QrCode,
   Download,
   Printer,
   ShieldCheck,
@@ -156,25 +154,9 @@ export default function CandidateBookingClient({
   const [error, setError] = useState("");
   const [isDeactivated, setIsDeactivated] = useState(false);
   const [, setSuccessNotice] = useState(false);
-  const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [liveSlotTakenNotice, setLiveSlotTakenNotice] = useState<string>("");
 
-  useEffect(() => {
-    if (candidate?.id && candidate.testSlot) {
-      const origin = typeof window !== "undefined" ? window.location.origin : "https://www.overwatchmoz.com";
-      const checkInUrl = `${origin}/gate?id=${candidate.id}`;
-      QRCode.toDataURL(checkInUrl, {
-        width: 320,
-        margin: 1.5,
-        color: {
-          dark: "#07090e",
-          light: "#ffffff",
-        },
-      })
-        .then(setQrDataUrl)
-        .catch((e) => console.error("Error generating QR code:", e));
-    }
-  }, [candidate?.id, candidate?.testSlot, activeLang]);
+  // Entry verified by official attendee list & identity document (no QR code)
 
   useEffect(() => {
     let cancelled = false;
@@ -573,8 +555,8 @@ export default function CandidateBookingClient({
             {/* ── ALREADY BOOKED VIEW ── */}
             {isAlreadyBooked ? (
               <div className="space-y-4">
-                {/* Security Pass Card with QR Code */}
-                <div className="rounded-2xl border-2 border-slate-900 bg-gradient-to-b from-[#0b1329] to-[#07090e] text-white p-6 shadow-xl relative overflow-hidden">
+                {/* Official Appointment Voucher Card */}
+                <div className="rounded-2xl border-2 border-slate-900 bg-[#0b1329] text-white p-6 shadow-xl relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
 
                   {/* Header Badge */}
@@ -585,7 +567,7 @@ export default function CandidateBookingClient({
                       </div>
                       <div>
                         <div className="text-[10px] font-mono uppercase tracking-widest text-emerald-400 font-bold">
-                          {isPt ? "Passe Digital de Entrada" : "Digital Entrance Pass"}
+                          {isPt ? "Comprovativo Oficial de Convocatória" : "Official Appointment Voucher"}
                         </div>
                         <div className="text-xs text-slate-300 font-semibold tracking-wide">
                           Overwatch Moçambique · {roleTitleText}
@@ -594,7 +576,7 @@ export default function CandidateBookingClient({
                     </div>
                     <div className="text-right">
                       <span className="font-mono text-[10px] px-2.5 py-1 bg-white/10 border border-white/15 rounded-md text-white/80 font-bold uppercase">
-                        REF: {candidate.id ? candidate.id.slice(0, 8).toUpperCase() : "PASS"}
+                        REF: #{candidate.id ? candidate.id.slice(0, 8).toUpperCase() : "CONF"}
                       </span>
                     </div>
                   </div>
@@ -607,7 +589,7 @@ export default function CandidateBookingClient({
                       </div>
                       <div>
                         <p className="text-xs font-bold text-emerald-300 uppercase tracking-wide">
-                          {isPt ? "Presença Confirmada no Portão" : "Gate Attendance Confirmed"}
+                          {isPt ? "Presença Confirmada na Recepção" : "Attendance Confirmed"}
                         </p>
                         <p className="text-[11px] text-emerald-200/80">
                           {isPt ? "Entrada registada em:" : "Checked in at:"} {new Date(candidate.attendedAt).toLocaleTimeString("pt-MZ", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Maputo" })} (Maputo)
@@ -615,58 +597,51 @@ export default function CandidateBookingClient({
                       </div>
                     </div>
                   ) : (
-                    <div className="mb-5 rounded-xl bg-white/5 border border-white/10 p-3 flex items-center gap-2.5 text-xs text-slate-300">
-                      <QrCode size={16} className="text-amber-400 shrink-0" />
-                      <span>
-                        {isPt
-                          ? "Apresente este código na portaria ao chegar para registar a sua presença."
-                          : "Present this QR code at the reception gate upon arrival to register attendance."}
-                      </span>
+                    <div className="mb-5 rounded-xl bg-white/5 border border-white/10 p-3.5 flex items-start gap-2.5 text-xs text-slate-300">
+                      <CheckCircle2 size={16} className="text-emerald-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-white">
+                          {isPt ? "Instruções de Acesso na Recepção" : "Reception Check-In Instructions"}
+                        </p>
+                        <p className="text-[11px] text-slate-300 mt-0.5 leading-relaxed">
+                          {isPt
+                            ? "A sua entrada nas instalações é autorizada mediante apresentação de um Documento de Identificação válido (BI / Passaporte) e confirmação do seu nome na lista da recepção. Não é necessário apresentar código QR."
+                            : "Your entrance is authorized by presenting a valid ID document (ID Card / Passport) and verifying your name on the reception roster. No QR code is required."}
+                        </p>
+                      </div>
                     </div>
                   )}
 
-                  {/* QR Code Graphic Box */}
-                  <div className="bg-white rounded-xl p-4 flex flex-col items-center justify-center text-center shadow-inner mx-auto max-w-[260px]">
-                    {qrDataUrl ? (
-                      <img
-                        src={qrDataUrl}
-                        alt="QR Code Check-in"
-                        className="w-48 h-48 object-contain"
-                      />
-                    ) : (
-                      <div className="w-48 h-48 flex items-center justify-center text-gray-400">
-                        <QrCode size={48} />
-                      </div>
-                    )}
-                    <div className="mt-2 text-center">
-                      <p className="text-xs font-bold text-gray-900 leading-tight">
-                        {candidate.name}
+                  {/* Confirmed Slot Details Highlight Box */}
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-4.5 text-center mx-auto max-w-md">
+                    <p className="text-[11px] font-mono uppercase tracking-wider text-slate-400 font-semibold">
+                      {isPt ? "Candidata Convocada" : "Candidate Name"}
+                    </p>
+                    <p className="text-base font-bold text-white mt-0.5">
+                      {candidate.name}
+                    </p>
+                    <div className="my-3 py-2.5 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                      <p className="text-[10px] uppercase font-mono tracking-wider text-emerald-400 font-bold">
+                        {isPt ? "Data & Turno Confirmado" : "Confirmed Test Session"}
                       </p>
-                      <p className="text-[11px] font-mono text-emerald-700 font-bold mt-0.5">
+                      <p className="text-sm font-bold text-white mt-0.5">
                         {candidate.testSlot}
                       </p>
                     </div>
+                    <p className="text-[11px] text-slate-400">
+                      📍 Av. Paulo Samuel Khankhomba 1948, Maputo · {isPt ? "Chegada 15 minutos antes" : "Arrive 15 minutes before"}
+                    </p>
                   </div>
 
-                  {/* Pass actions: Download & Print */}
+                  {/* Print Action */}
                   <div className="mt-5 flex items-center justify-center gap-3">
-                    {qrDataUrl && (
-                      <a
-                        href={qrDataUrl}
-                        download={`Overwatch-Passe-${candidate.name.replace(/\s+/g, "_")}.png`}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 text-xs font-semibold text-white transition-colors"
-                      >
-                        <Download size={13} />
-                        <span>{isPt ? "Guardar Imagem" : "Save Image"}</span>
-                      </a>
-                    )}
                     <button
                       onClick={() => window.print()}
                       type="button"
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-colors shadow"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-colors shadow"
                     >
                       <Printer size={13} />
-                      <span>{isPt ? "Imprimir Passe" : "Print Pass"}</span>
+                      <span>{isPt ? "Imprimir Comprovativo" : "Print Confirmation"}</span>
                     </button>
                   </div>
                 </div>
@@ -771,17 +746,17 @@ export default function CandidateBookingClient({
                   </div>
                 )}
 
-                {/* Gate Pass Generation Notice */}
+                {/* Instant Booking Confirmation Notice */}
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 py-3.5 flex items-start gap-3">
-                  <QrCode size={18} className="text-emerald-600 shrink-0 mt-0.5" />
+                  <CheckCircle2 size={18} className="text-emerald-600 shrink-0 mt-0.5" />
                   <div>
                     <p className="text-xs font-bold text-emerald-900 mb-0.5 uppercase tracking-wide">
-                      {isPt ? "Passe Oficial com Código QR na Portaria" : "Official QR Code Gate Pass"}
+                      {isPt ? "Confirmação Imediata de Agendamento" : "Instant Booking Confirmation"}
                     </p>
                     <p className="text-xs text-emerald-800 leading-relaxed">
                       {isPt
-                        ? "Assim que seleccionar e confirmar a sua data de teste, o seu Passe Digital exclusivo com Código QR será gerado imediatamente nesta página. Poderá guardá-lo ou descarregar a imagem para o seu telemóvel para apresentar obrigatoriamente na portaria da Overwatch."
-                        : "As soon as you confirm your test date, your exclusive Digital Gate Pass with QR Code will be immediately generated on this page. You can save or download the image to your phone to present at the entrance gate."}
+                        ? "Assim que seleccionar e confirmar a sua data de teste, o seu agendamento será imediatamente registado no sistema da Overwatch e receberá um email de confirmação. A entrada nas nossas instalações é efectuada mediante verificação do seu Documento de Identificação válido na recepção (sem necessidade de código QR)."
+                        : "As soon as you confirm your test date, your booking will be immediately registered in the Overwatch system and you will receive a confirmation email. Entrance is granted by showing a valid ID at reception (no QR code needed)."}
                     </p>
                   </div>
                 </div>

@@ -190,24 +190,14 @@ export const TestingAttendanceView: React.FC<TestingAttendanceViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Gate Pass Dispatch */}
+          {/* Session Confirmation Dispatch */}
           <button
             type="button"
             onClick={onDispatchGatePasses}
             className="px-3 py-1.5 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition-colors inline-flex items-center gap-1.5 cursor-pointer"
           >
             <Send size={13} />
-            <span>{t("Dispatch Gate Passes", "Disparar Passes QR")}</span>
-          </button>
-
-          {/* QR Scanner Trigger */}
-          <button
-            type="button"
-            onClick={onOpenGateScanner}
-            className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-          >
-            <QrCode size={13} />
-            <span>{t("Open QR Scanner", "Scanner de Portaria")}</span>
+            <span>{t("Send Session Confirmations", "Enviar Confirmações de Sessão")}</span>
           </button>
 
           {/* Settings / Config */}

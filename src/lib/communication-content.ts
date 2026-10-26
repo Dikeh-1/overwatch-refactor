@@ -2,6 +2,7 @@ import { formatSlotDisplay } from "./careers";
 import sanitizeHtml from "sanitize-html";
 
 export const BOOKING_TOKEN = "{{booking_link}}";
+export const TRAINING_TOKEN = "{{training_link}}";
 export const escapeMailText = (value: string) => value.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 export function safeMailHtml(html: string): string {
   return sanitizeHtml(html, {
@@ -27,6 +28,8 @@ type Candidate = {
   testScore?: number | null;
   score?: number | null;
   nextPhaseToken?: string;
+  trainingGroupId?: string;
+  trainingGroup?: string;
 };
 
 export function candidateVariables(text: string, candidate: Candidate, roleTitle: string, lang: "en" | "pt", html = false): string {
@@ -46,6 +49,10 @@ export function candidateVariables(text: string, candidate: Candidate, roleTitle
   const noButtonHtml = `<a data-action-button="true" href="${noChoiceUrl}" target="_blank" style="display:inline-block;color:#64748b;padding:8px 14px;text-decoration:underline;font-size:13px;">${lang === "en" ? "Decline / No interest" : "Não tenho interesse"}</a>`;
   const responseButtonsHtml = `<span style="display:inline-block;margin:14px 0;">${yesButtonHtml}&nbsp;&nbsp;${noButtonHtml}</span>`;
 
+  const trainingUrl = `https://www.overwatchmoz.com/${lang}/careers/training-invite/${encodeURIComponent(candidate.id || token)}`;
+  const trainingButtonHtml = `<a data-action-button="true" href="${trainingUrl}" target="_blank" style="display:inline-block;background-color:#0b1329;color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;">${lang === "en" ? "Select Training Group" : "Inscrever no Grupo de Formação"} →</a>`;
+  const trainingGroupVal = candidate.trainingGroup || (lang === "en" ? "Pending Group Selection" : "Pendente de Selecção");
+
   const values: Record<string, string> = {
     name: candidate.name,
     candidate_name: candidate.name,
@@ -53,6 +60,14 @@ export function candidateVariables(text: string, candidate: Candidate, roleTitle
     role_title: roleTitle,
     score: scoreDisplay,
     test_score: scoreDisplay,
+        training_link: html ? trainingButtonHtml : trainingUrl,
+    link_formacao: html ? trainingButtonHtml : trainingUrl,
+    link_inscricao: html ? trainingButtonHtml : trainingUrl,
+    training_url: trainingUrl,
+    training_button: html ? trainingButtonHtml : trainingUrl,
+    botao_formacao: html ? trainingButtonHtml : trainingUrl,
+    training_group: trainingGroupVal,
+    grupo_formacao: trainingGroupVal,
     next_phase_link: nextPhaseUrl,
     portal_link: nextPhaseUrl,
     confirm_button: html ? confirmButtonHtml : confirmAttendanceUrl,
@@ -94,9 +109,18 @@ export function bookingButton(candidate: Candidate, lang: "en" | "pt", preview =
   const href = `https://www.overwatchmoz.com/${lang}/careers/test-invite/${encodeURIComponent(candidate.id)}`;
   return `<a data-booking-button="true" draggable="${preview ? "true" : "false"}" href="${href}" target="_blank" style="display:inline-block;background-color:#0b1329;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:700">${lang === "en" ? "Choose your test date & time" : "Escolher data e hora do teste"} →</a>`;
 }
+
+export function trainingButton(candidate: Candidate, lang: "en" | "pt", preview = false): string {
+  const href = `https://www.overwatchmoz.com/${lang}/careers/training-invite/${encodeURIComponent(candidate.id)}`;
+  return `<a data-action-button="true" draggable="${preview ? "true" : "false"}" href="${href}" target="_blank" style="display:inline-block;background-color:#0b1329;color:#ffffff;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:700">${lang === "en" ? "Select Training Group" : "Inscrever no Grupo de Formação"} →</a>`;
+}
+
 export function renderStudioMessage(message: string, candidate: Candidate, roleTitle: string, lang: "en" | "pt", includeBooking: boolean, preview = false): string {
   let html = /<[a-z][\s\S]*>/i.test(message) ? safeMailHtml(message) : message.split(/\n\s*\n/).map(p => `<p>${escapeMailText(p).replace(/\n/g,"<br>")}</p>`).join("");
   html = candidateVariables(html, candidate, roleTitle, lang, true);
+  html = html.replace(/\{\{training_link\}\}/g, () => trainingButton(candidate, lang, preview));
+  html = html.replace(/\{\{link_formacao\}\}/g, () => trainingButton(candidate, lang, preview));
+  html = html.replace(/\{\{link_inscricao\}\}/g, () => trainingButton(candidate, lang, preview));
   return safeMailHtml(html.replace(/\{\{booking_link\}\}/g, () => includeBooking ? bookingButton(candidate, lang, preview) : ""));
 }
 export function studioScope(cohortId?: string, roleId?: string, recipientId?: string) { return `${cohortId || "current"}:${roleId || "all"}:${recipientId || "bulk"}`; }

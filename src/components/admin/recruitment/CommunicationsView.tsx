@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCommunicationDraft } from "../hooks/useCommunicationDraft";
 import { StudioMailbox, type StudioFolder } from "./StudioMailbox";
 import { DeliveryProgress } from "./DeliveryProgress";
-import { BOOKING_TOKEN, candidateVariables, renderStudioMessage, messageBlocks, moveBookingToken, studioScope, escapeMailText } from "@/lib/communication-content";
+import { BOOKING_TOKEN, TRAINING_TOKEN, candidateVariables, renderStudioMessage, messageBlocks, moveBookingToken, studioScope, escapeMailText } from "@/lib/communication-content";
 import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import {
   Mail,
@@ -36,6 +36,7 @@ import {
   Image as ImageIcon,
   FolderPlus,
   RefreshCw,
+  GraduationCap,
 } from "lucide-react";
 import { isNextPhase, isQualified, isTerminal, sameRole, canReceiveTestInvitation, hasSentCommunication, hasTested } from "@/lib/careers-workflow";
 import { Application, formatSlotDisplay, normalizeSlot } from "@/lib/careers";
@@ -312,7 +313,7 @@ Em anexo disponibilizamos o guia de preparação e cronograma de acolhimento. Le
     },
     {
       id: "test_convocation",
-      name: t("Physical Test & Gate Pass", "Convocatória Teste & Gate Pass"),
+      name: t("Physical Test Convocation", "Convocatória para Teste Presencial"),
       badge: "TESTE",
       subject:
         emailLang === "en"
@@ -1304,6 +1305,20 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
               </div>
 
               <div className="flex flex-wrap gap-2 pt-0.5">
+                                {/* Training Link Button */}
+                <button
+                  type="button"
+                  onClick={() => insertActionToken(TRAINING_TOKEN, t("Training Group Booking Button", "Botão de Inscrição na Formação"))}
+                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
+                  title={t(
+                    "Inserts {{training_link}}. Candidate selects their training group (Group A, Group B, etc.)",
+                    "Insere {{training_link}}. A candidata seleciona o seu grupo de formação (Grupo A, Grupo B, etc.)"
+                  )}
+                >
+                  <GraduationCap size={13} />
+                  <span>{t("Training Link", "Inscrição Formação")}</span>
+                </button>
+
                 {/* 1. Test Booking Button */}
                 <button
                   type="button"
@@ -1370,6 +1385,8 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
               <div className="flex flex-wrap gap-1.5">
                 {[
                   { tag: "{{candidate_name}}", label: t("Applicant Name", "Nome Candidato") },
+                  { tag: "{{training_link}}", label: t("Training Link", "Link Formação") },
+                  { tag: "{{training_group}}", label: t("Training Group", "Grupo Formação") },
                   { tag: "{{role_title}}", label: t("Job Role Title", "Título da Vaga") },
                   { tag: "{{score}}", label: t("Test Score %", "Nota do Teste %") },
                   { tag: "{{test_slot}}", label: t("Scheduled Test Slot", "Turno Agendado") },
