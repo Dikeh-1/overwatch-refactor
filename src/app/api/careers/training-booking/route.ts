@@ -3,6 +3,7 @@ import { getApplications, updateApplication } from "@/lib/careers-store";
 import { getConfiguredTrainingSlots } from "@/lib/careers-config-store";
 import { sendTrainingConfirmationEmail } from "@/lib/careers-email";
 import { isTerminal } from "@/lib/careers-workflow";
+import { isTrainingGroupBookingExpired } from "@/lib/careers";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,7 @@ export async function GET(request: Request) {
     const groupsWithAvailability = config.groups.map((g) => {
       const booked = stats[g.id] || 0;
       const isCandidateBookedHere = candidate?.trainingGroupId === g.id;
+      const isExpired = isTrainingGroupBookingExpired(g);
       return {
         id: g.id,
         name: g.name,
@@ -53,10 +55,12 @@ export async function GET(request: Request) {
         timeRange: g.timeRange,
         evaluationTime: g.evaluationTime,
         capacity: g.capacity,
+        startDate: g.startDate,
         bookedCount: booked,
         availableSlots: Math.max(0, g.capacity - booked),
-        isFull: booked >= g.capacity && !isCandidateBookedHere,
-        enabled: g.enabled,
+        isFull: (booked >= g.capacity || isExpired) && !isCandidateBookedHere,
+        isExpired,
+        enabled: g.enabled && (!isExpired || isCandidateBookedHere),
         isSelectedByCandidate: isCandidateBookedHere,
       };
     });
@@ -114,6 +118,16 @@ async function handlePOST(request: Request) {
 
     if (!group.enabled) {
       return Response.json({ error: "Este grupo não se encontra activo para inscrições." }, { status: 400 });
+    }
+
+    if (isTrainingGroupBookingExpired(group)) {
+      return Response.json(
+        {
+          error: `As inscrições para o ${group.name} encerraram automaticamente às 23:59 do dia anterior ao seu início.`,
+          isExpired: true,
+        },
+        { status: 400 }
+      );
     }
 
     // Concurrency / Capacity check scoped to cohort/role

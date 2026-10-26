@@ -56,6 +56,7 @@ export interface TrainingSlotGroup {
   evaluationTime: string;
   capacity: number;
   enabled: boolean;
+  startDate?: string;
 }
 
 export interface TrainingSlotConfig {

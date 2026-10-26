@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import {
   GraduationCap,
   Plus,
@@ -13,9 +14,12 @@ import {
   MapPin,
   Calendar,
   RefreshCw,
+  Mail,
+  ExternalLink,
 } from "lucide-react";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import { cycleLabel } from "@/lib/careers-cycle-label";
+import { isTrainingGroupBookingExpired } from "@/lib/careers";
 
 export interface TrainingSlotGroupItem {
   id: string;
@@ -25,6 +29,7 @@ export interface TrainingSlotGroupItem {
   evaluationTime: string;
   capacity: number;
   enabled: boolean;
+  startDate?: string;
 }
 
 type CatalogRole = { id: string; en: string; pt: string; open?: boolean; activeCohortId?: string | null };
@@ -106,6 +111,7 @@ export function RoleTrainingSlotSettings() {
       evaluationTime: "09h00–11h00",
       capacity: 8,
       enabled: true,
+      startDate: "2026-11-02",
     };
     setGroups([...groups, newGroup]);
   };
@@ -294,23 +300,34 @@ export function RoleTrainingSlotSettings() {
             {groups.map((group, idx) => {
               const booked = stats[group.id] || 0;
               const attendees = bookedCandidates[group.id] || [];
+              const isExpired = isTrainingGroupBookingExpired(group);
 
               return (
                 <div
                   key={group.id}
                   className={`rounded-xl border p-4 transition-all ${
-                    group.enabled
-                      ? "border-slate-200 bg-slate-50/50"
-                      : "border-slate-200 bg-slate-100/60 opacity-60"
+                    !group.enabled
+                      ? "border-slate-200 bg-slate-100/60 opacity-60"
+                      : isExpired
+                      ? "border-amber-200 bg-amber-50/30"
+                      : "border-slate-200 bg-slate-50/50"
                   }`}
                 >
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-start">
                     {/* Group Title & ID */}
                     <div className="lg:col-span-4 space-y-2">
                       <div>
-                        <label className="text-[10px] font-mono uppercase font-bold text-slate-500 block">
-                          {t("Group Name / Label:", "Nome do Grupo:")}
-                        </label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] font-mono uppercase font-bold text-slate-500">
+                            {t("Group Name / Label:", "Nome do Grupo:")}
+                          </label>
+                          {isExpired && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                              <Clock size={10} />
+                              {t("Closed (Cut-off passed)", "Fechado (Expirou)")}
+                            </span>
+                          )}
+                        </div>
                         <input
                           type="text"
                           value={group.name}
@@ -319,7 +336,7 @@ export function RoleTrainingSlotSettings() {
                         />
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <label className="inline-flex items-center gap-1.5 cursor-pointer text-xs font-medium text-slate-700">
                           <input
                             type="checkbox"
@@ -329,12 +346,17 @@ export function RoleTrainingSlotSettings() {
                           />
                           <span>{t("Active for booking", "Activo para inscrição")}</span>
                         </label>
+                        {isExpired && (
+                          <span className="text-[10px] text-amber-700 font-semibold">
+                            {t("· Booking closed 1 day prior at 23:59", "· Inscrições fecharam na véspera às 23:59")}
+                          </span>
+                        )}
                       </div>
                     </div>
 
-                    {/* Schedule & Hours */}
+                    {/* Schedule & Hours & Start Date */}
                     <div className="lg:col-span-5 space-y-2">
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-3 gap-2">
                         <div>
                           <label className="text-[10px] font-mono uppercase font-bold text-slate-500 block">
                             {t("Training Hours:", "Horário da Formação:")}
@@ -349,7 +371,7 @@ export function RoleTrainingSlotSettings() {
                         </div>
                         <div>
                           <label className="text-[10px] font-mono uppercase font-bold text-slate-500 block">
-                            {t("Evaluation Hours:", "Horário da Avaliação:")}
+                            {t("Evaluation Hours:", "Horário Avaliação:")}
                           </label>
                           <input
                             type="text"
@@ -357,6 +379,17 @@ export function RoleTrainingSlotSettings() {
                             value={group.evaluationTime}
                             onChange={(e) => handleGroupChange(idx, "evaluationTime", e.target.value)}
                             className="w-full text-xs rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 font-medium text-slate-900"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-mono uppercase font-bold text-slate-500 block" title={t("Cut-off closes booking 1 day prior at 11:59:59 PM Maputo time", "Inscrições encerram automaticamente às 23:59:59 da véspera")}>
+                            {t("Start Date:", "Data Início:")}
+                          </label>
+                          <input
+                            type="date"
+                            value={group.startDate || ""}
+                            onChange={(e) => handleGroupChange(idx, "startDate", e.target.value)}
+                            className="w-full text-xs rounded-lg border border-slate-300 bg-white px-2 py-1.5 font-medium text-slate-900"
                           />
                         </div>
                       </div>
@@ -396,7 +429,9 @@ export function RoleTrainingSlotSettings() {
 
                       <div className="pt-1">
                         <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md ${
-                          booked >= group.capacity
+                          isExpired
+                            ? "bg-amber-100 text-amber-800 border border-amber-200"
+                            : booked >= group.capacity
                             ? "bg-red-100 text-red-800 border border-red-200"
                             : "bg-emerald-100 text-emerald-800 border border-emerald-200"
                         }`}>
@@ -443,6 +478,35 @@ export function RoleTrainingSlotSettings() {
               );
             })}
           </div>
+        </div>
+
+        {/* Workspace Quick Links Footer */}
+        <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-4">
+            <Link
+              href="/admin/recruitment/next-phase"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-700 hover:text-sky-800 hover:underline"
+            >
+              <GraduationCap size={14} />
+              <span>{t("Open Next Phase & Training Workspace →", "Abrir Área de Formação e Próxima Fase →")}</span>
+            </Link>
+            <Link
+              href="/admin/recruitment/communications"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:underline"
+            >
+              <Mail size={13} />
+              <span>{t("Open Communications Studio →", "Abrir Estúdio de Comunicações →")}</span>
+            </Link>
+          </div>
+          <button
+            type="button"
+            disabled={saving || loading}
+            onClick={handleSave}
+            className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+          >
+            <Save size={13} />
+            <span>{saving ? t("Saving…", "A guardar…") : t("Save Training Settings", "Guardar Definições de Formação")}</span>
+          </button>
         </div>
       </div>
     </div>

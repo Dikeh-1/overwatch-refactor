@@ -27,6 +27,7 @@ interface TrainingGroup {
   bookedCount: number;
   availableSlots: number;
   isFull: boolean;
+  isExpired?: boolean;
   enabled: boolean;
   isSelectedByCandidate: boolean;
 }
@@ -371,13 +372,17 @@ export default function CandidateTrainingClient({
                         </div>
 
                         <div className="text-right">
-                          {isFull ? (
+                          {g.isExpired ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-950/60 text-amber-300 border border-amber-800">
+                              {isPt ? "Inscrições Encerradas" : "Booking Closed"}
+                            </span>
+                          ) : isFull ? (
                             <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-red-950/60 text-red-300 border border-red-800">
-                              Esgotado
+                              {isPt ? "Esgotado" : "Full"}
                             </span>
                           ) : (
                             <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950/60 text-emerald-300 border border-emerald-800">
-                              {g.availableSlots} vagas livres
+                              {g.availableSlots} {isPt ? "vagas livres" : "open slots"}
                             </span>
                           )}
                         </div>

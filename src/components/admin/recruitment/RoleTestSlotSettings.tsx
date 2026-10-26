@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
 import { cycleLabel } from "@/lib/careers-cycle-label";
 import type { CareerCohort } from "@/lib/careers-models";
-import { formatSlotDisplay, normalizeSlot, parseSlotComponents } from "@/lib/careers";
+import { formatSlotDisplay, normalizeSlot, parseSlotComponents, isSlotBookingExpired, isPastDateSlot } from "@/lib/careers";
 import { getQuotaForSlot } from "@/lib/careers-booking-rules";
 
 type CatalogRole = { id: string; en: string; pt: string; open?: boolean; activeCohortId?: string | null };
@@ -40,6 +40,7 @@ export function RoleTestSlotSettings() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [showExpired, setShowExpired] = useState(false);
   const isEditingQuotaRef = useRef(false);
 
   const loadCatalog = useCallback(
@@ -291,150 +292,271 @@ export function RoleTestSlotSettings() {
               />
             </label>
           </div>
-          <ul className="divide-y divide-slate-100">
-            {slots.map((slot) => {
-              const isEditingThis = editingSlot === slot;
-              const currentSlotCapacity = getQuotaForSlot(slot, quota, slotQuotas);
+          <div className="space-y-4">
+            {/* Active Bookable Slots */}
+            {(() => {
+              const activeSlots = slots.filter((s) => !isSlotBookingExpired(s));
+              const expiredSlots = slots.filter((s) => isSlotBookingExpired(s));
+
               return (
-                <li key={slot} className="flex flex-wrap items-center justify-between gap-3 py-2.5 text-sm">
-                  {isEditingThis ? (
-                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                      <input
-                        type="date"
-                        value={editDate}
-                        onChange={(e) => setEditDate(e.target.value)}
-                        aria-label={t("Edit slot date", "Editar data do turno")}
-                        className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs"
-                      />
-                      <input
-                        type="time"
-                        value={editTime}
-                        onChange={(e) => setEditTime(e.target.value)}
-                        aria-label={t("Edit slot time", "Editar hora do turno")}
-                        className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs"
-                      />
-                      <label className="inline-flex items-center gap-1.5 text-xs text-slate-600 font-medium">
-                        <span>{t("Capacity:", "Capacidade:")}</span>
-                        <input
-                          type="number"
-                          min={1}
-                          max={200}
-                          value={editSlotQuota}
-                          onChange={(e) => setEditSlotQuota(e.target.value)}
-                          aria-label={t("Edit slot capacity", "Editar capacidade do turno")}
-                          className="w-20 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-900"
-                        />
-                      </label>
-                      <button
-                        type="button"
-                        disabled={!editDate || !editTime || busy}
-                        onClick={() => {
-                          const updatedSlot = `${editDate} - ${editTime}`;
-                          const parsedSlotQ = parseInt(editSlotQuota, 10);
-                          const validSlotQ =
-                            Number.isFinite(parsedSlotQ) && parsedSlotQ >= 1 && parsedSlotQ <= 200
-                              ? parsedSlotQ
-                              : currentSlotCapacity;
-                          const next = slots.map((s) => (s === slot ? updatedSlot : s));
-                          const uniqueNext = [...new Set(next)];
-                          const nextMap: Record<string, number> = { ...slotQuotas };
-                          if (updatedSlot !== slot) {
-                            delete nextMap[normalizeSlot(slot)];
-                            delete nextMap[slot];
-                          }
-                          nextMap[normalizeSlot(updatedSlot)] = validSlotQ;
-                          setEditingSlot(null);
-                          setSlots(uniqueNext);
-                          setSlotQuotas(nextMap);
-                          void persistSchedule(
-                            uniqueNext,
-                            quota,
-                            updatedSlot !== slot ? { from: slot, to: updatedSlot } : undefined,
-                            nextMap
-                          );
-                        }}
-                        className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-700 disabled:opacity-40"
-                      >
-                        {t("Apply", "Aplicar")}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => setEditingSlot(null)}
-                        className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
-                      >
-                        {t("Cancel", "Cancelar")}
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <span>{formatSlotDisplay(slot, lang)}</span>
-                      <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-700">
-                        {t(`Capacity: ${currentSlotCapacity}`, `Capacidade: ${currentSlotCapacity}`)}
-                      </span>
+                <>
+                  {expiredSlots.length > 0 && (
+                    <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl border border-amber-200 bg-amber-50/50 text-xs text-amber-900">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                        <span className="font-medium">
+                          {t(
+                            `${expiredSlots.length} slot${expiredSlots.length > 1 ? "s" : ""} expired (booking cut-off passed at 11:59 PM day prior) · Synced with live candidate booking.`,
+                            `${expiredSlots.length} turno${expiredSlots.length > 1 ? "s" : ""} expirado${expiredSlots.length > 1 ? "s" : ""} (inscrições fecharam na véspera às 23:59) · Sincronizado com agendamento.`
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowExpired(!showExpired)}
+                          className="text-xs text-sky-700 hover:underline font-semibold"
+                        >
+                          {showExpired
+                            ? t("Hide expired slots", "Ocultar turnos expirados")
+                            : t(`View expired (${expiredSlots.length})`, `Ver expirados (${expiredSlots.length})`)}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => {
+                            const nextMap: Record<string, number> = {};
+                            activeSlots.forEach((s) => {
+                              nextMap[normalizeSlot(s)] = getQuotaForSlot(s, quota, slotQuotas);
+                            });
+                            setSlots(activeSlots);
+                            setSlotQuotas(nextMap);
+                            void persistSchedule(activeSlots, quota, undefined, nextMap);
+                          }}
+                          className="px-2.5 py-1 rounded-md bg-white border border-amber-300 text-amber-900 text-xs font-semibold hover:bg-amber-100 disabled:opacity-50 transition-colors cursor-pointer shadow-2xs"
+                        >
+                          {t("Sync & Remove Expired Slots", "Sincronizar e Limpar Expirados")}
+                        </button>
+                      </div>
                     </div>
                   )}
-                  <div className="flex items-center gap-3">
-                    {!isEditingThis && (
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => {
-                          const initial = slotToDateTimeInputs(slot);
-                          setEditDate(initial.date);
-                          setEditTime(initial.time);
-                          setEditSlotQuota(String(currentSlotCapacity));
-                          setEditingSlot(slot);
-                        }}
-                        className="text-xs font-medium text-sky-700 hover:underline disabled:opacity-40"
-                      >
-                        {t("Edit", "Editar")}
-                      </button>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between pb-1 border-b border-slate-100 text-xs">
+                      <span className="font-bold text-slate-800 uppercase tracking-wider font-mono">
+                        {t(`Active Booking Slots (${activeSlots.length})`, `Turnos Activos para Agendamento (${activeSlots.length})`)}
+                      </span>
+                      <span className="text-[11px] text-slate-500">
+                        {t("Candidates can book these slots until 11:59 PM 1 day prior.", "Candidatos podem agendar até às 23:59 da véspera.")}
+                      </span>
+                    </div>
+
+                    <ul className="divide-y divide-slate-100">
+                      {activeSlots.map((slot) => {
+                        const isEditingThis = editingSlot === slot;
+                        const currentSlotCapacity = getQuotaForSlot(slot, quota, slotQuotas);
+                        return (
+                          <li key={slot} className="flex flex-wrap items-center justify-between gap-3 py-2.5 text-sm">
+                            {isEditingThis ? (
+                              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                                <input
+                                  type="date"
+                                  value={editDate}
+                                  onChange={(e) => setEditDate(e.target.value)}
+                                  aria-label={t("Edit slot date", "Editar data do turno")}
+                                  className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs"
+                                />
+                                <input
+                                  type="time"
+                                  value={editTime}
+                                  onChange={(e) => setEditTime(e.target.value)}
+                                  aria-label={t("Edit slot time", "Editar hora do turno")}
+                                  className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs"
+                                />
+                                <label className="inline-flex items-center gap-1.5 text-xs text-slate-600 font-medium">
+                                  <span>{t("Capacity:", "Capacidade:")}</span>
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    max={200}
+                                    value={editSlotQuota}
+                                    onChange={(e) => setEditSlotQuota(e.target.value)}
+                                    aria-label={t("Edit slot capacity", "Editar capacidade do turno")}
+                                    className="w-20 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-900"
+                                  />
+                                </label>
+                                <button
+                                  type="button"
+                                  disabled={!editDate || !editTime || busy}
+                                  onClick={() => {
+                                    const updatedSlot = `${editDate} - ${editTime}`;
+                                    const parsedSlotQ = parseInt(editSlotQuota, 10);
+                                    const validSlotQ =
+                                      Number.isFinite(parsedSlotQ) && parsedSlotQ >= 1 && parsedSlotQ <= 200
+                                        ? parsedSlotQ
+                                        : currentSlotCapacity;
+                                    const next = slots.map((s) => (s === slot ? updatedSlot : s));
+                                    const uniqueNext = [...new Set(next)];
+                                    const nextMap: Record<string, number> = { ...slotQuotas };
+                                    if (updatedSlot !== slot) {
+                                      delete nextMap[normalizeSlot(slot)];
+                                      delete nextMap[slot];
+                                    }
+                                    nextMap[normalizeSlot(updatedSlot)] = validSlotQ;
+                                    setEditingSlot(null);
+                                    setSlots(uniqueNext);
+                                    setSlotQuotas(nextMap);
+                                    void persistSchedule(
+                                      uniqueNext,
+                                      quota,
+                                      updatedSlot !== slot ? { from: slot, to: updatedSlot } : undefined,
+                                      nextMap
+                                    );
+                                  }}
+                                  className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-700 disabled:opacity-40"
+                                >
+                                  {t("Apply", "Aplicar")}
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => setEditingSlot(null)}
+                                  className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                                >
+                                  {t("Cancel", "Cancelar")}
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex flex-wrap items-center gap-2.5">
+                                <span className="font-medium text-slate-900">{formatSlotDisplay(slot, lang)}</span>
+                                <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                                  {t(`Capacity: ${currentSlotCapacity}`, `Capacidade: ${currentSlotCapacity}`)}
+                                </span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-3">
+                              {!isEditingThis && (
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => {
+                                    const initial = slotToDateTimeInputs(slot);
+                                    setEditDate(initial.date);
+                                    setEditTime(initial.time);
+                                    setEditSlotQuota(String(currentSlotCapacity));
+                                    setEditingSlot(slot);
+                                  }}
+                                  className="text-xs font-medium text-sky-700 hover:underline disabled:opacity-40"
+                                >
+                                  {t("Edit", "Editar")}
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => {
+                                  const next = slots.filter((s) => s !== slot);
+                                  const nextMap: Record<string, number> = { ...slotQuotas };
+                                  delete nextMap[normalizeSlot(slot)];
+                                  delete nextMap[slot];
+                                  setSlots(next);
+                                  setSlotQuotas(nextMap);
+                                  if (editingSlot === slot) setEditingSlot(null);
+                                  void persistSchedule(next, quota, undefined, nextMap);
+                                }}
+                                className="text-xs font-medium text-rose-700 hover:underline disabled:opacity-40"
+                              >
+                                {t("Remove", "Remover")}
+                              </button>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+
+                    {!activeSlots.length && (
+                      <p className="text-xs text-slate-500 py-3">
+                        {t(
+                          "No active future booking slots configured. Add future dates above so applicants can book.",
+                          "Sem turnos futuros activos configurados. Adicione datas futuras acima para os candidatos agendarem."
+                        )}
+                      </p>
                     )}
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => {
-                        const next = slots.filter((s) => s !== slot);
-                        const nextMap: Record<string, number> = { ...slotQuotas };
-                        delete nextMap[normalizeSlot(slot)];
-                        delete nextMap[slot];
-                        setSlots(next);
-                        setSlotQuotas(nextMap);
-                        if (editingSlot === slot) setEditingSlot(null);
-                        void persistSchedule(next, quota, undefined, nextMap);
-                      }}
-                      className="text-xs font-medium text-rose-700 hover:underline disabled:opacity-40"
-                    >
-                      {t("Remove", "Remover")}
-                    </button>
                   </div>
-                </li>
+
+                  {/* Collapsible Expired Slots Section */}
+                  {showExpired && expiredSlots.length > 0 && (
+                    <div className="mt-4 pt-3 border-t border-slate-200/80 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider font-mono">
+                          {t("Past / Expired Slots (Cut-off Passed):", "Turnos Passados / Expirados (Prazo Encerrado):")}
+                        </span>
+                        <span className="text-[11px] text-amber-700 font-semibold">
+                          {t("Hidden from applicant booking pages", "Ocultos das páginas de agendamento")}
+                        </span>
+                      </div>
+                      <ul className="divide-y divide-slate-100 bg-slate-50/60 rounded-xl border border-slate-200 px-3">
+                        {expiredSlots.map((slot) => {
+                          const currentSlotCapacity = getQuotaForSlot(slot, quota, slotQuotas);
+                          return (
+                            <li key={slot} className="flex flex-wrap items-center justify-between gap-3 py-2 text-xs opacity-75">
+                              <div className="flex items-center gap-2.5">
+                                <span className="line-through text-slate-500">{formatSlotDisplay(slot, lang)}</span>
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                  {t("Booking Closed", "Inscrições Fechadas")}
+                                </span>
+                                <span className="text-slate-400">
+                                  {t(`Capacity: ${currentSlotCapacity}`, `Lotação: ${currentSlotCapacity}`)}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => {
+                                  const next = slots.filter((s) => s !== slot);
+                                  const nextMap: Record<string, number> = { ...slotQuotas };
+                                  delete nextMap[normalizeSlot(slot)];
+                                  delete nextMap[slot];
+                                  setSlots(next);
+                                  setSlotQuotas(nextMap);
+                                  void persistSchedule(next, quota, undefined, nextMap);
+                                }}
+                                className="text-xs font-medium text-rose-700 hover:underline disabled:opacity-40"
+                              >
+                                {t("Remove from cycle", "Remover do ciclo")}
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  )}
+                </>
               );
-            })}
-          </ul>
-          {!slots.length && (
-            <p className="text-xs text-slate-500">
-              {t(
-                "No slots configured. Booking invitations cannot be sent until future slots are saved.",
-                "Sem turnos. Guarde turnos futuros antes de enviar convites."
-              )}
-            </p>
-          )}
-          <div className="flex flex-wrap items-center gap-4">
-            <button
-              disabled={busy}
-              onClick={() => void save()}
-              className="rounded-lg bg-sky-600 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40"
-            >
-              {busy ? t("Saving…", "A guardar…") : t("Save cycle schedule", "Guardar horário do lote")}
-            </button>
-            <Link
-              className="text-xs font-medium text-sky-700"
-              href={`/admin/recruitment/archive?cohortId=${encodeURIComponent(cycleId)}&view=testing`}
-            >
-              {t("Open testing workspace →", "Abrir área de testes →")}
-            </Link>
+            })()}
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-slate-100">
+            <div className="flex flex-wrap items-center gap-4">
+              <button
+                disabled={busy}
+                onClick={() => void save()}
+                className="rounded-lg bg-sky-600 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40 hover:bg-sky-700 transition-colors shadow-2xs"
+              >
+                {busy ? t("Saving…", "A guardar…") : t("Save cycle schedule", "Guardar horário do lote")}
+              </button>
+              <Link
+                className="text-xs font-semibold text-sky-700 hover:text-sky-800 hover:underline inline-flex items-center gap-1"
+                href={`/admin/recruitment/archive?cohortId=${encodeURIComponent(cycleId)}&view=testing`}
+              >
+                <span>{t("Open testing workspace →", "Abrir área de testes →")}</span>
+              </Link>
+              <Link
+                className="text-xs font-medium text-slate-600 hover:text-slate-900 hover:underline inline-flex items-center gap-1"
+                href="/admin/recruitment/candidates"
+              >
+                <span>{t("Open Candidates Roster →", "Abrir Lista de Candidatos →")}</span>
+              </Link>
+            </div>
           </div>
         </>
       )}

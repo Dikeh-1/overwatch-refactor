@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { RoleTestSlotSettings } from "./RoleTestSlotSettings";
 import { RoleTrainingSlotSettings } from "./RoleTrainingSlotSettings";
 import React, { useState, useEffect, useCallback } from "react";
@@ -288,7 +289,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ lang: propLang }) =>
       : 0;
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 w-full max-w-7xl mx-auto">
       {error && (
         <p role="alert" className="rounded-lg border border-red-200 p-3 text-sm text-red-700">
           {error}
@@ -309,7 +310,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ lang: propLang }) =>
         </p>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-5">
+      <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-5 shadow-2xs">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
             <SlidersHorizontal size={14} className="text-slate-600" />
@@ -320,6 +321,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ lang: propLang }) =>
               )}
             </span>
           </h2>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/admin/recruitment/candidates"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-sky-700 hover:text-sky-800 hover:underline"
+            >
+              <Users size={12} />
+              <span>{t("Open Candidates Roster →", "Abrir Lista de Candidatos →")}</span>
+            </Link>
+            <Link
+              href="/admin/recruitment/roles"
+              className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-slate-900 hover:underline"
+            >
+              <span>{t("Manage Roles & Cohorts →", "Gerir Vagas e Ciclos →")}</span>
+            </Link>
+          </div>
         </div>
 
         {/* Role Cycle / Cohort Selector + Quota Input + Live Countdown Tracker */}
@@ -490,59 +506,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ lang: propLang }) =>
           </div>
         </div>
 
-        {/* Admin Session Security & Inactivity Timeout Controls */}
         <div className="pt-4 border-t border-slate-100">
-          <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 text-sky-700 border border-sky-200">
-                  <ShieldCheck size={16} />
-                </div>
-                <div>
-                  <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                    <span>{t("Admin Session Security & Inactivity Timeout", "Segurança da Sessão de Administrador e Tempo Limite")}</span>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200">
-                      {t("1h Sliding Session", "Sessão Deslizante 1h")}
-                    </span>
-                  </h3>
-                  <p className="text-[11px] text-slate-500">
-                    {t(
-                      "Continuous background renewal while you work. If idle, a single 60-second graceful warning appears before timeout.",
-                      "Renovação automática contínua em segundo plano enquanto trabalha. Em inactividade, surge um aviso de 60 segundos.",
-                    )}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                disabled={sessionRenewing}
-                onClick={() => void handleExtendAdminSession()}
-                className="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs disabled:opacity-50"
-              >
-                <RefreshCw size={12} className={sessionRenewing ? "animate-spin text-sky-600" : "text-slate-500"} />
-                <span>
-                  {sessionRenewing
-                    ? t("Extending…", "A prolongar…")
-                    : t("Refresh Session (+1 Hour)", "Prolongar Sessão (+1 Hora)")}
-                </span>
-              </button>
-            </div>
-            {sessionRenewNotice && (
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 flex items-center gap-1.5 animate-in fade-in duration-150">
-                <CheckCircle2 size={13} className="shrink-0 text-emerald-600" />
-                <span>{sessionRenewNotice}</span>
-              </div>
-            )}
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+              <Mail size={14} className="text-slate-600" />
+              <span>{t("Email Dispatch Defaults", "Definições de Envio de Email")}</span>
+            </h2>
+            <Link
+              href="/admin/recruitment/communications"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-sky-700 hover:text-sky-800 hover:underline"
+            >
+              <span>{t("Open Communications Studio →", "Abrir Estúdio de Comunicações →")}</span>
+            </Link>
           </div>
-        </div>
 
-        <div className="pt-4 border-t border-slate-100">
-          <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5 mb-3">
-            <Mail size={14} className="text-slate-600" />
-            <span>{t("Email Dispatch Defaults", "Definições de Envio de Email")}</span>
-          </h2>
-
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 {t("Default Sender Display Name", "Nome de Apresentação do Remetente")}
@@ -554,7 +532,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ lang: propLang }) =>
                   setSenderName(e.target.value);
                   setSavedSuccess(false);
                 }}
-                className="w-full max-w-md px-3 py-1.5 text-xs rounded border border-slate-300 text-slate-900"
+                className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 bg-white text-slate-900 font-medium focus:outline-none focus:ring-1 focus:ring-sky-500"
               />
             </div>
 
@@ -569,7 +547,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ lang: propLang }) =>
                   setReplyToEmail(e.target.value);
                   setSavedSuccess(false);
                 }}
-                className="w-full max-w-md px-3 py-1.5 text-xs rounded border border-slate-300 text-slate-900"
+                className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 bg-white text-slate-900 font-medium focus:outline-none focus:ring-1 focus:ring-sky-500"
               />
             </div>
           </div>

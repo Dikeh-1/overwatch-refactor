@@ -247,3 +247,43 @@ test('communications studio next-phase audience isolates confirmed (SIM) from aw
   assert.ok(testedPool.some((c) => c.id === 'cand-3'));
 });
 
+test('training group booking auto-invalidates 1 day prior to start date at 11:59:59 PM Maputo time', () => {
+  const { getTrainingGroupStartDate, isTrainingGroupBookingExpired } = require('../src/lib/careers.ts');
+
+  const groupA = {
+    id: 'group_a',
+    name: 'Grupo A',
+    schedule: 'Segunda a Quarta (2, 3 e 4 de Novembro): 08h00–12h00',
+    timeRange: '08h00–12h00',
+  };
+
+  const parsed = getTrainingGroupStartDate(groupA);
+  assert.ok(parsed, 'Should parse start date from schedule');
+  assert.equal(parsed.day, 2);
+  assert.equal(parsed.month, 11);
+  assert.equal(parsed.year, 2026);
+
+  // Reference date: Oct 26, 2026 -> 7 days prior -> Not expired
+  const oct26 = new Date('2026-10-26T10:00:00Z');
+  assert.equal(isTrainingGroupBookingExpired(groupA, oct26), false);
+
+  // Reference date: Nov 1, 2026 23:59:00 Maputo (UTC+2) -> 1 day prior -> Not expired yet
+  const nov1Evening = new Date('2026-11-01T21:50:00Z'); // 23:50 Maputo
+  assert.equal(isTrainingGroupBookingExpired(groupA, nov1Evening), false);
+
+  // Reference date: Nov 2, 2026 00:01:00 Maputo (UTC+2) -> Day of training -> Expired!
+  const nov2Start = new Date('2026-11-01T22:05:00Z'); // 00:05 Nov 2 Maputo
+  assert.equal(isTrainingGroupBookingExpired(groupA, nov2Start), true);
+
+  // Explicit startDate override
+  const groupCustom = {
+    id: 'group_custom',
+    startDate: '2026-11-15',
+    schedule: 'Custom schedule',
+  };
+  assert.equal(isTrainingGroupBookingExpired(groupCustom, oct26), false);
+  const nov15 = new Date('2026-11-15T08:00:00Z');
+  assert.equal(isTrainingGroupBookingExpired(groupCustom, nov15), true);
+});
+
+

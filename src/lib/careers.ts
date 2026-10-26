@@ -453,6 +453,78 @@ export function isSlotBookingExpired(slot?: string | null, customRefDate?: Date)
 }
 
 /**
+ * Determines the start date for a training group, from explicit startDate (YYYY-MM-DD) or parsing schedule string.
+ */
+export function getTrainingGroupStartDate(group?: { startDate?: string; schedule?: string } | null): { year: number; month: number; day: number } | null {
+  if (!group) return null;
+  if (group.startDate && /^\d{4}-\d{2}-\d{2}$/.test(group.startDate)) {
+    const [y, m, d] = group.startDate.split("-").map(Number);
+    return { year: y, month: m, day: d };
+  }
+  if (!group.schedule) return null;
+
+  const ptMonths: Record<string, number> = {
+    janeiro: 1, fevereiro: 2, marco: 3, março: 3, abril: 4, maio: 5, junho: 6,
+    julho: 7, agosto: 8, setembro: 9, outubro: 10, novembro: 11, dezembro: 12,
+    jan: 1, fev: 2, mar: 3, abr: 4, mai: 5, jun: 6, jul: 7, ago: 8, set: 9, out: 10, nov: 11, dez: 12,
+  };
+  const enMonths: Record<string, number> = {
+    january: 1, february: 2, march: 3, april: 4, may: 5, june: 6,
+    july: 7, august: 8, september: 9, october: 10, november: 11, december: 12,
+    jan: 1, feb: 2, apr: 4, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
+  };
+
+  const str = group.schedule.toLowerCase();
+
+  // Match e.g. "(\d{1,2})[\s,]+.*(?:de\s+)?([a-zçãé]+)" e.g. "2, 3 e 4 de Novembro" or "2 de Novembro"
+  const dayMonthMatch = str.match(/(?:^|[^\d])(\d{1,2})(?:st|nd|rd|th)?(?:\s*,\s*\d{1,2})*(?:\s+e\s+\d{1,2})?\s+(?:de\s+)?([a-zçãé]+)/i);
+  if (dayMonthMatch) {
+    const day = parseInt(dayMonthMatch[1], 10);
+    const rawMonth = dayMonthMatch[2].normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const month = ptMonths[rawMonth] || enMonths[rawMonth];
+    if (month && day >= 1 && day <= 31) {
+      return { year: 2026, month, day };
+    }
+  }
+
+  // Match ISO YYYY-MM-DD
+  const isoMatch = str.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    return { year: Number(isoMatch[1]), month: Number(isoMatch[2]), day: Number(isoMatch[3]) };
+  }
+
+  // Match DD/MM/YYYY
+  const ddmmyyyy = str.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (ddmmyyyy) {
+    return { year: Number(ddmmyyyy[3]), month: Number(ddmmyyyy[2]), day: Number(ddmmyyyy[1]) };
+  }
+
+  return null;
+}
+
+/**
+ * Automatically invalidates or closes booking for any training group 1 day prior to its scheduled start date.
+ * (e.g. Training starting Monday 2nd Nov expires by 11:59:59 PM Sunday 1st Nov in Maputo time).
+ */
+export function isTrainingGroupBookingExpired(group?: { startDate?: string; schedule?: string } | null, customRefDate?: Date): boolean {
+  if (!group) return false;
+  const parsed = getTrainingGroupStartDate(group);
+  if (!parsed) return false;
+
+  const now = getMaputoToday(customRefDate || new Date());
+
+  if (now.year > parsed.year) return true;
+  if (now.year < parsed.year) return false;
+
+  if (now.month > parsed.month) return true;
+  if (now.month < parsed.month) return false;
+
+  if (now.day >= parsed.day) return true;
+
+  return false;
+}
+
+/**
  * Checks if slot is scheduled for today (Maputo time).
  */
 export function isSlotToday(slot?: string | null, customRefDate?: Date): boolean {
