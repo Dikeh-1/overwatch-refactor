@@ -295,11 +295,11 @@ export const NextPhaseTrainingGroupsView: React.FC<Props> = ({
       <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-2xs">
         <div>
           <div className="flex items-center gap-2">
-            <GraduationCap className="text-blue-600" size={20} />
+            <GraduationCap className="text-slate-700" size={20} />
             <h2 className="text-sm font-bold text-slate-900 tracking-tight">
               {t("Practical Training Groups Roster", "Gestão de Turmas de Formação Prática")}
             </h2>
-            <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-blue-50 text-blue-800 border border-blue-200 uppercase">
+            <span className="px-2 py-0.5 rounded text-[0.65rem] font-bold bg-slate-100 text-slate-700 border border-slate-200 uppercase">
               {t("Hands-on Phase", "Fase Prática CCO")}
             </span>
           </div>
@@ -557,10 +557,10 @@ export const NextPhaseTrainingGroupsView: React.FC<Props> = ({
         </div>
 
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs">
-          <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-blue-600 block">
+          <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500 block">
             {t("Enrolled in Groups", "Inscritas nos Turnos")}
           </span>
-          <div className="text-2xl font-bold font-mono text-blue-700 mt-1">
+          <div className="text-2xl font-bold font-mono text-slate-900 mt-1">
             {totalBooked}
           </div>
           <span className="text-[0.65rem] text-slate-500 font-medium">
@@ -641,11 +641,11 @@ export const NextPhaseTrainingGroupsView: React.FC<Props> = ({
                       )}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-slate-500 mt-1 font-mono">
-                      <span className="flex items-center gap-1 text-blue-700 font-semibold">
-                        <Clock size={12} />
+                      <span className="flex items-center gap-1.5 text-slate-700 font-medium">
+                        <Clock size={12} className="text-slate-400" />
                         {g.timeRange}
                       </span>
-                      <span>•</span>
+                      <span className="text-slate-300">•</span>
                       <span>{g.schedule}</span>
                     </div>
                   </div>
@@ -665,7 +665,7 @@ export const NextPhaseTrainingGroupsView: React.FC<Props> = ({
                 <div className="w-full bg-slate-100 h-1.5 overflow-hidden">
                   <div
                     className={`h-full transition-all duration-300 ${
-                      isFull ? "bg-amber-500" : pct > 75 ? "bg-blue-600" : "bg-emerald-500"
+                      isFull ? "bg-amber-500" : pct > 75 ? "bg-slate-700" : "bg-emerald-500"
                     }`}
                     style={{ width: `${pct}%` }}
                   />

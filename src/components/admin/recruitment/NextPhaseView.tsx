@@ -654,29 +654,6 @@ export const NextPhaseView: React.FC<NextPhaseViewProps> = ({ lang: propLang, co
             <span>{isRefreshing ? t("Refreshing...", "A carregar...") : t("Refresh", "Actualizar")}</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              if (previewCandidateIndex >= candidates.length) setPreviewCandidateIndex(0);
-              setEmailPreviewModalOpen(true);
-            }}
-            className="px-3 py-1.5 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-          >
-            <Eye size={13} className="text-sky-600" />
-            <span>{t(`Preview Candidate Emails (${candidates.length})`, `Pré-visualizar Emails das Candidatas (${candidates.length})`)}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setConfirmModalOpen(true)}
-            disabled={summary.notSent === 0}
-            className="px-3.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors disabled:opacity-40 cursor-pointer shadow-2xs"
-          >
-            <Send size={13} />
-            <span>
-              {t(`Dispatch Invitations (${summary.notSent})`, `Disparar Convocatórias (${summary.notSent})`)}
-            </span>
-          </button>
         </div>
       </div>
 
