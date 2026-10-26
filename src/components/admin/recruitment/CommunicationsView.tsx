@@ -258,6 +258,53 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
   };
 
   // Pre-configured Built-in Templates
+  const DEFAULT_PT_TRAINING_CONFIRMATION = `Prezada {{candidate_name}},
+
+Confirmamos com sucesso a sua inscrição na 2.ª Fase de Selecção – Formação Presencial em Consciência Situacional e Identificação de Ameaças através de CCTV para a função de {{role_title}}.
+
+DETALHES DA SESSÃO CONFIRMADA:
+• Período de Formação: 2, 3 e 4 de Novembro de 2026
+• Avaliação Prática: Quinta-feira, 5 de Novembro de 2026
+• Local: Sede Overwatch Moçambique, Av. Paulo Samuel Khankhomba, N.º 1948, Maputo
+• Comparência: Solicitamos comparência com 15 minutos de antecedência
+
+INSTRUÇÕES DE ACESSO À PORTARIA:
+A sua entrada nas instalações da Overwatch será autorizada mediante apresentação de um Documento de Identificação válido (BI / Passaporte) e verificação do seu nome na lista da recepção. Não é necessário apresentar código QR.
+
+O QUE DEVE TRAZER:
+• Documento de identificação original válido (BI / Passaporte).
+• Uma cópia do documento de identificação (caso ainda não tenha entregue).
+• Caneta azul ou preta e caderno ou bloco de notas para apontamentos.
+
+(Nota: Não é necessário trazer computador. Todos os materiais práticos serão fornecidos pela Overwatch. Recordamos que a candidata deverá frequentar os três dias de formação no mesmo grupo.)
+
+Com os melhores cumprimentos,
+Equipa de Recrutamento
+Overwatch Moçambique`;
+
+  const DEFAULT_EN_TRAINING_CONFIRMATION = `Dear {{candidate_name}},
+
+We successfully confirm your registration for the 2nd Phase Selection – In-Person Training in Situational Awareness and Threat Identification through CCTV for the position of {{role_title}}.
+
+CONFIRMED SESSION DETAILS:
+• Training Period: November 2, 3 and 4, 2026
+• Practical Evaluation: Thursday, November 5, 2026
+• Location: Overwatch Mozambique Headquarters, Av. Paulo Samuel Khankhomba, N.º 1948, Maputo
+• Attendance: Please arrive 15 minutes prior to the start time
+
+SECURITY ENTRANCE INSTRUCTIONS:
+Your entrance to Overwatch premises will be authorized upon presentation of a valid ID document (ID / Passport) and verification of your name on the reception roster. No QR code is required.
+
+WHAT TO BRING:
+• Valid original ID document (ID / Passport).
+• A copy of your ID document (if not yet submitted).
+• Blue or black pen and notebook/notepad.
+(No laptop required. All practical materials will be provided by Overwatch.)
+
+Kind regards,
+Recruitment Team
+Overwatch Mozambique`;
+
   const builtInTemplates = [
     {
       id: "interview_convocation",
@@ -327,6 +374,13 @@ Please find all preparatory instructions and documentation attached. Ensure you 
 Após a avaliação da sua candidatura para {{role_title}}, temos a honra de informar que foi seleccionada para a Próxima Fase do programa de selecção Overwatch.
 
 Em anexo disponibilizamos o guia de preparação e cronograma de acolhimento. Lembramos da obrigatoriedade do documento de identificação original.`,
+      followUpEnabled: true,
+      followUpSubject:
+        emailLang === "en"
+          ? "Registration Confirmed: In-Person Practical Training & Evaluation — {{role_title}}"
+          : "Confirmação de Inscrição: Formação Presencial e Avaliação Prática – {{role_title}}",
+      followUpBody:
+        emailLang === "en" ? DEFAULT_EN_TRAINING_CONFIRMATION : DEFAULT_PT_TRAINING_CONFIRMATION,
     },
     {
       id: "training_convocation",
@@ -425,6 +479,13 @@ Caso tenha alguma questão, poderá responder directamente a este email ou conta
 Com os melhores cumprimentos,
 Equipa de Recrutamento
 Overwatch Moçambique`,
+      followUpEnabled: true,
+      followUpSubject:
+        emailLang === "en"
+          ? "Registration Confirmed: In-Person Practical Training & Evaluation — {{role_title}}"
+          : "Confirmação de Inscrição: Formação Presencial e Avaliação Prática – {{role_title}}",
+      followUpBody:
+        emailLang === "en" ? DEFAULT_EN_TRAINING_CONFIRMATION : DEFAULT_PT_TRAINING_CONFIRMATION,
     },
     {
       id: "test_convocation",
@@ -1086,7 +1147,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       </div>
 
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3"><label className="text-xs font-semibold">{t("Email language", "Idioma do email")}<select aria-label={t("Email language", "Idioma do email")} value={emailLang} onChange={event => setEmailLang(event.target.value as "pt" | "en")} className="ml-3 rounded-lg border px-3 py-2"><option value="pt">Português</option><option value="en">English</option></select></label><span className="text-xs text-slate-500">{t("Controls templates, role names, booking buttons and the letterhead. The admin interface can stay in English.", "Controla os modelos, nomes de vagas, botões de agendamento e o timbre.")}</span></div>
-      <div className="sticky top-[102px] z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+      <div className="sticky top-[102px] z-30 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
         <nav aria-label={t("Mailbox folders", "Pastas de correio")} className="flex flex-wrap gap-1">{([
           ["compose", t("Compose", "Escrever")],
           ["drafts", t("Drafts", "Rascunhos")],
@@ -1588,7 +1649,26 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
               <input
                 type="checkbox"
                 checked={followUpEnabled}
-                onChange={event => setFollowUpEnabled(event.target.checked)}
+                onChange={event => {
+                  const checked = event.target.checked;
+                  setFollowUpEnabled(checked);
+                  if (checked && (!followUpSubject.trim() || !followUpBody.trim())) {
+                    if (!followUpSubject.trim()) {
+                      setFollowUpSubject(
+                        emailLang === "en"
+                          ? "Registration Confirmed: In-Person Practical Training & Evaluation — {{role_title}}"
+                          : "Confirmação de Inscrição: Formação Presencial e Avaliação Prática – {{role_title}}"
+                      );
+                    }
+                    if (!followUpBody.trim()) {
+                      setFollowUpBody(
+                        emailLang === "en"
+                          ? DEFAULT_EN_TRAINING_CONFIRMATION
+                          : DEFAULT_PT_TRAINING_CONFIRMATION
+                      );
+                    }
+                  }
+                }}
               />
               <span>{t("Send an automatic follow-up message", "Enviar seguimento automático")}</span>
             </label>
@@ -1724,7 +1804,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
         {/* ========================================================================= */}
         {/* RIGHT COLUMN: THE OFFICIAL OVERWATCH COMMUNICATIONS STUDIO CANVAS (7 cols) */}
         {/* ========================================================================= */}
-        <div className="lg:col-span-7 space-y-4 self-start">
+        <div className="lg:col-span-7 space-y-4 lg:sticky lg:top-[164px] self-start lg:max-h-[calc(100vh-11rem)] lg:overflow-y-auto admin-scrollbar z-10">
           {/* Main Studio Canvas Container */}
           <div
             onDragOver={(e) => {

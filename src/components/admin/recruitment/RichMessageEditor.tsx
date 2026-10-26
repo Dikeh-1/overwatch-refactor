@@ -1067,7 +1067,7 @@ export default function RichMessageEditor({
       {/* =========================================================================
           EDITOR CANVAS
          ========================================================================= */}
-      <div className="relative min-h-[300px] max-h-[520px] overflow-y-auto admin-scrollbar flex-1 bg-white p-6">
+      <div className="relative min-h-[340px] flex-1 bg-white p-6">
         {/* ContentEditable Visual Element (Persistently preserved in DOM) */}
         <div
           ref={editorRef}

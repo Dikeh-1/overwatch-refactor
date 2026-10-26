@@ -398,7 +398,7 @@ export default function RecruitmentWorkspace({
         </header>
         <div
           style={snapshotMode ? { display: "none" } : undefined}
-          className="sticky top-[46px] z-25 bg-[#F7F8FA] pt-1 pb-1.5 -mt-1 -mb-1"
+          className="sticky top-[46px] z-40 bg-[#F7F8FA] pt-1 pb-1.5 -mt-1 -mb-1"
         >
           <nav
             aria-label={t("Recruitment stages", "Etapas de recrutamento")}
