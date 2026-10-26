@@ -1658,7 +1658,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
               if (checked && !messageBody.includes(BOOKING_TOKEN)) {
                 if (canvasTab === "edit") editorHandle.current?.insertText(BOOKING_TOKEN);
                 else setMessageBody(previous => moveBookingToken(previous, messageBlocks(previous).length));
-              } else if (!checked) { setMessageBody(previous => previous.replaceAll(BOOKING_TOKEN,"")); setFollowUpEnabled(false); }
+              } else if (!checked) { setMessageBody(previous => previous.replaceAll(BOOKING_TOKEN,"")); }
             }} />
             <span>{t("Include a test-booking link. Only eligible candidates in this cycle will receive this invitation.", "Incluir ligação de agendamento. Apenas candidatos elegíveis deste lote receberão a convocatória.")}</span>
           </label>

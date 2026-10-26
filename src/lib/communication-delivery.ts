@@ -36,7 +36,7 @@ export async function deliverQueuedItem(item: MailItem) {
         return;
       }
       if (!content || content.kind !== "draft" || content.scope !== item.scope || !["draft", "queued", "sent", "completed"].includes(content.data.status)) throw Error("The saved message is unavailable. Review this draft before sending.");
-      item = { ...item, data: { ...item.data, subject: content.data.subject, messageBody: content.data.messageBody, attachments: await hydrateMailAttachments(content.data.attachments, item.scope), followUp: content.data.followUpEnabled ? { trigger: "booking_confirmed", subject: content.data.followUpSubject, message: content.data.followUpBody } : undefined } };
+      item = { ...item, data: { ...item.data, subject: content.data.subject, messageBody: content.data.messageBody, attachments: await hydrateMailAttachments(content.data.attachments, item.scope), followUp: content.data.followUpEnabled ? { trigger: content.data.includeBookingButton ? "booking_confirmed" : "response_confirmed", subject: content.data.followUpSubject, message: content.data.followUpBody } : undefined } };
     }
     const rawCandidate = await getApplication(item.data.candidateId, true);
     const workspaceApps = item.data.includeBookingButton ? ((await getRecruitmentWorkspaceData().catch(() => ({ applications: [] as Application[] }))).applications || []) : [];

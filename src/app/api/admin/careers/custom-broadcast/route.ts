@@ -267,7 +267,7 @@ async function handlePOST(request: Request) {
       const scope = studioScope(body.cohortId, roleId, audienceFilter === "individual" ? candidateId : undefined);
       if (!draft || draft.kind !== "draft" || draft.scope !== scope) return Response.json({ error: "Save the draft before sending." }, { status: 409 });
       if (!["draft", "queued"].includes(draft.data.status)) return Response.json({ error: "This draft was already sent. Review Sent mail before creating another message." }, { status: 409 });
-      if (draft.data.followUpEnabled && (!draft.data.includeBookingButton || !validFollowUp({ trigger: "booking_confirmed", subject: draft.data.followUpSubject, message: draft.data.followUpBody }))) return Response.json({ error: "Fix the saved booking follow-up before sending." }, { status: 400 });
+      if (draft.data.followUpEnabled && !validFollowUp({ trigger: draft.data.includeBookingButton ? "booking_confirmed" : "response_confirmed", subject: draft.data.followUpSubject || "", message: draft.data.followUpBody || "" })) return Response.json({ error: "Fix the saved follow-up message before sending." }, { status: 400 });
       if (draft.data.status === "draft" && (draft.data.subject !== subject || draft.data.messageBody !== message || Boolean(draft.data.includeBookingButton) !== includeBookingButton)) return Response.json({ error: "The message changed since its last save. Save it again before sending." }, { status: 409 });
       const queuedItems = draft.data.status === "queued" ? draft.data.queuedItems : deduplicatedCandidates.map(candidate => {
         const role = workspace.roles.find(r => sameRole(r.id, candidate.role));
