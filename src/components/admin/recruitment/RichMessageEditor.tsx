@@ -53,6 +53,9 @@ interface RichMessageEditorProps {
   availableVariables?: { code: string; label: string }[];
   maxFileSizeMb?: number;
   className?: string;
+  stickyToolbar?: boolean;
+  seamless?: boolean;
+  canvasMaxHeight?: string;
 }
 
 const DEFAULT_VARIABLES = [
@@ -100,6 +103,9 @@ export default function RichMessageEditor({
   availableVariables = DEFAULT_VARIABLES,
   maxFileSizeMb = 10,
   className = "",
+  stickyToolbar = false,
+  seamless = false,
+  canvasMaxHeight,
 }: RichMessageEditorProps) {
   const [editorMode, setEditorMode] = useState<"visual" | "raw">("visual");
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -573,11 +579,14 @@ export default function RichMessageEditor({
   const wordCount = plainText ? plainText.split(/\s+/).filter(Boolean).length : 0;
 
   return (
-    <div className={`rounded-2xl border border-slate-200 bg-white shadow-2xs overflow-hidden flex flex-col ${className}`}>
+    <div className={`${seamless ? "border-0 rounded-none shadow-none bg-white flex flex-col" : "rounded-2xl border border-slate-200 bg-white shadow-2xs flex flex-col"} ${className}`}>
       {/* =========================================================================
           TOOLBAR HEADER (Sticky / Frozen Toolbar)
          ========================================================================= */}
-      <div onMouseDown={event => { if (!(event.target as Element).closest("select,input")) event.preventDefault(); }} className="sticky top-0 z-20 border-b border-slate-200 bg-slate-50/95 backdrop-blur-xs p-2 sm:p-2.5 flex flex-wrap items-center justify-between gap-2 select-none shadow-xs">
+      <div
+        onMouseDown={event => { if (!(event.target as Element).closest("select,input")) event.preventDefault(); }}
+        className={`sticky top-0 z-20 border-b border-slate-200 bg-slate-50/95 backdrop-blur-xs p-2 sm:p-2.5 flex flex-wrap items-center justify-between gap-2 select-none shadow-xs ${seamless ? "border-t border-slate-200" : "rounded-t-2xl"}`}
+      >
         {/* Left Toolbar: Actions */}
         <div className="flex flex-wrap items-center gap-1">
           {/* History Undo / Redo */}
@@ -1067,7 +1076,10 @@ export default function RichMessageEditor({
       {/* =========================================================================
           EDITOR CANVAS - Dedicated Scroll Container (Toolbar stays frozen at top)
          ========================================================================= */}
-      <div className="relative min-h-[340px] max-h-[520px] overflow-y-auto admin-scrollbar flex-1 bg-white p-6">
+      <div
+        className="relative min-h-[300px] overflow-y-auto admin-scrollbar flex-1 bg-white p-6"
+        style={canvasMaxHeight ? { maxHeight: canvasMaxHeight } : { maxHeight: "520px" }}
+      >
         {/* ContentEditable Visual Element (Persistently preserved in DOM) */}
         <div
           ref={editorRef}
@@ -1181,7 +1193,7 @@ export default function RichMessageEditor({
       {/* =========================================================================
           STATUS BAR (CHARS, WORDS, DYNAMIC NOTICE)
          ========================================================================= */}
-      <div className="border-t border-slate-200 bg-slate-50 px-4 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-slate-500 font-mono">
+      <div className={`border-t border-slate-200 bg-slate-50 px-4 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-slate-500 font-mono ${seamless ? "" : "rounded-b-2xl"}`}>
         <div className="flex items-center gap-3">
           <span>{charCount} {lang === "en" ? "characters" : "caracteres"}</span>
           <span>•</span>

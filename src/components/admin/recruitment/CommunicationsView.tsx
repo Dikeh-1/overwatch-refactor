@@ -94,19 +94,45 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
   const [deliveryCampaign, setDeliveryCampaign] = useState<string | null>(null);
   const [includeBookingButton, setIncludeBookingButton] = useState(false);
 
-  // Audience Target State
-  const initialRole = fixedRecipient?.role || propRoleId || activeRoleId || roles[0]?.id || "cctv";
-  const [selectedRole, setSelectedRole] = useState<string>(initialRole);
+  // Audience Target State: resolve valid non-"all" role immediately on first load
+  const resolvedRole = useMemo(() => {
+    if (fixedRecipient?.role) return fixedRecipient.role;
+    if (propRoleId && propRoleId !== "all") return propRoleId;
+    if (activeRoleId && activeRoleId !== "all" && (roles.length === 0 || roles.some((r) => r.id === activeRoleId))) {
+      return activeRoleId;
+    }
+    if (roles.length > 0) {
+      const openRole = roles.find((r) => r.open);
+      if (openRole) return openRole.id;
+      return roles[0].id;
+    }
+    return "cctv_technical_manager";
+  }, [fixedRecipient?.role, propRoleId, activeRoleId, roles]);
+
+  const [selectedRole, setSelectedRole] = useState<string>(resolvedRole);
   const [targetAudience, setTargetAudience] = useState<string>(fixedRecipient ? "individual" : "uncontacted");
   const [individualSearch, setIndividualSearch] = useState("");
   const [selectedIndividualId, setSelectedIndividualId] = useState<string>(fixedRecipient?.id || "");
   const [selectedSlot, setSelectedSlot] = useState<string>("");
 
   useEffect(() => {
-    if (propRoleId && propRoleId !== selectedRole) {
-      setSelectedRole(propRoleId);
+    if (fixedRecipient?.role) {
+      if (selectedRole !== fixedRecipient.role) setSelectedRole(fixedRecipient.role);
+      return;
     }
-  }, [propRoleId]);
+    if (propRoleId && propRoleId !== "all") {
+      if (selectedRole !== propRoleId) setSelectedRole(propRoleId);
+      return;
+    }
+    if (roles.length > 0) {
+      const isValid = roles.some((r) => r.id === selectedRole && selectedRole !== "all");
+      if (!isValid && resolvedRole && resolvedRole !== selectedRole) {
+        setSelectedRole(resolvedRole);
+      }
+    } else if (selectedRole === "all") {
+      setSelectedRole(resolvedRole);
+    }
+  }, [propRoleId, roles, resolvedRole, fixedRecipient?.role, selectedRole]);
 
   // Role capability flags for active selection
   const currentRoleDef = useMemo(() => {
@@ -178,6 +204,13 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
   const [followUpEnabled, setFollowUpEnabled] = useState(false);
   const [followUpSubject, setFollowUpSubject] = useState("");
   const [followUpBody, setFollowUpBody] = useState("");
+
+  const isInsideWorkspace = Boolean(propRoleId || cohortId);
+  const studioNavTop = isInsideWorkspace ? "top-[94px]" : "top-[52px]";
+  const columnStickyTop = isInsideWorkspace ? "lg:top-[160px]" : "lg:top-[118px]";
+  const columnMaxHeight = isInsideWorkspace
+    ? "lg:max-h-[calc(100vh-175px)]"
+    : "lg:max-h-[calc(100vh-130px)]";
   const scope = studioScope(cohortId, selectedRole, fixedRecipient?.id || (targetAudience === "individual" ? selectedIndividualId || undefined : undefined));
   const draft = useCommunicationDraft(scope, { emailLang, subject, messageBody, attachments, includeBookingButton, targetAudience, selectedIndividualId, selectedSlot, followUpEnabled, followUpSubject, followUpBody }, data => {
     setEmailLang(data.emailLang === "en" ? "en" : "pt");
@@ -1209,57 +1242,57 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3"><label className="text-xs font-semibold">{t("Email language", "Idioma do email")}<select aria-label={t("Email language", "Idioma do email")} value={emailLang} onChange={event => setEmailLang(event.target.value as "pt" | "en")} className="ml-3 rounded-lg border px-3 py-2"><option value="pt">Português</option><option value="en">English</option></select></label><span className="text-xs text-slate-500">{t("Controls templates, role names, booking buttons and the letterhead. The admin interface can stay in English.", "Controla os modelos, nomes de vagas, botões de agendamento e o timbre.")}</span></div>
       
       {/* Sticky Tab Navigation Bar with Solid Backdrop (Prevents Content Bleeding on Scroll) */}
-      <div className={`sticky ${propRoleId || cohortId ? "top-[94px]" : "top-[52px]"} z-30 bg-[#F7F8FA] -mx-4 px-4 sm:-mx-6 sm:px-6 py-2 -mt-2 -mb-2 transition-all`}>
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-          <nav aria-label={t("Mailbox folders", "Pastas de correio")} className="flex flex-wrap gap-1">{([
-            ["compose", t("Compose", "Escrever")],
-            ["drafts", t("Drafts", "Rascunhos")],
-            ["incoming", t("Incoming", "Recebidos")],
-            ["sent", t("Sent", "Enviados")],
-            ["outbox", t("Outbox", "Caixa de saída")],
-            ["scheduled", t("Scheduled Auto Follow-Ups", "Seguimentos Automáticos")],
-          ] as const).map(([key,label]) => <button key={key} type="button" aria-pressed={folder === key} onClick={() => setFolder(key)} className={`rounded-lg px-3 py-2 text-xs font-medium cursor-pointer ${folder === key ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"}`}>{label}</button>)}</nav>
-          <div className="flex items-center gap-3">
-            <span role="status" className="max-w-sm text-xs text-slate-500">{draft.status}</span>
-            <button
-              type="button"
-              disabled={!draft.ready || isDispatching || openingDraft}
-              onClick={() => {
-                if (newDraftLock.current) return;
-                newDraftLock.current = true;
-                setOpeningDraft(true);
-                void draft.newDraft().then(() => setFolder("compose")).catch(error => setDeliveryNotice(error.message)).finally(() => {
-                  newDraftLock.current = false;
-                  setOpeningDraft(false);
-                });
-              }}
-              className="rounded-lg border px-3 py-2 text-xs font-medium cursor-pointer disabled:opacity-50"
-            >
-              {openingDraft ? t("Creating draft…", "A criar rascunho…") : t("New draft", "Novo rascunho")}
-            </button>
-          </div>
-        </div>
-      </div>
-      {folder !== "compose" && <StudioMailbox scope={scope} folder={folder} applications={applications} onOpenDraft={async id => { await draft.open(id); setFolder("compose"); }} onOpenProgress={campaignId => setDeliveryCampaign(campaignId)} />}
-      {/* MAIN 2-COLUMN STUDIO LAYOUT */}
-      {deliveryNotice && (
-        <div role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 flex items-center justify-between gap-3 animate-in fade-in duration-200">
-          <span>{deliveryNotice}</span>
-          <button
-            type="button"
-            onClick={() => setDeliveryNotice(null)}
-            className="text-emerald-600 hover:text-emerald-900 p-0.5 rounded transition-colors cursor-pointer shrink-0"
-            title={t("Dismiss", "Fechar")}
-          >
-            <X size={15} />
-          </button>
-        </div>
-      )}
-      <div hidden={folder !== "compose"} inert={!draft.ready || isDispatching} className={folder !== "compose" ? "hidden" : "grid grid-cols-1 lg:grid-cols-12 gap-6 items-start"}>
-        {/* ========================================================================= */}
-        {/* LEFT COLUMN: COMPOSER PALETTE & DISPATCH CONTROLS (5 cols on lg) */}
-        {/* ========================================================================= */}
-        <div className="lg:col-span-5 space-y-4">
+      <div className={`sticky ${studioNavTop} z-30 bg-[#F7F8FA] -mx-4 px-4 sm:-mx-6 sm:px-6 py-2 -mt-2 -mb-2 transition-all`}>
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                <nav aria-label={t("Mailbox folders", "Pastas de correio")} className="flex flex-wrap gap-1">{([
+                  ["compose", t("Compose", "Escrever")],
+                  ["drafts", t("Drafts", "Rascunhos")],
+                  ["incoming", t("Incoming", "Recebidos")],
+                  ["sent", t("Sent", "Enviados")],
+                  ["outbox", t("Outbox", "Caixa de saída")],
+                  ["scheduled", t("Scheduled Auto Follow-Ups", "Seguimentos Automáticos")],
+                ] as const).map(([key,label]) => <button key={key} type="button" aria-pressed={folder === key} onClick={() => setFolder(key)} className={`rounded-lg px-3 py-2 text-xs font-medium cursor-pointer ${folder === key ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"}`}>{label}</button>)}</nav>
+                <div className="flex items-center gap-3">
+                  <span role="status" className="max-w-sm text-xs text-slate-500">{draft.status}</span>
+                  <button
+                    type="button"
+                    disabled={!draft.ready || isDispatching || openingDraft}
+                    onClick={() => {
+                      if (newDraftLock.current) return;
+                      newDraftLock.current = true;
+                      setOpeningDraft(true);
+                      void draft.newDraft().then(() => setFolder("compose")).catch(error => setDeliveryNotice(error.message)).finally(() => {
+                        newDraftLock.current = false;
+                        setOpeningDraft(false);
+                      });
+                    }}
+                    className="rounded-lg border px-3 py-2 text-xs font-medium cursor-pointer disabled:opacity-50"
+                  >
+                    {openingDraft ? t("Creating draft…", "A criar rascunho…") : t("New draft", "Novo rascunho")}
+                  </button>
+                </div>
+              </div>
+            </div>
+            {folder !== "compose" && <StudioMailbox scope={scope} folder={folder} applications={applications} onOpenDraft={async id => { await draft.open(id); setFolder("compose"); }} onOpenProgress={campaignId => setDeliveryCampaign(campaignId)} />}
+            {/* MAIN 2-COLUMN STUDIO LAYOUT */}
+            {deliveryNotice && (
+              <div role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 flex items-center justify-between gap-3 animate-in fade-in duration-200">
+                <span>{deliveryNotice}</span>
+                <button
+                  type="button"
+                  onClick={() => setDeliveryNotice(null)}
+                  className="text-emerald-600 hover:text-emerald-900 p-0.5 rounded transition-colors cursor-pointer shrink-0"
+                  title={t("Dismiss", "Fechar")}
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            )}
+            <div hidden={folder !== "compose"} inert={!draft.ready || isDispatching} className={folder !== "compose" ? "hidden" : "grid grid-cols-1 lg:grid-cols-12 gap-6 items-start"}>
+              {/* ========================================================================= */}
+              {/* LEFT COLUMN: COMPOSER PALETTE & DISPATCH CONTROLS (5 cols on lg) */}
+              {/* ========================================================================= */}
+              <div className={`lg:col-span-5 lg:sticky ${columnStickyTop} ${columnMaxHeight} lg:overflow-y-auto lg:overscroll-contain pr-1.5 space-y-4 admin-scrollbar`}>
           {/* CARD 1: TARGET AUDIENCE */}
           <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-3.5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
@@ -1791,6 +1824,8 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                   value={followUpBody}
                   onChange={setFollowUpBody}
                   lang={lang}
+                  stickyToolbar
+                  canvasMaxHeight="360px"
                   availableVariables={[
                     { code: "{{candidate_name}}", label: t("Candidate Full Name", "Nome Completo") },
                     { code: "{{name}}", label: t("Candidate Name (Short)", "Nome Candidato") },
@@ -1894,7 +1929,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
         {/* ========================================================================= */}
         {/* RIGHT COLUMN: THE OFFICIAL OVERWATCH COMMUNICATIONS STUDIO CANVAS (7 cols) */}
         {/* ========================================================================= */}
-        <div className="lg:col-span-7 space-y-4">
+        <div className={`lg:col-span-7 lg:sticky ${columnStickyTop} ${columnMaxHeight} lg:overflow-y-auto lg:overscroll-contain pr-1 space-y-4 admin-scrollbar`}>
           {/* Main Studio Canvas Container */}
           <div
             onDragOver={(e) => {
@@ -1904,7 +1939,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
             }}
             onDragLeave={() => setIsDragOverLetterhead(false)}
             onDrop={handleDropOnLetterhead}
-            className={`rounded-2xl border transition-all shadow-xl relative bg-white ${
+            className={`rounded-2xl border transition-all shadow-xl relative bg-white flex flex-col ${
               isDragOverLetterhead
                 ? "border-sky-500 ring-4 ring-sky-100"
                 : "border-slate-300"
@@ -1922,142 +1957,154 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
               </div>
             )}
 
-            {/* Studio Canvas Mode Header Tabs */}
-            <div className="rounded-t-2xl border-b border-slate-200 bg-slate-50 px-6 py-3 flex flex-wrap items-center justify-between gap-3 relative">
-              <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => setCanvasTab("edit")}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    canvasTab === "edit"
-                      ? "bg-white text-slate-900 shadow-2xs border border-slate-200/60"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  <FileText size={13} className={canvasTab === "edit" ? "text-sky-600" : "text-slate-400"} />
-                  <span>{t("Message Editor", "Editor da Mensagem")}</span>
-                </button>
+            {/* STICKY CONTROL REGION (Tabs + Subject Line + Heading) */}
+            <div className="sticky top-0 z-30 bg-white rounded-t-2xl shadow-xs">
+              {/* Studio Canvas Mode Header Tabs */}
+              <div className="rounded-t-2xl border-b border-slate-200 bg-slate-50 px-6 py-3 flex flex-wrap items-center justify-between gap-3 relative">
+                <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setCanvasTab("edit")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      canvasTab === "edit"
+                        ? "bg-white text-slate-900 shadow-2xs border border-slate-200/60"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <FileText size={13} className={canvasTab === "edit" ? "text-sky-600" : "text-slate-400"} />
+                    <span>{t("Message Editor", "Editor da Mensagem")}</span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => setCanvasTab("preview")}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    canvasTab === "preview"
-                      ? "bg-white text-slate-900 shadow-2xs border border-slate-200/60"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  <Eye size={13} className={canvasTab === "preview" ? "text-sky-600" : "text-slate-400"} />
-                  <span>{t("Live Official Letterhead Preview", "Pré-visualização em Papel Timbrado")}</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setCanvasTab("preview")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      canvasTab === "preview"
+                        ? "bg-white text-slate-900 shadow-2xs border border-slate-200/60"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <Eye size={13} className={canvasTab === "preview" ? "text-sky-600" : "text-slate-400"} />
+                    <span>{t("Live Official Letterhead Preview", "Pré-visualização em Papel Timbrado")}</span>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCopyWhatsApp}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
+                    title={t("Copy formatted broadcast copy for WhatsApp", "Copiar texto formatado para WhatsApp")}
+                  >
+                    {copiedWhatsApp ? (
+                      <>
+                        <Check size={13} className="text-emerald-600" />
+                        <span className="text-emerald-700 font-bold">{t("Copied!", "Copiado!")}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={13} />
+                        <span>{t("Copy for WhatsApp", "Copiar p/ WhatsApp")}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleCopyWhatsApp}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
-                  title={t("Copy formatted broadcast copy for WhatsApp", "Copiar texto formatado para WhatsApp")}
-                >
-                  {copiedWhatsApp ? (
-                    <>
-                      <Check size={13} className="text-emerald-600" />
-                      <span className="text-emerald-700 font-bold">{t("Copied!", "Copiado!")}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={13} />
-                      <span>{t("Copy for WhatsApp", "Copiar p/ WhatsApp")}</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-
-
-            {/* Tab 1: Professional Rich Message Editor */}
-            <div style={{ display: canvasTab === "edit" ? "block" : "none" }} className="p-6 space-y-5">
-              {/* Intelligent Link & Audience Safeguard Advisor Banner */}
-              {advisorDiagnostics.length > 0 && (
-                <div className="space-y-2">
-                  {advisorDiagnostics.map((diag, i) => (
-                    <div
-                      key={i}
-                      className={`p-3.5 rounded-xl border text-xs space-y-2 ${
-                        diag.type === "warning"
-                          ? "bg-amber-50/90 border-amber-300 text-amber-900"
-                          : "bg-sky-50/90 border-sky-300 text-sky-900"
-                      }`}
-                    >
-                      <div className="flex items-start gap-2.5">
-                        <AlertCircle
-                          size={16}
-                          className={`mt-0.5 shrink-0 ${
-                            diag.type === "warning" ? "text-amber-600" : "text-sky-600"
+              {/* When in Edit Mode: Advisor Banner, Official Email Subject Line, and Heading */}
+              {canvasTab === "edit" && (
+                <div className="px-6 pt-3.5 pb-3 space-y-3 bg-white border-b border-slate-200">
+                  {/* Intelligent Link & Audience Safeguard Advisor Banner */}
+                  {advisorDiagnostics.length > 0 && (
+                    <div className="space-y-2">
+                      {advisorDiagnostics.map((diag, i) => (
+                        <div
+                          key={i}
+                          className={`p-3 rounded-xl border text-xs space-y-2 ${
+                            diag.type === "warning"
+                              ? "bg-amber-50/90 border-amber-300 text-amber-900"
+                              : "bg-sky-50/90 border-sky-300 text-sky-900"
                           }`}
-                        />
-                        <div className="flex-1 space-y-1">
-                          <h4 className="font-bold text-xs">{diag.title}</h4>
-                          <p className="text-[11px] leading-relaxed text-slate-700">{diag.message}</p>
+                        >
+                          <div className="flex items-start gap-2.5">
+                            <AlertCircle
+                              size={16}
+                              className={`mt-0.5 shrink-0 ${
+                                diag.type === "warning" ? "text-amber-600" : "text-sky-600"
+                              }`}
+                            />
+                            <div className="flex-1 space-y-1">
+                              <h4 className="font-bold text-xs">{diag.title}</h4>
+                              <p className="text-[11px] leading-relaxed text-slate-700">{diag.message}</p>
+                            </div>
+                          </div>
+                          {diag.actions && diag.actions.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-200/60 pl-6">
+                              {diag.actions.map((act, actIdx) => (
+                                <button
+                                  key={actIdx}
+                                  type="button"
+                                  onClick={act.onClick}
+                                  className="px-2.5 py-1 rounded-md bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 text-[11px] font-semibold transition-colors cursor-pointer shadow-2xs"
+                                >
+                                  {act.label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                      {diag.actions && diag.actions.length > 0 && (
-                        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-200/60 pl-6">
-                          {diag.actions.map((act, actIdx) => (
-                            <button
-                              key={actIdx}
-                              type="button"
-                              onClick={act.onClick}
-                              className="px-2.5 py-1 rounded-md bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 text-[11px] font-semibold transition-colors cursor-pointer shadow-2xs"
-                            >
-                              {act.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                      ))}
                     </div>
-                  ))}
+                  )}
+
+                  {/* Official Email Subject Bar */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <label htmlFor="studio-email-subject" className="font-bold text-slate-800">
+                        {t("Official Email Subject Line", "Assunto Oficial do Email")}
+                      </label>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {subject.length} {t("characters", "caracteres")}
+                      </span>
+                    </div>
+                    <input
+                      type="text"
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      id="studio-email-subject"
+                      name="subject"
+                      autoComplete="on"
+                      placeholder={t("Enter email subject...", "Assunto da comunicação oficial...")}
+                      className="w-full rounded-xl border border-slate-300 px-4 py-2 text-xs sm:text-sm text-slate-900 font-medium focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none shadow-2xs bg-white"
+                    />
+                  </div>
+
+                  {/* Official Message Content Heading */}
+                  <div className="flex items-center justify-between text-xs pt-0.5">
+                    <span className="font-bold text-slate-800">
+                      {t("Official Message Content & Attachments", "Conteúdo Oficial da Mensagem & Anexos")}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {attachments.length} {t("attachment(s)", "anexo(s)")}
+                    </span>
+                  </div>
                 </div>
               )}
-              {/* Official Email Subject Bar */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <label htmlFor="studio-email-subject" className="font-bold text-slate-800">
-                    {t("Official Email Subject Line", "Assunto Oficial do Email")}
-                  </label>
-                  <span className="text-[10px] text-slate-400 font-mono">
-                    {subject.length} {t("characters", "caracteres")}
-                  </span>
-                </div>
-                <input
-                  type="text"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  id="studio-email-subject"
-                  name="subject"
-                  autoComplete="on"
-                  placeholder={t("Enter email subject...", "Assunto da comunicação oficial...")}
-                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-xs sm:text-sm text-slate-900 font-medium focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none shadow-2xs"
-                />
-              </div>
+            </div>
 
-              {/* Standard Professional Rich Message Editor */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <label htmlFor="studio-email-subject" className="font-bold text-slate-800">
-                    {t("Official Message Content & Attachments", "Conteúdo Oficial da Mensagem & Anexos")}
-                  </label>
-                  <span className="text-[10px] text-slate-400 font-mono">
-                    {attachments.length} {t("attachment(s)", "anexo(s)")}
-                  </span>
-                </div>
-                <div onFocusCapture={() => { lastEditor.current = "main"; }}><RichMessageEditor
+            {/* Tab 1: Professional Rich Message Editor */}
+            <div style={{ display: canvasTab === "edit" ? "block" : "none" }}>
+              <div onFocusCapture={() => { lastEditor.current = "main"; }}>
+                <RichMessageEditor
                   ref={editorHandle}
                   value={messageBody}
                   onChange={setMessageBody}
                   attachments={attachments}
                   onAttachmentsChange={setAttachments}
                   lang={lang}
+                  seamless
+                  stickyToolbar
+                  canvasMaxHeight="420px"
                   placeholder={t(
                     "Type your official letter here, edit the loaded template, or drag a template directly into this space...",
                     "Escreva a mensagem aqui, personalize o modelo carregado ou arraste um modelo para esta área..."
@@ -2080,7 +2127,6 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                   ]}
                 /></div>
               </div>
-            </div>
 
             {/* Tab 2: Live Official Branded Letterhead Preview */}
             <div style={{ display: canvasTab === "preview" ? "flex" : "none" }} className="p-6 sm:p-8 bg-slate-100/60 flex-col items-center space-y-4">
