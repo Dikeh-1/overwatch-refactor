@@ -46,6 +46,7 @@ type WorkspaceData = {
   cohort?: CareerCohort;
   role?: CareerRoleDefinition;
   applications: Application[];
+  allApplications?: Application[];
 };
 export default function RecruitmentWorkspace({
   cohortId,
@@ -101,30 +102,33 @@ export default function RecruitmentWorkspace({
         if (!response.ok)
           throw new Error(payload.error || "Unable to load workspace");
         if (request !== generation.current || signal?.aborted) return;
-        if (cohortId) setData(payload);
+        if (cohortId) setData({ ...payload, allApplications: payload.applications });
         else {
           const role = (payload.roles as CareerRoleDefinition[]).find((r) =>
             sameRole(r.id, roleId),
           );
           if (!role) throw new Error("Role not found");
           const catalog: CareerCohort[] = payload.cohorts;
+          const matchingCohorts = catalog.filter((c) => sameRole(c.roleId, role.id));
           const cohort =
             catalog.find((c) => c.id === role.activeCohortId) ||
-            catalog
-              .filter((c) => sameRole(c.roleId, role.id))
-              .sort((a, b) =>
-                (b.closedAt || b.openedAt).localeCompare(
-                  a.closedAt || a.openedAt,
-                ),
-              )[0];
+            matchingCohorts.find((c) => c.status === "active" && applicationsForCohort(payload.applications, c, catalog).length > 0) ||
+            matchingCohorts.find((c) => applicationsForCohort(payload.applications, c, catalog).length > 0) ||
+            matchingCohorts.sort((a, b) =>
+              (b.closedAt || b.openedAt || "").localeCompare(
+                a.closedAt || a.openedAt || "",
+              ),
+            )[0];
+          const cohortApps = cohort
+            ? applicationsForCohort(payload.applications, cohort, catalog)
+            : [];
           setData({
             role,
             cohort,
-            applications: cohort
-              ? applicationsForCohort(payload.applications, cohort, catalog)
-              : payload.applications.filter(
-                  (a: Application) => sameRole(a.role, role.id) && !a.cohortId,
-                ),
+            applications: cohortApps.length > 0
+              ? cohortApps
+              : payload.applications.filter((a: Application) => sameRole(a.role, role.id)),
+            allApplications: payload.applications,
           });
         }
       } catch (e) {
@@ -630,7 +634,7 @@ export default function RecruitmentWorkspace({
           <NextPhaseView cohortId={cohort?.id} roleId={role.id} />
         )}
         {!snapshotMode && tab === "communications" && (
-          <CommunicationsView applications={apps} cohortId={cohort?.id} roleId={role.id} />
+          <CommunicationsView applications={data?.allApplications || apps} cohortId={cohort?.id} roleId={role.id} />
         )}
       </div>
     </CohortRoleProvider>

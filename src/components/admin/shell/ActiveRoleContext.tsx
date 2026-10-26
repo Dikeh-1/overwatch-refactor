@@ -66,15 +66,18 @@ export const ActiveRoleProvider: React.FC<{
     return () => window.removeEventListener("admin:careers-updated", refresh);
   }, [refreshRoles]);
 
-  // Read saved active role ID from localStorage
+  // Read saved active role ID from localStorage or sync with first open role
   useEffect(() => {
     try {
       const saved = localStorage.getItem("overwatch_active_role");
       if (saved) {
         setActiveRoleIdState(saved);
+      } else if (roles.length > 0) {
+        const firstOpen = roles.find((r) => r.open);
+        if (firstOpen) setActiveRoleIdState(firstOpen.id);
       }
     } catch {}
-  }, []);
+  }, [roles]);
 
   const setActiveRoleId = useCallback((id: string) => {
     setActiveRoleIdState(id);
