@@ -178,6 +178,13 @@ async function handlePOST(request: Request) {
       communications,
     });
 
+    try {
+      const { bookingFollowUp } = await import("@/lib/communication-delivery");
+      await bookingFollowUp(updated);
+    } catch (e) {
+      console.error("Training follow-up error:", e);
+    }
+
     return Response.json({
       success: true,
       candidate: {

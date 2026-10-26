@@ -81,7 +81,12 @@ async function handlePOST(request: Request) {
       );
     }
 
-    if (body.followUp && (!includeBookingButton || !validFollowUp(body.followUp))) return Response.json({ error: "A booking follow-up needs a booking invitation and a subject and message. It cannot contain another booking link." }, { status: 400 });
+    if (body.followUp && !validFollowUp(body.followUp)) {
+      return Response.json(
+        { error: "A follow-up message needs a subject and message. It cannot contain another booking link." },
+        { status: 400 },
+      );
+    }
 
     if (testOnly) {
       const recipient = testEmail?.trim();

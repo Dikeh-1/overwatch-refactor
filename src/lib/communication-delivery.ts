@@ -9,11 +9,12 @@ import type { Application } from "./careers";
 import { getRecruitmentWorkspaceData } from "./careers-workspace-store";
 
 export const deliveryId = (key: string) => createHash("sha256").update(key).digest("hex");
-export type FollowUp = { trigger: "booking_confirmed"; subject: string; message: string };
+export type FollowUp = { trigger: "booking_confirmed" | "response_confirmed"; subject: string; message: string };
 export function validFollowUp(value: unknown): value is FollowUp {
   if (!value || typeof value !== "object") return false;
   const data = value as Partial<FollowUp>;
-  return data.trigger === "booking_confirmed" && typeof data.subject === "string" && Boolean(data.subject.trim()) && data.subject.length <= 1000 && typeof data.message === "string" && Boolean(data.message.trim()) && data.message.length <= 100000 && !/\{\{booking_link\}\}/.test(data.message);
+  const validTrigger = data.trigger === "booking_confirmed" || data.trigger === "response_confirmed";
+  return validTrigger && typeof data.subject === "string" && Boolean(data.subject.trim()) && data.subject.length <= 1000 && typeof data.message === "string" && Boolean(data.message.trim()) && data.message.length <= 100000 && !/\{\{booking_link\}\}/.test(data.message);
 }
 export async function enqueueStudioMail(candidate: Application, data: MailItem["data"], scope: string, campaignId: string): Promise<MailItem> {
   const id = deliveryId(`${campaignId}:${candidate.id}`), existing = await getMail(id);
