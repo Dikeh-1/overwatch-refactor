@@ -4,7 +4,8 @@ import { mkdir, readFile, writeFile, rename, unlink } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { getCareersPool as getPgPool } from "./careers-db";
-import type { CareerRoleDefinition, CareerCohort } from "./careers-models";
+import type { CareerRoleDefinition, CareerCohort, TrainingSlotGroup, TrainingSlotConfig } from "./careers-models";
+export type { TrainingSlotGroup, TrainingSlotConfig } from "./careers-models";
 import { DEFAULT_TEST_SLOTS } from "./careers";
 
 const isServerless = Boolean(
@@ -334,23 +335,6 @@ export async function getConfiguredRoles(): Promise<CareerRoleDefinition[]> {
 }
 
 
-export interface TrainingSlotGroup {
-  id: string;
-  name: string;
-  schedule: string;
-  timeRange: string;
-  evaluationTime: string;
-  capacity: number;
-  enabled: boolean;
-}
-
-export interface TrainingSlotConfig {
-  roleId?: string;
-  title: string;
-  location: string;
-  groups: TrainingSlotGroup[];
-}
-
 export const DEFAULT_TRAINING_SLOT_CONFIG: TrainingSlotConfig = {
   roleId: "cctv",
   title: "Formação em Consciência Situacional e Identificação de Ameaças através de CCTV",
@@ -377,11 +361,33 @@ export const DEFAULT_TRAINING_SLOT_CONFIG: TrainingSlotConfig = {
   ],
 };
 
-export async function getConfiguredTrainingSlots(): Promise<TrainingSlotConfig> {
+export async function getConfiguredTrainingSlots(cohortId?: string | null): Promise<TrainingSlotConfig> {
+  if (cohortId) {
+    try {
+      const cohorts = await getConfiguredCohorts();
+      const cohort = cohorts.find((c) => c.id === cohortId);
+      if (cohort?.trainingSlots && Array.isArray(cohort.trainingSlots.groups) && cohort.trainingSlots.groups.length > 0) {
+        return cohort.trainingSlots;
+      }
+    } catch {}
+  }
   return getSystemConfig<TrainingSlotConfig>("training_slots", DEFAULT_TRAINING_SLOT_CONFIG);
 }
 
-export async function setConfiguredTrainingSlots(config: TrainingSlotConfig): Promise<TrainingSlotConfig> {
+export async function setConfiguredTrainingSlots(
+  config: TrainingSlotConfig,
+  cohortId?: string | null
+): Promise<TrainingSlotConfig> {
+  if (cohortId) {
+    try {
+      const cohorts = await getConfiguredCohorts();
+      const idx = cohorts.findIndex((c) => c.id === cohortId);
+      if (idx >= 0) {
+        cohorts[idx] = { ...cohorts[idx], trainingSlots: config };
+        await setConfiguredCohorts(cohorts);
+      }
+    } catch {}
+  }
   return setSystemConfig<TrainingSlotConfig>("training_slots", config);
 }
 

@@ -6,6 +6,8 @@ import {
   setConfiguredTrainingSlots,
   type TrainingSlotConfig,
 } from "@/lib/careers-config-store";
+import { getRecruitmentWorkspaceData } from "@/lib/careers-workspace-store";
+import { saveCohort } from "@/lib/careers-campaign-store";
 import { isTerminal } from "@/lib/careers-workflow";
 
 export const dynamic = "force-dynamic";
@@ -16,10 +18,42 @@ async function handleGET(request: Request) {
   }
 
   try {
-    const config = await getConfiguredTrainingSlots();
+    const params = new URL(request.url).searchParams;
+    const cohortId = params.get("cohortId");
+    const roleId = params.get("roleId");
+
+    const workspace = await getRecruitmentWorkspaceData();
+    const roles = workspace.roles.map((r) => ({
+      id: r.id,
+      en: r.en,
+      pt: r.pt,
+      open: r.open,
+      activeCohortId: r.activeCohortId,
+    }));
+    const cohorts = workspace.cohorts
+      .filter((c) => !c.unassigned)
+      .map((c) => ({
+        id: c.id,
+        roleId: c.roleId,
+        name: c.name,
+        openedAt: c.openedAt,
+        closedAt: c.closedAt,
+        status: c.status,
+      }));
+
+    const selectedCohort = cohortId
+      ? workspace.cohorts.find((c) => c.id === cohortId)
+      : roleId
+      ? workspace.cohorts.find((c) => c.roleId === roleId)
+      : workspace.cohorts.find((c) => c.trainingSlots && c.trainingSlots.groups?.length > 0) ||
+        workspace.cohorts.find((c) => c.status === "active") ||
+        workspace.cohorts[0];
+
+    const activeCohortId = selectedCohort?.id || cohortId || null;
+    const config = await getConfiguredTrainingSlots(activeCohortId);
     const applications = await getApplications();
 
-    // Calculate booked counts per group
+    // Calculate booked counts per group for this cohort/role
     const stats: Record<string, number> = {};
     const bookedCandidates: Record<string, Array<{ id: string; name: string; email: string; bookedAt?: string }>> = {};
 
@@ -28,7 +62,11 @@ async function handleGET(request: Request) {
       bookedCandidates[g.id] = [];
     });
 
-    applications.forEach((a) => {
+    const relevantApps = activeCohortId
+      ? applications.filter((a) => a.cohortId === activeCohortId || (selectedCohort && a.role === selectedCohort.roleId))
+      : applications;
+
+    relevantApps.forEach((a) => {
       if (a.trainingGroupId && !isTerminal(a)) {
         stats[a.trainingGroupId] = (stats[a.trainingGroupId] || 0) + 1;
         if (!bookedCandidates[a.trainingGroupId]) bookedCandidates[a.trainingGroupId] = [];
@@ -43,6 +81,9 @@ async function handleGET(request: Request) {
 
     return Response.json(
       {
+        roles,
+        cohorts,
+        selectedCohortId: activeCohortId,
         config,
         stats,
         bookedCandidates,
@@ -62,7 +103,7 @@ async function handlePOST(request: Request) {
 
   try {
     const body = await request.json();
-    const { groups, title, location, roleId } = body;
+    const { groups, title, location, roleId, cohortId } = body;
 
     if (!Array.isArray(groups) || groups.length === 0) {
       return Response.json({ error: "Pelo menos um grupo de formação deve ser configurado." }, { status: 400 });
@@ -95,11 +136,24 @@ async function handlePOST(request: Request) {
       groups: cleanGroups,
     };
 
-    const saved = await setConfiguredTrainingSlots(newConfig);
+    if (cohortId) {
+      try {
+        const workspace = await getRecruitmentWorkspaceData();
+        const cohort = workspace.cohorts.find((c) => c.id === cohortId);
+        if (cohort) {
+          await saveCohort({ ...cohort, trainingSlots: newConfig });
+        }
+      } catch (err) {
+        console.warn("Could not attach trainingSlots to cohort:", err);
+      }
+    }
+
+    const saved = await setConfiguredTrainingSlots(newConfig, cohortId);
 
     return Response.json({
       success: true,
       config: saved,
+      cohortId: cohortId || null,
     });
   } catch (err: any) {
     console.error("POST training-slots error:", err);

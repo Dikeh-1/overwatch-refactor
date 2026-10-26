@@ -157,6 +157,7 @@ export function RoleTestSlotSettings() {
           "Horário e capacidade por turno guardados em tempo real. As páginas de agendamento e listas de teste deste lote seleccionado reflectem estas alterações imediatamente."
         )
       );
+      setTimeout(() => setNotice(""), 4000);
       window.dispatchEvent(new Event("admin:careers-updated"));
     } catch (error) {
       setError((error as Error).message);

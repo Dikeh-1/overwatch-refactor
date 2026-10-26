@@ -77,7 +77,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ lang: propLang }) =>
       );
     } finally {
       setSessionRenewing(false);
-      setTimeout(() => setSessionRenewNotice(""), 6000);
+      setTimeout(() => setSessionRenewNotice(""), 4000);
     }
   };
 
@@ -243,6 +243,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ lang: propLang }) =>
               ),
         );
       }
+      setTimeout(() => setQuotaNotice(""), 4000);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to save application quota");
     } finally {
@@ -266,6 +267,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ lang: propLang }) =>
         await handleSaveApplicationQuota();
       }
       setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 4000);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to save settings");
     } finally {
@@ -532,40 +534,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ lang: propLang }) =>
               </div>
             )}
           </div>
-        </div>
-
-        {/* Default Session Capacity (for Candidate Exam Test Sessions) */}
-        <div className="pt-3 border-t border-slate-100">
-          <div className="flex items-center justify-between gap-2 mb-1">
-            <label className="block text-xs font-semibold text-slate-700">
-              {t("Default Test Session Capacity (Per Slot Fallback)", "Capacidade Padrão por Turno de Teste Presencial")}
-            </label>
-            <span className="text-[10px] text-slate-400 font-medium">
-              {t("Candidate Exam Seats · Not Login Timeout", "Vagas de Exame · Não é o Tempo de Login")}
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              min={1}
-              max={200}
-              value={defaultQuota}
-              onChange={(e) => {
-                setDefaultQuota(Number(e.target.value));
-                setSavedSuccess(false);
-              }}
-              className="w-24 px-3 py-1.5 text-xs rounded border border-slate-300 font-bold text-slate-900"
-            />
-            <span className="text-xs text-slate-500">
-              {t("candidates per test session", "candidatos por turno de teste")}
-            </span>
-          </div>
-          <p className="text-[11px] text-slate-400 mt-1">
-            {t(
-              "Configures classroom seats for applicant bookings. Booking for any test slot automatically closes 1 day prior at 11:59 PM.",
-              "Define o número de lugares por turno presencial. As inscrições encerram automaticamente 1 dia antes às 23h59.",
-            )}
-          </p>
         </div>
 
         <div className="pt-4 border-t border-slate-100">

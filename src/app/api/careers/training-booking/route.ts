@@ -13,8 +13,6 @@ export async function GET(request: Request) {
     const token = url.searchParams.get("token");
 
     const applications = await getApplications();
-    const config = await getConfiguredTrainingSlots();
-
     let candidate = null;
     if (candidateId) {
       candidate = applications.find(
@@ -30,6 +28,8 @@ export async function GET(request: Request) {
       return Response.json({ error: "Candidata não encontrada ou link inválido." }, { status: 404 });
     }
 
+    const config = await getConfiguredTrainingSlots(candidate?.cohortId);
+
     // Tally real-time bookings per group
     const stats: Record<string, number> = {};
     config.groups.forEach((g) => {
@@ -37,7 +37,8 @@ export async function GET(request: Request) {
     });
 
     applications.forEach((a) => {
-      if (a.trainingGroupId && !isTerminal(a)) {
+      const matchesCohort = !candidate?.cohortId || a.cohortId === candidate.cohortId || (candidate?.role && a.role === candidate.role);
+      if (matchesCohort && a.trainingGroupId && !isTerminal(a)) {
         stats[a.trainingGroupId] = (stats[a.trainingGroupId] || 0) + 1;
       }
     });
@@ -104,7 +105,7 @@ async function handlePOST(request: Request) {
       return Response.json({ error: "Candidata não encontrada ou convite expirado." }, { status: 404 });
     }
 
-    const config = await getConfiguredTrainingSlots();
+    const config = await getConfiguredTrainingSlots(candidate.cohortId);
     const group = config.groups.find((g) => g.id === groupId);
 
     if (!group) {
@@ -115,9 +116,13 @@ async function handlePOST(request: Request) {
       return Response.json({ error: "Este grupo não se encontra activo para inscrições." }, { status: 400 });
     }
 
-    // Concurrency / Capacity check
+    // Concurrency / Capacity check scoped to cohort/role
     const currentBookedCount = applications.filter(
-      (a) => a.id !== candidate.id && a.trainingGroupId === group.id && !isTerminal(a)
+      (a) =>
+        a.id !== candidate.id &&
+        a.trainingGroupId === group.id &&
+        (!candidate.cohortId || a.cohortId === candidate.cohortId || a.role === candidate.role) &&
+        !isTerminal(a)
     ).length;
 
     if (currentBookedCount >= group.capacity) {

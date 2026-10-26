@@ -48,6 +48,23 @@ export interface CareerRoleDefinition {
   updatedAt: string;
 }
 
+export interface TrainingSlotGroup {
+  id: string;
+  name: string;
+  schedule: string;
+  timeRange: string;
+  evaluationTime: string;
+  capacity: number;
+  enabled: boolean;
+}
+
+export interface TrainingSlotConfig {
+  roleId?: string;
+  title: string;
+  location: string;
+  groups: TrainingSlotGroup[];
+}
+
 export interface CareerCohort {
   id: string;
   roleId: string;
@@ -65,6 +82,7 @@ export interface CareerCohort {
   testSlots?: string[];
   slotQuota?: number;
   slotQuotas?: Record<string, number>;
+  trainingSlots?: TrainingSlotConfig;
   applicationQuota?: number | null;
   historicalAttendance?: { applicationIds: string[]; confirmedAt: string; basis: "admin_confirmed_booked_attendees"; previousAbsenceIds?: string[] };
   historicalTestResults?: {

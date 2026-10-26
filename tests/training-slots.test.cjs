@@ -104,3 +104,86 @@ test('training slot configuration supports adding more groups dynamically (Group
     process.chdir(cwd);
   }
 });
+
+test('training slot configuration isolates pipelines per recruitment cycle (cohort)', async () => {
+  const cwd = process.cwd();
+  const temp = mkdtempSync(path.join(os.tmpdir(), 'overwatch-cohort-training-test-'));
+  process.chdir(temp);
+  try {
+    const cohortAConfig = {
+      roleId: 'cctv',
+      title: 'Formação CCO Ciclo 1',
+      location: 'Sala 1',
+      groups: [
+        {
+          id: 'group_a',
+          name: 'GRUPO A — Ciclo 1',
+          schedule: '2 a 5 Nov',
+          timeRange: '08h00–12h00',
+          evaluationTime: '09h00–11h00',
+          capacity: 10,
+          enabled: true,
+        },
+      ],
+    };
+
+    const cohortBConfig = {
+      roleId: 'manager',
+      title: 'Formação Gestor Técnico Ciclo 2',
+      location: 'Sala 2',
+      groups: [
+        {
+          id: 'group_special',
+          name: 'GRUPO GESTORES',
+          schedule: '10 a 12 Nov',
+          timeRange: '14h00–18h00',
+          evaluationTime: '15h00–17h00',
+          capacity: 5,
+          enabled: true,
+        },
+      ],
+    };
+
+    // Store Cohort A and Cohort B in configured cohorts
+    const { setConfiguredCohorts } = require('../src/lib/careers-config-store.ts');
+    await setConfiguredCohorts([
+      {
+        id: 'cohort-1',
+        roleId: 'cctv',
+        name: 'Ciclo 1',
+        openedAt: '2026-10-01',
+        status: 'active',
+        stages: [],
+        screeningRules: [],
+        trainingSlots: cohortAConfig,
+      },
+      {
+        id: 'cohort-2',
+        roleId: 'manager',
+        name: 'Ciclo 2',
+        openedAt: '2026-10-15',
+        status: 'active',
+        stages: [],
+        screeningRules: [],
+        trainingSlots: cohortBConfig,
+      },
+    ]);
+
+    const retrievedA = await getConfiguredTrainingSlots('cohort-1');
+    const retrievedB = await getConfiguredTrainingSlots('cohort-2');
+
+    assert.equal(retrievedA.title, 'Formação CCO Ciclo 1');
+    assert.equal(retrievedA.groups[0].name, 'GRUPO A — Ciclo 1');
+    assert.equal(retrievedA.groups[0].capacity, 10);
+
+    assert.equal(retrievedB.title, 'Formação Gestor Técnico Ciclo 2');
+    assert.equal(retrievedB.groups[0].name, 'GRUPO GESTORES');
+    assert.equal(retrievedB.groups[0].capacity, 5);
+
+    // Default configuration remains untouched
+    const retrievedDefault = await getConfiguredTrainingSlots(null);
+    assert.ok(retrievedDefault.groups.length >= 2);
+  } finally {
+    process.chdir(cwd);
+  }
+});

@@ -15,6 +15,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useAdminLanguage } from "../shell/AdminLanguageContext";
+import { cycleLabel } from "@/lib/careers-cycle-label";
 
 export interface TrainingSlotGroupItem {
   id: string;
@@ -26,12 +27,19 @@ export interface TrainingSlotGroupItem {
   enabled: boolean;
 }
 
+type CatalogRole = { id: string; en: string; pt: string; open?: boolean; activeCohortId?: string | null };
+type CatalogCohort = { id: string; roleId: string; name: string; openedAt: string; closedAt?: string | null; status: string };
+
 export function RoleTrainingSlotSettings() {
-  const { t } = useAdminLanguage();
+  const { lang, t } = useAdminLanguage();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [roles, setRoles] = useState<CatalogRole[]>([]);
+  const [cohorts, setCohorts] = useState<CatalogCohort[]>([]);
+  const [cycleId, setCycleId] = useState<string>("");
 
   const [title, setTitle] = useState("Formação em Consciência Situacional e Identificação de Ameaças através de CCTV");
   const [location, setLocation] = useState("Av Paulo Samuel Khankhomba 1948");
@@ -39,16 +47,27 @@ export function RoleTrainingSlotSettings() {
   const [stats, setStats] = useState<Record<string, number>>({});
   const [bookedCandidates, setBookedCandidates] = useState<Record<string, Array<{ id: string; name: string; email: string; bookedAt?: string }>>>({});
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (targetCohortId?: string) => {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch("/api/admin/careers/training-slots", { cache: "no-store" });
+      const url = targetCohortId
+        ? `/api/admin/careers/training-slots?cohortId=${encodeURIComponent(targetCohortId)}&t=${Date.now()}`
+        : `/api/admin/careers/training-slots?t=${Date.now()}`;
+      const res = await fetch(url, { cache: "no-store" });
       const data = await res.json();
 
       if (!res.ok || data.error) {
         setError(data.error || "Failed to load training slot configuration");
         return;
+      }
+
+      if (data.roles) setRoles(data.roles);
+      if (data.cohorts) setCohorts(data.cohorts);
+      if (targetCohortId) {
+        setCycleId(targetCohortId);
+      } else if (data.selectedCohortId) {
+        setCycleId(data.selectedCohortId);
       }
 
       if (data.config) {
@@ -69,6 +88,13 @@ export function RoleTrainingSlotSettings() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const handleCohortSelect = (id: string) => {
+    setCycleId(id);
+    setNotice(null);
+    setError(null);
+    void loadData(id);
+  };
 
   const handleAddGroup = () => {
     const nextLetter = String.fromCharCode(65 + groups.length); // A, B, C, D...
@@ -99,11 +125,15 @@ export function RoleTrainingSlotSettings() {
     setError(null);
     setNotice(null);
 
+    const selectedCohort = cohorts.find((c) => c.id === cycleId);
+
     try {
       const res = await fetch("/api/admin/careers/training-slots", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          cohortId: cycleId || undefined,
+          roleId: selectedCohort?.roleId,
           title,
           location,
           groups,
@@ -117,10 +147,11 @@ export function RoleTrainingSlotSettings() {
         return;
       }
 
-      setNotice(t("Training groups and slot quotas successfully saved.", "Grupos de formação e quotas de vagas guardados com sucesso."));
+      setNotice(t("Training groups and slot quotas successfully saved for this recruitment cycle.", "Grupos de formação e quotas de vagas guardados com sucesso para este lote."));
       if (data.config?.groups) {
         setGroups(data.config.groups);
       }
+      setTimeout(() => setNotice(null), 4000);
     } catch (err: any) {
       console.error("Save error:", err);
       setError("Erro ao guardar dados.");
@@ -160,7 +191,7 @@ export function RoleTrainingSlotSettings() {
             className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
           >
             <Plus size={13} />
-            <span>{t("+ Add Group", "+ Adicionar Grupo")}</span>
+            <span>{t("Add Group", "Adicionar Grupo")}</span>
           </button>
           <button
             type="button"
@@ -176,7 +207,7 @@ export function RoleTrainingSlotSettings() {
 
       {/* Notices */}
       {notice && (
-        <div className="m-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 flex items-center gap-2">
+        <div className="m-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 flex items-center gap-2 animate-in fade-in duration-150">
           <CheckCircle2 size={14} className="shrink-0 text-emerald-600" />
           <span>{notice}</span>
         </div>
@@ -190,6 +221,34 @@ export function RoleTrainingSlotSettings() {
 
       {/* Main Settings Form */}
       <div className="p-4 sm:p-5 space-y-5">
+        {/* Role / Recruitment Cycle Selector */}
+        <div className="pb-4 border-b border-slate-100">
+          <label className="block text-xs font-semibold text-slate-700">
+            {t("Role / recruitment cycle", "Vaga / lote de recrutamento")}
+            <select
+              aria-label={t("Role / recruitment cycle", "Vaga / lote de recrutamento")}
+              disabled={loading || saving}
+              value={cycleId}
+              onChange={(e) => handleCohortSelect(e.target.value)}
+              className="mt-1.5 w-full rounded-lg border border-slate-300 p-2 text-xs font-medium text-slate-900 bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+            >
+              <option value="">{t("Choose a recruitment cycle", "Seleccione um lote de recrutamento")}</option>
+              {cohorts.map((cohort) => {
+                const role = roles.find((r) => r.id === cohort.roleId) || {
+                  id: cohort.roleId,
+                  en: cohort.roleId,
+                  pt: cohort.roleId,
+                };
+                return (
+                  <option key={cohort.id} value={cohort.id}>
+                    {cycleLabel(cohort as any, role as any, lang)}
+                  </option>
+                );
+              })}
+            </select>
+          </label>
+        </div>
+
         {/* Global Training Metadata */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 border-b border-slate-100">
           <div>
