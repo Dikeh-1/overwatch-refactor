@@ -40,5 +40,5 @@ export default function CommunicationsPage() {
     );
   }
 
-  return <CommunicationsView applications={applications} />;
+  return <CommunicationsView applications={applications} roleId={workspaceRole && workspaceRole !== "all" ? workspaceRole : undefined} cohortId={cohortId || undefined} />;
 }

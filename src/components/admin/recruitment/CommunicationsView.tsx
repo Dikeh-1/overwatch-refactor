@@ -53,6 +53,7 @@ interface CommunicationsViewProps {
   fixedRecipient?: Application;
   onSent?: () => Promise<void>;
   cohortId?: string;
+  roleId?: string;
   lang?: "pt" | "en";
 }
 
@@ -80,6 +81,7 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
   fixedRecipient,
   onSent,
   cohortId,
+  roleId: propRoleId,
   lang: propLang,
 }) => {
   const { lang: contextLang } = useAdminLanguage();
@@ -93,20 +95,27 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
   const [includeBookingButton, setIncludeBookingButton] = useState(false);
 
   // Audience Target State
-  const [selectedRole, setSelectedRole] = useState<string>(fixedRecipient?.role || activeRoleId || "cctv");
-  const [targetAudience, setTargetAudience] = useState<string>(fixedRecipient ? "individual" : "all_role");
+  const initialRole = fixedRecipient?.role || propRoleId || activeRoleId || roles[0]?.id || "cctv";
+  const [selectedRole, setSelectedRole] = useState<string>(initialRole);
+  const [targetAudience, setTargetAudience] = useState<string>(fixedRecipient ? "individual" : "shortlisted_unbooked");
   const [individualSearch, setIndividualSearch] = useState("");
   const [selectedIndividualId, setSelectedIndividualId] = useState<string>(fixedRecipient?.id || "");
   const [selectedSlot, setSelectedSlot] = useState<string>("");
 
+  useEffect(() => {
+    if (propRoleId && propRoleId !== selectedRole) {
+      setSelectedRole(propRoleId);
+    }
+  }, [propRoleId]);
+
   // Role capability flags for active selection
   const currentRoleDef = useMemo(() => {
-    return roles.find((r) => r.id === selectedRole) || (selectedRole === "all" ? null : activeRole);
+    return roles.find((r) => r.id === selectedRole) || activeRole;
   }, [roles, selectedRole, activeRole]);
 
   const pipelineStages = useMemo(() => {
-    return currentRoleDef?.pipelineStages || (selectedRole === "all" ? ["applications", "screening", "testing", "gate_checkin", "next_phase", "interview", "hired"] : ["applications", "screening", "interview", "hired"]);
-  }, [currentRoleDef, selectedRole]);
+    return currentRoleDef?.pipelineStages || ["applications", "screening", "interview", "hired"];
+  }, [currentRoleDef]);
 
   const roleHasTesting = pipelineStages.includes("testing") || selectedRole === "cctv_technical_manager";
   const roleHasNextPhase = pipelineStages.includes("next_phase");
@@ -182,16 +191,16 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
 
   // Sync role change with active role
   useEffect(() => {
-    if (fixedRecipient) return;
+    if (fixedRecipient || propRoleId) return;
     if (activeRoleId) {
       setSelectedRole(activeRoleId);
       const def = roles.find((r) => r.id === activeRoleId);
       const st = def?.pipelineStages || [];
       if (!st.includes("next_phase")) {
-        setTargetAudience((prev) => (prev === "next_phase" ? "all_role" : prev));
+        setTargetAudience((prev) => (prev === "next_phase" ? "shortlisted_unbooked" : prev));
       }
     }
-  }, [activeRoleId, roles, fixedRecipient]);
+  }, [activeRoleId, roles, fixedRecipient, propRoleId]);
 
   // Import browser-only templates once, then use the audited shared store.
   useEffect(() => {
@@ -682,6 +691,15 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
     return out;
   };
 
+  const isNonTerminal = (a: Application) =>
+    !isTerminal(a) &&
+    a.status !== "archived" &&
+    a.status !== "not_advancing" &&
+    a.status !== "disqualified" &&
+    a.status !== "rejected" &&
+    a.status !== "withdrawn" &&
+    a.status !== "no_show";
+
   const targetCandidates = useMemo(() => {
     if (fixedRecipient) return applications.filter(a => a.id === fixedRecipient.id && (!includeBookingButton || canReceiveTestInvitation(a)));
     if (targetAudience === "individual") {
@@ -689,33 +707,37 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       return applications.filter(a => a.id === selectedIndividualId && (!includeBookingButton || canReceiveTestInvitation(a)));
     }
 
-    const roleApps = applications.filter(a => !selectedRole || selectedRole === "all" || sameRole(a.role, selectedRole));
-    const contactedEmails = new Set(roleApps.filter(hasSentCommunication).map(a => a.email.trim().toLowerCase()));
-    const bookedEmails = new Set(roleApps.filter(a => Boolean(a.testSlot) && a.status !== "archived").map(a => a.email.trim().toLowerCase()));
+    const roleApps = applications.filter(a => sameRole(a.role, selectedRole));
+    // Strictly isolate non-terminal active applicants in this role - no archived or rejected applicants
+    const activeRoleApps = roleApps.filter(isNonTerminal);
 
-    let pool = includeBookingButton ? roleApps.filter(canReceiveTestInvitation) : roleApps;
+    let pool = includeBookingButton ? activeRoleApps.filter(canReceiveTestInvitation) : activeRoleApps;
 
     if (targetAudience === "next_phase" || targetAudience === "next_phase_confirmed") return deduplicateByEmail(pool.filter(isConfirmed));
     if (targetAudience === "next_phase_awaiting") return deduplicateByEmail(pool.filter(isAwaiting));
     if (targetAudience === "next_phase_all") return deduplicateByEmail(pool.filter(isNextPhase));
     if (targetAudience === "screened") return deduplicateByEmail(pool.filter(isQualified));
-    if (targetAudience === "tested") return deduplicateByEmail(pool.filter(hasTested));
+    if (targetAudience === "tested") return deduplicateByEmail(roleApps.filter(a => !isTerminal(a) && hasTested(a)));
     if (targetAudience === "interview") return deduplicateByEmail(pool.filter((a) => a.status === "interview"));
     if (targetAudience === "hired") return deduplicateByEmail(pool.filter((a) => a.status === "hired"));
 
     if (targetAudience === "shortlisted_unbooked") {
-      return deduplicateByEmail(pool.filter((a) => !a.testSlot && a.status !== "archived" && a.status !== "disqualified"));
+      return deduplicateByEmail(pool.filter((a) => !a.testSlot && !hasTested(a) && !isNextPhase(a)));
     }
 
     if (targetAudience === "booked_confirmed") {
-      let list = pool.filter((a) => Boolean(a.testSlot) && a.status !== "archived");
+      let list = pool.filter((a) => Boolean(a.testSlot) && !hasTested(a));
       if (selectedSlot) {
         list = list.filter((a) => a.testSlot && normalizeSlot(a.testSlot) === normalizeSlot(selectedSlot));
       }
       return deduplicateByEmail(list);
     }
 
-    return deduplicateByEmail(pool.filter((a) => a.status !== "archived" && a.status !== "disqualified" && !hasSentCommunication(a)));
+    if (targetAudience === "all_active") {
+      return deduplicateByEmail(pool);
+    }
+
+    return deduplicateByEmail(pool.filter((a) => !a.testSlot && !hasTested(a) && !isNextPhase(a)));
   }, [applications, fixedRecipient, targetAudience, selectedRole, selectedIndividualId, selectedSlot, includeBookingButton]);
 
   // Distinct test slots for slot filter
@@ -829,8 +851,10 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
         payload.audienceFilter = "invited_unconfirmed";
       } else if (targetAudience === "booked_confirmed") {
         payload.audienceFilter = "booked_confirmed";
+      } else if (targetAudience === "all_active") {
+        payload.audienceFilter = "all_active";
       } else {
-        payload.audienceFilter = "all_applied";
+        payload.audienceFilter = "invited_unconfirmed";
       }
 
       const res = await fetch("/api/admin/careers/custom-broadcast", {
@@ -903,6 +927,9 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
     if (targetAudience === "shortlisted_unbooked") {
       return `${targetCandidates.length} ${t("Shortlisted Candidates (Pending Booking)", "Candidatos Triados (Pendente Agendamento)")}`;
     }
+    if (targetAudience === "all_active") {
+      return `${targetCandidates.length} ${t("All Active Candidates in this Role", "Todos os Candidatos Ativos nesta Vaga")}`;
+    }
     return `${targetCandidates.length} ${t("Candidates in Role Cohort", "Candidatos na Vaga")}`;
   }, [targetAudience, selectedIndividualId, applications, targetCandidates, t]);
 
@@ -966,7 +993,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
     const hasBookingLink = messageBody.includes(BOOKING_TOKEN) || includeBookingButton;
 
     // Diagnostic 1: Next phase links in pre-test audience
-    if (hasNextPhaseLink && (targetAudience === "shortlisted_unbooked" || targetAudience === "all_role" || targetAudience === "screened")) {
+    if (hasNextPhaseLink && (targetAudience === "shortlisted_unbooked" || targetAudience === "all_active" || targetAudience === "screened")) {
       diagnostics.push({
         type: "warning",
         title: t(
@@ -1025,7 +1052,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
     }
 
     // Diagnostic 3: Score variable in unscreened audience
-    if (messageBody.includes("{{score}}") && (targetAudience === "shortlisted_unbooked" || targetAudience === "screened" || targetAudience === "all_role")) {
+    if (messageBody.includes("{{score}}") && (targetAudience === "shortlisted_unbooked" || targetAudience === "screened" || targetAudience === "all_active")) {
       diagnostics.push({
         type: "info",
         title: t("Dynamic Variable Notice: {{score}}", "Aviso de Variável: {{score}}"),
@@ -1214,22 +1241,22 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                 {t("Role Campaign:", "Vaga de Recrutamento:")}
               </label>
               <select
+                aria-label={t("Target role campaign", "Vaga alvo")}
                 value={selectedRole}
                 onChange={(e) => {
                   const newRole = e.target.value;
                   setSelectedRole(newRole);
                   const def = roles.find((r) => r.id === newRole);
                   const st = def?.pipelineStages || [];
-                  if (!st.includes("next_phase") && targetAudience === "next_phase") {
-                    setTargetAudience((prev) => (prev === "next_phase" ? "all_role" : prev));
+                  if (!st.includes("next_phase") && (targetAudience === "next_phase" || targetAudience === "next_phase_confirmed" || targetAudience === "next_phase_awaiting" || targetAudience === "next_phase_all")) {
+                    setTargetAudience("shortlisted_unbooked");
                   }
                   if (!st.includes("testing") && (targetAudience === "shortlisted_unbooked" || targetAudience === "booked_confirmed")) {
-                    setTargetAudience((prev) => (prev === "next_phase" ? "all_role" : prev));
+                    setTargetAudience(st.includes("next_phase") ? "next_phase" : "all_active");
                   }
                 }}
                 className="w-full text-xs rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 font-medium focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
               >
-                <option value="all">{t("All Roles / Global", "Todas as Vagas / Global")}</option>
                 {roles.map((r) => (
                   <option key={r.id} value={r.id}>
                     {lang === "en" ? r.en || r.pt : r.pt || r.en}
@@ -1245,22 +1272,20 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
               </label>
               <div className="grid grid-cols-1 gap-1.5 text-xs">
                 {(() => {
-                  const rawRolePool = applications.filter((a) => selectedRole === "all" || sameRole(a.role, selectedRole));
-                  const uncontactedCount = rawRolePool.filter((a) => a.status !== "archived" && a.status !== "disqualified" && !hasSentCommunication(a)).length;
-                  const unbookedCount = rawRolePool.filter((a) => !a.testSlot && a.status !== "archived" && a.status !== "disqualified").length;
-                  const bookedCount = rawRolePool.filter((a) => Boolean(a.testSlot) && a.status !== "archived").length;
-                  const testedCount = rawRolePool.filter(hasTested).length;
-                  const nextPhaseConfirmedCount = rawRolePool.filter(isConfirmed).length;
-                  const nextPhaseAwaitingCount = rawRolePool.filter(isAwaiting).length;
-                  const nextPhaseAllCount = rawRolePool.filter(isNextPhase).length;
-                  const interviewCount = rawRolePool.filter((a) => a.status === "interview").length;
-                  const hiredCount = rawRolePool.filter((a) => a.status === "hired").length;
-                  const list: { id: string; label: string }[] = [];
+                  const roleApps = applications.filter((a) => sameRole(a.role, selectedRole));
+                  const activeRolePool = roleApps.filter(isNonTerminal);
 
-                  list.push({
-                    id: "all_role",
-                    label: t(`All Applicants in this Role · Uncontacted (${uncontactedCount})`, `Todas as Candidaturas desta Vaga · Por Contactar (${uncontactedCount})`),
-                  });
+                  const unbookedCount = deduplicateByEmail(activeRolePool.filter((a) => !a.testSlot && !hasTested(a) && !isNextPhase(a))).length;
+                  const bookedCount = deduplicateByEmail(activeRolePool.filter((a) => Boolean(a.testSlot) && !hasTested(a))).length;
+                  const testedCount = deduplicateByEmail(roleApps.filter((a) => !isTerminal(a) && hasTested(a))).length;
+                  const nextPhaseConfirmedCount = deduplicateByEmail(activeRolePool.filter(isConfirmed)).length;
+                  const nextPhaseAwaitingCount = deduplicateByEmail(activeRolePool.filter(isAwaiting)).length;
+                  const nextPhaseAllCount = deduplicateByEmail(activeRolePool.filter(isNextPhase)).length;
+                  const interviewCount = deduplicateByEmail(activeRolePool.filter((a) => a.status === "interview")).length;
+                  const hiredCount = deduplicateByEmail(activeRolePool.filter((a) => a.status === "hired")).length;
+                  const allActiveCount = deduplicateByEmail(activeRolePool).length;
+
+                  const list: { id: string; label: string }[] = [];
 
                   list.push(
                     {
@@ -1294,13 +1319,16 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                     {
                       id: "hired",
                       label: t(`Hired & Admitted (${hiredCount})`, `Contratados & Admitidos (${hiredCount})`),
+                    },
+                    {
+                      id: "all_active",
+                      label: t(`All Active Candidates in this Role (${allActiveCount})`, `Todos os Candidatos Ativos desta Vaga (${allActiveCount})`),
+                    },
+                    {
+                      id: "individual",
+                      label: t("Individual Specific Applicant", "Candidato Específico (Individual)"),
                     }
                   );
-
-                  list.push({
-                    id: "individual",
-                    label: t("Individual Specific Applicant", "Candidato Específico (Individual)"),
-                  });
 
                   return list;
                 })().map((aud) => (

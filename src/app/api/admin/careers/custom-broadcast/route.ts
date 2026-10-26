@@ -8,7 +8,7 @@ import { isPastDateSlot, isSlotBookingExpired } from "@/lib/careers";
 import { auditRequest } from "@/lib/admin-activity";
 import crypto from "node:crypto";
 import { getRecruitmentWorkspaceData } from "@/lib/careers-workspace-store";
-import { applicationsForCohort, sameRole, canReceiveTestInvitation, hasSentCommunication, isNextPhase, isQualified, hasTested, isConfirmed, isAwaiting } from "@/lib/careers-workflow";
+import { applicationsForCohort, sameRole, canReceiveTestInvitation, hasSentCommunication, isNextPhase, isQualified, hasTested, isConfirmed, isAwaiting, isTerminal } from "@/lib/careers-workflow";
 import { authenticated, sameOrigin } from "@/lib/careers-auth";
 import { getApplications, updateApplication } from "@/lib/careers-store";
 import { sendTransactionalEmail } from "@/lib/careers-email";
@@ -193,33 +193,33 @@ async function handlePOST(request: Request) {
 
       // Filter by audience cohort
       if (audienceFilter === "invited_unconfirmed" || audienceFilter === "shortlisted_unbooked") {
-        targetPool = targetPool.filter(a => !a.testSlot && !bookedEmails.has(a.email.trim().toLowerCase()) && !["archived", "rejected", "disqualified"].includes(a.status));
+        targetPool = targetPool.filter(a => !isTerminal(a) && a.status !== "not_advancing" && !a.testSlot && !bookedEmails.has(a.email.trim().toLowerCase()) && !hasTested(a) && !isNextPhase(a));
       } else if (audienceFilter === "booked_confirmed") {
         targetPool = targetPool.filter(
-          (a) => Boolean(a.testSlot) && a.status !== "archived",
+          (a) => !isTerminal(a) && Boolean(a.testSlot) && !hasTested(a),
         );
       } else if (audienceFilter === "all_invited") {
         targetPool = targetPool.filter(
-          (a) => Boolean(a.invitedAt) && a.status !== "archived",
+          (a) => !isTerminal(a) && Boolean(a.invitedAt),
         );
       } else if (audienceFilter === "screened") {
-        targetPool = targetPool.filter(isQualified);
+        targetPool = targetPool.filter(a => !isTerminal(a) && isQualified(a));
       } else if (audienceFilter === "tested") {
-        targetPool = targetPool.filter(hasTested);
+        targetPool = targetPool.filter(a => !isTerminal(a) && hasTested(a));
       } else if (audienceFilter === "interview") {
         targetPool = targetPool.filter(
-          (a) => a.status === "interview",
+          (a) => !isTerminal(a) && a.status === "interview",
         );
       } else if (audienceFilter === "next_phase_confirmed" || audienceFilter === "next_phase") {
-        targetPool = targetPool.filter(isConfirmed);
+        targetPool = targetPool.filter(a => !isTerminal(a) && isConfirmed(a));
       } else if (audienceFilter === "next_phase_awaiting") {
-        targetPool = targetPool.filter(isAwaiting);
+        targetPool = targetPool.filter(a => !isTerminal(a) && isAwaiting(a));
       } else if (audienceFilter === "next_phase_all") {
-        targetPool = targetPool.filter(isNextPhase);
+        targetPool = targetPool.filter(a => !isTerminal(a) && isNextPhase(a));
       } else if (audienceFilter === "disqualified") {
         targetPool = targetPool.filter((a) => a.status === "archived");
-      } else if (audienceFilter === "all_applied" || audienceFilter === "all_role") {
-        targetPool = targetPool.filter((a) => a.status !== "archived" && !hasSentCommunication(a) && !contactedEmails.has(a.email.trim().toLowerCase()));
+      } else if (audienceFilter === "all_applied" || audienceFilter === "all_role" || audienceFilter === "all_active") {
+        targetPool = targetPool.filter((a) => !isTerminal(a) && a.status !== "archived" && a.status !== "not_advancing" && a.status !== "disqualified");
       }
 
       // Filter by gender

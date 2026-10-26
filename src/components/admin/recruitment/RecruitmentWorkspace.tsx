@@ -630,7 +630,7 @@ export default function RecruitmentWorkspace({
           <NextPhaseView cohortId={cohort?.id} roleId={role.id} />
         )}
         {!snapshotMode && tab === "communications" && (
-          <CommunicationsView applications={apps} cohortId={cohort?.id} />
+          <CommunicationsView applications={apps} cohortId={cohort?.id} roleId={role.id} />
         )}
       </div>
     </CohortRoleProvider>
