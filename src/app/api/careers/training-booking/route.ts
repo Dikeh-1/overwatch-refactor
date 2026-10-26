@@ -1,7 +1,6 @@
 import { auditRequest } from "@/lib/admin-activity";
 import { getApplications, updateApplication } from "@/lib/careers-store";
 import { getConfiguredTrainingSlots } from "@/lib/careers-config-store";
-import { sendTrainingConfirmationEmail } from "@/lib/careers-email";
 import { isTerminal } from "@/lib/careers-workflow";
 import { isTrainingGroupBookingExpired } from "@/lib/careers";
 
@@ -178,23 +177,6 @@ async function handlePOST(request: Request) {
       activityLog,
       communications,
     });
-
-    // Send confirmation email without QR code
-    try {
-      const origin =
-        request.headers.get("origin") ||
-        process.env.NEXT_PUBLIC_SITE_URL ||
-        new URL(request.url).origin;
-
-      await sendTrainingConfirmationEmail({
-        application: candidate,
-        group,
-        location: config.location,
-        baseUrl: origin,
-      });
-    } catch (emailErr) {
-      console.error("Failed to send training confirmation email:", emailErr);
-    }
 
     return Response.json({
       success: true,

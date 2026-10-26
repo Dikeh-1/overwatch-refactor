@@ -107,25 +107,34 @@ export default function RichMessageEditor({
   const [showVariablePicker, setShowVariablePicker] = useState(false);
   const [fontFamily, setFontFamily] = useState<string>("sans");
   const [fontSize, setFontSize] = useState<string>("14px");
+  const [showBulletMenu, setShowBulletMenu] = useState(false);
+  const [showNumberMenu, setShowNumberMenu] = useState(false);
 
   const editorRef = useRef<HTMLDivElement>(null);
   const rawRef = useRef<HTMLTextAreaElement>(null);
   const variablePickerRef = useRef<HTMLDivElement>(null);
+  const bulletMenuRef = useRef<HTMLDivElement>(null);
+  const numberMenuRef = useRef<HTMLDivElement>(null);
   const savedRange = useRef<Range | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (variablePickerRef.current && !variablePickerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (variablePickerRef.current && !variablePickerRef.current.contains(target)) {
         setShowVariablePicker(false);
       }
+      if (bulletMenuRef.current && !bulletMenuRef.current.contains(target)) {
+        setShowBulletMenu(false);
+      }
+      if (numberMenuRef.current && !numberMenuRef.current.contains(target)) {
+        setShowNumberMenu(false);
+      }
     };
-    if (showVariablePicker) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showVariablePicker]);
+  }, []);
   const [activeCommands, setActiveCommands] = useState<Record<string, boolean>>({});
   const rememberSelection = useCallback(() => {
     const selection = window.getSelection();
@@ -328,8 +337,187 @@ export default function RichMessageEditor({
     execCmd("formatBlock", activeCommands.blockquote ? "p" : "blockquote");
   };
 
-  // Keyboard shortcut listener
+  const findParentTag = (node: Node | null | undefined, tag: string): HTMLElement | null => {
+    let curr = node;
+    const upper = tag.toUpperCase();
+    while (curr && curr !== editorRef.current) {
+      if (curr.nodeType === Node.ELEMENT_NODE && (curr as Element).tagName === upper) {
+        return curr as HTMLElement;
+      }
+      curr = curr.parentNode;
+    }
+    return null;
+  };
+
+  const applyListStyle = (tag: "ul" | "ol", styleType: string, customStart?: number) => {
+    restoreSelection();
+    let parent = findParentTag(window.getSelection()?.anchorNode, tag);
+    if (!parent) {
+      document.execCommand(tag === "ol" ? "insertOrderedList" : "insertUnorderedList", false);
+      parent = findParentTag(window.getSelection()?.anchorNode, tag);
+    }
+    if (parent) {
+      parent.style.listStyleType = styleType;
+      if (tag === "ol") {
+        const ol = parent as HTMLOListElement;
+        if (styleType === "lower-alpha") ol.type = "a";
+        else if (styleType === "upper-alpha") ol.type = "A";
+        else if (styleType === "lower-roman") ol.type = "i";
+        else if (styleType === "upper-roman") ol.type = "I";
+        else ol.type = "1";
+
+        if (customStart !== undefined) {
+          ol.start = customStart;
+        }
+      }
+    }
+    rememberSelection();
+    handleContentChange();
+    setShowBulletMenu(false);
+    setShowNumberMenu(false);
+  };
+
+  const handlePromptStartNumber = () => {
+    restoreSelection();
+    let parent = findParentTag(window.getSelection()?.anchorNode, "OL") as HTMLOListElement | null;
+    if (!parent) {
+      document.execCommand("insertOrderedList", false);
+      parent = findParentTag(window.getSelection()?.anchorNode, "OL") as HTMLOListElement | null;
+    }
+    const currentStart = parent?.start || 1;
+    const input = prompt(
+      lang === "en" ? "Enter starting number (e.g. 2, 3...):" : "Introduza o número inicial (ex: 2, 3...):",
+      String(currentStart)
+    );
+    if (input) {
+      const parsed = parseInt(input.trim(), 10);
+      if (Number.isFinite(parsed) && parsed >= 1 && parent) {
+        parent.start = parsed;
+        rememberSelection();
+        handleContentChange();
+      }
+    }
+    setShowNumberMenu(false);
+  };
+
+  // Keyboard shortcut & auto-numbering listener
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    // Tab and Shift+Tab indentation for lists
+    if (e.key === "Tab") {
+      const sel = window.getSelection();
+      const li = findParentTag(sel?.anchorNode, "LI");
+      if (li) {
+        e.preventDefault();
+        if (e.shiftKey) {
+          document.execCommand("outdent", false);
+        } else {
+          document.execCommand("indent", false);
+        }
+        rememberSelection();
+        handleContentChange();
+        return;
+      }
+    }
+
+    // Auto-list trigger when user types Space after '1.', '2.', 'a.', 'i.', '-', '*'
+    if (e.key === " ") {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && sel.isCollapsed) {
+        const range = sel.getRangeAt(0);
+        const node = range.startContainer;
+        if (node && node.nodeType === Node.TEXT_NODE) {
+          const textBeforeCaret = (node.textContent || "").slice(0, range.startOffset).trimStart();
+
+          // 1. Numbered lists: digits followed by dot, e.g. "1.", "2.", "3.", "10."
+          const numMatch = textBeforeCaret.match(/^(\d+)\.$/);
+          if (numMatch) {
+            e.preventDefault();
+            const startNum = parseInt(numMatch[1], 10);
+            node.textContent = (node.textContent || "").slice(range.startOffset);
+            document.execCommand("insertOrderedList", false);
+            const curSel = window.getSelection();
+            const ol = findParentTag(curSel?.anchorNode, "OL") as HTMLOListElement | null;
+            if (ol) {
+              ol.style.listStyleType = "decimal";
+              if (startNum > 1) ol.start = startNum;
+            }
+            rememberSelection();
+            handleContentChange();
+            return;
+          }
+
+          // 2. Lowercase letters: e.g. "a.", "b.", "c."
+          const lowerLetterMatch = textBeforeCaret.match(/^([a-z])\.$/);
+          if (lowerLetterMatch) {
+            e.preventDefault();
+            const letter = lowerLetterMatch[1];
+            const startNum = letter.charCodeAt(0) - 96;
+            node.textContent = (node.textContent || "").slice(range.startOffset);
+            document.execCommand("insertOrderedList", false);
+            const curSel = window.getSelection();
+            const ol = findParentTag(curSel?.anchorNode, "OL") as HTMLOListElement | null;
+            if (ol) {
+              ol.type = "a";
+              ol.style.listStyleType = "lower-alpha";
+              if (startNum > 1) ol.start = startNum;
+            }
+            rememberSelection();
+            handleContentChange();
+            return;
+          }
+
+          // 3. Uppercase letters: e.g. "A.", "B."
+          const upperLetterMatch = textBeforeCaret.match(/^([A-Z])\.$/);
+          if (upperLetterMatch) {
+            e.preventDefault();
+            const letter = upperLetterMatch[1];
+            const startNum = letter.charCodeAt(0) - 64;
+            node.textContent = (node.textContent || "").slice(range.startOffset);
+            document.execCommand("insertOrderedList", false);
+            const curSel = window.getSelection();
+            const ol = findParentTag(curSel?.anchorNode, "OL") as HTMLOListElement | null;
+            if (ol) {
+              ol.type = "A";
+              ol.style.listStyleType = "upper-alpha";
+              if (startNum > 1) ol.start = startNum;
+            }
+            rememberSelection();
+            handleContentChange();
+            return;
+          }
+
+          // 4. Roman numerals: e.g. "i.", "ii.", "iii.", "iv." or "I.", "II."
+          const romanMatch = textBeforeCaret.match(/^([ivxlcdm]+)\.$/i);
+          if (romanMatch) {
+            e.preventDefault();
+            const isUpper = romanMatch[1] === romanMatch[1].toUpperCase();
+            node.textContent = (node.textContent || "").slice(range.startOffset);
+            document.execCommand("insertOrderedList", false);
+            const curSel = window.getSelection();
+            const ol = findParentTag(curSel?.anchorNode, "OL") as HTMLOListElement | null;
+            if (ol) {
+              ol.type = isUpper ? "I" : "i";
+              ol.style.listStyleType = isUpper ? "upper-roman" : "lower-roman";
+            }
+            rememberSelection();
+            handleContentChange();
+            return;
+          }
+
+          // 5. Unordered bullets: "-", "*", "•"
+          const bulletMatch = textBeforeCaret.match(/^[-*•]$/);
+          if (bulletMatch) {
+            e.preventDefault();
+            node.textContent = (node.textContent || "").slice(range.startOffset);
+            document.execCommand("insertUnorderedList", false);
+            rememberSelection();
+            handleContentChange();
+            return;
+          }
+        }
+      }
+    }
+
     if (e.ctrlKey || e.metaKey) {
       if (e.key === "b" || e.key === "B") {
         e.preventDefault();
@@ -605,27 +793,153 @@ export default function RichMessageEditor({
           </div>
 
           {/* Lists & Blocks */}
-          <div className="flex items-center border-r border-slate-200 pr-1.5 mr-1 gap-0.5">
-            <button
-              type="button"
-              disabled={editorMode === "raw"}
-              aria-pressed={Boolean(activeCommands.insertUnorderedList)}
-              onClick={() => execCmd("insertUnorderedList")}
-              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 transition-colors cursor-pointer aria-pressed:bg-sky-100 aria-pressed:text-sky-800 aria-pressed:ring-1 aria-pressed:ring-sky-300"
-              title="Bullet List"
-            >
-              <List size={14} />
-            </button>
-            <button
-              type="button"
-              disabled={editorMode === "raw"}
-              aria-pressed={Boolean(activeCommands.insertOrderedList)}
-              onClick={() => execCmd("insertOrderedList")}
-              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 transition-colors cursor-pointer aria-pressed:bg-sky-100 aria-pressed:text-sky-800 aria-pressed:ring-1 aria-pressed:ring-sky-300"
-              title="Numbered List"
-            >
-              <ListOrdered size={14} />
-            </button>
+          <div className="flex items-center border-r border-slate-200 pr-1.5 mr-1 gap-1">
+            {/* Unordered List with Dropdown */}
+            <div className="relative flex items-center" ref={bulletMenuRef}>
+              <button
+                type="button"
+                disabled={editorMode === "raw"}
+                aria-pressed={Boolean(activeCommands.insertUnorderedList)}
+                onClick={() => execCmd("insertUnorderedList")}
+                className="p-1.5 rounded-l-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 transition-colors cursor-pointer aria-pressed:bg-sky-100 aria-pressed:text-sky-800"
+                title="Bullet List (•, ○, ■)"
+              >
+                <List size={14} />
+              </button>
+              <button
+                type="button"
+                disabled={editorMode === "raw"}
+                onClick={() => {
+                  setShowBulletMenu(!showBulletMenu);
+                  setShowNumberMenu(false);
+                  setShowColorPicker(false);
+                  setShowHighlightPicker(false);
+                  setShowVariablePicker(false);
+                }}
+                className="p-1 rounded-r-lg text-slate-500 hover:text-slate-900 hover:bg-slate-200/70 transition-colors cursor-pointer border-l border-slate-200"
+                title="Bullet styles"
+              >
+                <ChevronDown size={10} />
+              </button>
+
+              {showBulletMenu && (
+                <div className="absolute left-0 top-full mt-1.5 z-40 bg-white border border-slate-200 rounded-xl p-1.5 shadow-xl w-44 space-y-1">
+                  <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    {lang === "en" ? "Bullet Style" : "Estilo de Marcador"}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => applyListStyle("ul", "disc")}
+                    className="w-full text-left px-2 py-1.5 rounded-lg text-xs text-slate-700 hover:bg-sky-50 hover:text-sky-900 flex items-center gap-2 cursor-pointer font-medium"
+                  >
+                    <span className="text-base leading-none">•</span>
+                    <span>{lang === "en" ? "Disc (Default)" : "Disco (Padrão)"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyListStyle("ul", "circle")}
+                    className="w-full text-left px-2 py-1.5 rounded-lg text-xs text-slate-700 hover:bg-sky-50 hover:text-sky-900 flex items-center gap-2 cursor-pointer font-medium"
+                  >
+                    <span className="text-base leading-none">○</span>
+                    <span>{lang === "en" ? "Circle" : "Círculo"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyListStyle("ul", "square")}
+                    className="w-full text-left px-2 py-1.5 rounded-lg text-xs text-slate-700 hover:bg-sky-50 hover:text-sky-900 flex items-center gap-2 cursor-pointer font-medium"
+                  >
+                    <span className="text-base leading-none">■</span>
+                    <span>{lang === "en" ? "Square" : "Quadrado"}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Ordered List with Dropdown */}
+            <div className="relative flex items-center" ref={numberMenuRef}>
+              <button
+                type="button"
+                disabled={editorMode === "raw"}
+                aria-pressed={Boolean(activeCommands.insertOrderedList)}
+                onClick={() => execCmd("insertOrderedList")}
+                className="p-1.5 rounded-l-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200/70 transition-colors cursor-pointer aria-pressed:bg-sky-100 aria-pressed:text-sky-800"
+                title="Numbered List (1, a, I...)"
+              >
+                <ListOrdered size={14} />
+              </button>
+              <button
+                type="button"
+                disabled={editorMode === "raw"}
+                onClick={() => {
+                  setShowNumberMenu(!showNumberMenu);
+                  setShowBulletMenu(false);
+                  setShowColorPicker(false);
+                  setShowHighlightPicker(false);
+                  setShowVariablePicker(false);
+                }}
+                className="p-1 rounded-r-lg text-slate-500 hover:text-slate-900 hover:bg-slate-200/70 transition-colors cursor-pointer border-l border-slate-200"
+                title="Numbering formats & start number"
+              >
+                <ChevronDown size={10} />
+              </button>
+
+              {showNumberMenu && (
+                <div className="absolute left-0 top-full mt-1.5 z-40 bg-white border border-slate-200 rounded-xl p-1.5 shadow-xl w-52 space-y-1">
+                  <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    {lang === "en" ? "Numbering Format" : "Formato de Numeração"}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => applyListStyle("ol", "decimal")}
+                    className="w-full text-left px-2 py-1.5 rounded-lg text-xs text-slate-700 hover:bg-sky-50 hover:text-sky-900 flex items-center justify-between cursor-pointer font-medium"
+                  >
+                    <span>1, 2, 3...</span>
+                    <span className="text-[10px] text-slate-400">{lang === "en" ? "Numbers" : "Números"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyListStyle("ol", "lower-alpha")}
+                    className="w-full text-left px-2 py-1.5 rounded-lg text-xs text-slate-700 hover:bg-sky-50 hover:text-sky-900 flex items-center justify-between cursor-pointer font-medium"
+                  >
+                    <span>a, b, c...</span>
+                    <span className="text-[10px] text-slate-400">{lang === "en" ? "Letters" : "Letras"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyListStyle("ol", "upper-alpha")}
+                    className="w-full text-left px-2 py-1.5 rounded-lg text-xs text-slate-700 hover:bg-sky-50 hover:text-sky-900 flex items-center justify-between cursor-pointer font-medium"
+                  >
+                    <span>A, B, C...</span>
+                    <span className="text-[10px] text-slate-400">{lang === "en" ? "Capitals" : "Maiúsculas"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyListStyle("ol", "lower-roman")}
+                    className="w-full text-left px-2 py-1.5 rounded-lg text-xs text-slate-700 hover:bg-sky-50 hover:text-sky-900 flex items-center justify-between cursor-pointer font-medium"
+                  >
+                    <span>i, ii, iii...</span>
+                    <span className="text-[10px] text-slate-400">{lang === "en" ? "Roman" : "Romano"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyListStyle("ol", "upper-roman")}
+                    className="w-full text-left px-2 py-1.5 rounded-lg text-xs text-slate-700 hover:bg-sky-50 hover:text-sky-900 flex items-center justify-between cursor-pointer font-medium"
+                  >
+                    <span>I, II, III...</span>
+                    <span className="text-[10px] text-slate-400">{lang === "en" ? "Roman Cap" : "Romano Maiúsculo"}</span>
+                  </button>
+                  <div className="border-t border-slate-100 my-1 pt-1">
+                    <button
+                      type="button"
+                      onClick={handlePromptStartNumber}
+                      className="w-full text-left px-2 py-1.5 rounded-lg text-xs font-semibold text-sky-700 hover:bg-sky-50 flex items-center justify-between cursor-pointer"
+                    >
+                      <span>{lang === "en" ? "Set Starting Number..." : "Definir Início (ex: 2, 3)..."}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             <button
               type="button"
               disabled={editorMode === "raw"}
@@ -753,7 +1067,7 @@ export default function RichMessageEditor({
       {/* =========================================================================
           EDITOR CANVAS
          ========================================================================= */}
-      <div className="relative min-h-[340px] flex-1 bg-white p-6">
+      <div className="relative min-h-[300px] max-h-[520px] overflow-y-auto admin-scrollbar flex-1 bg-white p-6">
         {/* ContentEditable Visual Element (Persistently preserved in DOM) */}
         <div
           ref={editorRef}
@@ -772,7 +1086,7 @@ export default function RichMessageEditor({
           onKeyDown={handleKeyDown}
           data-placeholder={placeholder}
           style={{ display: editorMode === "visual" ? "block" : "none" }}
-          className="outline-none min-h-[300px] text-sm text-slate-900 leading-relaxed font-sans empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400 empty:before:pointer-events-none prose prose-slate max-w-none [&_p]:my-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_blockquote]:my-3 [&_blockquote]:border-l-4 [&_blockquote]:border-sky-300 [&_blockquote]:pl-4 [&_blockquote]:text-slate-600"
+          className="outline-none min-h-[260px] text-sm text-slate-900 leading-relaxed font-sans empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400 empty:before:pointer-events-none prose prose-slate max-w-none [&_p]:my-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul[style*='circle']]:list-[circle] [&_ul[style*='square']]:list-[square] [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol[type='a']]:list-[lower-alpha] [&_ol[type='A']]:list-[upper-alpha] [&_ol[type='i']]:list-[lower-roman] [&_ol[type='I']]:list-[upper-roman] [&_ol[style*='lower-alpha']]:list-[lower-alpha] [&_ol[style*='upper-alpha']]:list-[upper-alpha] [&_ol[style*='lower-roman']]:list-[lower-roman] [&_ol[style*='upper-roman']]:list-[upper-roman] [&_blockquote]:my-3 [&_blockquote]:border-l-4 [&_blockquote]:border-sky-300 [&_blockquote]:pl-4 [&_blockquote]:text-slate-600"
         />
 
         {/* Source Textarea Element (Persistently preserved in DOM) */}

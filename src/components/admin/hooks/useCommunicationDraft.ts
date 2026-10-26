@@ -1,7 +1,14 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type DraftContent = { subject: string; messageBody: string; attachments?: unknown[] };
+type DraftContent = {
+  subject: string;
+  messageBody: string;
+  attachments?: unknown[];
+  followUpEnabled?: boolean;
+  followUpSubject?: string;
+  followUpBody?: string;
+};
 type SavedDraft<T> = { id: string; kind: string; version: number; data: T & { status?: string }; updated_at: string; savedAt?: string };
 export function useCommunicationDraft<T extends DraftContent>(scope: string, snapshot: T, restore: (data: Partial<T>) => void) {
   const [ready, setReady] = useState(false), [status, setStatus] = useState("Loading draft…");
@@ -51,7 +58,16 @@ export function useCommunicationDraft<T extends DraftContent>(scope: string, sna
     const current = { ...state.current };
     if (current.scope !== scope || !current.id) throw Error("Draft is still loading");
     const data = latest.current, json = JSON.stringify(data);
-    if (json === current.saved || (!current.version && !data.subject && !data.messageBody && !data.attachments?.length)) return state.current.id;
+    if (
+      json === current.saved ||
+      (!current.version &&
+        !data.subject &&
+        !data.messageBody &&
+        !data.attachments?.length &&
+        !data.followUpSubject &&
+        !data.followUpBody)
+    )
+      return state.current.id;
     let resolvedId = current.id;
     const task = (async () => {
       const sendSave = async (draftId: string, version: number, forceUploadAttachments = false) => {
@@ -94,7 +110,13 @@ export function useCommunicationDraft<T extends DraftContent>(scope: string, sna
   }, [scope]);
   useEffect(() => {
     if (!ready || state.current.scope !== scope) return;
-    if (!snapshot.subject && !snapshot.messageBody && !snapshot.attachments?.length) {
+    if (
+      !snapshot.subject &&
+      !snapshot.messageBody &&
+      !snapshot.attachments?.length &&
+      !snapshot.followUpSubject &&
+      !snapshot.followUpBody
+    ) {
       try { localStorage.removeItem(`overwatch-draft:${scope}`); } catch {}
       return;
     }

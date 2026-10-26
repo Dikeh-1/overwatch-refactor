@@ -4,14 +4,28 @@ import { getSystemConfig, setSystemConfig } from "@/lib/careers-config-store";
 import { getCareersPool } from "@/lib/careers-db";
 import { exclusive } from "@/lib/careers-store";
 
-type Template = { id: string; title: string; subject: string; body: string; createdAt: string };
+type Template = {
+  id: string;
+  title: string;
+  subject: string;
+  body: string;
+  createdAt: string;
+  followUpEnabled?: boolean;
+  followUpSubject?: string;
+  followUpBody?: string;
+  attachments?: any[];
+};
 function validTemplate(value: unknown): value is Template {
   if (!value || typeof value !== "object") return false;
   const item = value as Record<string, unknown>;
-  return ["id", "title", "subject", "body", "createdAt"].every(key => typeof item[key] === "string") &&
+  const baseValid = ["id", "title", "subject", "body", "createdAt"].every(key => typeof item[key] === "string") &&
     /^[\w-]{1,100}$/.test(item.id as string) && !!(item.title as string).trim() &&
     (item.title as string).length <= 200 && (item.subject as string).length <= 1000 &&
     (item.body as string).length <= 100000 && Number.isFinite(Date.parse(item.createdAt as string));
+  if (!baseValid) return false;
+  if (item.followUpSubject !== undefined && typeof item.followUpSubject === "string" && item.followUpSubject.length > 1000) return false;
+  if (item.followUpBody !== undefined && typeof item.followUpBody === "string" && item.followUpBody.length > 100000) return false;
+  return true;
 }
 async function readTemplates(): Promise<Template[]> {
   const pool = getCareersPool();
@@ -28,7 +42,17 @@ async function handlePATCH(request: Request) {
   if (!sameOrigin(request) || !(await authenticated())) return Response.json({ error: "Unauthorized" }, { status: 403 });
   const data = await request.json().catch(() => null);
   if (!["save", "delete", "import"].includes(data?.action) || !validTemplate(data?.template)) return Response.json({ error: "Invalid template" }, { status: 400 });
-  const template: Template = { id: data.template.id, title: data.template.title, subject: data.template.subject, body: data.template.body, createdAt: data.template.createdAt };
+  const template: Template = {
+    id: data.template.id,
+    title: data.template.title,
+    subject: data.template.subject,
+    body: data.template.body,
+    createdAt: data.template.createdAt,
+    followUpEnabled: typeof data.template.followUpEnabled === "boolean" ? data.template.followUpEnabled : undefined,
+    followUpSubject: typeof data.template.followUpSubject === "string" ? data.template.followUpSubject : undefined,
+    followUpBody: typeof data.template.followUpBody === "string" ? data.template.followUpBody : undefined,
+    attachments: Array.isArray(data.template.attachments) ? data.template.attachments : undefined,
+  };
   const update = (current: Template[]) => data.action === "delete" ? current.filter(item => item.id !== template.id) : data.action === "import" && current.some(item => item.id === template.id) ? current : [template, ...current.filter(item => item.id !== template.id)];
   const pool = getCareersPool();
   try {

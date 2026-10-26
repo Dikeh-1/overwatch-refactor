@@ -69,6 +69,10 @@ interface CustomTemplate {
   subject: string;
   body: string;
   createdAt: string;
+  followUpEnabled?: boolean;
+  followUpSubject?: string;
+  followUpBody?: string;
+  attachments?: AttachmentItem[];
 }
 
 export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
@@ -231,8 +235,21 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
   };
   const saveCustomTemplate = async () => {
     if (!newTemplateTitle.trim()) return;
-    const newTpl: CustomTemplate = { id: `tpl_${crypto.randomUUID()}`, title: newTemplateTitle.trim(), subject, body: messageBody, createdAt: new Date().toISOString() };
-    if (await persistTemplate("save", newTpl)) { setNewTemplateTitle(""); setSaveTemplateModalOpen(false); }
+    const newTpl: CustomTemplate = {
+      id: `tpl_${crypto.randomUUID()}`,
+      title: newTemplateTitle.trim(),
+      subject,
+      body: messageBody,
+      followUpEnabled,
+      followUpSubject,
+      followUpBody,
+      attachments,
+      createdAt: new Date().toISOString(),
+    };
+    if (await persistTemplate("save", newTpl)) {
+      setNewTemplateTitle("");
+      setSaveTemplateModalOpen(false);
+    }
   };
   const deleteCustomTemplate = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -486,13 +503,24 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
   ];
 
   // Load a template into the letterhead editor
-  const handleLoadTemplate = (tpl: { subject: string; body: string }) => {
-    setSubject(tpl.subject);
-    setMessageBody(tpl.body);
+  const handleLoadTemplate = (tpl: {
+    subject: string;
+    body: string;
+    followUpEnabled?: boolean;
+    followUpSubject?: string;
+    followUpBody?: string;
+    attachments?: AttachmentItem[];
+  }) => {
+    setSubject(tpl.subject || "");
+    setMessageBody(tpl.body || "");
+    if (tpl.followUpEnabled !== undefined) setFollowUpEnabled(Boolean(tpl.followUpEnabled));
+    if (tpl.followUpSubject !== undefined) setFollowUpSubject(tpl.followUpSubject || "");
+    if (tpl.followUpBody !== undefined) setFollowUpBody(tpl.followUpBody || "");
+    if (tpl.attachments !== undefined) setAttachments(tpl.attachments || []);
   };
 
   // Drag and drop template handlers
-  const handleDragStartTemplate = (e: React.DragEvent, tpl: { subject: string; body: string }) => {
+  const handleDragStartTemplate = (e: React.DragEvent, tpl: any) => {
     e.dataTransfer.setData("application/json", JSON.stringify(tpl));
   };
 
@@ -503,8 +531,12 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
       const dataStr = e.dataTransfer.getData("application/json");
       if (dataStr) {
         const tpl = JSON.parse(dataStr);
-        if (tpl.subject !== undefined) setSubject(tpl.subject);
-        if (tpl.body !== undefined) setMessageBody(tpl.body);
+        if (tpl.subject !== undefined) setSubject(tpl.subject || "");
+        if (tpl.body !== undefined) setMessageBody(tpl.body || "");
+        if (tpl.followUpEnabled !== undefined) setFollowUpEnabled(Boolean(tpl.followUpEnabled));
+        if (tpl.followUpSubject !== undefined) setFollowUpSubject(tpl.followUpSubject || "");
+        if (tpl.followUpBody !== undefined) setFollowUpBody(tpl.followUpBody || "");
+        if (tpl.attachments !== undefined) setAttachments(tpl.attachments || []);
       }
     } catch {
       // ignore
@@ -1692,7 +1724,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
         {/* ========================================================================= */}
         {/* RIGHT COLUMN: THE OFFICIAL OVERWATCH COMMUNICATIONS STUDIO CANVAS (7 cols) */}
         {/* ========================================================================= */}
-        <div className="lg:col-span-7 space-y-4 lg:sticky lg:top-4 self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto admin-scrollbar">
+        <div className="lg:col-span-7 space-y-4 self-start">
           {/* Main Studio Canvas Container */}
           <div
             onDragOver={(e) => {
@@ -1720,8 +1752,8 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
               </div>
             )}
 
-            {/* Studio Canvas Mode Header Tabs (Sticky Top) */}
-            <div className="rounded-t-2xl border-b border-slate-200 bg-slate-50 px-6 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-30 backdrop-blur-xs bg-slate-50/95">
+            {/* Studio Canvas Mode Header Tabs */}
+            <div className="rounded-t-2xl border-b border-slate-200 bg-slate-50 px-6 py-3 flex flex-wrap items-center justify-between gap-3 relative">
               <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200">
                 <button
                   type="button"
@@ -1930,8 +1962,8 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
 
                 {/* The Actual Official Letterhead Sheet */}
                 <div className="w-full max-w-2xl rounded-2xl border border-slate-300 bg-white shadow-xl overflow-hidden text-left flex flex-col">
-                  {/* Pinned / Static Header Section (Stops here when scrolling) */}
-                  <div className="sticky top-0 z-20 shrink-0 bg-white shadow-xs">
+                  {/* Header Section */}
+                  <div className="relative shrink-0 bg-white">
                     {/* Navy Header Band #0a1128 */}
                     <div className="bg-[#0a1128] px-6 py-4.5 border-b-2 border-white/10 flex items-center justify-between text-white">
                       <Logo variant="light" size="sm" />
