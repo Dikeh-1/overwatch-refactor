@@ -270,7 +270,7 @@ export async function getApplications(forceFresh = false): Promise<Application[]
         cachedApplicationsAt = Date.now();
         return filtered;
       }
-      throw new Error("Candidate storage unavailable", { cause: apiErr });
+      throw new Error(`Candidate storage unavailable (REST): ${apiErr instanceof Error ? apiErr.message : String(apiErr)}`, { cause: apiErr });
     }
   }
 
