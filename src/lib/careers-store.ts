@@ -219,7 +219,7 @@ export async function getApplications(forceFresh = false): Promise<Application[]
       }).catch(() => {});
       return filtered;
     } catch (pgErr) {
-      console.warn("Postgres query error, falling back to local disk replica:", pgErr);
+      console.warn("Postgres query error, attempting fallbacks:", pgErr);
       const list = await read("applications.json", []);
       const filtered = (list || []).filter((a: any) => a && a.role !== "__system_config__" && !SYSTEM_UUIDS.has(a.id));
       if (filtered.length > 0) {
@@ -227,7 +227,24 @@ export async function getApplications(forceFresh = false): Promise<Application[]
         cachedApplicationsAt = Date.now();
         return filtered;
       }
-      throw new Error("Candidate storage unavailable", { cause: pgErr });
+      if (getSupabaseUrl() && getSupabaseKey()) {
+        try {
+          const rows = await (
+            await api("/rest/v1/career_applications?select=data&order=created_at.desc")
+          ).json();
+          const restFiltered = rows
+            .map((r: { data: Application }) => r.data)
+            .filter((a: any) => a && a.role !== "__system_config__" && !SYSTEM_UUIDS.has(a.id));
+          if (restFiltered.length > 0) {
+            cachedApplications = restFiltered;
+            cachedApplicationsAt = Date.now();
+            return restFiltered;
+          }
+        } catch (restErr) {
+          console.warn("Supabase REST secondary fallback error:", restErr);
+        }
+      }
+      throw new Error(`Candidate storage unavailable: ${pgErr instanceof Error ? pgErr.message : String(pgErr)}`, { cause: pgErr });
     }
   }
 

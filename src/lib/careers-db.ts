@@ -6,9 +6,21 @@ const runtime = globalThis as typeof globalThis & {
 };
 /** Share the connection budget across stores, route bundles and development reloads. */
 export function getCareersPool(): Pool | null {
-  if (!process.env.DATABASE_URL) return null;
+  const rawUrl =
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.POSTGRES_URL_NON_POOLING;
+  if (!rawUrl) return null;
   if (!runtime.overwatchCareersPool) {
-    const cleanConnectionString = process.env.DATABASE_URL.replace(/[\?&]sslmode=[^&]*/g, "");
+    let cleanConnectionString = rawUrl;
+    try {
+      const parsed = new URL(rawUrl);
+      parsed.searchParams.delete("sslmode");
+      cleanConnectionString = parsed.toString();
+    } catch {
+      cleanConnectionString = cleanConnectionString.replace(/[\?&]sslmode=[^&]*/g, "");
+    }
     runtime.overwatchCareersPool = new Pool({
       connectionString: cleanConnectionString,
       ssl: { rejectUnauthorized: false },
