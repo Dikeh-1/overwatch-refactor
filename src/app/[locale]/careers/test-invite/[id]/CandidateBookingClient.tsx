@@ -144,7 +144,7 @@ export default function CandidateBookingClient({
   id: string;
   locale: string;
 }) {
-  const cleanId = (id || "").trim().replace(/\/+$/, "");
+  const cleanId = (id || "").trim().replace(/\/+$/, "").replace(/[\s.…]+$/, "");
   // The URL locale (/pt/ or /en/) is the single source of truth. Default is strictly Portuguese (pt).
   const activeLang: "pt" | "en" = locale === "en" ? "en" : "pt";
   const isPt = activeLang === "pt";

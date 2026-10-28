@@ -182,12 +182,12 @@ async function resolveCandidateRoleRequirements(candidate: Application) {
 }
 
 async function resolveCandidateWithFallback(rawId?: string | null): Promise<Application | null> {
-  const cleanId = (rawId || "").trim().replace(/\/+$/, "");
-  if (!cleanId || !/^[\w-]{6,64}$/i.test(cleanId)) return null;
+  const cleanId = (rawId || "").trim().replace(/\/+$/, "").replace(/[\s.…]+$/, "");
+  if (!cleanId || !/^[\w.-]{6,64}$/i.test(cleanId)) return null;
 
   let raw = await getApplication(cleanId, true);
   if (!raw && cleanId.length >= 8) {
-    const prefix = cleanId.split("-")[0];
+    const prefix = cleanId.replace(/[\s.…]+$/, "").split("-")[0];
     if (/^[a-f0-9]{8}$/i.test(prefix)) {
       const pool = getCareersPool();
       if (pool) {
@@ -241,7 +241,11 @@ export async function GET(request: Request) {
     }
 
     if (!candidate.invitedAt && !candidate.testSlot && candidate.status !== "test_invited") return Response.json({ error: "This applicant has not received a test invitation.", code: "INVITATION_REQUIRED" }, { status: 403 });
-    if (!candidate.bookingLinkOpenedAt) await updateApplication(candidate.id, { bookingLinkOpenedAt: new Date().toISOString() });
+    if (!candidate.bookingLinkOpenedAt) {
+      updateApplication(candidate.id, { bookingLinkOpenedAt: new Date().toISOString() }).catch((err) => {
+        console.warn("Could not mark bookingLinkOpenedAt (non-fatal):", err);
+      });
+    }
 
     const [allApps, slotConfig, roleMeta] = await Promise.all([
       getApplications(), // Use in-memory cache to eliminate massive Supabase egress
@@ -305,7 +309,10 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("Test booking GET error:", error);
     return Response.json(
-      { error: "Erro ao carregar detalhes da convocatória." },
+      {
+        error: "Erro ao carregar detalhes da convocatória.",
+        detail: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 },
     );
   }
