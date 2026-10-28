@@ -5,6 +5,7 @@ import { sameBookingScope, getQuotaForSlot } from "@/lib/careers-booking-rules";
 import { auditRequest } from "@/lib/admin-activity";
 import { resolveApplication, isTerminal, isNextPhase } from "@/lib/careers-workflow";
 import { getCandidateSlotConfig, reserveTestSlot } from "@/lib/careers-booking";
+import { getCareersPool } from "@/lib/careers-db";
 import { getApplication, updateApplication, getApplications } from "@/lib/careers-store";
 import { normalizeSlot, isPastDateSlot, isSlotBookingExpired, type Application } from "@/lib/careers";
 import { sendBookingConfirmation } from "@/lib/careers-email";
@@ -180,20 +181,46 @@ async function resolveCandidateRoleRequirements(candidate: Application) {
   };
 }
 
+async function resolveCandidateWithFallback(rawId?: string | null): Promise<Application | null> {
+  const cleanId = (rawId || "").trim().replace(/\/+$/, "");
+  if (!cleanId || !/^[\w-]{6,64}$/i.test(cleanId)) return null;
+
+  let raw = await getApplication(cleanId, true);
+  if (!raw && cleanId.length >= 8) {
+    const prefix = cleanId.split("-")[0];
+    if (/^[a-f0-9]{8}$/i.test(prefix)) {
+      const pool = getCareersPool();
+      if (pool) {
+        try {
+          const fallback = await pool.query(
+            "SELECT data FROM career_applications WHERE id::text LIKE $1 LIMIT 2",
+            [`${prefix.toLowerCase()}%`]
+          );
+          if (fallback.rows.length === 1 && fallback.rows[0]?.data) {
+            raw = fallback.rows[0].data;
+          }
+        } catch {}
+      }
+      if (!raw) {
+        try {
+          const all = await getApplications();
+          const matches = all.filter((a) => a.id.toLowerCase().startsWith(prefix.toLowerCase()));
+          if (matches.length === 1) {
+            raw = matches[0];
+          }
+        } catch {}
+      }
+    }
+  }
+  return raw ? resolveApplication(raw) : null;
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 
-    if (!id || typeof id !== "string" || !/^[\w-]{6,64}$/i.test(id.trim())) {
-      return Response.json(
-        { error: "Identificador de candidatura inválido." },
-        { status: 400 },
-      );
-    }
-
-    const raw = await getApplication(id, true);
-    const candidate = raw ? resolveApplication(raw) : null;
+    const candidate = await resolveCandidateWithFallback(id);
     if (!candidate) {
       return Response.json(
         { error: "Candidatura não encontrada." },
@@ -289,13 +316,6 @@ async function handlePOST(request: Request) {
     const body = await request.json();
     const { id, slot } = body;
 
-    if (!id || typeof id !== "string" || !/^[\w-]{6,64}$/i.test(id.trim())) {
-      return Response.json(
-        { error: "Identificador de candidatura inválido." },
-        { status: 400 },
-      );
-    }
-
     if (!slot || typeof slot !== "string" || !slot.trim()) {
       return Response.json(
         { error: "Por favor selecione uma data válida para o teste." },
@@ -303,8 +323,7 @@ async function handlePOST(request: Request) {
       );
     }
 
-    const raw = await getApplication(id, true);
-    const candidate = raw ? resolveApplication(raw) : null;
+    const candidate = await resolveCandidateWithFallback(id);
     if (!candidate) {
       return Response.json(
         { error: "Candidatura não encontrada." },

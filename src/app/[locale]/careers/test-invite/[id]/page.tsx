@@ -26,6 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function TestInvitePage({ params }: Props) {
   const { locale, id } = await params;
   setRequestLocale(locale);
+  const cleanId = (id || "").trim().replace(/\/+$/, "");
 
-  return <CandidateBookingClient id={id} locale={locale} />;
+  return <CandidateBookingClient id={cleanId} locale={locale} />;
 }

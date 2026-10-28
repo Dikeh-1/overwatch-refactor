@@ -4,8 +4,28 @@ import sanitizeHtml from "sanitize-html";
 export const BOOKING_TOKEN = "{{booking_link}}";
 export const TRAINING_TOKEN = "{{training_link}}";
 export const escapeMailText = (value: string) => value.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+
+export function fixConjoinedHtml(html: string): string {
+  if (!html || typeof html !== "string") return html;
+  let fixed = html;
+  // 1. Ensure space before opening inline tags if preceded by a letter/digit/punctuation without space
+  fixed = fixed.replace(/([a-zA-Z0-9:;,!?])<(b|strong|i|em|u|span|a)\b/gi, "$1 <$2");
+  // 2. Ensure space after closing inline tags if followed by a letter/digit without space
+  fixed = fixed.replace(/<\/(b|strong|i|em|u|span|a)>([a-zA-Z0-9])/gi, "</$1> $2");
+  // 3. Fix punctuation spacing: colon followed immediately by a letter (excluding protocols like https:// and times like 10:00)
+  fixed = fixed.replace(/(:(?!\/\/))(?=[a-zA-Z])/g, "$1 ");
+  // 4. Fix repeated colons like ": : :" or ":::"
+  fixed = fixed.replace(/(?::\s*){2,}:/g, ":");
+  // 5. Fix duplicate adjacent words (e.g. "about about", "cerca de cerca de")
+  fixed = fixed.replace(/\b(about|cerca de|aproximadamente)\s+\1\b/gi, "$1");
+  // 6. Clean up accidental multiple spaces (but keep single spaces)
+  fixed = fixed.replace(/([^\S\r\n]){2,}/g, " ");
+  return fixed;
+}
+
 export function safeMailHtml(html: string): string {
-  return sanitizeHtml(html, {
+  const normalized = fixConjoinedHtml(html);
+  const sanitized = sanitizeHtml(normalized, {
     allowedTags: ["p","div","br","strong","b","em","i","u","s","strike","span","font","a","ul","ol","li","blockquote","hr","h1","h2","h3"],
     allowedAttributes: { "*": ["style"], a: ["href","target","rel","data-booking-button","data-action-button","draggable"], font: ["face","size","color"] },
     allowedSchemes: ["http","https","mailto","tel"], allowProtocolRelative: false,
@@ -19,6 +39,7 @@ export function safeMailHtml(html: string): string {
     } },
     transformTags: { a: (_tag, attributes) => ({ tagName: "a", attribs: { ...attributes, rel: "noopener noreferrer" } }) }
   });
+  return fixConjoinedHtml(sanitized);
 }
 type Candidate = {
   id: string;

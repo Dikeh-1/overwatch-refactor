@@ -5,7 +5,22 @@ export function renderOfficialMail({ candidate, subject, message, roleTitle, loc
   const en = locale === "en";
   const body = includeBookingButton && !message.includes(BOOKING_TOKEN) ? `${message}\n\n${BOOKING_TOKEN}` : message;
   const html = renderStudioMessage(body, candidate, roleTitle, locale, includeBookingButton);
-  const plain = candidateVariables(message.replace(/<br\s*\/?\s*>|<\/p>|<\/div>|<\/li>/gi,"\n").replace(/<[^>]*>/g,""),candidate,roleTitle,locale).replaceAll(BOOKING_TOKEN, includeBookingButton ? `https://www.overwatchmoz.com/${locale}/careers/test-invite/${candidate.id}` : "");
+  const plain = candidateVariables(
+    message
+      .replace(/<br\s*\/?>|<\/p>|<\/div>|<\/li>/gi, "\n")
+      .replace(/<\/(b|strong|i|em|u|span|a)>/gi, " </$1> ")
+      .replace(/<[^>]*>/g, "")
+      .replace(/[^\S\r\n]+/g, " ")
+      .trim(),
+    candidate,
+    roleTitle,
+    locale,
+  ).replaceAll(
+    BOOKING_TOKEN,
+    includeBookingButton
+      ? `https://www.overwatchmoz.com/${locale}/careers/test-invite/${candidate.id}`
+      : "",
+  );
   const origin = "https://www.overwatchmoz.com", logoWhiteUrl = `${origin}/logo-white.png`;
   return { subject: candidateVariables(subject,candidate,roleTitle,locale), text: plain + (includeBookingButton && !message.includes(BOOKING_TOKEN) ? `\nhttps://www.overwatchmoz.com/${locale}/careers/test-invite/${candidate.id}` : ""), html: `<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;background:#f1f5f9;font-family:Arial,sans-serif;color:#1e293b"><div style="max-width:640px;margin:24px auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;font-family:Arial,sans-serif;color:#1e293b">
       <!-- Official Letterhead Header (Dark Navy #0b1329) -->

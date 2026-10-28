@@ -144,6 +144,7 @@ export default function CandidateBookingClient({
   id: string;
   locale: string;
 }) {
+  const cleanId = (id || "").trim().replace(/\/+$/, "");
   // The URL locale (/pt/ or /en/) is the single source of truth. Default is strictly Portuguese (pt).
   const activeLang: "pt" | "en" = locale === "en" ? "en" : "pt";
   const isPt = activeLang === "pt";
@@ -168,7 +169,7 @@ export default function CandidateBookingClient({
           setError("");
         }
         const res = await fetch(
-          `/api/careers/test-booking?id=${encodeURIComponent(id)}&t=${Date.now()}`,
+          `/api/careers/test-booking?id=${encodeURIComponent(cleanId)}&t=${Date.now()}`,
           { cache: "no-store" },
         );
 
@@ -221,7 +222,7 @@ export default function CandidateBookingClient({
       }
     }
 
-    if (id) {
+    if (cleanId) {
       void fetchCandidate(false);
     } else {
       setError(isPt ? "Link de convocatória inválido." : "Invalid invitation link.");
@@ -231,19 +232,19 @@ export default function CandidateBookingClient({
     // 45s live polling with activity throttling to prevent Supabase egress quota exhaustion
     let lastFetchedTime = Date.now();
     const interval = setInterval(() => {
-      if (id && !cancelled && (typeof document === "undefined" || !document.hidden)) {
+      if (cleanId && !cancelled && (typeof document === "undefined" || !document.hidden)) {
         lastFetchedTime = Date.now();
         void fetchCandidate(true);
       }
     }, 45000);
     const onFocus = () => {
-      if (id && !cancelled && Date.now() - lastFetchedTime > 20000) {
+      if (cleanId && !cancelled && Date.now() - lastFetchedTime > 20000) {
         lastFetchedTime = Date.now();
         void fetchCandidate(true);
       }
     };
     const onVisibility = () => {
-      if (id && !cancelled && typeof document !== "undefined" && !document.hidden && Date.now() - lastFetchedTime > 20000) {
+      if (cleanId && !cancelled && typeof document !== "undefined" && !document.hidden && Date.now() - lastFetchedTime > 20000) {
         lastFetchedTime = Date.now();
         void fetchCandidate(true);
       }
@@ -256,7 +257,7 @@ export default function CandidateBookingClient({
       if (typeof BroadcastChannel !== "undefined") {
         channel = new BroadcastChannel("overwatch_test_booking_live");
         channel.onmessage = () => {
-          if (id && !cancelled) void fetchCandidate(true);
+          if (cleanId && !cancelled) void fetchCandidate(true);
         };
       }
     } catch {}
@@ -270,7 +271,7 @@ export default function CandidateBookingClient({
         channel?.close();
       } catch {}
     };
-  }, [id, isPt]);
+  }, [cleanId, isPt]);
 
   async function handleConfirmSlot() {
     if (!selectedSlot) {
@@ -289,7 +290,7 @@ export default function CandidateBookingClient({
       const res = await fetch("/api/careers/test-booking", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, slot: selectedSlot }),
+        body: JSON.stringify({ id: cleanId, slot: selectedSlot }),
       });
 
       const data = await res.json().catch(() => ({}));
