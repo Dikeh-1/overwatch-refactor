@@ -92,7 +92,13 @@ async function handleGET(request: Request) {
     );
   } catch (err: any) {
     console.error("GET training-slots error:", err);
-    return Response.json({ error: "Failed to load training slots" }, { status: 500 });
+    return Response.json(
+      {
+        error: "Failed to load training slots",
+        detail: err instanceof Error ? err.message : String(err),
+      },
+      { status: 500 }
+    );
   }
 }
 

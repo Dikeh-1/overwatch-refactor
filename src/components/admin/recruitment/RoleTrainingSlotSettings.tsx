@@ -63,7 +63,7 @@ export function RoleTrainingSlotSettings() {
       const data = await res.json();
 
       if (!res.ok || data.error) {
-        setError(data.error || "Failed to load training slot configuration");
+        setError(t("Failed to load training slots", "Falha ao carregar turnos de formação"));
         return;
       }
 
@@ -84,7 +84,7 @@ export function RoleTrainingSlotSettings() {
       setBookedCandidates(data.bookedCandidates || {});
     } catch (err: any) {
       console.error("Error loading training slots:", err);
-      setError("Erro ao comunicar com o servidor.");
+      setError(t("Failed to communicate with server.", "Erro ao comunicar com o servidor."));
     } finally {
       setLoading(false);
     }

@@ -80,7 +80,10 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("Failed to retrieve test slots:", error);
     return Response.json(
-      { error: "Falha ao obter turnos de teste." },
+      {
+        error: "Failed to load test schedules.",
+        detail: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 },
     );
   }

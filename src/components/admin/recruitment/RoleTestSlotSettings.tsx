@@ -51,7 +51,7 @@ export function RoleTestSlotSettings() {
           cache: "no-store",
         });
         const data: Catalog & { error?: string } = await response.json();
-        if (!response.ok) throw Error(data.error || "Failed to load schedules");
+        if (!response.ok) throw Error(t("Failed to load test schedules.", "Falha ao obter turnos de teste."));
         setCatalog(data);
         setCycleId((currentId) => {
           const targetId =
@@ -613,7 +613,9 @@ export function RoleTestSlotSettings() {
       )}
       {error && (
         <p role="alert" className="text-xs text-red-700">
-          {error}
+          {error.includes("Falha ao obter") || error.includes("Failed to load")
+            ? t("Failed to load test schedules.", "Falha ao obter turnos de teste.")
+            : error}
         </p>
       )}
     </section>
