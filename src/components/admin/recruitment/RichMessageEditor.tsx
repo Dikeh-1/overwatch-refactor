@@ -56,6 +56,7 @@ interface RichMessageEditorProps {
   stickyToolbar?: boolean;
   seamless?: boolean;
   canvasMaxHeight?: string;
+  topHeader?: React.ReactNode;
 }
 
 const DEFAULT_VARIABLES = [
@@ -106,6 +107,7 @@ export default function RichMessageEditor({
   stickyToolbar = false,
   seamless = false,
   canvasMaxHeight,
+  topHeader,
 }: RichMessageEditorProps) {
   const [editorMode, setEditorMode] = useState<"visual" | "raw">("visual");
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -581,12 +583,28 @@ export default function RichMessageEditor({
   return (
     <div className={`${seamless ? "border-0 rounded-none shadow-none bg-white flex flex-col" : "rounded-2xl border border-slate-200 bg-white shadow-2xs flex flex-col"} ${className}`}>
       {/* =========================================================================
-          TOOLBAR HEADER (Sticky / Frozen Toolbar)
+          UNIFIED STICKY CONTROL REGION
+          Keeps tabs, subject line, headings, complete rich-text formatting toolbar,
+          and Visual / Source controls together in a stable, non-colliding header.
          ========================================================================= */}
       <div
-        onMouseDown={event => { if (!(event.target as Element).closest("select,input")) event.preventDefault(); }}
-        className={`sticky top-0 z-20 border-b border-slate-200 bg-slate-50/95 backdrop-blur-xs p-2 sm:p-2.5 flex flex-wrap items-center justify-between gap-2 select-none shadow-xs ${seamless ? "border-t border-slate-200" : "rounded-t-2xl"}`}
+        className={`sticky top-0 z-20 bg-white shadow-xs ${
+          topHeader ? "rounded-t-2xl" : seamless ? "" : "rounded-t-2xl"
+        }`}
       >
+        {topHeader && (
+          <div className="rounded-t-2xl">
+            {topHeader}
+          </div>
+        )}
+
+        {/* TOOLBAR HEADER (Sticky / Frozen Toolbar) */}
+        <div
+          onMouseDown={event => { if (!(event.target as Element).closest("select,input,button")) event.preventDefault(); }}
+          className={`border-b border-slate-200 bg-slate-50/95 backdrop-blur-xs p-2 sm:p-2.5 flex flex-wrap items-center justify-between gap-2 select-none shadow-xs ${
+            topHeader ? "border-t" : seamless ? "border-t" : "rounded-t-2xl"
+          }`}
+        >
         {/* Left Toolbar: Actions */}
         <div className="flex flex-wrap items-center gap-1">
           {/* History Undo / Redo */}
@@ -1071,6 +1089,7 @@ export default function RichMessageEditor({
             </button>
           </div>
         </div>
+      </div>
       </div>
 
       {/* =========================================================================

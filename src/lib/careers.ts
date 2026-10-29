@@ -6,7 +6,24 @@ export const roles = [
     open: true,
   },
   { id: "cctv", en: "CCTV Operator", pt: "Operadora de CCTV", open: true },
-
+  {
+    id: "operations",
+    en: "Security Operations Manager",
+    pt: "Gestor de Operações de Segurança",
+    open: false,
+  },
+  {
+    id: "technical",
+    en: "Technical Support Specialist",
+    pt: "Especialista de Suporte Técnico",
+    open: false,
+  },
+  {
+    id: "sales",
+    en: "Sales & Business Development",
+    pt: "Vendas e Desenvolvimento de Negócios",
+    open: false,
+  },
 ];
 
 export type Role = {

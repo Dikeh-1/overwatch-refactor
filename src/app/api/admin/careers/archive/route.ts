@@ -16,11 +16,43 @@ export async function GET(request: Request) {
       await getRecruitmentWorkspaceData();
     const cohortId = new URL(request.url).searchParams.get("cohortId");
     if (cohortId) {
-      const cohort = cohorts.find((c) => c.id === cohortId);
+      let cohort = cohorts.find((c) => c.id === cohortId);
+      if (!cohort) {
+        const matchingRole = roles.find(
+          (r) =>
+            r.activeCohortId === cohortId ||
+            sameRole(r.id, cohortId.replace(/_initial_cohort$/, "")) ||
+            cohortId.startsWith(r.id)
+        );
+        if (matchingRole) {
+          cohort = {
+            id: cohortId,
+            roleId: matchingRole.id,
+            name: `${matchingRole.pt} — ${cohortId}`,
+            openedAt: matchingRole.createdAt || new Date().toISOString(),
+            closedAt: matchingRole.updatedAt || new Date().toISOString(),
+            status: "closed" as const,
+            stages: matchingRole.pipelineStages,
+            screeningRules: matchingRole.screeningRules,
+            legacy: true,
+          };
+        }
+      }
       if (!cohort)
         return Response.json({ error: "Cohort not found" }, { status: 404 });
       const role =
-        cohort.roleSnapshot || roles.find((r) => sameRole(r.id, cohort.roleId));
+        cohort.roleSnapshot ||
+        roles.find((r) => sameRole(r.id, cohort.roleId)) || {
+          id: cohort.roleId,
+          en: cohort.name,
+          pt: cohort.name,
+          department: "Operações",
+          open: cohort.status === "active",
+          pipelineStages: cohort.stages || ["applications", "screening", "interview", "hired"],
+          screeningRules: cohort.screeningRules || [],
+          createdAt: cohort.openedAt || new Date().toISOString(),
+          updatedAt: cohort.closedAt || new Date().toISOString(),
+        };
       const members = applicationsForCohort(applications, cohort, cohorts);
       return Response.json(
         {

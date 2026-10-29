@@ -2,19 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { ArrowRight, Loader2 } from "lucide-react";
-import { formatCandidateName, formatSlotDisplay } from "@/lib/careers";
-import {
-  PortalShell,
-  PortalHeading,
-  Card,
-  SectionTitle,
-  PlainList,
-  Notice,
-  PrimaryButton,
-  OptionRow,
-  StatusTag,
-} from "@/components/careers/portal/PortalShell";
+import Image from "next/image";
+import { Check, AlertCircle, Calendar, ArrowRight } from "lucide-react";
+import OverwatchOrbitLoader from "@/components/ui/OverwatchOrbitLoader";
+import { formatCandidateName } from "@/lib/careers";
 
 /* ================================================================
    CANDIDATE RESPONSE / CONFIRMATION PAGE
@@ -119,191 +110,341 @@ export default function NextPhaseCandidatePage() {
   };
 
   /* ================================================================
-     RENDER — shared Overwatch candidate portal design
+     LOADING STATE
      ================================================================ */
-  const isConfirmMode = Boolean(candidateInfo?.isTechManager) || searchParams.get("mode") === "confirm";
-
   if (loading) {
     return (
-      <PortalShell isPt>
-        <div className="flex min-h-[40vh] items-center justify-center gap-3 text-[15px] text-[#6b6f7b]">
-          <Loader2 size={18} strokeWidth={1.75} className="animate-spin" />
-          A verificar o seu convite…
-        </div>
-      </PortalShell>
+      <div className="min-h-screen bg-[#F6F7F9] flex items-center justify-center">
+        <OverwatchOrbitLoader label="A verificar convite..." size="md" />
+      </div>
     );
   }
 
+  /* ================================================================
+     RENDER
+     ================================================================ */
   return (
-    <PortalShell isPt>
+    <div className="min-h-screen bg-[#F6F7F9] flex flex-col">
+
+      {/* ---- HEADER: Dark navy bar ---- */}
+      <header className="h-16 sm:h-[68px] bg-[#0b1329] flex items-center px-5 sm:px-8 shrink-0">
+        <div className="flex items-center justify-between w-full max-w-[720px] mx-auto">
+          <Image
+            src="/logo.png"
+            alt="Overwatch"
+            width={140}
+            height={21}
+            className="h-5 w-auto brightness-0 invert"
+            priority
+          />
+          <span className="text-[11px] font-medium tracking-wide text-white/60 uppercase">
+            Recrutamento
+          </span>
+        </div>
+      </header>
+
+      {/* ---- Preview Mode indicator ---- */}
       {isPreview && (
-        <p className="no-print mb-6 inline-block rounded-full border border-[#d4d6dc] px-3 py-1 text-[12px] font-medium text-[#4a4e5a]">
-          Pré-visualização
-        </p>
+        <div className="bg-amber-50 border-b border-amber-200 py-2 px-4 text-center">
+          <span className="text-xs font-medium text-amber-700">Preview Mode</span>
+        </div>
       )}
 
-      {/* Stage mismatch: applicant opened a later-phase link while still at the testing stage */}
-      {stageMismatchInfo && (
-        <>
-          <PortalHeading
-            overline="Processo de recrutamento"
-            title={`Olá, ${formatCandidateName(stageMismatchInfo.candidate.name)}`}
-            meta={stageMismatchInfo.candidate.roleTitle || "Candidatura Overwatch"}
-          />
-          <p className="max-w-[580px] text-[16px] leading-relaxed text-[#4a4e5a]">
-            Este link destina-se a uma fase posterior. A sua candidatura encontra-se, neste momento, na fase de
-            marcação e realização do teste presencial.
-          </p>
-          <div className="mt-6">
-            <Notice>
-              {stageMismatchInfo.candidate.testSlot ? (
-                <>
-                  Teste marcado para{" "}
-                  <strong className="font-semibold text-[#1a1a2e]">
-                    {formatSlotDisplay(stageMismatchInfo.candidate.testSlot, true)}
-                  </strong>
-                  .
-                </>
-              ) : (
-                "Ainda não escolheu a data do teste presencial. Use o botão abaixo para escolher."
-              )}
-            </Notice>
-          </div>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <a
-              href={stageMismatchInfo.bookingUrl}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#1a1a2e] px-6 text-[15px] font-medium text-white hover:bg-[#2d2d44]"
-            >
-              {stageMismatchInfo.candidate.testSlot ? "Ver marcação" : "Escolher data do teste"}
-              <ArrowRight size={17} strokeWidth={1.75} />
-            </a>
-            <a
-              href={stageMismatchInfo.checkStatusUrl}
-              className="inline-flex h-12 items-center justify-center rounded-lg border border-[#d4d6dc] px-6 text-[15px] font-medium hover:border-[#1a1a2e]"
-            >
-              Consultar estado
-            </a>
-          </div>
-        </>
-      )}
+      {/* ---- MAIN CONTENT ---- */}
+      <main className="flex-1 flex flex-col items-center px-4 sm:px-6 py-8 sm:py-12">
+        <div className="w-full max-w-[680px]">
 
-      {/* Invalid / expired token */}
-      {error && !candidateInfo && !stageMismatchInfo && (
-        <PortalHeading overline="Confirmação" title="Este link não é válido" meta={error} />
-      )}
-
-      {candidateInfo && (
-        <>
-          <PortalHeading
-            overline={isConfirmMode ? "Convocatória e confirmação de presença" : "Confirmação · Processo de selecção"}
-            title={formatCandidateName(candidateInfo.name)}
-            meta={
-              <span>
-                {candidateInfo.roleTitle || "Recrutamento Overwatch"}
-                {typeof candidateInfo.testScore === "number" && (
-                  <span className="text-[#8a8e99]"> · Resultado do teste: {candidateInfo.testScore}%</span>
-                )}
-              </span>
-            }
-          />
-
-          {submittedChoice ? (
-            <Card className="px-6 py-7 sm:px-8">
-              <StatusTag>{submittedChoice === "yes" ? "Resposta confirmada" : "Resposta registada"}</StatusTag>
-              <p className="mt-4 max-w-[560px] text-[16px] leading-relaxed text-[#4a4e5a]">
-                {submittedChoice === "yes"
-                  ? "Agradecemos a sua confirmação. Enviámos um email para a sua caixa de correio e entraremos em contacto brevemente com os próximos passos."
-                  : "Agradecemos a sua resposta e a sua participação no processo de selecção da Overwatch. Desejamos-lhe os maiores sucessos profissionais."}
-              </p>
-              <p className="mt-6 border-t border-[#e6e7eb] pt-4 text-[13px] text-[#8a8e99]">
-                Registado em {new Date().toLocaleString("pt-MZ")}
-              </p>
-            </Card>
-          ) : (
-            <>
-              <p className="mb-8 max-w-[580px] text-[16px] leading-relaxed text-[#4a4e5a]">
-                Confirme, por favor, a sua intenção relativamente às condições da próxima etapa do processo de
-                selecção.
-              </p>
-
-              <section className="mb-8">
-                <SectionTitle>{candidateInfo.isTechManager ? "Próxima fase" : "Condições"}</SectionTitle>
-                <Card className="px-5 py-5 sm:px-6">
-                  {candidateInfo.isTechManager ? (
-                    <PlainList
-                      items={[
-                        "Entrevista técnica presencial e sessão de avaliação nas instalações da Overwatch, em Maputo.",
-                        "Documentação: CV impresso actualizado, Bilhete de Identidade (BI/DIRE) e certificados de habilitações e formações técnicas.",
-                        "Enquadramento contratual alinhado com a experiência e as competências demonstradas.",
-                      ]}
-                    />
-                  ) : (
-                    <PlainList
-                      items={[
-                        "10 dias de formação inicial, sem remuneração",
-                        "3 meses de formação prática, com remuneração mensal de 9.000 MZN",
-                        "Regime de trabalho 2D / 2N / 2F (turnos de 12 horas)",
-                      ]}
-                    />
-                  )}
-                </Card>
-              </section>
-
-              <section>
-                <SectionTitle>A sua resposta</SectionTitle>
-                <div role="radiogroup" className="space-y-2">
-                  <OptionRow
-                    selected={selectedChoice === "yes"}
-                    onSelect={() => setSelectedChoice("yes")}
-                    title={
-                      isConfirmMode
-                        ? "Sim, confirmo a minha presença e disponibilidade"
-                        : "Sim, tenho interesse e estou disponível"
-                    }
-                    subtitle={
-                      isConfirmMode
-                        ? "Estarei presente na próxima etapa."
-                        : "Pretendo continuar no processo e aceito as condições indicadas."
-                    }
-                  />
-                  <OptionRow
-                    selected={selectedChoice === "no"}
-                    onSelect={() => setSelectedChoice("no")}
-                    title="Não tenho interesse"
-                    subtitle="Pretendo terminar a minha participação no processo."
-                  />
+          {/* ---- Stage Mismatch Guidance Card (Unconfirmed/Pre-test candidate opened link) ---- */}
+          {stageMismatchInfo && (
+            <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 sm:p-8 shadow-xs space-y-6">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-center shrink-0 text-sky-700">
+                  <Calendar size={24} />
                 </div>
-              </section>
+                <div className="space-y-1">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-sky-700 bg-sky-50 px-2.5 py-0.5 rounded-full border border-sky-200">
+                    Processo de Recrutamento Overwatch
+                  </span>
+                  <h1 className="text-xl font-bold text-slate-900">
+                    Olá, {formatCandidateName(stageMismatchInfo.candidate.name)}
+                  </h1>
+                  <p className="text-xs text-slate-500">
+                    {stageMismatchInfo.candidate.roleTitle || "Candidatura Overwatch"}
+                  </p>
+                </div>
+              </div>
 
-              <div className="mt-8">
-                {error && (
-                  <p role="alert" className="mb-3 text-[14px] text-[#b42318]">
-                    {error}
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-3">
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-800">
+                  <AlertCircle size={16} className="text-sky-600" />
+                  <span>Estado Atual da sua Candidatura</span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Recebeu esta ligação para confirmação de fases subsequentes. No entanto, o seu processo encontra-se atualmente na fase de agendamento e realização de testes de selecção presenciais.
+                </p>
+                {stageMismatchInfo.candidate.testSlot ? (
+                  <div className="p-3 bg-white rounded-lg border border-slate-200 text-xs text-slate-700">
+                    <span className="font-semibold text-slate-900">Turno de teste já reservado: </span>
+                    <span className="font-mono text-sky-700 font-bold">{stageMismatchInfo.candidate.testSlot}</span>
+                  </div>
+                ) : (
+                  <p className="text-xs text-amber-800 bg-amber-50 p-2.5 rounded-lg border border-amber-200 font-medium">
+                    Ainda não escolheu o seu turno para o teste presencial. Por favor clique no botão abaixo para selecionar a sua data e horário.
                   </p>
                 )}
-                <PrimaryButton
-                  type="button"
-                  onClick={handleConfirmResponse}
-                  disabled={submitting}
-                  className="w-full sm:w-auto"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 size={17} strokeWidth={1.75} className="animate-spin" />
-                      A registar…
-                    </>
-                  ) : (
-                    <>
-                      Confirmar resposta
-                      <ArrowRight size={17} strokeWidth={1.75} />
-                    </>
-                  )}
-                </PrimaryButton>
               </div>
-            </>
+
+              <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+                <a
+                  href={stageMismatchInfo.bookingUrl}
+                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#0b1329] hover:bg-slate-800 text-white text-xs font-bold transition-colors text-center shadow-xs flex items-center justify-center gap-2"
+                >
+                  <Calendar size={15} />
+                  <span>{stageMismatchInfo.candidate.testSlot ? "Ver Bilhete de Agendamento →" : "Agendar Data e Turno do Teste →"}</span>
+                </a>
+                <a
+                  href={stageMismatchInfo.checkStatusUrl}
+                  className="w-full sm:w-auto px-5 py-3 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors text-center"
+                >
+                  Consultar Estado Geral
+                </a>
+              </div>
+            </div>
           )}
-        </>
-      )}
-    </PortalShell>
+
+          {/* ---- Error-only state (invalid/expired token) ---- */}
+          {error && !candidateInfo && (
+            <div className="bg-white border border-[#E5E7EB] rounded-lg p-6 sm:p-8">
+              <div className="flex items-start gap-3">
+                <AlertCircle size={18} className="text-red-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-slate-900 mb-1">Link inválido</p>
+                  <p className="text-sm text-slate-600 leading-relaxed">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ---- Main card ---- */}
+          {candidateInfo && (
+            <div className="bg-white border border-[#E5E7EB] rounded-lg overflow-hidden">
+
+              {/* Card header */}
+              <div className="px-6 sm:px-8 pt-6 sm:pt-8 pb-5 border-b border-[#EAECF0]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400 mb-1">
+                  Overwatch • Recrutamento {candidateInfo.roleTitle ? candidateInfo.roleTitle.toUpperCase() : "2026"}
+                </p>
+                <h1 className="text-lg sm:text-xl font-bold text-[#0b1329] leading-snug">
+                  {candidateInfo.isTechManager || searchParams.get("mode") === "confirm"
+                    ? "Convocatória & Confirmação de Presença"
+                    : "Confirmação – Processo de Selecção"}
+                </h1>
+                <p className="text-sm text-slate-600 mt-2 flex flex-wrap items-center gap-2">
+                  <span>Candidato(a): <strong className="text-slate-900">{formatCandidateName(candidateInfo.name)}</strong></span>
+                  {typeof candidateInfo.testScore === "number" && (
+                    <span className="font-mono text-xs px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-700">
+                      Nota: {candidateInfo.testScore}%
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              {/* Card body */}
+              <div className="px-6 sm:px-8 py-6 sm:py-8">
+
+                {/* ============================================
+                    SUBMITTED STATE
+                    ============================================ */}
+                {submittedChoice ? (
+                  <div className="space-y-4">
+                    {submittedChoice === "yes" ? (
+                      <>
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center">
+                            <Check size={16} className="text-emerald-600" />
+                          </div>
+                          <h2 className="text-base font-semibold text-slate-900">
+                            Resposta confirmada
+                          </h2>
+                        </div>
+                        <p className="text-sm text-slate-600 leading-relaxed">
+                          Agradecemos a sua confirmação. Enviámos um email de confirmação
+                          para a sua caixa de correio. Entraremos em contacto brevemente com
+                          os próximos passos do processo de selecção.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center">
+                            <Check size={16} className="text-slate-500" />
+                          </div>
+                          <h2 className="text-base font-semibold text-slate-900">
+                            Resposta registada
+                          </h2>
+                        </div>
+                        <p className="text-sm text-slate-600 leading-relaxed">
+                          Agradecemos a sua resposta e a participação no processo de selecção
+                          da Overwatch. Desejamos-lhe os maiores sucessos nas suas futuras
+                          oportunidades profissionais.
+                        </p>
+                      </>
+                    )}
+                    <p className="text-xs text-slate-400 pt-3 border-t border-[#EAECF0]">
+                      Data do registo: {new Date().toLocaleString("pt-MZ")}
+                    </p>
+                  </div>
+                ) : (
+                  /* ============================================
+                     CONFIRMATION FORM
+                     ============================================ */
+                  <div className="space-y-6">
+                    <p className="text-sm text-slate-700 leading-relaxed">
+                      Por favor confirme a sua intenção relativamente às condições previstas
+                      para a próxima etapa do processo de selecção.
+                    </p>
+
+                    {/* ---- Conditions box ---- */}
+                    {candidateInfo.isTechManager ? (
+                      <div className="bg-[#F9FAFB] border border-[#EAECF0] rounded-md p-5">
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+                          Directrizes & Condições da Próxima Fase
+                        </p>
+                        <ul className="space-y-2.5 text-sm text-slate-700 leading-relaxed">
+                          <li className="flex gap-2">
+                            <span className="text-slate-400 mt-0.5 shrink-0">•</span>
+                            <span>
+                              <strong>Entrevista Técnica Presencial & Sessão de Avaliação</strong> nas instalações da Overwatch em Maputo.
+                            </span>
+                          </li>
+                          <li className="flex gap-2">
+                            <span className="text-slate-400 mt-0.5 shrink-0">•</span>
+                            <span>
+                              <strong>Apresentação de Documentação:</strong> CV impresso actualizado, Bilhete de Identidade (BI/DIRE) e Certificados de Habilitações e Formações Técnicas.
+                            </span>
+                          </li>
+                          <li className="flex gap-2">
+                            <span className="text-slate-400 mt-0.5 shrink-0">•</span>
+                            <span>
+                              <strong>Enquadramento e Pacote Contratual:</strong> Acordo alinhado com a experiência e competências demonstradas na função técnica.
+                            </span>
+                          </li>
+                        </ul>
+                      </div>
+                    ) : (
+                      <div className="bg-[#F9FAFB] border border-[#EAECF0] rounded-md p-5">
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+                          Condições
+                        </p>
+                        <ul className="space-y-2.5 text-sm text-slate-700 leading-relaxed">
+                          <li className="flex gap-2">
+                            <span className="text-slate-400 mt-0.5 shrink-0">•</span>
+                            <span>
+                              <strong>10 dias de formação inicial</strong>, sem remuneração
+                            </span>
+                          </li>
+                          <li className="flex gap-2">
+                            <span className="text-slate-400 mt-0.5 shrink-0">•</span>
+                            <span>
+                              <strong>3 meses de formação prática</strong> com remuneração mensal
+                              de <strong>9.000 MZN</strong>
+                            </span>
+                          </li>
+                          <li className="flex gap-2">
+                            <span className="text-slate-400 mt-0.5 shrink-0">•</span>
+                            <span>
+                              Regime de trabalho: <strong>2D / 2N / 2F</strong> (12 horas por turno)
+                            </span>
+                          </li>
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* ---- YES / NO selection rows ---- */}
+                    <div className="space-y-2">
+                      {/* YES row */}
+                      <label
+                        className={`flex items-center gap-3 h-[60px] px-4 rounded-md border cursor-pointer transition-colors ${
+                          selectedChoice === "yes"
+                            ? "border-[#0b1329] bg-[#F0F4FF]"
+                            : "border-[#E5E7EB] bg-white hover:bg-slate-50"
+                        }`}
+                        onClick={() => setSelectedChoice("yes")}
+                      >
+                        <input
+                          type="radio"
+                          name="choice"
+                          checked={selectedChoice === "yes"}
+                          onChange={() => setSelectedChoice("yes")}
+                          className="w-4 h-4 text-[#0b1329] border-slate-300 focus:ring-[#0b1329] focus:ring-offset-0 cursor-pointer shrink-0"
+                        />
+                        <span className="text-sm text-slate-800 leading-snug">
+                          {candidateInfo.isTechManager || searchParams.get("mode") === "confirm"
+                            ? "Sim, confirmo a minha presença e disponibilidade para a próxima etapa."
+                            : "Sim, tenho interesse em continuar no processo de selecção e estou disponível para cumprir as condições indicadas."}
+                        </span>
+                      </label>
+
+                      {/* NO row */}
+                      <label
+                        className={`flex items-center gap-3 h-[60px] px-4 rounded-md border cursor-pointer transition-colors ${
+                          selectedChoice === "no"
+                            ? "border-[#0b1329] bg-[#F0F4FF]"
+                            : "border-[#E5E7EB] bg-white hover:bg-slate-50"
+                        }`}
+                        onClick={() => setSelectedChoice("no")}
+                      >
+                        <input
+                          type="radio"
+                          name="choice"
+                          checked={selectedChoice === "no"}
+                          onChange={() => setSelectedChoice("no")}
+                          className="w-4 h-4 text-[#0b1329] border-slate-300 focus:ring-[#0b1329] focus:ring-offset-0 cursor-pointer shrink-0"
+                        />
+                        <span className="text-sm text-slate-800">
+                          Não tenho interesse
+                        </span>
+                      </label>
+                    </div>
+
+                    {/* ---- Inline error ---- */}
+                    {error && (
+                      <div className="flex items-start gap-2 p-3 rounded-md bg-red-50 border border-red-200">
+                        <AlertCircle size={15} className="text-red-500 mt-0.5 shrink-0" />
+                        <p className="text-sm text-red-700">{error}</p>
+                      </div>
+                    )}
+
+                    {/* ---- Confirm button ---- */}
+                    <button
+                      type="button"
+                      onClick={handleConfirmResponse}
+                      disabled={submitting}
+                      className="w-full h-12 rounded-md bg-[#0b1329] text-white text-sm font-semibold hover:bg-[#111b3a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {submitting ? (
+                        <>
+                          <OverwatchOrbitLoader size="xs" theme="dark" className="shrink-0" />
+                          <span>A registar resposta...</span>
+                        </>
+                      ) : (
+                        <span>Confirmar resposta</span>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* ---- FOOTER ---- */}
+      <footer className="py-6 text-center shrink-0">
+        <p className="text-xs text-slate-400">
+          Overwatch Mozambique · Recrutamento e Selecção
+        </p>
+      </footer>
+    </div>
   );
 }

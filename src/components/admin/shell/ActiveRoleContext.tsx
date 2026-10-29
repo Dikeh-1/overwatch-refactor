@@ -32,11 +32,74 @@ const ActiveRoleContext = createContext<ActiveRoleContextType>({
   refreshRoles: async () => {},
 });
 
+const DEFAULT_ROLES: CareerRoleDefinition[] = [
+  {
+    id: "cctv_technical_manager",
+    en: "CCTV Installation & Technical Manager",
+    pt: "Gestor Técnico e Instalação de CCTV",
+    department: "Engenharia Técnica",
+    open: true,
+    activeCohortId: "cctv_technical_manager_initial_cohort",
+    pipelineStages: ["applications", "screening", "testing", "interview", "hired"],
+    screeningRules: [],
+    createdAt: "2026-09-01T00:00:00Z",
+    updatedAt: "2026-09-01T00:00:00Z",
+  },
+  {
+    id: "cctv",
+    en: "CCTV Operator",
+    pt: "Operadora de CCTV",
+    department: "Operações de Segurança",
+    open: true,
+    activeCohortId: "cctv_cohort",
+    pipelineStages: ["applications", "screening", "testing", "gate_checkin", "next_phase", "interview", "hired"],
+    screeningRules: [],
+    createdAt: "2026-09-01T00:00:00Z",
+    updatedAt: "2026-09-01T00:00:00Z",
+  },
+  {
+    id: "operations",
+    en: "Security Operations Manager",
+    pt: "Gestor de Operações de Segurança",
+    department: "Operações de Segurança",
+    open: false,
+    activeCohortId: null,
+    pipelineStages: ["applications", "screening", "interview", "hired"],
+    screeningRules: [],
+    createdAt: "2026-09-01T00:00:00Z",
+    updatedAt: "2026-09-01T00:00:00Z",
+  },
+  {
+    id: "technical",
+    en: "Technical Support Specialist",
+    pt: "Especialista de Suporte Técnico",
+    department: "Engenharia Técnica",
+    open: false,
+    activeCohortId: null,
+    pipelineStages: ["applications", "screening", "interview", "hired"],
+    screeningRules: [],
+    createdAt: "2026-09-01T00:00:00Z",
+    updatedAt: "2026-09-01T00:00:00Z",
+  },
+  {
+    id: "sales",
+    en: "Sales & Business Development",
+    pt: "Vendas e Desenvolvimento de Negócios",
+    department: "Comercial",
+    open: false,
+    activeCohortId: null,
+    pipelineStages: ["applications", "screening", "interview", "hired"],
+    screeningRules: [],
+    createdAt: "2026-09-01T00:00:00Z",
+    updatedAt: "2026-09-01T00:00:00Z",
+  },
+];
+
 export const ActiveRoleProvider: React.FC<{
   children: React.ReactNode;
   applications?: Application[];
 }> = ({ children, applications = [] }) => {
-  const [roles, setRoles] = useState<CareerRoleDefinition[]>([]);
+  const [roles, setRoles] = useState<CareerRoleDefinition[]>(DEFAULT_ROLES);
   const [activeRoleId, setActiveRoleIdState] = useState<string>("cctv");
   const [loading, setLoading] = useState(true);
 

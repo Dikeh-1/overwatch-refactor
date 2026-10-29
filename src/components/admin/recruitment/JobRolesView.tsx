@@ -281,7 +281,7 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
             >
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 {/* Role Header Info */}
-                <div className="flex items-start gap-3.5 min-w-0">
+                <div className="flex items-start gap-3.5 min-w-0 flex-1">
                   <div
                     className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${
                       role.open
@@ -292,12 +292,12 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
                     <Briefcase size={20} />
                   </div>
 
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h2 className="text-sm font-bold text-slate-900 truncate">{title}</h2>
+                      <h2 className="text-sm font-bold text-slate-900">{title}</h2>
 
                       <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[0.65rem] font-bold uppercase tracking-wider ${
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[0.65rem] font-bold uppercase tracking-wider whitespace-nowrap ${
                           role.open
                             ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                             : "bg-slate-100 text-slate-600 border border-slate-200"
@@ -313,22 +313,22 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
                         </span>
                       </span>
 
-                      <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[0.68rem] font-medium border border-slate-200">
+                      <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[0.68rem] font-medium border border-slate-200 whitespace-nowrap">
                         {role.department || (lang === "en" ? "Operations" : "Operações")}
                       </span>
                     </div>
 
                     <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500 flex-wrap">
-                      <span className="font-mono text-[0.7rem] text-slate-400">ID: {role.id}</span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1 text-slate-600">
+                      <span className="font-mono text-[0.7rem] text-slate-400 whitespace-nowrap">ID: {role.id}</span>
+                      <span className="whitespace-nowrap">•</span>
+                      <span className="flex items-center gap-1 text-slate-600 whitespace-nowrap">
                         <Layers size={13} className="text-slate-500" />
                         <span>
                           {stageCount} {t("stages", "fases")}
                         </span>
                       </span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1 text-slate-600">
+                      <span className="whitespace-nowrap">•</span>
+                      <span className="flex items-center gap-1 text-slate-600 whitespace-nowrap">
                         <Sliders size={13} className="text-slate-500" />
                         <span>
                           {rulesCount} {t("screening rules", "regras de triagem")}
@@ -336,8 +336,8 @@ export const JobRolesView: React.FC<JobRolesViewProps> = ({
                       </span>
                       {activeCohort && (
                         <>
-                          <span>•</span>
-                          <span className="flex items-center gap-1 text-slate-700 font-medium">
+                          <span className="whitespace-nowrap">•</span>
+                          <span className="flex items-center gap-1 text-slate-700 font-medium whitespace-nowrap">
                             <Calendar size={13} />
                             <span>{activeCohort.name}</span>
                           </span>

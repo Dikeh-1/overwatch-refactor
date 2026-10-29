@@ -1957,10 +1957,179 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
               </div>
             )}
 
-            {/* STICKY CONTROL REGION (Tabs + Subject Line + Heading) */}
-            <div className="sticky top-0 z-30 bg-white rounded-t-2xl shadow-xs">
-              {/* Studio Canvas Mode Header Tabs */}
-              <div className="rounded-t-2xl border-b border-slate-200 bg-slate-50 px-6 py-3 flex flex-wrap items-center justify-between gap-3 relative">
+            {/* Tab 1: Professional Rich Message Editor with UNIFIED TWO-LEVEL STICKY CONTROLS */}
+            <div style={{ display: canvasTab === "edit" ? "block" : "none" }}>
+              <div onFocusCapture={() => { lastEditor.current = "main"; }}>
+                <RichMessageEditor
+                  ref={editorHandle}
+                  value={messageBody}
+                  onChange={setMessageBody}
+                  attachments={attachments}
+                  onAttachmentsChange={setAttachments}
+                  lang={lang}
+                  seamless
+                  stickyToolbar
+                  canvasMaxHeight="calc(100vh - 440px)"
+                  topHeader={
+                    <div className="rounded-t-2xl bg-white">
+                      {/* 1. Studio Canvas Mode Header Tabs */}
+                      <div className="rounded-t-2xl border-b border-slate-200 bg-slate-50 px-6 py-3 flex flex-wrap items-center justify-between gap-3 relative">
+                        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200">
+                          <button
+                            type="button"
+                            onClick={() => setCanvasTab("edit")}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                              canvasTab === "edit"
+                                ? "bg-white text-slate-900 shadow-2xs border border-slate-200/60"
+                                : "text-slate-600 hover:text-slate-900"
+                            }`}
+                          >
+                            <FileText size={13} className={canvasTab === "edit" ? "text-sky-600" : "text-slate-400"} />
+                            <span>{t("Message Editor", "Editor da Mensagem")}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setCanvasTab("preview")}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                              canvasTab === "preview"
+                                ? "bg-white text-slate-900 shadow-2xs border border-slate-200/60"
+                                : "text-slate-600 hover:text-slate-900"
+                            }`}
+                          >
+                            <Eye size={13} className={canvasTab === "preview" ? "text-sky-600" : "text-slate-400"} />
+                            <span>{t("Live Official Letterhead Preview", "Pré-visualização em Papel Timbrado")}</span>
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleCopyWhatsApp}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
+                            title={t("Copy formatted broadcast copy for WhatsApp", "Copiar texto formatado para WhatsApp")}
+                          >
+                            {copiedWhatsApp ? (
+                              <>
+                                <Check size={13} className="text-emerald-600" />
+                                <span className="text-emerald-700 font-bold">{t("Copied!", "Copiado!")}</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy size={13} />
+                                <span>{t("Copy for WhatsApp", "Copiar p/ WhatsApp")}</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 2. Official Email Subject Line, Advisor Diagnostics & Headings */}
+                      <div className="px-6 pt-3.5 pb-3 space-y-3 bg-white">
+                        {advisorDiagnostics.length > 0 && (
+                          <div className="space-y-2">
+                            {advisorDiagnostics.map((diag, i) => (
+                              <div
+                                key={i}
+                                className={`p-3 rounded-xl border text-xs space-y-2 ${
+                                  diag.type === "warning"
+                                    ? "bg-amber-50/90 border-amber-300 text-amber-900"
+                                    : "bg-sky-50/90 border-sky-300 text-sky-900"
+                                }`}
+                              >
+                                <div className="flex items-start gap-2.5">
+                                  <AlertCircle
+                                    size={16}
+                                    className={`mt-0.5 shrink-0 ${
+                                      diag.type === "warning" ? "text-amber-600" : "text-sky-600"
+                                    }`}
+                                  />
+                                  <div className="flex-1 space-y-1">
+                                    <h4 className="font-bold text-xs">{diag.title}</h4>
+                                    <p className="text-[11px] leading-relaxed text-slate-700">{diag.message}</p>
+                                  </div>
+                                </div>
+                                {diag.actions && diag.actions.length > 0 && (
+                                  <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-200/60 pl-6">
+                                    {diag.actions.map((act, actIdx) => (
+                                      <button
+                                        key={actIdx}
+                                        type="button"
+                                        onClick={act.onClick}
+                                        className="px-2.5 py-1 rounded-md bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 text-[11px] font-semibold transition-colors cursor-pointer shadow-2xs"
+                                      >
+                                        {act.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Official Email Subject Bar */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <label htmlFor="studio-email-subject" className="font-bold text-slate-800">
+                              {t("Official Email Subject Line", "Assunto Oficial do Email")}
+                            </label>
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              {subject.length} {t("characters", "caracteres")}
+                            </span>
+                          </div>
+                          <input
+                            type="text"
+                            value={subject}
+                            onChange={(e) => setSubject(e.target.value)}
+                            id="studio-email-subject"
+                            name="subject"
+                            autoComplete="on"
+                            placeholder={t("Enter email subject...", "Assunto da comunicação oficial...")}
+                            className="w-full rounded-xl border border-slate-300 px-4 py-2 text-xs sm:text-sm text-slate-900 font-medium focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none shadow-2xs bg-white"
+                          />
+                        </div>
+
+                        {/* Official Message Content Heading */}
+                        <div className="flex items-center justify-between text-xs pt-0.5">
+                          <span className="font-bold text-slate-800">
+                            {t("Official Message Content & Attachments", "Conteúdo Oficial da Mensagem & Anexos")}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {attachments.length} {t("attachment(s)", "anexo(s)")}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  }
+                  placeholder={t(
+                    "Type your official letter here, edit the loaded template, or drag a template directly into this space...",
+                    "Escreva a mensagem aqui, personalize o modelo carregado ou arraste um modelo para esta área..."
+                  )}
+                  availableVariables={[
+                    { code: "{{candidate_name}}", label: t("Candidate Full Name", "Nome Completo") },
+                    { code: "{{name}}", label: t("Candidate Name (Short)", "Nome Candidato") },
+                    { code: "{{role_title}}", label: t("Job Role Title", "Cargo / Função") },
+                    { code: "{{booking_link}}", label: t("Test Booking Button", "Botão de Agendamento") },
+                    { code: "{{confirm_button}}", label: t("Confirm Button (Single RSVP)", "Botão Confirmar Presença") },
+                    { code: "{{response_buttons}}", label: t("Dual Response Buttons (Yes / No)", "Botões Sim / Não") },
+                    { code: "{{yes_button}}", label: t("Acceptance Button", "Botão Sim (Aceitar)") },
+                    { code: "{{no_button}}", label: t("Decline Button", "Botão Não (Recusar)") },
+                    { code: "{{next_phase_link}}", label: t("Confirmation Portal Link", "Link do Portal de Confirmação") },
+                    { code: "{{score}}", label: t("Test Score %", "Nota do Teste %") },
+                    { code: "{{test_slot}}", label: t("Assigned Test Slot", "Turno Agendado") },
+                    { code: "{{date}}", label: t("Current Official Date", "Data Oficial") },
+                    { code: "{{location}}", label: t("HQ Facility Address", "Endereço das Instalações") },
+                    { code: "{{company_name}}", label: t("Company Name", "Overwatch Moçambique") },
+                  ]}
+                />
+              </div>
+            </div>
+
+            {/* Tab 2: Live Official Branded Letterhead Preview */}
+            <div style={{ display: canvasTab === "preview" ? "flex" : "none" }} className="flex-col">
+              {/* Sticky Mode Tabs Bar for Preview */}
+              <div className="sticky top-0 z-30 rounded-t-2xl border-b border-slate-200 bg-slate-50 px-6 py-3 flex flex-wrap items-center justify-between gap-3 shadow-xs">
                 <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200">
                   <button
                     type="button"
@@ -2010,126 +2179,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                   </button>
                 </div>
               </div>
-
-              {/* When in Edit Mode: Advisor Banner, Official Email Subject Line, and Heading */}
-              {canvasTab === "edit" && (
-                <div className="px-6 pt-3.5 pb-3 space-y-3 bg-white border-b border-slate-200">
-                  {/* Intelligent Link & Audience Safeguard Advisor Banner */}
-                  {advisorDiagnostics.length > 0 && (
-                    <div className="space-y-2">
-                      {advisorDiagnostics.map((diag, i) => (
-                        <div
-                          key={i}
-                          className={`p-3 rounded-xl border text-xs space-y-2 ${
-                            diag.type === "warning"
-                              ? "bg-amber-50/90 border-amber-300 text-amber-900"
-                              : "bg-sky-50/90 border-sky-300 text-sky-900"
-                          }`}
-                        >
-                          <div className="flex items-start gap-2.5">
-                            <AlertCircle
-                              size={16}
-                              className={`mt-0.5 shrink-0 ${
-                                diag.type === "warning" ? "text-amber-600" : "text-sky-600"
-                              }`}
-                            />
-                            <div className="flex-1 space-y-1">
-                              <h4 className="font-bold text-xs">{diag.title}</h4>
-                              <p className="text-[11px] leading-relaxed text-slate-700">{diag.message}</p>
-                            </div>
-                          </div>
-                          {diag.actions && diag.actions.length > 0 && (
-                            <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-200/60 pl-6">
-                              {diag.actions.map((act, actIdx) => (
-                                <button
-                                  key={actIdx}
-                                  type="button"
-                                  onClick={act.onClick}
-                                  className="px-2.5 py-1 rounded-md bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 text-[11px] font-semibold transition-colors cursor-pointer shadow-2xs"
-                                >
-                                  {act.label}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Official Email Subject Bar */}
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between text-xs">
-                      <label htmlFor="studio-email-subject" className="font-bold text-slate-800">
-                        {t("Official Email Subject Line", "Assunto Oficial do Email")}
-                      </label>
-                      <span className="text-[10px] text-slate-400 font-mono">
-                        {subject.length} {t("characters", "caracteres")}
-                      </span>
-                    </div>
-                    <input
-                      type="text"
-                      value={subject}
-                      onChange={(e) => setSubject(e.target.value)}
-                      id="studio-email-subject"
-                      name="subject"
-                      autoComplete="on"
-                      placeholder={t("Enter email subject...", "Assunto da comunicação oficial...")}
-                      className="w-full rounded-xl border border-slate-300 px-4 py-2 text-xs sm:text-sm text-slate-900 font-medium focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none shadow-2xs bg-white"
-                    />
-                  </div>
-
-                  {/* Official Message Content Heading */}
-                  <div className="flex items-center justify-between text-xs pt-0.5">
-                    <span className="font-bold text-slate-800">
-                      {t("Official Message Content & Attachments", "Conteúdo Oficial da Mensagem & Anexos")}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      {attachments.length} {t("attachment(s)", "anexo(s)")}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Tab 1: Professional Rich Message Editor */}
-            <div style={{ display: canvasTab === "edit" ? "block" : "none" }}>
-              <div onFocusCapture={() => { lastEditor.current = "main"; }}>
-                <RichMessageEditor
-                  ref={editorHandle}
-                  value={messageBody}
-                  onChange={setMessageBody}
-                  attachments={attachments}
-                  onAttachmentsChange={setAttachments}
-                  lang={lang}
-                  seamless
-                  stickyToolbar
-                  canvasMaxHeight="420px"
-                  placeholder={t(
-                    "Type your official letter here, edit the loaded template, or drag a template directly into this space...",
-                    "Escreva a mensagem aqui, personalize o modelo carregado ou arraste um modelo para esta área..."
-                  )}
-                  availableVariables={[
-                    { code: "{{candidate_name}}", label: t("Candidate Full Name", "Nome Completo") },
-                    { code: "{{name}}", label: t("Candidate Name (Short)", "Nome Candidato") },
-                    { code: "{{role_title}}", label: t("Job Role Title", "Cargo / Função") },
-                    { code: "{{booking_link}}", label: t("Test Booking Button", "Botão de Agendamento") },
-                    { code: "{{confirm_button}}", label: t("Confirm Button (Single RSVP)", "Botão Confirmar Presença") },
-                    { code: "{{response_buttons}}", label: t("Dual Response Buttons (Yes / No)", "Botões Sim / Não") },
-                    { code: "{{yes_button}}", label: t("Acceptance Button", "Botão Sim (Aceitar)") },
-                    { code: "{{no_button}}", label: t("Decline Button", "Botão Não (Recusar)") },
-                    { code: "{{next_phase_link}}", label: t("Confirmation Portal Link", "Link do Portal de Confirmação") },
-                    { code: "{{score}}", label: t("Test Score %", "Nota do Teste %") },
-                    { code: "{{test_slot}}", label: t("Assigned Test Slot", "Turno Agendado") },
-                    { code: "{{date}}", label: t("Current Official Date", "Data Oficial") },
-                    { code: "{{location}}", label: t("HQ Facility Address", "Endereço das Instalações") },
-                    { code: "{{company_name}}", label: t("Company Name", "Overwatch Moçambique") },
-                  ]}
-                /></div>
-              </div>
-
-            {/* Tab 2: Live Official Branded Letterhead Preview */}
-            <div style={{ display: canvasTab === "preview" ? "flex" : "none" }} className="p-6 sm:p-8 bg-slate-100/60 flex-col items-center space-y-4">
+              <div className="p-6 sm:p-8 bg-slate-100/60 flex flex-col items-center space-y-4">
                 {/* Dynamic Personalization Guarantee Banner */}
                 <div className="w-full max-w-2xl rounded-xl border border-sky-200 bg-sky-50/90 p-3.5 shadow-2xs flex items-start gap-3 text-xs text-sky-950">
                   <ShieldCheck className="text-sky-600 shrink-0 mt-0.5" size={17} />
@@ -2309,6 +2359,7 @@ Informamos que, para este ciclo específico, não daremos seguimento à sua cand
                 </div>
               </div>
             </div>
+          </div>
 
           {/* DISPATCH CONTROLS & TEST EMAIL STRIP */}
           <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-4">
