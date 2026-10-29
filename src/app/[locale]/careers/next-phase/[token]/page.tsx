@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { Check, AlertCircle, Calendar, ArrowRight } from "lucide-react";
 import OverwatchOrbitLoader from "@/components/ui/OverwatchOrbitLoader";
+import { formatCandidateName } from "@/lib/careers";
 
 /* ================================================================
    CANDIDATE RESPONSE / CONFIRMATION PAGE
@@ -165,7 +166,7 @@ export default function NextPhaseCandidatePage() {
                     Processo de Recrutamento Overwatch
                   </span>
                   <h1 className="text-xl font-bold text-slate-900">
-                    Olá, {stageMismatchInfo.candidate.name}
+                    Olá, {formatCandidateName(stageMismatchInfo.candidate.name)}
                   </h1>
                   <p className="text-xs text-slate-500">
                     {stageMismatchInfo.candidate.roleTitle || "Candidatura Overwatch"}
@@ -239,7 +240,7 @@ export default function NextPhaseCandidatePage() {
                     : "Confirmação – Processo de Selecção"}
                 </h1>
                 <p className="text-sm text-slate-600 mt-2 flex flex-wrap items-center gap-2">
-                  <span>Candidato(a): <strong className="text-slate-900">{candidateInfo.name}</strong></span>
+                  <span>Candidato(a): <strong className="text-slate-900">{formatCandidateName(candidateInfo.name)}</strong></span>
                   {typeof candidateInfo.testScore === "number" && (
                     <span className="font-mono text-xs px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-700">
                       Nota: {candidateInfo.testScore}%
@@ -267,7 +268,7 @@ export default function NextPhaseCandidatePage() {
                           </h2>
                         </div>
                         <p className="text-sm text-slate-600 leading-relaxed">
-                          Obrigada pela sua confirmação. Enviámos um email de confirmação
+                          Agradecemos a sua confirmação. Enviámos um email de confirmação
                           para a sua caixa de correio. Entraremos em contacto brevemente com
                           os próximos passos do processo de selecção.
                         </p>

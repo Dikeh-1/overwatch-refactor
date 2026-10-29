@@ -662,4 +662,26 @@ export function getMaputoToday(date: Date = new Date()) {
 
 export const getMaputoTime = getMaputoToday;
 
+/**
+ * Professional Portuguese / International Name Title-Casing.
+ * Formats "marven combane" => "Marven Combane", "ANA DE SOUSA" => "Ana de Sousa", etc.
+ * Preserves standard lowercase prepositions in Portuguese: da, de, do, das, dos, e.
+ */
+export function formatCandidateName(name?: string | null): string {
+  if (!name) return "";
+  const trimmed = name.trim();
+  if (!trimmed) return "";
+  const parts = trimmed.toLowerCase().split(/\s+/);
+  const lowerPrepositions = new Set(["de", "da", "do", "das", "dos", "e"]);
+  return parts
+    .map((word, index) => {
+      if (index > 0 && lowerPrepositions.has(word)) {
+        return word;
+      }
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ");
+}
+
+
 

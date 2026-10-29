@@ -226,11 +226,19 @@ export async function getRoleDefinitions(forceFresh = false): Promise<CareerRole
     }
 
     // Combine configs or fallback to defaults
+    const defaultList = buildDefaultRoles();
     let roles: CareerRoleDefinition[] = remoteConfigs
       ? [...remoteConfigs]
       : inMemoryRoleDefs
       ? [...inMemoryRoleDefs]
-      : buildDefaultRoles();
+      : defaultList;
+
+    // Ensure known core roles (e.g. cctv_technical_manager) are always present even if omitted in a partial remote config
+    for (const def of defaultList) {
+      if (!roles.some((r) => sameRole(r.id, def.id))) {
+        roles.push(def);
+      }
+    }
 
     // Synchronize open state from Supabase career_roles
     roles = roles.map((role) => {

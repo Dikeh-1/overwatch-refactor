@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import {
   Calendar,
   CheckCircle2,
@@ -10,16 +11,25 @@ import {
   RefreshCw,
   Lock,
   ShieldOff,
-  Download,
   Printer,
   ShieldCheck,
   RotateCcw,
   MessageSquare,
   Mail,
+  MapPin,
+  Clock,
+  Briefcase,
+  User,
+  FileText,
   X,
 } from "lucide-react";
 import { siteContact } from "@/lib/site-config";
-import { formatSlotDisplay, isPastDateSlot, isSlotBookingExpired } from "@/lib/careers";
+import {
+  formatSlotDisplay,
+  formatCandidateName,
+  isPastDateSlot,
+  isSlotBookingExpired,
+} from "@/lib/careers";
 import { openOverwatchChatbot } from "@/components/layout/ZohoChatbot";
 
 type SlotStat = {
@@ -56,7 +66,7 @@ type CandidateData = {
   supportEmail?: string;
 };
 
-function ChatbotSupportHeadsUp({
+function ChatbotSupportSection({
   isPt,
   supportEmail = "info@overwatchmoz.com",
 }: {
@@ -64,46 +74,45 @@ function ChatbotSupportHeadsUp({
   supportEmail?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-        <div className="flex items-start gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-[#07080f] text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+    <div className="rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-5">
+        <div className="flex items-start gap-4">
+          <div className="w-10 h-10 rounded-xl bg-[#0b1329] text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
             <MessageSquare size={18} />
           </div>
           <div className="space-y-1.5">
-            <h3 className="text-xs sm:text-sm font-bold text-gray-900">
+            <h3 className="text-sm font-bold text-slate-900">
               {isPt
-                ? "Tem alguma dúvida, dificuldade ou questão?"
-                : "Have any problems, questions, or enquiries?"}
+                ? "Dúvidas ou Dificuldade no Agendamento?"
+                : "Questions or need assistance with your booking?"}
             </h3>
-            <p className="text-xs text-gray-600 leading-relaxed">
+            <p className="text-xs text-slate-600 leading-relaxed max-w-xl">
               {isPt ? (
                 <>
-                  Se tiver qualquer problema ou dúvida, contacte-nos através do{" "}
-                  <strong className="text-gray-900">Chatbot no nosso website</strong> — escolha a opção{" "}
-                  <strong className="text-gray-900">«Falar com um agente»</strong>{" "}
-                  <span className="text-gray-500">(&ldquo;Speak with an agent&rdquo;)</span> e a nossa equipa irá responder. Em alternativa, envie-nos um email para{" "}
+                  A nossa equipa de Recursos Humanos está disponível para ajudar. Se encontrar qualquer
+                  constrangimento, pode falar directamente com um assistente através do{" "}
+                  <strong className="text-slate-900">Chatbot no website</strong> (opção{" "}
+                  <em>«Falar com um agente»</em>) ou enviar email para{" "}
                   <a
                     href={`mailto:${supportEmail}`}
-                    className="font-bold text-gray-900 underline decoration-gray-400 underline-offset-2 hover:text-gray-700"
+                    className="font-semibold text-slate-900 underline underline-offset-2 hover:text-slate-700"
                   >
                     {supportEmail}
-                  </a>{" "}
-                  — respondemos mais rapidamente.
+                  </a>
+                  .
                 </>
               ) : (
                 <>
-                  If you have any problems or enquiries, please contact us via the{" "}
-                  <strong className="text-gray-900">Chatbot on our website</strong> — choose{" "}
-                  <strong className="text-gray-900">&ldquo;Speak with an agent&rdquo;</strong>{" "}
-                  and we will respond. Or send us an email at{" "}
+                  Our HR team is here to assist. If you encounter any issues, please reach out via the{" "}
+                  <strong className="text-slate-900">website chatbot</strong> (select{" "}
+                  <em>&ldquo;Speak with an agent&rdquo;</em>) or email us at{" "}
                   <a
                     href={`mailto:${supportEmail}`}
-                    className="font-bold text-gray-900 underline decoration-gray-400 underline-offset-2 hover:text-gray-700"
+                    className="font-semibold text-slate-900 underline underline-offset-2 hover:text-slate-700"
                   >
                     {supportEmail}
-                  </a>{" "}
-                  — we respond faster.
+                  </a>
+                  .
                 </>
               )}
             </p>
@@ -111,22 +120,22 @@ function ChatbotSupportHeadsUp({
               <button
                 type="button"
                 onClick={() => openOverwatchChatbot()}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#07080f] hover:bg-gray-800 text-white text-xs font-semibold px-4 py-2.5 transition-all shadow-sm cursor-pointer"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#0b1329] hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2.5 transition-colors shadow-xs cursor-pointer"
               >
-                <MessageSquare size={13} className="text-white" />
+                <MessageSquare size={14} />
                 <span>
                   {isPt
-                    ? "Abrir Chatbot · «Falar com um agente»"
-                    : 'Open Chatbot · "Speak with an agent"'}
+                    ? "Abrir Chat de Apoio · Falar com Agente"
+                    : "Open Support Chat · Speak with Agent"}
                 </span>
               </button>
               <a
                 href={`mailto:${supportEmail}?subject=${encodeURIComponent(
-                  isPt ? "Questão sobre Teste Presencial — Overwatch" : "Test Booking Enquiry — Overwatch",
+                  isPt ? "Apoio ao Agendamento de Teste — Overwatch" : "Test Booking Support — Overwatch",
                 )}`}
-                className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-800 text-xs font-semibold px-4 py-2.5 transition-all shadow-xs"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs font-semibold px-4 py-2.5 transition-colors"
               >
-                <Mail size={13} className="text-gray-600" />
+                <Mail size={14} className="text-slate-500" />
                 <span>{supportEmail}</span>
               </a>
             </div>
@@ -145,19 +154,16 @@ export default function CandidateBookingClient({
   locale: string;
 }) {
   const cleanId = (id || "").trim().replace(/\/+$/, "").replace(/[\s.…]+$/, "");
-  // The URL locale (/pt/ or /en/) is the single source of truth. Default is strictly Portuguese (pt).
   const activeLang: "pt" | "en" = locale === "en" ? "en" : "pt";
   const isPt = activeLang === "pt";
+
   const [candidate, setCandidate] = useState<CandidateData | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [isDeactivated, setIsDeactivated] = useState(false);
-  const [, setSuccessNotice] = useState(false);
   const [liveSlotTakenNotice, setLiveSlotTakenNotice] = useState<string>("");
-
-  // Entry verified by official attendee list & identity document (no QR code)
 
   useEffect(() => {
     let cancelled = false;
@@ -200,8 +206,8 @@ export default function CandidateBookingClient({
                 if (silent) {
                   setLiveSlotTakenNotice(
                     isPt
-                      ? `Actualização em tempo real: A última vaga para «${formatSlotDisplay(currentSelected, true)}» acabou de ser preenchida por outro candidato. Seleccionámos automaticamente o próximo horário disponível.`
-                      : `Live update: The last spot for "${formatSlotDisplay(currentSelected, false)}" was just taken by another applicant. We have automatically selected the next open slot for you.`,
+                      ? `Actualização: O turno «${formatSlotDisplay(currentSelected, true)}» foi entretanto preenchido. Seleccionámos automaticamente a próxima vaga aberta.`
+                      : `Live update: The slot "${formatSlotDisplay(currentSelected, false)}" was just filled. We selected the next available slot.`,
                   );
                 }
               }
@@ -280,7 +286,11 @@ export default function CandidateBookingClient({
     }
 
     if (candidate?.slotStats?.[selectedSlot]?.isFull) {
-      setError(isPt ? "As vagas para esta data já se encontram esgotadas. Por favor seleccione outra data disponível." : "This slot is full. Please choose another available date.");
+      setError(
+        isPt
+          ? "As vagas para esta data já se encontram preenchidas. Por favor seleccione outra data disponível."
+          : "This slot is full. Please choose another open session.",
+      );
       return;
     }
 
@@ -341,7 +351,6 @@ export default function CandidateBookingClient({
           ? { ...prev, testSlot: selectedSlot, testBookedAt: data.testBookedAt || new Date().toISOString() }
           : null,
       );
-      setSuccessNotice(true);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -357,11 +366,13 @@ export default function CandidateBookingClient({
     Boolean(candidate?.cohortId && candidate.cohortId.includes("cctv_technical_manager"));
 
   const roleTitleText = isPt
-    ? candidate?.roleTitle?.pt || (isTechManager ? "Gestor Técnico e Instalação de CCTV" : "Operadora de CCO")
-    : candidate?.roleTitle?.en || (isTechManager ? "CCTV Installation & Technical Manager" : "CCTV Operator");
+    ? candidate?.roleTitle?.pt || (isTechManager ? "Gestor Técnico e Instalação de CCTV" : "Operadora de Centro de Controlo (CCO)")
+    : candidate?.roleTitle?.en || (isTechManager ? "CCTV Installation & Technical Manager" : "CCTV Control Centre Operator");
 
   const referenceCodeText =
     candidate?.referenceCode || (isTechManager ? "TM-2026/MZQ" : "CCO-2026/MZQ");
+
+  const formattedCandidateName = formatCandidateName(candidate?.name);
 
   const durationText = isPt
     ? candidate?.durationText?.pt ||
@@ -383,482 +394,531 @@ export default function CandidateBookingClient({
     ? candidate?.whatToBring?.pt ||
       (isTechManager
         ? [
-            "Documento de identificação (BI / Passaporte)",
-            "Caneta",
-            "Lápis e borracha, se desejar",
-            "Calculadora simples, opcional",
+            "Documento de identificação válido com fotografia (BI ou Passaporte original)",
+            "Caneta de tinta azul ou preta",
+            "Lápis e borracha para cálculos ou apontamentos, se desejar",
+            "Calculadora científica ou simples (opcional)",
           ]
         : [
-            "Documento de identificação original (BI / Passaporte)",
-            "Caneta (azul ou preta)",
-            "Chegar até às 09h30 (portão fecha às 09h50)",
+            "Documento de identificação original com fotografia (BI / Passaporte)",
+            "Caneta de tinta azul ou preta",
+            "Chegada até às 09h30 (o portão de acesso fecha às 09h50)",
           ])
     : candidate?.whatToBring?.en ||
       (isTechManager
         ? [
-            "Identification document (ID / Passport)",
-            "Pen",
-            "Pencil and eraser, if desired",
-            "Simple calculator, optional",
+            "Valid photo identification (original ID / Passport)",
+            "Blue or black ballpoint pen",
+            "Pencil and eraser for notes/drawings, if desired",
+            "Simple or scientific calculator (optional)",
           ]
         : [
-            "Original photo ID (BI / Passport)",
-            "A pen (blue or black)",
-            "Arrive by 09:30 (gate closes at 09:50)",
+            "Original valid photo ID (National ID / Passport)",
+            "Blue or black pen",
+            "Arrive by 09:30 (access gate closes promptly at 09:50)",
           ]);
 
   const supportEmail = candidate?.supportEmail || siteContact.email || "info@overwatchmoz.com";
+  const refDisplay = candidate?.id ? candidate.id.slice(0, 8).toUpperCase() : "CONF";
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-28 sm:pt-36 pb-24 sm:pb-28">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-800 flex flex-col font-sans selection:bg-[#0b1329] selection:text-white">
+      {/* ── PRINT MEDIA CSS (Clean single-page voucher export) ── */}
+      <style jsx global>{`
+        @media print {
+          body {
+            background: #ffffff !important;
+            color: #0f172a !important;
+          }
+          header,
+          footer,
+          .no-print {
+            display: none !important;
+          }
+          .print-container {
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .print-slip {
+            border: 1px solid #cbd5e1 !important;
+            box-shadow: none !important;
+            background: #ffffff !important;
+            color: #0f172a !important;
+            page-break-inside: avoid;
+          }
+        }
+      `}</style>
+
+      {/* ── TOP CORPORATE HEADER ── */}
+      <header className="border-b border-slate-800/80 bg-[#0b1329] text-white sticky top-0 z-40 shadow-xs">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <Image
+              src="/logo-white.png"
+              alt="Overwatch Moçambique"
+              width={130}
+              height={22}
+              className="h-5 sm:h-5.5 w-auto object-contain"
+              priority
+            />
+            <span className="hidden sm:inline-block h-4 w-px bg-white/20" />
+            <span className="hidden sm:inline-block text-xs font-semibold tracking-wide text-slate-300">
+              {isPt ? "Portal de Recrutamento & Selecção" : "Recruitment & Selection Portal"}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-3">
+            {candidate && (
+              <span className="font-mono text-[11px] font-bold px-2.5 py-1 rounded-md bg-white/10 border border-white/15 text-slate-200">
+                REF: #{refDisplay}
+              </span>
+            )}
+            <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+              {isAlreadyBooked
+                ? isPt ? "Confirmado" : "Confirmed"
+                : isPt ? "Convocatória" : "Invited"}
+            </span>
+          </div>
+        </div>
+      </header>
+
+      {/* ── MAIN CONTENT WORKSPACE ── */}
+      <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-6 print-container">
 
         {/* ── LOADING STATE ─────────────────────────────────────── */}
         {loading ? (
-          <div className="min-h-[50vh] flex flex-col items-center justify-center gap-5 text-center">
-            <div className="relative">
-              <div className="h-14 w-14 rounded-2xl bg-[#07080f] flex items-center justify-center">
-                <RefreshCw className="animate-spin text-white/70" size={22} />
-              </div>
+          <div className="min-h-[50vh] flex flex-col items-center justify-center gap-4 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-[#0b1329] text-white flex items-center justify-center shadow-md">
+              <RefreshCw className="animate-spin text-white/80" size={20} />
             </div>
             <div>
-              <p className="text-sm font-semibold text-gray-900">
-                {isPt ? "A carregar a sua convocatória…" : "Loading your invitation…"}
+              <p className="text-sm font-bold text-slate-900">
+                {isPt ? "A carregar dados da convocatória…" : "Loading invitation details…"}
               </p>
-              <p className="text-xs text-gray-400 mt-1">
-                {isPt ? "Aguarde um momento." : "Just a moment."}
+              <p className="text-xs text-slate-500 mt-1">
+                Overwatch Moçambique · {isPt ? "Aguarde um momento" : "Please hold on"}
               </p>
             </div>
           </div>
 
         /* ── DEACTIVATED LINK ────────────────────────────────────── */
         ) : isDeactivated ? (
-          <div className="max-w-lg mx-auto py-8 space-y-6">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center h-20 w-20 rounded-3xl bg-red-50 border border-red-100 mb-6">
-                <ShieldOff size={36} className="text-red-400" />
+          <div className="py-8 space-y-6 max-w-xl mx-auto">
+            <div className="rounded-2xl border border-red-200 bg-white p-8 text-center shadow-xs">
+              <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-red-50 border border-red-100 text-red-600 mb-4">
+                <ShieldOff size={28} />
               </div>
-              <h1 className="text-xl font-bold text-gray-900 mb-3">
-                {isPt ? "Link de agendamento desactivado" : "Booking link deactivated"}
+              <h1 className="text-lg font-bold text-slate-900 mb-2">
+                {isPt ? "Link de Agendamento Desactivado" : "Booking Link Deactivated"}
               </h1>
-              <p className="text-sm text-gray-500 leading-relaxed mb-2">
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                 {isPt
-                  ? "Este link de convocatória foi desactivado pelo departamento de Recursos Humanos e não permite mais agendamentos."
-                  : "This invitation link has been deactivated by the HR department and no longer allows bookings."}
+                  ? "Este link de convocatória foi encerrado ou substituído pelo departamento de Recursos Humanos e já não se encontra activo."
+                  : "This invitation link was closed or updated by the Human Resources department and is no longer active."}
               </p>
             </div>
-            <ChatbotSupportHeadsUp isPt={isPt} supportEmail={supportEmail} />
+            <ChatbotSupportSection isPt={isPt} supportEmail={supportEmail} />
           </div>
 
         /* ── NOT FOUND / ERROR ───────────────────────────────────── */
         ) : error && !candidate ? (
-          <div className="max-w-lg mx-auto py-8 space-y-6">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center h-20 w-20 rounded-3xl bg-amber-50 border border-amber-100 mb-6">
-                <AlertCircle size={36} className="text-amber-400" />
+          <div className="py-8 space-y-6 max-w-xl mx-auto">
+            <div className="rounded-2xl border border-amber-200 bg-white p-8 text-center shadow-xs">
+              <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-amber-50 border border-amber-100 text-amber-600 mb-4">
+                <AlertCircle size={28} />
               </div>
-              <h1 className="text-xl font-bold text-gray-900 mb-3">
-                {isPt ? "Convocatória não encontrada" : "Invitation not found"}
+              <h1 className="text-lg font-bold text-slate-900 mb-2">
+                {isPt ? "Convocatória Não Localizada" : "Invitation Not Found"}
               </h1>
-              <p className="text-sm text-gray-500 leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4">
                 {error ||
                   (isPt
-                    ? "Não foi possível localizar esta convocatória. Verifique se o link está correcto ou entre em contacto connosco abaixo."
-                    : "Could not locate this invitation. Please verify the link or contact us below.")}
+                    ? "Não foi possível localizar o registo desta convocatória. Por favor confirme o link recebido ou contacte a nossa equipa."
+                    : "Unable to find this invitation record. Please verify the URL or contact our team.")}
               </p>
             </div>
-            <ChatbotSupportHeadsUp isPt={isPt} supportEmail={supportEmail} />
+            <ChatbotSupportSection isPt={isPt} supportEmail={supportEmail} />
           </div>
 
-        /* ── MAIN CANDIDATE VIEW ─────────────────────────────────── */
+        /* ── CANDIDATE WORKSPACE ─────────────────────────────────── */
         ) : candidate ? (
-          <div className="space-y-5">
+          <div className="space-y-6">
 
+            {/* Next Phase notification badge (if advanced) */}
             {candidate.isNextPhase && (
-              <div className="rounded-2xl border border-emerald-300 bg-emerald-50/90 p-4 sm:p-5 shadow-xs space-y-2.5">
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+              <div className="rounded-2xl border border-emerald-300 bg-emerald-50/90 p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 no-print">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
                     <CheckCircle2 size={18} />
                   </div>
-                  <div className="space-y-1">
+                  <div>
                     <h2 className="text-sm font-bold text-emerald-950">
-                      {isPt ? "Aprovado(a) para a Próxima Fase!" : "Advanced to Next Phase!"}
+                      {isPt ? "Aprovado(a) para a Próxima Fase do Processo!" : "Advanced to Next Phase!"}
                     </h2>
-                    <p className="text-xs text-emerald-800 leading-relaxed">
+                    <p className="text-xs text-emerald-800 leading-relaxed mt-0.5">
                       {isPt
-                        ? "Já concluiu a fase de testes e foi selecionado(a) para a Próxima Fase do recrutamento. Aceda ao seu portal para confirmar disponibilidade."
-                        : "You have already completed the testing phase and advanced to the Next Phase. Visit your portal to confirm availability."}
+                        ? "Concluiu a avaliação presencial e foi apurado(a) para a fase subsequente. Clique para aceder ao portal da Próxima Fase."
+                        : "You completed the in-person assessment and qualified for the next phase. Click to access your Next Phase portal."}
                     </p>
                   </div>
                 </div>
-                <div className="pt-1">
-                  <a
-                    href={`/${locale}/careers/next-phase/${encodeURIComponent(candidate.nextPhaseToken || candidate.id)}`}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0b1329] hover:bg-slate-800 text-white text-xs font-bold transition-colors shadow-2xs"
-                  >
-                    <span>{isPt ? "Aceder ao Portal da Próxima Fase →" : "Access Next Phase Portal →"}</span>
-                  </a>
-                </div>
+                <a
+                  href={`/${locale}/careers/next-phase/${encodeURIComponent(candidate.nextPhaseToken || candidate.id)}`}
+                  className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#0b1329] hover:bg-slate-800 text-white text-xs font-bold transition-colors shadow-xs"
+                >
+                  <span>{isPt ? "Aceder à Próxima Fase →" : "Access Next Phase →"}</span>
+                </a>
               </div>
             )}
 
-            {/* Identity header */}
-            <div className="border border-gray-100 rounded-2xl bg-white shadow-sm overflow-hidden">
-              <div className="bg-[#07080f] px-6 py-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[0.7rem] font-semibold uppercase tracking-widest text-white/40 mb-1">
+            {/* ── CANDIDATE HERO BANNER ── */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5 mb-5">
+                <div>
+                  <div className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 font-mono">
+                    <ShieldCheck size={14} className="text-[#0b1329]" />
+                    <span>
                       {candidate.rebookingGraceActive
-                        ? isPt ? "Período de Graça · Reagendamento Excepcional" : "Grace Period · Exceptional Rebooking"
+                        ? isPt ? "Reagendamento Excepcional Autorizado" : "Exceptional Rebooking Authorized"
                         : isAlreadyBooked
-                          ? isPt ? "Presença confirmada" : "Attendance confirmed"
-                          : isPt ? "Convocatória oficial" : "Official convocation"}
-                    </p>
-                    <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight leading-tight">
-                      {candidate.name}
-                    </h1>
-                    <p className="text-xs text-emerald-400 font-medium mt-1">
-                      {roleTitleText}
-                    </p>
-                  </div>
-                  {candidate.rebookingGraceActive ? (
-                    <div className="shrink-0 h-10 w-10 rounded-full bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-400">
-                      <RotateCcw size={18} />
-                    </div>
-                  ) : isAlreadyBooked ? (
-                    <div className="shrink-0 h-10 w-10 rounded-full bg-emerald-400/20 border border-emerald-400/30 flex items-center justify-center">
-                      <CheckCircle2 size={20} className="text-emerald-400" />
-                    </div>
-                  ) : (
-                    <span className="shrink-0 text-[0.65rem] font-mono font-medium text-white/35 border border-white/15 rounded-lg px-2 py-1 mt-1">
-                      {referenceCodeText}
+                          ? isPt ? "Presença Confirmada" : "Attendance Confirmed"
+                          : isPt ? "Convocatória Oficial para Teste Presencial" : "Official In-Person Test Convocation"}
                     </span>
-                  )}
+                  </div>
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                    {formattedCandidateName}
+                  </h1>
+                </div>
+
+                <div className="flex sm:flex-col items-center sm:items-end justify-between gap-1.5 shrink-0">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 border border-slate-200/80 text-xs font-semibold text-slate-800">
+                    <Briefcase size={13} className="text-slate-500" />
+                    <span>{roleTitleText}</span>
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-400">
+                    Código: #{referenceCodeText}
+                  </span>
                 </div>
               </div>
-              <div className="px-6 py-4">
-                <p className="text-sm text-gray-500 leading-relaxed">
-                  {candidate.rebookingGraceActive
+
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                {candidate.rebookingGraceActive
+                  ? isPt
+                    ? `A Direcção de Recursos Humanos autorizou uma oportunidade excepcional de reagendamento para a função de ${roleTitleText}. Por favor seleccione a sua nova data entre os turnos disponíveis abaixo.`
+                    : `The HR Directorate has authorized an exceptional rebooking window for the ${roleTitleText} position. Please select your new session below.`
+                  : isAlreadyBooked
                     ? isPt
-                      ? `Foi-lhe autorizada uma oportunidade final de reagendamento para a posição de ${roleTitleText}. Escolha a sua nova data entre os turnos disponíveis abaixo.`
-                      : `You have been granted an exceptional rebooking opportunity for the ${roleTitleText} position. Choose your new date from the open slots below.`
-                    : isAlreadyBooked
-                      ? isPt
-                        ? "A sua confirmação foi registada com sucesso. Abaixo encontram-se todos os detalhes e requisitos do seu teste presencial."
-                        : "Your confirmation has been successfully registered. All details and requirements for your in-person test are shown below."
-                      : isPt
-                        ? `Foi seleccionado(a) para a fase de teste técnico presencial para a posição de ${roleTitleText}. Escolha a data e horário mais conveniente abaixo.`
-                        : `You have been selected for the in-person technical assessment for the ${roleTitleText} position. Choose your preferred date and time below.`}
-                </p>
-              </div>
+                      ? "A sua vaga para a avaliação presencial encontra-se registada e garantida. Guarde ou imprima o Comprovativo Oficial abaixo com todas as indicações de comparência e acesso às instalações."
+                      : "Your in-person assessment session is confirmed and reserved. Please save or print your Official Confirmation Slip below with venue and check-in instructions."
+                    : isPt
+                      ? `Foi seleccionado(a) para a prova de avaliação técnica presencial da Overwatch Moçambique para a função de ${roleTitleText}. Seleccione o dia e horário mais conveniente entre as sessões abertas.`
+                      : `You have been selected for the Overwatch Mozambique in-person technical evaluation for the ${roleTitleText} role. Please select your preferred session from the open slots below.`}
+              </p>
             </div>
 
-            {/* ── ALREADY BOOKED VIEW ── */}
+            {/* ══════════════════════════════════════════════════════════
+                STATE A: ALREADY BOOKED — SINGLE EXECUTIVE OFFICIAL VOUCHER
+                (Unified human-grade slip: NO duplicates, NO neon blobs)
+                ══════════════════════════════════════════════════════════ */}
             {isAlreadyBooked ? (
-              <div className="space-y-4">
-                {/* Official Appointment Voucher Card */}
-                <div className="rounded-2xl border-2 border-slate-900 bg-[#0b1329] text-white p-6 shadow-xl relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
-
-                  {/* Header Badge */}
-                  <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-4 mb-5">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                        <ShieldCheck size={18} />
+              <div className="space-y-6">
+                <div className="rounded-2xl border border-slate-300/90 bg-white text-slate-900 shadow-sm overflow-hidden print-slip">
+                  {/* Voucher Header Band */}
+                  <div className="bg-[#0b1329] text-white px-6 sm:px-8 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-emerald-400 shrink-0">
+                        <ShieldCheck size={22} />
                       </div>
                       <div>
-                        <div className="text-[10px] font-mono uppercase tracking-widest text-emerald-400 font-bold">
-                          {isPt ? "Comprovativo Oficial de Convocatória" : "Official Appointment Voucher"}
-                        </div>
-                        <div className="text-xs text-slate-300 font-semibold tracking-wide">
-                          Overwatch Moçambique · {roleTitleText}
-                        </div>
+                        <span className="text-[10px] font-mono uppercase tracking-widest text-emerald-400 font-bold block">
+                          {isPt ? "Documento Oficial de Convocatória" : "Official Convocation Slip"}
+                        </span>
+                        <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                          {isPt ? "Comprovativo de Agendamento Presencial" : "In-Person Assessment Slip"}
+                        </h2>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span className="font-mono text-[10px] px-2.5 py-1 bg-white/10 border border-white/15 rounded-md text-white/80 font-bold uppercase">
-                        REF: #{candidate.id ? candidate.id.slice(0, 8).toUpperCase() : "CONF"}
-                      </span>
+
+                    <div className="flex items-center gap-2 self-end sm:self-auto no-print">
+                      <button
+                        type="button"
+                        onClick={() => window.print()}
+                        className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white text-[#0b1329] hover:bg-slate-100 text-xs font-bold transition-all shadow-xs cursor-pointer"
+                      >
+                        <Printer size={14} />
+                        <span>{isPt ? "Imprimir / Guardar PDF" : "Print / Save PDF"}</span>
+                      </button>
                     </div>
                   </div>
 
-                  {/* Attendance Status Banner */}
+                  {/* Attendance Check-in Banner if already arrived at gate */}
                   {candidate.attendedAt ? (
-                    <div className="mb-5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 p-3.5 flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 shrink-0">
-                        <CheckCircle2 size={20} />
+                    <div className="mx-6 sm:mx-8 mt-6 rounded-xl bg-emerald-50 border border-emerald-200 p-4 flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                        <CheckCircle2 size={18} />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-emerald-300 uppercase tracking-wide">
-                          {isPt ? "Presença Confirmada na Recepção" : "Attendance Confirmed"}
+                        <p className="text-xs font-bold text-emerald-900 uppercase tracking-wide">
+                          {isPt ? "Presença Validada na Recepção" : "Attendance Verified at Reception"}
                         </p>
-                        <p className="text-[11px] text-emerald-200/80">
-                          {isPt ? "Entrada registada em:" : "Checked in at:"} {new Date(candidate.attendedAt).toLocaleTimeString("pt-MZ", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Maputo" })} (Maputo)
+                        <p className="text-xs text-emerald-700">
+                          {isPt ? "Check-in registado às" : "Checked in at"}{" "}
+                          {new Date(candidate.attendedAt).toLocaleTimeString("pt-MZ", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            timeZone: "Africa/Maputo",
+                          })}{" "}
+                          (Hora de Maputo)
                         </p>
                       </div>
                     </div>
-                  ) : (
-                    <div className="mb-5 rounded-xl bg-white/5 border border-white/10 p-3.5 flex items-start gap-2.5 text-xs text-slate-300">
-                      <CheckCircle2 size={16} className="text-emerald-400 shrink-0 mt-0.5" />
+                  ) : null}
+
+                  {/* Main Voucher Body Grid */}
+                  <div className="p-6 sm:p-8 space-y-6">
+
+                    {/* Candidate & Role Row */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pb-6 border-b border-slate-200">
                       <div>
-                        <p className="font-semibold text-white">
-                          {isPt ? "Instruções de Acesso na Recepção" : "Reception Check-In Instructions"}
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-semibold block mb-1">
+                          {isPt ? "Candidato(a) Convocado(a)" : "Candidate Name"}
+                        </span>
+                        <p className="text-base font-bold text-slate-900">
+                          {formattedCandidateName}
                         </p>
-                        <p className="text-[11px] text-slate-300 mt-0.5 leading-relaxed">
-                          {isPt
-                            ? "A sua entrada nas instalações é autorizada mediante apresentação de um Documento de Identificação válido (BI / Passaporte) e confirmação do seu nome na lista da recepção. Não é necessário apresentar código QR."
-                            : "Your entrance is authorized by presenting a valid ID document (ID Card / Passport) and verifying your name on the reception roster. No QR code is required."}
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-semibold block mb-1">
+                          {isPt ? "Posição Convocada" : "Position"}
+                        </span>
+                        <p className="text-sm font-semibold text-slate-800">
+                          {roleTitleText}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-semibold block mb-1">
+                          {isPt ? "Código de Referência" : "Reference ID"}
+                        </span>
+                        <p className="text-sm font-mono font-bold text-slate-800">
+                          #{refDisplay}
                         </p>
                       </div>
                     </div>
-                  )}
 
-                  {/* Confirmed Slot Details Highlight Box */}
-                  <div className="bg-white/5 border border-white/10 rounded-xl p-4.5 text-center mx-auto max-w-md">
-                    <p className="text-[11px] font-mono uppercase tracking-wider text-slate-400 font-semibold">
-                      {isPt ? "Candidata Convocada" : "Candidate Name"}
-                    </p>
-                    <p className="text-base font-bold text-white mt-0.5">
-                      {candidate.name}
-                    </p>
-                    <div className="my-3 py-2.5 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-                      <p className="text-[10px] uppercase font-mono tracking-wider text-emerald-400 font-bold">
-                        {isPt ? "Data & Turno Confirmado" : "Confirmed Test Session"}
-                      </p>
-                      <p className="text-sm font-bold text-white mt-0.5">
-                        {candidate.testSlot}
-                      </p>
-                    </div>
-                    <p className="text-[11px] text-slate-400">
-                      📍 Av. Paulo Samuel Khankhomba 1948, Maputo · {isPt ? "Chegada 15 minutos antes" : "Arrive 15 minutes before"}
-                    </p>
-                  </div>
+                    {/* Highlighted Session Date & Time Box */}
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-5 space-y-2">
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <Calendar size={18} className="text-[#0b1329]" />
+                          <span className="text-xs font-bold uppercase tracking-wider text-slate-700 font-mono">
+                            {isPt ? "Sessão Agendada & Confirmada" : "Confirmed Test Session"}
+                          </span>
+                        </div>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 text-[11px] font-bold">
+                          <Check size={11} />
+                          <span>{isPt ? "Vaga Garantida" : "Slot Secured"}</span>
+                        </span>
+                      </div>
 
-                  {/* Print Action */}
-                  <div className="mt-5 flex items-center justify-center gap-3">
-                    <button
-                      onClick={() => window.print()}
-                      type="button"
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-colors shadow"
-                    >
-                      <Printer size={13} />
-                      <span>{isPt ? "Imprimir Comprovativo" : "Print Confirmation"}</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Main confirmed slot card */}
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 overflow-hidden">
-                  <div className="flex items-center gap-3 px-5 py-3.5 border-b border-emerald-200 bg-emerald-100/60">
-                    <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-                    <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">
-                      {isPt ? "Teste agendado e confirmado" : "Test booked & confirmed"}
-                    </span>
-                  </div>
-                  <div className="p-5 space-y-4">
-                    <div>
-                      <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-emerald-600 mb-1">
-                        {isPt ? "Data & hora" : "Date & time"}
-                      </p>
-                      <p className="text-lg font-bold text-gray-900">
+                      <p className="text-lg sm:text-xl font-extrabold text-slate-900 pt-1">
                         {formatSlotDisplay(candidate.testSlot || "", isPt)}
                       </p>
-                      <p className="text-sm text-gray-500 mt-0.5">
-                        {durationText}
+                      <p className="text-xs text-slate-600 flex items-center gap-1.5">
+                        <Clock size={13} className="text-slate-400" />
+                        <span>{durationText}</span>
                       </p>
                     </div>
 
-                    <div className="h-px bg-emerald-200" />
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-emerald-600 mb-1.5">
-                          {isPt ? "Local" : "Venue"}
-                        </p>
-                        <p className="text-sm font-semibold text-gray-900">Overwatch Moçambique</p>
-                        <p className="text-xs text-gray-600 mt-0.5 leading-snug">{siteContact.address.pt}</p>
-                        <p className="text-[11px] text-gray-500 mt-1 leading-snug">
-                          {venueLandmarkText}
-                        </p>
+                    {/* Venue & Access Instructions (2 Columns) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-1">
+                      {/* Venue Column */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 uppercase tracking-wide">
+                          <MapPin size={15} className="text-[#0b1329]" />
+                          <span>{isPt ? "Local de Realização" : "Test Venue"}</span>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 p-4 bg-white space-y-1.5 text-xs">
+                          <p className="font-bold text-slate-900">Overwatch Moçambique</p>
+                          <p className="text-slate-700 leading-snug">{siteContact.address.pt}</p>
+                          <p className="text-slate-500 text-[11px] pt-1 border-t border-slate-100 leading-snug">
+                            {venueLandmarkText}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-emerald-600 mb-1.5">
-                          {isPt ? "O que trazer" : "What to bring"}
-                        </p>
-                        <ul className="space-y-1.5 text-xs text-gray-700">
-                          {whatToBringItems.map((item, idx) => (
-                            <li key={idx} className="flex items-start gap-1.5">
-                              <Check size={12} className="text-emerald-600 mt-0.5 shrink-0" />
-                              <span>{item}</span>
-                            </li>
-                          ))}
-                        </ul>
+
+                      {/* What to bring Column */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 uppercase tracking-wide">
+                          <FileText size={15} className="text-[#0b1329]" />
+                          <span>{isPt ? "Material Obrigatório" : "Requirements"}</span>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 p-4 bg-white space-y-2 text-xs">
+                          <ul className="space-y-1.5">
+                            {whatToBringItems.map((item, idx) => (
+                              <li key={idx} className="flex items-start gap-2 text-slate-700 leading-snug">
+                                <Check size={13} className="text-emerald-600 shrink-0 mt-0.5" />
+                                <span>{item}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       </div>
                     </div>
+
+                    {/* Security Entrance Notice */}
+                    <div className="rounded-xl border border-slate-200/90 bg-slate-50 p-4 text-xs text-slate-700 flex items-start gap-3">
+                      <ShieldCheck size={18} className="text-[#0b1329] shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <p className="font-bold text-slate-900">
+                          {isPt ? "Instruções de Acesso na Recepção:" : "Reception Check-In Protocol:"}
+                        </p>
+                        <p className="text-slate-600 leading-relaxed">
+                          {isPt
+                            ? "A entrada nas instalações é autorizada mediante apresentação de um Documento de Identificação oficial com fotografia válido (BI ou Passaporte original) e conferência do seu nome na lista da recepção. Não é necessário apresentar código QR."
+                            : "Entry is granted upon presenting a valid photo identification document (original ID Card or Passport) and verifying your name on the reception roster. No QR code is required."}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Printable Footer / Metadata */}
+                    <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-500">
+                      <span>
+                        {isPt ? "Emissão Oficial" : "Official Record"} · Overwatch Moçambique, Lda.
+                      </span>
+                      <span className="font-mono">
+                        {isPt ? "Registo Único" : "Single Record"}: #{refDisplay}
+                      </span>
+                    </div>
+
                   </div>
                 </div>
 
-                {/* Single-use notice */}
-                <div className="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-xs">
-                  <Lock size={14} className="text-gray-400 shrink-0 mt-0.5" />
-                  <p className="text-gray-500 leading-relaxed">
+                {/* Single-use note */}
+                <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-xs no-print">
+                  <Lock size={14} className="text-slate-400 shrink-0 mt-0.5" />
+                  <p className="text-slate-500 leading-relaxed">
                     {isPt
-                      ? "Este link só pode ser utilizado uma vez. A data escolhida está confirmada e não pode ser alterada. A sua vaga está garantida."
-                      : "This link is single-use only. Your chosen date is confirmed and cannot be changed. Your slot is secured."}
+                      ? "Este agendamento é pessoal e intransmissível. A sua vaga encontra-se confirmada e não requer nova acção. Em caso de força maior, contacte-nos pelo canal de apoio abaixo."
+                      : "This booking is personal and confirmed. In case of unexpected constraints, please contact our support team below."}
                   </p>
                 </div>
 
-                {/* Chatbot & Email Support Heads-Up + Dynamic Curved Arrow */}
-                <ChatbotSupportHeadsUp isPt={isPt} supportEmail={supportEmail} />
+                {/* Support Section */}
+                <div className="no-print">
+                  <ChatbotSupportSection isPt={isPt} supportEmail={supportEmail} />
+                </div>
               </div>
 
-            /* ── YET TO BOOK VIEW ── */
+            /* ══════════════════════════════════════════════════════════
+                STATE B: YET TO BOOK — CLEAN SLOT SELECTION INTERFACE
+                ══════════════════════════════════════════════════════════ */
             ) : (
-              <div className="space-y-4">
-                {/* Rebooking Grace Notice Banner */}
+              <div className="space-y-6">
+
+                {/* Grace period banner if applicable */}
                 {candidate.rebookingGraceActive && (
-                  <div className="rounded-2xl border-2 border-emerald-500/50 bg-emerald-50 dark:bg-emerald-950/40 p-5 text-emerald-950 dark:text-emerald-100 shadow-md">
+                  <div className="rounded-2xl border border-emerald-300 bg-emerald-50/90 p-5 text-emerald-950 shadow-xs">
                     <div className="flex items-start gap-3.5">
-                      <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+                      <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5">
                         <RotateCcw size={18} />
                       </div>
-                      <div className="space-y-1.5 flex-1">
-                        <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-900 dark:text-emerald-200">
-                            {isPt ? "Período de Graça · Reagendamento Autorizado" : "Grace Period · Rebooking Authorized"}
-                          </span>
-                          <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-200/80 dark:bg-emerald-500/20 border border-emerald-400 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-200 font-bold uppercase">
-                            {isPt ? "Link de Uso Único (OTL)" : "Single-Use Link (OTL)"}
-                          </span>
-                        </div>
-                        <p className="text-xs text-emerald-950 dark:text-emerald-100 font-medium leading-relaxed">
+                      <div className="space-y-1 flex-1">
+                        <span className="text-xs font-bold uppercase tracking-wider text-emerald-900 block">
+                          {isPt ? "Período de Graça Autorizado" : "Grace Period Authorized"}
+                        </span>
+                        <p className="text-xs text-emerald-800 leading-relaxed">
                           {isPt
-                            ? "Em virtude de constrangimentos na localização ou deslocação para a sua data anterior, a Direcção de RH concedeu autorização para escolher uma nova data entre os turnos ainda disponíveis. Uma vez confirmada a escolha, este link é invalidado e o agendamento torna-se definitivo."
-                            : "Due to location or transport constraints on your previous date, HR has authorized you to pick a new test date among the remaining open sessions. Once confirmed, this link is consumed and your booking is final."}
+                            ? "A Direcção de RH autorizou a remarcação da sua data de teste presencial. Seleccione uma nova sessão entre as vagas disponíveis abaixo. Ao confirmar, o novo agendamento torna-se definitivo."
+                            : "HR has authorized you to reschedule your in-person test session. Choose an available slot below. Once confirmed, this booking is final."}
                         </p>
                         {candidate.previousTestSlot && (
-                          <div className="text-[11px] text-emerald-900/80 dark:text-emerald-200/80 pt-1 flex items-center gap-1.5 font-medium">
-                            <span>{isPt ? "Data anterior não comparecida:" : "Previously missed date:"}</span>
-                            <span className="line-through font-mono font-bold text-emerald-800 dark:text-emerald-300">{candidate.previousTestSlot}</span>
-                          </div>
+                          <p className="text-[11px] text-emerald-700 pt-1 font-mono">
+                            {isPt ? "Turno anterior:" : "Previous slot:"}{" "}
+                            <span className="line-through">{candidate.previousTestSlot}</span>
+                          </p>
                         )}
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Instant Booking Confirmation Notice */}
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 py-3.5 flex items-start gap-3">
-                  <CheckCircle2 size={18} className="text-emerald-600 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-xs font-bold text-emerald-900 mb-0.5 uppercase tracking-wide">
-                      {isPt ? "Confirmação Imediata de Agendamento" : "Instant Booking Confirmation"}
-                    </p>
-                    <p className="text-xs text-emerald-800 leading-relaxed">
-                      {isPt
-                        ? "Assim que seleccionar e confirmar a sua data de teste, o seu agendamento será imediatamente registado no sistema da Overwatch e receberá um email de confirmação. A entrada nas nossas instalações é efectuada mediante verificação do seu Documento de Identificação válido na recepção (sem necessidade de código QR)."
-                        : "As soon as you confirm your test date, your booking will be immediately registered in the Overwatch system and you will receive a confirmation email. Entrance is granted by showing a valid ID at reception (no QR code needed)."}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Role-specific What to Bring & Venue Preview */}
-                <div className="rounded-2xl border border-gray-200 bg-gray-50/70 p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-[0.68rem] font-bold uppercase tracking-wider text-gray-500 mb-1.5">
-                      {isPt ? "Local do Teste" : "Test Venue"}
-                    </p>
-                    <p className="text-xs font-bold text-gray-900">Overwatch Moçambique</p>
-                    <p className="text-xs text-gray-600 mt-0.5 leading-snug">{siteContact.address.pt}</p>
-                    <p className="text-[11px] text-gray-500 mt-1 leading-snug">{venueLandmarkText}</p>
-                  </div>
-                  <div>
-                    <p className="text-[0.68rem] font-bold uppercase tracking-wider text-gray-500 mb-1.5">
-                      {isPt ? "O que trazer" : "What to bring"}
-                    </p>
-                    <ul className="space-y-1 text-xs text-gray-700">
-                      {whatToBringItems.map((item, idx) => (
-                        <li key={idx} className="flex items-start gap-1.5">
-                          <Check size={12} className="text-emerald-600 mt-0.5 shrink-0" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                {/* Single-use warning */}
-                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3.5 flex items-start gap-3">
-                  <AlertCircle size={16} className="text-amber-500 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-xs font-semibold text-amber-800 mb-0.5">
-                      {isPt ? "Agendamento único e definitivo" : "Single-use & final booking"}
-                    </p>
-                    <p className="text-xs text-amber-700 leading-relaxed">
-                      {isPt
-                        ? "Só pode escolher uma data. Uma vez confirmada, a escolha é definitiva e não pode ser alterada. Verifique a sua disponibilidade antes de confirmar."
-                        : "You can only choose one date. Once confirmed, the booking is final and cannot be changed. Please verify your availability before confirming."}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Capacity notice */}
-                {candidate?.windowFilledNotice && (
-                  <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3.5 flex items-start gap-3">
-                    <AlertCircle size={16} className="text-blue-500 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs font-semibold text-blue-800 mb-0.5">
-                        {isPt ? "Turnos de Avaliação Presenciais" : "In-Person Assessment Sessions"}
+                {/* Venue preview & What to bring card */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs">
+                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 font-mono">
+                    {isPt ? "Informações & Requisitos do Teste" : "Test Information & Requirements"}
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                    <div className="space-y-1.5 p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                      <p className="font-bold text-slate-900 flex items-center gap-1.5">
+                        <MapPin size={14} className="text-[#0b1329]" />
+                        <span>{isPt ? "Local das Provas" : "Test Venue"}</span>
                       </p>
-                      <p className="text-xs text-blue-700 leading-relaxed">
-                        {isPt
-                          ? "Consulte os turnos de avaliação presenciais abertos e reserve a sua data entre as opções disponíveis abaixo."
-                          : "Review the open evaluation sessions and reserve your date from the available slots below."}
+                      <p className="font-semibold text-slate-800">Overwatch Moçambique</p>
+                      <p className="text-slate-600 leading-snug">{siteContact.address.pt}</p>
+                      <p className="text-[11px] text-slate-500 leading-snug pt-1">
+                        {venueLandmarkText}
                       </p>
                     </div>
-                  </div>
-                )}
 
-                {/* Slot selection */}
-                <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
-                  <div className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-2">
+                    <div className="space-y-1.5 p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                      <p className="font-bold text-slate-900 flex items-center gap-1.5">
+                        <FileText size={14} className="text-[#0b1329]" />
+                        <span>{isPt ? "O Que Trazer" : "What to Bring"}</span>
+                      </p>
+                      <ul className="space-y-1 text-slate-700 leading-snug">
+                        {whatToBringItems.map((item, idx) => (
+                          <li key={idx} className="flex items-start gap-1.5">
+                            <Check size={12} className="text-emerald-600 mt-0.5 shrink-0" />
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Slot Selection Card */}
+                <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs">
+                  <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
                     <div>
-                      <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                        <Calendar size={16} className="text-gray-400" />
-                        <span>{isPt ? "Seleccione a sua data" : "Select your date"}</span>
+                      <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <Calendar size={16} className="text-[#0b1329]" />
+                        <span>{isPt ? "Seleccione a Sessão Pretendida" : "Select Your Session"}</span>
                       </h2>
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-xs text-slate-500 mt-0.5">
                         {isPt
-                          ? "Turnos presenciais com vagas limitadas. Seleccione um horário disponível abaixo."
-                          : "In-person test sessions with limited capacity. Select an open slot below."}
+                          ? "Vagas limitadas por turma presencial. Escolha o seu horário."
+                          : "Limited capacity per in-person session. Pick your slot."}
                       </p>
                     </div>
                   </div>
 
                   {liveSlotTakenNotice && (
-                    <div className="mx-4 mt-4 flex items-start justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-3 text-xs text-amber-900">
+                    <div className="mx-6 mt-4 flex items-start justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-900">
                       <div className="flex items-start gap-2">
-                        <AlertCircle size={14} className="shrink-0 mt-0.5 text-amber-600" />
+                        <AlertCircle size={15} className="shrink-0 mt-0.5 text-amber-600" />
                         <span>{liveSlotTakenNotice}</span>
                       </div>
                       <button
                         type="button"
                         onClick={() => setLiveSlotTakenNotice("")}
-                        className="text-amber-700 hover:text-amber-950 p-0.5"
+                        className="text-amber-700 hover:text-amber-950 p-0.5 cursor-pointer"
                       >
                         <X size={13} />
                       </button>
                     </div>
                   )}
 
-                  <div className="p-4 space-y-2">
+                  <div className="p-5 sm:p-6 space-y-2.5">
                     {slotsList.length === 0 && (
-                      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-center text-xs text-gray-500">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-center text-xs text-slate-500">
                         {isPt
-                          ? "Nenhum turno disponível de momento. Por favor aguarde pela actualização de horários."
+                          ? "Nenhum turno disponível de momento. Por favor aguarde pela publicação de novos horários."
                           : "No test slots are currently open. Please check back shortly."}
                       </div>
                     )}
+
                     {slotsList.map((slot) => {
                       const isSelected = selectedSlot === slot;
                       const stat = candidate?.slotStats?.[slot];
@@ -872,38 +932,30 @@ export default function CandidateBookingClient({
                           <div
                             key={slot}
                             aria-disabled="true"
-                            className="w-full text-left rounded-xl border border-gray-200/90 bg-gray-50/90 px-4 py-3.5 flex items-center justify-between gap-3 opacity-55 cursor-not-allowed select-none pointer-events-none"
+                            className="w-full text-left rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3.5 flex items-center justify-between gap-3 opacity-60 cursor-not-allowed select-none"
                           >
                             <div className="flex items-center gap-3">
-                              <div className="h-4 w-4 rounded-full border-2 border-gray-300 bg-gray-200/80 flex items-center justify-center shrink-0">
-                                <Lock size={8} className="text-gray-500" strokeWidth={2.5} />
+                              <div className="h-4 w-4 rounded-full border border-slate-300 bg-slate-200 flex items-center justify-center shrink-0">
+                                <Lock size={9} className="text-slate-500" />
                               </div>
-
                               <div>
-                                <p className="text-sm font-semibold text-gray-500 line-through">
+                                <p className="text-sm font-medium text-slate-500 line-through">
                                   {formatSlotDisplay(slot, isPt)}
                                 </p>
-                                <p className="text-xs mt-0.5 text-gray-400">
+                                <p className="text-[11px] text-slate-400 mt-0.5">
                                   {isBookingExpired
-                                    ? (isPt ? "Inscrições encerradas · Prazo limite atingido (23h59 da véspera)" : "Bookings closed · Expired at 11:59 PM day prior")
+                                    ? (isPt ? "Inscrições encerradas às 23h59 da véspera" : "Bookings closed at 11:59 PM day prior")
                                     : isPast
-                                      ? (isPt ? "Sessão encerrada · Data passada" : "Session concluded · Past date")
-                                      : (isPt ? "Vagas esgotadas · Não disponível" : "No spots available · Full")}
+                                      ? (isPt ? "Sessão já realizada" : "Session concluded")
+                                      : (isPt ? "Vagas esgotadas" : "Full capacity reached")}
                                 </p>
                               </div>
                             </div>
 
-                            <span className={`flex items-center gap-1 text-[0.65rem] font-semibold px-2 py-0.5 rounded-full shrink-0 ${
-                              isBookingExpired || isPast
-                                ? "text-gray-600 bg-gray-200/80 border border-gray-300"
-                                : "text-red-600 bg-red-100/90 border border-red-200"
-                            }`}>
-                              <Lock size={9} />
-                              {isBookingExpired
-                                ? (isPt ? "Encerrado" : "Closed")
-                                : isPast
-                                  ? (isPt ? "Passado" : "Concluded")
-                                  : (isPt ? "Esgotado" : "Full")}
+                            <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 border border-slate-300 shrink-0">
+                              {isBookingExpired || isPast
+                                ? (isPt ? "ENCERRADO" : "CLOSED")
+                                : (isPt ? "ESGOTADO" : "FULL")}
                             </span>
                           </div>
                         );
@@ -916,47 +968,41 @@ export default function CandidateBookingClient({
                           onClick={() => setSelectedSlot(slot)}
                           className={`w-full text-left rounded-xl border px-4 py-3.5 transition-all flex items-center justify-between gap-3 cursor-pointer ${
                             isSelected
-                              ? "border-[#07080f] bg-[#07080f] shadow-md ring-1 ring-[#07080f]"
-                              : "border-gray-200 bg-white hover:border-gray-400 hover:shadow-sm"
+                              ? "border-[#0b1329] bg-[#0b1329] text-white shadow-md ring-1 ring-[#0b1329]"
+                              : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-xs"
                           }`}
                         >
                           <div className="flex items-center gap-3">
-                            <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                              isSelected
-                                ? "border-white bg-white"
-                                : "border-gray-300 bg-white"
-                            }`}>
-                              {isSelected ? (
-                                <div className="h-2 w-2 rounded-full bg-[#07080f]" />
-                              ) : null}
+                            <div
+                              className={`h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                                isSelected ? "border-white bg-white" : "border-slate-300 bg-white"
+                              }`}
+                            >
+                              {isSelected && <div className="h-2 w-2 rounded-full bg-[#0b1329]" />}
                             </div>
 
                             <div>
-                              <p className={`text-sm font-semibold ${
-                                isSelected ? "text-white" : "text-gray-900"
-                              }`}>
+                              <p className={`text-sm font-bold ${isSelected ? "text-white" : "text-slate-900"}`}>
                                 {formatSlotDisplay(slot, isPt)}
                               </p>
-                              <p className={`text-xs mt-0.5 ${
-                                isSelected ? "text-white/60" : "text-gray-400"
-                              }`}>
-                                {durationText} · Maputo
+                              <p className={`text-xs mt-0.5 ${isSelected ? "text-slate-300" : "text-slate-500"}`}>
+                                {durationText}
                               </p>
                             </div>
                           </div>
 
                           {isSelected ? (
-                            <span className="flex items-center gap-1 text-[0.65rem] font-semibold text-white/90 bg-white/15 border border-white/25 px-2.5 py-0.5 rounded-full shrink-0">
-                              <Check size={9} />
-                              <span>{isPt ? "Selecionada" : "Selected"}</span>
+                            <span className="flex items-center gap-1 text-[11px] font-bold text-white bg-white/20 border border-white/30 px-2.5 py-0.5 rounded-full shrink-0">
+                              <Check size={11} />
+                              <span>{isPt ? "Seleccionada" : "Selected"}</span>
                             </span>
                           ) : remaining !== undefined && remaining <= 3 ? (
-                            <span className="text-[0.65rem] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full shrink-0">
+                            <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full shrink-0">
                               {isPt ? `Só ${remaining} vaga${remaining !== 1 ? "s" : ""}` : `Only ${remaining} left`}
                             </span>
                           ) : remaining !== undefined ? (
-                            <span className="text-[0.65rem] text-gray-500 font-medium shrink-0">
-                              {isPt ? `${remaining} vagas abertas` : `${remaining} spots left`}
+                            <span className="text-[11px] text-slate-500 font-medium shrink-0">
+                              {isPt ? `${remaining} vagas abertas` : `${remaining} spots open`}
                             </span>
                           ) : null}
                         </button>
@@ -964,59 +1010,59 @@ export default function CandidateBookingClient({
                     })}
                   </div>
 
-                  {/* Error */}
+                  {/* Submission Error Banner */}
                   {error && (
-                    <div className="mx-4 mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3 text-xs text-red-700">
-                      <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                    <div className="mx-6 mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
+                      <AlertCircle size={15} className="shrink-0 mt-0.5" />
                       <span>{error}</span>
                     </div>
                   )}
 
-                  {/* Submit */}
-                  <div className="px-4 pb-5 pt-2 space-y-3">
+                  {/* Confirm Button */}
+                  <div className="px-6 pb-6 pt-2 space-y-3">
                     <button
                       type="button"
                       onClick={handleConfirmSlot}
                       disabled={submitting || !selectedSlot || Boolean(candidate?.slotStats?.[selectedSlot]?.isFull)}
-                      className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-[#07080f] text-white text-sm font-bold py-3.5 hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm cursor-pointer"
+                      className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-[#0b1329] text-white text-sm font-bold py-3.5 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-xs cursor-pointer"
                     >
                       {submitting ? (
                         <>
-                          <RefreshCw className="animate-spin" size={15} />
-                          <span>{isPt ? "A confirmar…" : "Confirming…"}</span>
+                          <RefreshCw className="animate-spin" size={16} />
+                          <span>{isPt ? "A registar agendamento…" : "Confirming booking…"}</span>
                         </>
                       ) : (
                         <>
-                          <span>{isPt ? "Confirmar data definitiva" : "Confirm my test date"}</span>
+                          <span>{isPt ? "Confirmar Agendamento Presencial" : "Confirm My Test Session"}</span>
                           <ArrowRight size={16} />
                         </>
                       )}
                     </button>
-                    <p className="text-center text-[0.68rem] text-gray-400">
+                    <p className="text-center text-[11px] text-slate-500">
                       {isPt
-                        ? "🔒 Ao confirmar, a sua escolha fica gravada de forma permanente e não pode ser alterada."
-                        : "🔒 By confirming, your choice is permanently recorded and cannot be changed."}
+                        ? "A confirmação é registada de imediato no sistema da Overwatch e o seu comprovativo é gerado."
+                        : "Your confirmation is saved immediately and an official slip is generated."}
                     </p>
                   </div>
                 </div>
 
-                {/* Chatbot & Email Support Heads-Up + Dynamic Curved Arrow */}
-                <ChatbotSupportHeadsUp isPt={isPt} supportEmail={supportEmail} />
+                {/* Support Section */}
+                <ChatbotSupportSection isPt={isPt} supportEmail={supportEmail} />
               </div>
             )}
 
-            {/* Footer info bar */}
-            <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            {/* Official Footer */}
+            <div className="rounded-2xl border border-slate-200 bg-white px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 no-print">
               <div>
-                <p className="text-xs font-semibold text-gray-700">Overwatch Moçambique, Lda.</p>
-                <p className="text-xs text-gray-400 mt-0.5">{siteContact.address.pt}</p>
+                <p className="font-semibold text-slate-800">Overwatch Moçambique, Lda.</p>
+                <p className="text-slate-400 mt-0.5">{siteContact.address.pt}</p>
               </div>
               <div className="flex items-center gap-3">
                 <a
                   href={`mailto:${supportEmail}`}
-                  className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 transition-colors font-medium"
+                  className="inline-flex items-center gap-1.5 text-slate-600 hover:text-slate-900 font-semibold"
                 >
-                  <Mail size={12} />
+                  <Mail size={13} />
                   <span>{supportEmail}</span>
                 </a>
               </div>
@@ -1024,7 +1070,7 @@ export default function CandidateBookingClient({
 
           </div>
         ) : null}
-      </div>
+      </main>
     </div>
   );
 }
