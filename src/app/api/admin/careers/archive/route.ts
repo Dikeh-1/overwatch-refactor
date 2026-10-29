@@ -20,18 +20,7 @@ export async function GET(request: Request) {
       if (!cohort)
         return Response.json({ error: "Cohort not found" }, { status: 404 });
       const role =
-        cohort.roleSnapshot ||
-        roles.find((r) => sameRole(r.id, cohort.roleId)) || {
-          id: cohort.roleId,
-          en: cohort.roleId === "cctv_technical_manager" ? "CCTV Installation & Technical Manager" : cohort.name,
-          pt: cohort.roleId === "cctv_technical_manager" ? "Gestor Técnico e Instalação de CCTV" : cohort.name,
-          department: "Operações",
-          open: cohort.status === "active",
-          pipelineStages: cohort.stages || ["applications", "screening", "interview", "hired"],
-          screeningRules: cohort.screeningRules || [],
-          createdAt: cohort.openedAt || new Date().toISOString(),
-          updatedAt: cohort.closedAt || new Date().toISOString(),
-        };
+        cohort.roleSnapshot || roles.find((r) => sameRole(r.id, cohort.roleId));
       const members = applicationsForCohort(applications, cohort, cohorts);
       return Response.json(
         {
