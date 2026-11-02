@@ -360,10 +360,10 @@ async function handlePOST(request: Request) {
   }
 }
 
-export function substituteCandidateVariables(text: string, candidate: Application, roleTitle?: string, isEnglish?: boolean): string {
+function substituteCandidateVariables(text: string, candidate: Application, roleTitle?: string, isEnglish?: boolean): string {
   return candidateVariables(text, candidate, roleTitle || (candidate.role === "cctv" ? isEnglish ? "CCTV Operator" : "Operadora de CCTV" : candidate.role), isEnglish ? "en" : "pt");
 }
-export function generateOfficialBroadcastHtml(params: { candidate: Application; subject: string; message: string; includeBookingButton: boolean; buttonText: string; roleTitle?: string; locale?: "en" | "pt" }) {
+function generateOfficialBroadcastHtml(params: { candidate: Application; subject: string; message: string; includeBookingButton: boolean; buttonText: string; roleTitle?: string; locale?: "en" | "pt" }) {
   return renderOfficialMail({ ...params, roleTitle: params.roleTitle || params.candidate.role, locale: params.locale || (/Dear\s+|Kind regards|recruitment process/i.test(params.message) ? "en" : "pt") }).html;
 }
 export async function POST(request: Request) { return auditRequest(request, () => handlePOST(request)); }
